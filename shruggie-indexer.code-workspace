@@ -1,0 +1,104 @@
+{
+    "folders": [
+        {
+            "path": ".",
+            "name": "Workspace Home"
+        }
+    ],
+    "settings": {
+        "powershell.cwd": "Workspace Home",
+        "powershell.buttons.showPanelMovementButtons": true,
+        "powershell.enableReferencesCodeLens": true,
+        "powershell.codeFormatting.autoCorrectAliases": true,
+        "powershell.codeFormatting.avoidSemicolonsAsLineTerminators": true,
+        "powershell.codeFormatting.ignoreOneLineBlock": true,
+        "powershell.codeFormatting.openBraceOnSameLine": true,
+        "powershell.codeFormatting.whitespaceAfterSeparator": false,
+        "powershell.codeFormatting.whitespaceAroundOperator": false,
+        "powershell.codeFormatting.whitespaceBeforeOpenParen": true,
+        "powershell.analyzeOpenDocumentsOnly": true,
+        "editor.foldingStrategy": "indentation",
+        /*"editor.defaultFormatter": "ms-vscode.powershell",*/
+        "editor.formatOnSave": false,
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true,
+        "editor.detectIndentation": true,
+        "editor.wordWrap": "on",
+        "editor.minimap.enabled": true,
+        "editor.renderWhitespace": "all",
+        "editor.renderControlCharacters": true,
+        "editor.renderLineHighlight": "all",
+        "editor.renderFinalNewline": "on",
+        "editor.rulers": [
+            80,
+            84,
+            88,
+            120,
+            124,
+            128,
+            160
+        ],
+        "editor.codeLens": false,
+        "editor.fontSize": 12,
+        "editor.fontLigatures": true,
+        "editor.lineHeight": 20,
+        "editor.letterSpacing": 0.6,
+        "editor.cursorBlinking": "smooth",
+        "editor.cursorSmoothCaretAnimation": "on",
+        "editor.cursorStyle": "line",
+        "editor.cursorWidth": 2,
+        "editor.cursorSurroundingLines": 3,
+        "editor.cursorSurroundingLinesStyle": "default",
+        "files.associations": {
+            "*.ps1": "powershell",
+            "*.wp0": "json"
+        },
+        "files.defaultLanguage": "powershell",
+        "files.exclude": {
+            "**/.hg": false
+        },
+        "git.autofetch": true,
+        "git.enableSmartCommit": true,
+        "github.copilot.editor.enableAutoCompletions": true,
+        "github.copilot.enable": {
+            "markdown": true
+        },
+        "hexeditor.columnWidth": 32,
+        "hexeditor.defaultEndianness": "little",
+        "hexeditor.inspectorType": "aside",
+        "hexeditor.showDecodedText": true,
+        "inlineChat.lineEmptyHint": false,
+        "json.format.enable": true,
+        "json.validate.enable": true,
+        "json.schemas": [
+            {
+                "fileMatch": [
+                    "manifest.json",
+                    "manifest.webmanifest",
+                    "app.webmanifest"
+                ],
+                "url": "https://schemas.shruggie.tech/data/web-manifest.schema.json"
+            },{
+                "fileMatch": [
+                    "*_meta.json",
+                    "*_directorymeta.json",
+                    "*-feeds-export_index.json"
+                ],
+                "url": "https://schemas.shruggie.tech/data/shruggie-indexer-v1.schema.json"
+            },{
+                "fileMatch": [
+                    "*_meta2.json",
+                    "*_directorymeta2.json",
+                    "*-feeds-export_index2.json"
+                ],
+                "url": "https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json"
+            }
+        ],
+        "[powershell]": {
+            "editor.defaultFormatter": "ms-vscode.powershell"
+        },
+        "[log]": {
+            "editor.wordWrap": "off"
+        }
+    }
+}

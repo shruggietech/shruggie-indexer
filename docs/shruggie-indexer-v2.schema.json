@@ -1,0 +1,357 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json",
+  "title": "IndexEntry",
+  "description": "Schema version 2 of the shruggie-indexer output format. Describes a single indexed file or directory, including its identity, filesystem properties, timestamps, and any associated metadata entries. This schema replaces the original MakeIndex v1 schema with a restructured layout that consolidates related fields into logical sub-objects, eliminates redundant fields, adds explicit provenance tracking for metadata entries, and provides the structural foundation for MetaMergeDelete reversal operations.",
+  "type": "object",
+
+  "definitions": {
+
+    "NameObject": {
+      "description": "A named entity with its text representation and associated hash digests of that text. Used for file names, directory names, and metadata sidecar file names. The hashes are computed from the UTF-8 byte representation of the text string.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "description": "The text value of the name. For files this includes the extension. For the root-level entry this is the file or directory name without any path components. Null when the named entity has no meaningful name (e.g., generated metadata entries that were never files on disk).",
+          "type": ["string", "null"]
+        },
+        "hashes": {
+          "description": "Hash digests of the name text string. Null when the text field is null.",
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/definitions/HashSet" }
+          ]
+        }
+      },
+      "required": ["text", "hashes"]
+    },
+
+    "HashSet": {
+      "description": "A collection of hash digests for a given input. All hash values are uppercase hexadecimal strings (characters 0-9, A-F). The md5 and sha256 algorithms are always present; sha512 is optional and included when the indexer is configured to compute it or when the hash set describes metadata content where the additional digest provides verification value.",
+      "type": "object",
+      "properties": {
+        "md5": {
+          "description": "MD5 digest (128-bit, 32 hex characters).",
+          "type": "string",
+          "pattern": "^[0-9A-F]{32}$"
+        },
+        "sha256": {
+          "description": "SHA-256 digest (256-bit, 64 hex characters).",
+          "type": "string",
+          "pattern": "^[0-9A-F]{64}$"
+        },
+        "sha512": {
+          "description": "SHA-512 digest (512-bit, 128 hex characters). Optional; included when configured or when additional verification strength is warranted.",
+          "type": "string",
+          "pattern": "^[0-9A-F]{128}$"
+        }
+      },
+      "required": ["md5", "sha256"],
+      "additionalProperties": false
+    },
+
+    "SizeObject": {
+      "description": "The size of a file or metadata entry expressed in both human-readable and machine-readable forms.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "description": "Human-readable size string with appropriate unit suffix (e.g., '15.28 MB', '135 B', '2.04 GB'). Units follow the decimal SI convention: B, KB, MB, GB, TB.",
+          "type": "string"
+        },
+        "bytes": {
+          "description": "Exact size in bytes as an integer.",
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": ["text", "bytes"],
+      "additionalProperties": false
+    },
+
+    "TimestampPair": {
+      "description": "A single timestamp expressed in both ISO 8601 local-time and Unix epoch millisecond formats. The ISO string preserves the original timezone offset from the source filesystem. The Unix timestamp is always in milliseconds since the Unix epoch (1970-01-01T00:00:00Z).",
+      "type": "object",
+      "properties": {
+        "iso": {
+          "description": "ISO 8601 timestamp string with full fractional-second precision and timezone offset. Format: yyyy-MM-ddTHH:mm:ss.fffffffzzz (up to 7 fractional digits, matching .NET's DateTime precision where available; Python implementations may produce 6 fractional digits).",
+          "type": "string"
+        },
+        "unix": {
+          "description": "Unix timestamp in milliseconds since epoch. Integer precision. Timezone-independent (always UTC-equivalent).",
+          "type": "integer"
+        }
+      },
+      "required": ["iso", "unix"],
+      "additionalProperties": false
+    },
+
+    "TimestampsObject": {
+      "description": "The three standard filesystem timestamps for a file, directory, or sidecar metadata entry.",
+      "type": "object",
+      "properties": {
+        "created": {
+          "description": "When the item was created on the filesystem.",
+          "$ref": "#/definitions/TimestampPair"
+        },
+        "modified": {
+          "description": "When the item's content was last modified.",
+          "$ref": "#/definitions/TimestampPair"
+        },
+        "accessed": {
+          "description": "When the item was last accessed (read). Note: filesystem access-time tracking varies by OS and mount options; this value may be unreliable on some systems.",
+          "$ref": "#/definitions/TimestampPair"
+        }
+      },
+      "required": ["created", "modified", "accessed"],
+      "additionalProperties": false
+    },
+
+    "ParentObject": {
+      "description": "Identity and naming information for the parent directory of the indexed item.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The unique identifier of the parent directory. Uses the 'x' prefix (directory ID namespace). For items at the root of the indexed tree whose parent directory was not itself indexed, this ID is still computed from the parent directory's name but the parent will not have its own index entry.",
+          "type": "string",
+          "pattern": "^x[0-9A-F]+$"
+        },
+        "name": {
+          "description": "The name of the parent directory.",
+          "$ref": "#/definitions/NameObject"
+        }
+      },
+      "required": ["id", "name"],
+      "additionalProperties": false
+    },
+
+    "MetadataEntry": {
+      "description": "A single metadata record associated with the parent indexed item. Metadata entries come from two sources: 'generated' entries are produced by tools during the indexing process (e.g., exiftool output), and 'sidecar' entries are absorbed from external files that live alongside the indexed item on disk. Sidecar entries carry additional filesystem properties to support MetaMergeDelete reversal operations — reconstructing the original sidecar file from the metadata entry.",
+      "type": "object",
+      "properties": {
+
+        "id": {
+          "description": "The unique identifier of this metadata entry. The ID prefix indicates provenance: 'z' for generated metadata (content that only ever existed in memory before being serialized into the index output), 'y' for sidecar metadata (absorbed from an external file whose content was hashed). The hash portion of the ID is derived from the content of the metadata: for generated entries this is the hash of the serialized output; for sidecar entries this is the hash of the original file's content on disk.",
+          "type": "string",
+          "pattern": "^[yz][0-9A-F]+$"
+        },
+
+        "origin": {
+          "description": "How this metadata entry came into existence. This is the primary discriminator for determining what operations are valid on the entry and what additional fields are present.\n\n  - 'generated': Created by a tool during the indexing process. The data was computed or extracted at index time and never existed as a standalone file. Generated entries will not have file_system, size, or timestamps fields. The id prefix will be 'z'.\n\n  - 'sidecar': Absorbed from an external metadata file (a 'sidecar' file) that was discovered alongside the indexed item. Sidecar entries include file_system, size, and timestamps fields to support reversal of MetaMergeDelete operations. The id prefix will be 'y'.",
+          "type": "string",
+          "enum": ["generated", "sidecar"]
+        },
+
+        "name": {
+          "description": "The name of the metadata source. For sidecar entries this is the original filename of the sidecar file (e.g., 'flashplayer.cfg'). For generated entries both text and hashes are null since the data was never a file.",
+          "$ref": "#/definitions/NameObject"
+        },
+
+        "hashes": {
+          "description": "Hash digests of the metadata content. For sidecar entries these are the hashes of the original file's byte content on disk. For generated entries these are the hashes of the serialized output data (e.g., the JSON string produced by exiftool). These hashes can be used to verify data integrity and to detect whether the metadata content has changed between indexing runs.",
+          "$ref": "#/definitions/HashSet"
+        },
+
+        "file_system": {
+          "description": "Filesystem location information for the original sidecar file. Present only when origin is 'sidecar'. Provides the relative path needed to reconstruct the sidecar file during MetaMergeDelete reversal operations. The parent directory is always the same as the owning indexed item's parent, so it is not repeated here.",
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "relative": {
+                  "description": "The relative path from the index root to the original sidecar file.",
+                  "type": "string"
+                }
+              },
+              "required": ["relative"],
+              "additionalProperties": false
+            }
+          ]
+        },
+
+        "size": {
+          "description": "The size of the original sidecar file. Present only when origin is 'sidecar'. Used during MetaMergeDelete reversal to verify that a reconstructed file matches the original.",
+          "$ref": "#/definitions/SizeObject"
+        },
+
+        "timestamps": {
+          "description": "The filesystem timestamps of the original sidecar file. Present only when origin is 'sidecar'. Used during MetaMergeDelete reversal to restore the original modification, creation, and access times on the reconstructed file.",
+          "$ref": "#/definitions/TimestampsObject"
+        },
+
+        "attributes": {
+          "description": "Classification, format, and transformation information for this metadata entry.",
+          "type": "object",
+          "properties": {
+
+            "type": {
+              "description": "The semantic classification of this metadata entry. Uses a hierarchical dot-notation where a prefix segment identifies the generating tool or source category when that information adds value beyond what the 'origin' field provides.\n\nFor generated metadata, the prefix identifies the tool:\n  - 'exiftool.json_metadata': EXIF/XMP/IPTC metadata extracted by exiftool, delivered as a JSON object.\n\nFor sidecar metadata, no prefix is used (the 'origin' field already indicates sidecar provenance). The type directly names the content classification:\n  - 'description': A text description file, typically produced by youtube-dl or yt-dlp. Expected content is UTF-8 text, possibly with problematic characters.\n  - 'desktop_ini': A Windows desktop.ini file used to customize folder appearance in Explorer.\n  - 'generic_metadata': A generic metadata or configuration file (.cfg, .conf, .config, .yaml, .exif, .meta, .metadata, .comments, .gitattributes, .gitignore). Content format varies.\n  - 'hash': A file containing one or more hash/checksum values (.md5, .sha256, .crc32, etc.).\n  - 'json_metadata': A JSON-formatted metadata file (.info.json, .exifjson, .meta.json, _directorymeta.json, language-code subtitle JSON, etc.).\n  - 'link': A URL shortcut (.url), filesystem shortcut (.lnk), or similar pointer file (.link, .source).\n  - 'screenshot': A screen capture image associated with the indexed item.\n  - 'subtitles': A subtitle or caption track file (.srt, .sub, .sbv, .vtt, .lrc), optionally with a language code.\n  - 'thumbnail': A thumbnail or cover image (.cover, .thumb, .thumbnail, thumbs.db).\n  - 'torrent': A torrent or magnet link file containing peer-to-peer retrieval metadata.\n  - 'error': The metadata entry could not be read or classified. The data field may be null or contain partial/diagnostic information.",
+              "type": "string"
+            },
+
+            "format": {
+              "description": "The serialization format of the 'data' field as stored in this index entry. This tells consumers how to interpret and, if needed, reverse-transform the data.\n\n  - 'json': The data field contains a JSON object or array (parsed, not a string).\n  - 'text': The data field contains a UTF-8 string.\n  - 'base64': The data field contains a Base64-encoded string representing binary content. The original binary content can be recovered by Base64-decoding the string. When this format is used, the 'source_media_type' field should also be present to identify the decoded content type.\n  - 'lines': The data field contains an array of strings, one per line. Used for hash files and subtitle files where line-level structure is semantically meaningful.",
+              "type": "string",
+              "enum": ["json", "text", "base64", "lines"]
+            },
+
+            "source_media_type": {
+              "description": "The MIME type of the original source data before any transformations were applied. Present only when the stored format differs from the original (i.e., when 'transforms' is non-empty and the original was a binary or non-text format). Primary use case: binary sidecar files (screenshots, thumbnails, torrents) where the data is stored as Base64 but the original bytes represent a specific media type (e.g., 'image/png', 'image/jpeg', 'application/x-bittorrent').",
+              "type": "string"
+            },
+
+            "transforms": {
+              "description": "An ordered list of transformations that were applied to the source data before storing it in the 'data' field. The list is ordered from first-applied to last-applied. To reverse the storage and recover the original data, apply the inverse of each transform in reverse order.\n\nDefined transform identifiers:\n  - 'base64_encode': The source data (raw bytes) was Base64-encoded into a string for JSON-safe storage. Inverse: Base64-decode the string to recover the original bytes.\n  - 'json_compact': The source JSON was compacted (whitespace removed). Inverse: none needed (compaction is lossless).\n  - 'line_split': The source text was split into an array of lines with empty lines filtered out. Inverse: join the array elements with the platform line separator.\n  - 'key_filter': Specific keys were removed from a JSON object (e.g., exiftool system keys). Inverse: not reversible (filtered keys are not stored).\n\nAn empty array means the data is stored as-is with no transformations applied.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": ["type", "format", "transforms"],
+          "additionalProperties": false
+        },
+
+        "data": {
+          "description": "The metadata content. The structure of this field varies based on the 'attributes.format' value: when format is 'json' this is a JSON object or array; when format is 'text' or 'base64' this is a string; when format is 'lines' this is an array of strings. May be null if the metadata could not be read (type is 'error').",
+          "type": ["null", "string", "object", "array"]
+        }
+      },
+      "required": ["id", "origin", "name", "hashes", "attributes", "data"],
+      "additionalProperties": false
+    }
+  },
+
+  "properties": {
+
+    "schema_version": {
+      "description": "The version of the index entry schema. This document defines version 2. Version 1 corresponds to the original MakeIndex PowerShell output format.",
+      "type": "integer",
+      "const": 2
+    },
+
+    "id": {
+      "description": "The primary unique identifier for this indexed item. The first character is a type prefix: 'y' for files (derived from content hash), 'x' for directories (derived from directory+parent name hash). The remaining characters are the uppercase hexadecimal hash digest selected by 'id_algorithm'. For files, the hash is computed over the file's byte content (or over the file's name string if the file is a symbolic link). For directories, the hash is computed by a two-layer scheme: hash(directory_name) concatenated with hash(parent_directory_name), then hashed again.",
+      "type": "string",
+      "pattern": "^[xy][0-9A-F]+$"
+    },
+
+    "id_algorithm": {
+      "description": "The hash algorithm used to generate the 'id' field. This determines which hash from the full set of computed hashes is used as the canonical identifier and, by extension, as the basis for 'attributes.storage_name'. The default is 'md5'. Legacy workflows that require SHA-256-based identifiers should set this to 'sha256'. The value is always lowercase.",
+      "type": "string",
+      "enum": ["md5", "sha256"]
+    },
+
+    "type": {
+      "description": "The fundamental filesystem type of the indexed item. Replaces the v1 dual-boolean pattern (IsDirectory + IsFile) with a single discriminator.\n\n  - 'file': A regular file.\n  - 'directory': A directory (folder). Directory entries may contain an 'items' array with recursively-nested IndexEntry objects.",
+      "type": "string",
+      "enum": ["file", "directory"]
+    },
+
+    "name": {
+      "description": "The name of the indexed file or directory. For files this includes the extension. Does not include any path components.",
+      "$ref": "#/definitions/NameObject"
+    },
+
+    "extension": {
+      "description": "The file extension without the leading period (e.g., 'exe', 'json', 'tar.gz'). Null for directories.",
+      "type": ["string", "null"]
+    },
+
+    "mime_type": {
+      "description": "The MIME type of the file as detected by the indexer (e.g., 'application/octet-stream', 'text/plain', 'image/png'). Null for directories. Detection is based on file extension and/or content inspection, not solely on the extension.",
+      "type": ["string", "null"]
+    },
+
+    "size": {
+      "description": "The size of the item. For files, this is the file size. For directories, this is the total combined size of all contained files and subdirectories.",
+      "$ref": "#/definitions/SizeObject"
+    },
+
+    "hashes": {
+      "description": "Hash digests of the item's content. For files, these are computed over the file's byte content (or over the file's name string if the file is a symbolic link, ensuring deterministic IDs without requiring the link target to be accessible). Null for directories (directory identity is derived from name hashing, not content hashing).",
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/definitions/HashSet" }
+      ]
+    },
+
+    "file_system": {
+      "description": "Filesystem location and hierarchy information for the indexed item.",
+      "type": "object",
+      "properties": {
+        "relative": {
+          "description": "The relative path from the index root to this item, using forward-slash separators regardless of the source platform.",
+          "type": "string"
+        },
+        "parent": {
+          "description": "Identity and naming information for this item's parent directory. Null for the root item of a single-file index operation where the parent directory is not meaningful.",
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/definitions/ParentObject" }
+          ]
+        }
+      },
+      "required": ["relative", "parent"],
+      "additionalProperties": false
+    },
+
+    "timestamps": {
+      "description": "The filesystem timestamps for the indexed item.",
+      "$ref": "#/definitions/TimestampsObject"
+    },
+
+    "attributes": {
+      "description": "Filesystem attributes and storage information for the indexed item.",
+      "type": "object",
+      "properties": {
+        "is_link": {
+          "description": "Whether the item is a symbolic link (symlink). When true, the item's content hashes are computed from the file name string rather than the file content, since the link target may not be accessible.",
+          "type": "boolean"
+        },
+        "storage_name": {
+          "description": "The name assigned to this item for use in renamed/storage mode. For files: the id followed by a period and the extension (e.g., 'yA8A8C089A6A8583B24C85F5A4A41F5AC.exe'). For directories: identical to the id (e.g., 'x3B4F479E9F880E438882FC34B67D352C'). This value is used when the indexer operates with the Rename flag to derive the on-disk name for the renamed item.",
+          "type": "string"
+        }
+      },
+      "required": ["is_link", "storage_name"],
+      "additionalProperties": false
+    },
+
+    "items": {
+      "description": "Child items contained within this directory. Present only when the indexed item is a directory and the indexer is operating in recursive or directory mode. Each element is a complete IndexEntry conforming to this same schema. Null for files and for directories indexed in non-recursive mode.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "array",
+          "items": { "$ref": "#" }
+        }
+      ]
+    },
+
+    "metadata": {
+      "description": "An array of metadata records associated with this indexed item. For files, this typically includes at least an exiftool-generated entry (when the -Meta flag is active and the file type is not in the exclusion list) and any sidecar metadata files discovered alongside the item (when MetaMerge is active). For directories, this is null or omitted. Each entry in the array is a self-contained MetadataEntry object with its own identity, provenance, classification, and data payload.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/definitions/MetadataEntry" }
+        }
+      ]
+    }
+  },
+
+  "required": [
+    "schema_version",
+    "id",
+    "id_algorithm",
+    "type",
+    "name",
+    "extension",
+    "size",
+    "hashes",
+    "file_system",
+    "timestamps",
+    "attributes"
+  ],
+  "additionalProperties": false
+}

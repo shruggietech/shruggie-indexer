@@ -1,0 +1,1 @@
+# Shruggie-Indexer — Technical Specification
