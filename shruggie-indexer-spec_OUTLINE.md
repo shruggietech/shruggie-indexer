@@ -58,25 +58,41 @@
 
 ### 5.1. Schema Overview
 
-### 5.2. Top-Level IndexEntry Fields
+### 5.2. Reusable Type Definitions
 
-### 5.3. Identity Fields
+#### 5.2.1. HashSet
 
-### 5.4. Filesystem Metadata Fields
+#### 5.2.2. NameObject
 
-### 5.5. Relationship Fields
+#### 5.2.3. SizeObject
 
-### 5.6. Timestamp Fields
+#### 5.2.4. TimestampPair
 
-### 5.7. Recursive Items Field
+#### 5.2.5. TimestampsObject
 
-### 5.8. Metadata Array and MetadataEntry Fields
+#### 5.2.6. ParentObject
 
-### 5.9. Dropped Fields
+### 5.3. Top-Level IndexEntry Fields
 
-### 5.10. Schema Validation and Enforcement
+### 5.4. Identity Fields
 
-### 5.11. Backward Compatibility Considerations
+### 5.5. Naming and Content Fields
+
+### 5.6. Filesystem Location and Hierarchy Fields
+
+### 5.7. Timestamp Fields
+
+### 5.8. Attribute Fields
+
+### 5.9. Recursive Items Field
+
+### 5.10. Metadata Array and MetadataEntry Fields
+
+### 5.11. Dropped and Restructured Fields
+
+### 5.12. Schema Validation and Enforcement
+
+### 5.13. Backward Compatibility Considerations
 
 ## 6. Core Operations
 
