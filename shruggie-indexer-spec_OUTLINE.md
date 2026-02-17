@@ -166,104 +166,120 @@
 
 ### 9.5. Programmatic Usage Examples
 
-## 10. Logging and Diagnostics
+## 10. GUI Application
 
-### 10.1. Logging Architecture
+### 10.1. GUI Framework and Architecture
 
-### 10.2. Logger Naming Hierarchy
+### 10.2. Window Layout
 
-### 10.3. Log Levels and CLI Flag Mapping
+### 10.3. Target Selection and Input
 
-### 10.4. Session Identifiers
+### 10.4. Configuration Panel
 
-### 10.5. Log Output Destinations
+### 10.5. Indexing Execution and Progress
 
-### 10.6. Progress Reporting
+### 10.6. Output Display and Export
 
-## 11. External Dependencies
+### 10.7. Keyboard Shortcuts and Accessibility
 
-### 11.1. Required External Binaries
+## 11. Logging and Diagnostics
 
-### 11.2. Python Standard Library Modules
+### 11.1. Logging Architecture
 
-### 11.3. Third-Party Python Packages
+### 11.2. Logger Naming Hierarchy
 
-### 11.4. Eliminated Original Dependencies
+### 11.3. Log Levels and CLI Flag Mapping
 
-### 11.5. Dependency Verification at Runtime
+### 11.4. Session Identifiers
 
-## 12. Packaging and Distribution
+### 11.5. Log Output Destinations
 
-### 12.1. Package Metadata
+### 11.6. Progress Reporting
 
-### 12.2. pyproject.toml Configuration
+## 12. External Dependencies
 
-### 12.3. Entry Points and Console Scripts
+### 12.1. Required External Binaries
 
-### 12.4. Standalone Executable Builds
+### 12.2. Python Standard Library Modules
 
-### 12.5. Release Artifact Inventory
+### 12.3. Third-Party Python Packages
 
-### 12.6. Version Management
+### 12.4. Eliminated Original Dependencies
 
-## 13. Testing
+### 12.5. Dependency Verification at Runtime
 
-### 13.1. Testing Strategy
+## 13. Packaging and Distribution
 
-### 13.2. Unit Test Coverage
+### 13.1. Package Metadata
 
-### 13.3. Integration Tests
+### 13.2. pyproject.toml Configuration
 
-### 13.4. Output Schema Conformance Tests
+### 13.3. Entry Points and Console Scripts
 
-### 13.5. Cross-Platform Test Matrix
+### 13.4. Standalone Executable Builds
 
-### 13.6. Backward Compatibility Validation
+### 13.5. Release Artifact Inventory
 
-### 13.7. Performance Benchmarks
+### 13.6. Version Management
 
-## 14. Platform Portability
+## 14. Testing
 
-### 14.1. Cross-Platform Design Principles
+### 14.1. Testing Strategy
 
-### 14.2. Windows-Specific Considerations
+### 14.2. Unit Test Coverage
 
-### 14.3. Linux and macOS Considerations
+### 14.3. Integration Tests
 
-### 14.4. Filesystem Behavior Differences
+### 14.4. Output Schema Conformance Tests
 
-### 14.5. Creation Time Portability
+### 14.5. Cross-Platform Test Matrix
 
-### 14.6. Symlink and Reparse Point Handling
+### 14.6. Backward Compatibility Validation
 
-## 15. Security and Safety
+### 14.7. Performance Benchmarks
 
-### 15.1. Symlink Traversal Safety
+## 15. Platform Portability
 
-### 15.2. Path Validation and Sanitization
+### 15.1. Cross-Platform Design Principles
 
-### 15.3. Temporary File Handling
+### 15.2. Windows-Specific Considerations
 
-### 15.4. Metadata Merge-Delete Safeguards
+### 15.3. Linux and macOS Considerations
 
-### 15.5. Large File and Deep Recursion Handling
+### 15.4. Filesystem Behavior Differences
 
-## 16. Performance Considerations
+### 15.5. Creation Time Portability
 
-### 16.1. Multi-Algorithm Hashing in a Single Pass
+### 15.6. Symlink and Reparse Point Handling
 
-### 16.2. Chunked File Reading
+## 16. Security and Safety
 
-### 16.3. Large Directory Tree Handling
+### 16.1. Symlink Traversal Safety
 
-### 16.4. JSON Serialization for Large Output Trees
+### 16.2. Path Validation and Sanitization
 
-### 16.5. Exiftool Invocation Strategy
+### 16.3. Temporary File Handling
 
-## 17. Future Considerations
+### 16.4. Metadata Merge-Delete Safeguards
 
-### 17.1. Potential Feature Additions
+### 16.5. Large File and Deep Recursion Handling
 
-### 17.2. Schema Evolution
+## 17. Performance Considerations
 
-### 17.3. Plugin or Extension Architecture
+### 17.1. Multi-Algorithm Hashing in a Single Pass
+
+### 17.2. Chunked File Reading
+
+### 17.3. Large Directory Tree Handling
+
+### 17.4. JSON Serialization for Large Output Trees
+
+### 17.5. Exiftool Invocation Strategy
+
+## 18. Future Considerations
+
+### 18.1. Potential Feature Additions
+
+### 18.2. Schema Evolution
+
+### 18.3. Plugin or Extension Architecture

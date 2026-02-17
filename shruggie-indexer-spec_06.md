@@ -256,7 +256,7 @@ The port computes MD5 and SHA256 by default for all hash operations. SHA512 is c
 
 #### Multi-algorithm single-pass hashing
 
-`hash_file()` reads the file in fixed-size chunks and feeds each chunk to all active hash objects simultaneously. This is the core performance optimization described in §16.1:
+`hash_file()` reads the file in fixed-size chunks and feeds each chunk to all active hash objects simultaneously. This is the core performance optimization described in §17.1:
 
 ```python
 # Illustrative — not the exact implementation.
@@ -428,7 +428,7 @@ Unix timestamps are derived directly from the stat result's floating-point value
 
 #### Creation time portability
 
-Creation time handling varies by platform and is one of the primary portability concerns for the timestamp module (see §14.5 for the full platform analysis). The resolution strategy is:
+Creation time handling varies by platform and is one of the primary portability concerns for the timestamp module (see §15.5 for the full platform analysis). The resolution strategy is:
 
 1. Attempt `stat_result.st_birthtime`. This is the true file creation time and is available on macOS (all filesystems), Windows (NTFS), and some Linux configurations (kernel 4.11+ with `statx` support on ext4/XFS/Btrfs). If the attribute exists, use it.
 

@@ -56,7 +56,7 @@ The original PowerShell source code is closed-source and is not included in the 
 
 **NG3 — Drop-in PowerShell replacement.** The port does not replicate the original's PowerShell parameter interface, its `-OutputObject` / `-OutputJson` switch pattern, or its integration with the pslib global state (`$global:MetadataFileParser`, `$global:DeleteQueue`, `$LibSessionID`). The Python tool has its own CLI, API, and configuration system designed for the Python ecosystem.
 
-**NG4 — Real-time or watch-mode indexing.** The tool processes a target path and produces output. It does not monitor the filesystem for changes or re-index automatically. File-watching functionality is a potential future enhancement (see §17) but is not part of the MVP.
+**NG4 — Real-time or watch-mode indexing.** The tool processes a target path and produces output. It does not monitor the filesystem for changes or re-index automatically. File-watching functionality is a potential future enhancement (see §18) but is not part of the MVP.
 
 **NG5 — Database or server backend.** Index output is written to JSON files or stdout. The tool does not write to databases, expose an HTTP API, or provide query functionality over indexed data. Downstream consumers ingest the JSON output using their own storage and query infrastructure.
 
@@ -148,7 +148,7 @@ This section catalogs the architectural and behavioral decisions where the port 
 
 **Original:** `Vbs` is a custom structured logging function that is the most widely-called function in the pslib library. It implements its own severity normalization, colorized console output via `Write-Host`, call-stack compression (`A:A:A` → `A(3)`), session ID embedding, monthly log file rotation, and log directory bootstrapping — all manually.
 
-**Port:** Python's `logging` standard library module provides all of these capabilities natively or through standard handlers: severity levels, formatters for console and file output, `RotatingFileHandler` or `TimedRotatingFileHandler` for log rotation, and built-in caller information. The port uses a logger hierarchy rooted at `shruggie_indexer` with per-module child loggers. See §10.
+**Port:** Python's `logging` standard library module provides all of these capabilities natively or through standard handlers: severity levels, formatters for console and file output, `RotatingFileHandler` or `TimedRotatingFileHandler` for log rotation, and built-in caller information. The port uses a logger hierarchy rooted at `shruggie_indexer` with per-module child loggers. See §11.
 
 #### DEV-09 — Computed null-hash constants
 
@@ -178,7 +178,7 @@ This section catalogs the architectural and behavioral decisions where the port 
 
 **Original:** `ValidateIsLink` is listed as a dependency in the `MakeIndex` docstring but is never actually called — `FileId` and `DirectoryId` perform symlink detection inline. `UpdateFunctionStack` and `VariableStringify` are internal utility functions whose purposes are absorbed by Python built-ins.
 
-**Port:** These functions are not carried forward. See §11.4.
+**Port:** These functions are not carried forward. See §12.4.
 
 #### DEV-14 — Configurable extension validation
 

@@ -29,7 +29,7 @@ shruggie-indexer/
 
 | Path | Type | Description |
 |------|------|-------------|
-| `.github/workflows/` | Directory | GitHub Actions CI/CD pipeline definitions. Contains at minimum `release.yml` for the release build pipeline (see §12). |
+| `.github/workflows/` | Directory | GitHub Actions CI/CD pipeline definitions. Contains at minimum `release.yml` for the release build pipeline (see §13). |
 | `docs/` | Directory | All project documentation beyond the top-level planning and specification files. Subdivided into `porting-reference/` (original implementation reference materials) and `user/` (end-user documentation). See §3.6. |
 | `scripts/` | Directory | Platform-paired shell scripts for development environment setup, build automation, and test execution. See §3.5. |
 | `src/shruggie_indexer/` | Directory | The Python source package. All importable code lives here. See §3.2. |
@@ -38,7 +38,7 @@ shruggie-indexer/
 | `.python-version` | File | Contains the string `3.12` (no minor patch). Used by `pyenv` and similar version managers to auto-select the correct interpreter. |
 | `LICENSE` | File | Full Apache 2.0 license text, obtained from [https://www.apache.org/licenses/LICENSE-2.0.txt](https://www.apache.org/licenses/LICENSE-2.0.txt). |
 | `README.md` | File | Project overview, installation instructions, quick-start usage examples, and links to full documentation. |
-| `pyproject.toml` | File | Centralized project metadata, build system configuration, dependency declarations, entry points, and tool settings (`ruff`, `pytest`, `pyinstaller`). See §12.2. |
+| `pyproject.toml` | File | Centralized project metadata, build system configuration, dependency declarations, entry points, and tool settings (`ruff`, `pytest`, `pyinstaller`). See §13.2. |
 | `shruggie-indexer-plan.md` | File | Sprint-based implementation plan. Lives at the repository root for top-level visibility, consistent with `shruggie-feedtools`. |
 | `shruggie-indexer-spec.md` | File | This technical specification (or a consolidated single-file version of it). Lives at the repository root for top-level visibility. |
 
@@ -229,7 +229,7 @@ Scripts are provided in platform-paired sets: `.ps1` (PowerShell, for Windows) a
 | Script Pair | Purpose |
 |-------------|---------|
 | `venv-setup.ps1` / `venv-setup.sh` | Creates a Python virtual environment (`.venv/`), activates it, installs the package in editable mode (`pip install -e ".[dev,gui]"`), and verifies that the `shruggie-indexer` console script is available. Checks for the correct Python version before proceeding. Idempotent — safe to re-run. |
-| `build.ps1` / `build.sh` | Runs the PyInstaller build to produce standalone executables. Builds both the CLI executable and the GUI executable as separate artifacts. Outputs to `dist/`. See §12.4. |
+| `build.ps1` / `build.sh` | Runs the PyInstaller build to produce standalone executables. Builds both the CLI executable and the GUI executable as separate artifacts. Outputs to `dist/`. See §13.4. |
 | `test.ps1` / `test.sh` | Runs the full test suite via `pytest`. Accepts optional arguments to control scope (e.g., `./test.sh unit` to run only unit tests). Sets up any required environment variables and ensures the virtual environment is active. |
 
 Scripts MUST be executable without arguments for the default behavior. Optional arguments (e.g., test scope, build target) are documented in a comment block at the top of each script.

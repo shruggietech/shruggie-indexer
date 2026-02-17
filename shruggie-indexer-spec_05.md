@@ -107,7 +107,7 @@ A `TimestampPair` expresses a single timestamp in both ISO 8601 local-time and U
 
 **v1 comparison:** v1 uses separate top-level field pairs — `TimeAccessed` / `UnixTimeAccessed`, `TimeCreated` / `UnixTimeCreated`, `TimeModified` / `UnixTimeModified`. v2's `TimestampPair` consolidates each pair into a single object and nests them inside a `TimestampsObject` (see §5.2.5).
 
-**Fractional seconds precision:** The original's `.ToString($DateFormat)` uses the `fffffff` format specifier, which produces 7 fractional digits (100-nanosecond precision, the resolution of .NET's `DateTime` type). Python's `datetime.isoformat()` produces 6 fractional digits by default (microsecond precision). This is an acceptable deviation — the 7th digit is almost always `0` in practice because filesystem timestamps rarely carry sub-microsecond precision. The ISO string format SHOULD include all available fractional digits without artificial truncation or zero-padding to a specific width. See §6.5 for the timestamp derivation logic and §14.5 for cross-platform precision considerations.
+**Fractional seconds precision:** The original's `.ToString($DateFormat)` uses the `fffffff` format specifier, which produces 7 fractional digits (100-nanosecond precision, the resolution of .NET's `DateTime` type). Python's `datetime.isoformat()` produces 6 fractional digits by default (microsecond precision). This is an acceptable deviation — the 7th digit is almost always `0` in practice because filesystem timestamps rarely carry sub-microsecond precision. The ISO string format SHOULD include all available fractional digits without artificial truncation or zero-padding to a specific width. See §6.5 for the timestamp derivation logic and §15.5 for cross-platform precision considerations.
 
 **Millisecond Unix timestamps:** The `unix` value is in milliseconds, not seconds. This matches the original's `[DateTimeOffset]::ToUnixTimeMilliseconds()` and is computed in the port as `int(stat_result.st_mtime * 1000)`. See DEV-07 in §2.6.
 
@@ -125,7 +125,7 @@ A `TimestampsObject` groups the three standard filesystem timestamps.
 
 **Access time caveat:** Filesystem access-time tracking varies by OS and mount options. Linux systems mounted with `noatime` or `relatime` (the default on most distributions) may report stale or approximate access times. The indexer reports whatever the filesystem provides via `os.stat()` without attempting to validate accuracy. Consumers SHOULD NOT rely on `accessed` timestamps for precise behavioral analysis.
 
-**Creation time portability:** On Windows, `os.stat().st_birthtime` (Python 3.12+) or `st_ctime` provides the file creation time. On Linux, `st_birthtime` is available on Python 3.12+ for filesystems that support it (ext4 with kernel 4.11+); on older kernels or unsupported filesystems, it is unavailable. On macOS, `st_birthtime` is generally available. When creation time is not available, the implementation MUST fall back to `st_ctime` (which on Linux represents the inode change time, not the creation time) and SHOULD log a diagnostic message on the first occurrence per invocation. See §14.5 for the full cross-platform discussion.
+**Creation time portability:** On Windows, `os.stat().st_birthtime` (Python 3.12+) or `st_ctime` provides the file creation time. On Linux, `st_birthtime` is available on Python 3.12+ for filesystems that support it (ext4 with kernel 4.11+); on older kernels or unsupported filesystems, it is unavailable. On macOS, `st_birthtime` is generally available. When creation time is not available, the implementation MUST fall back to `st_ctime` (which on Linux represents the inode change time, not the creation time) and SHOULD log a diagnostic message on the first occurrence per invocation. See §15.5 for the full cross-platform discussion.
 
 #### 5.2.6. ParentObject
 
@@ -316,7 +316,7 @@ The size of the item. For files, `size.bytes` is the file size as reported by `o
 
 Hash digests of the item's content.
 
-For **files**: the `HashSet` contains digests computed over the file's byte content in a single streaming pass (see §6.3 and §16.1). If the file is a symbolic link, the hashes are computed over the UTF-8 encoded bytes of the file's name string instead, ensuring deterministic IDs without requiring the link target to be accessible.
+For **files**: the `HashSet` contains digests computed over the file's byte content in a single streaming pass (see §6.3 and §17.1). If the file is a symbolic link, the hashes are computed over the UTF-8 encoded bytes of the file's name string instead, ensuring deterministic IDs without requiring the link target to be accessible.
 
 For **directories**: `null`. Directory identity is derived from name hashing (the two-layer scheme), not content hashing. The directory's name hashes are in `name.hashes`.
 
@@ -365,7 +365,7 @@ The three standard filesystem timestamps, each as a `TimestampPair` (§5.2.4) pr
 
 **v1 comparison:** v1 uses six separate top-level fields for three timestamps (two formats each). v2 nests them in a single `TimestampsObject` containing three `TimestampPair` values. The semantic content is identical; the structural organization is consolidated.
 
-**Derivation:** All timestamps are derived from `os.stat()` / `os.lstat()` results. The ISO string is produced from a `datetime` object constructed from the stat float, with the local timezone offset attached. The Unix millisecond integer is computed directly from the stat float. See §6.5 for implementation details and §14.5 for cross-platform behavior.
+**Derivation:** All timestamps are derived from `os.stat()` / `os.lstat()` results. The ISO string is produced from a `datetime` object constructed from the stat float, with the local timezone offset attached. The Unix millisecond integer is computed directly from the stat float. See §6.5 for implementation details and §15.5 for cross-platform behavior.
 
 ### 5.8. Attribute Fields
 
@@ -599,7 +599,7 @@ This section documents every v1 field that is absent from v2 and every v1 field 
 
 #### Build-time validation
 
-The canonical v2 JSON Schema (`shruggie-indexer-v2.schema.json`) MUST be used as the validation target for output conformance testing (see §13.4). The test suite SHOULD include a schema conformance test that:
+The canonical v2 JSON Schema (`shruggie-indexer-v2.schema.json`) MUST be used as the validation target for output conformance testing (see §14.4). The test suite SHOULD include a schema conformance test that:
 
 1. Generates index entries for a representative set of inputs (files of various types, directories, symlinks, items with sidecar metadata, items without metadata).
 2. Validates each generated entry against the canonical JSON Schema using a Draft-07-compliant validator (e.g., `jsonschema` Python package).
