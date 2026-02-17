@@ -149,7 +149,7 @@ The tool MUST operate correctly using only compiled defaults — no configuratio
 | Field | Default | Rationale |
 |-------|---------|-----------|
 | `recursive` | `True` | Matches original: recursion is on unless `-NotRecursive` is specified. |
-| `id_algorithm` | `"sha256"` | Matches original: `$IdType` defaults to `"SHA256"`. |
+| `id_algorithm` | `"md5"` | Deviates from original `$IdType` based on a majority of historical user preference. |
 | `compute_sha512` | `False` | SHA512 is available but not computed by default for performance. The original does not compute SHA512 at runtime either (despite declaring it in the output schema). |
 | `output_stdout` | `True` (conditional) | Applied via the defaulting logic in §7.1 — only `True` when no file-based output is active. |
 | `output_file` | `None` | No aggregate output file by default. |
@@ -162,13 +162,50 @@ The tool MUST operate correctly using only compiled defaults — no configuratio
 
 #### Extension validation pattern
 
+**Original pattern (from MakeObject, line ~8710):**
+
 ```python
-EXTENSION_VALIDATION_PATTERN = r"^(([a-z0-9]){1,2}|([a-z0-9])([a-z0-9\-]){1,12}([a-z0-9]))$"
+EXTENSION_VALIDATION_PATTERN_ORIGINAL = r"^(([a-z0-9]){1,2}|([a-z0-9])([a-z0-9\-]){1,12}([a-z0-9]))$"
 ```
 
-This is the original's extension validation regex from `MakeObject` (line ~8710), transcribed exactly. It accepts lowercase alphanumeric extensions of 1–14 characters where hyphens are permitted in interior positions but not at the start or end. The regex is applied to the extension string *without* the leading dot (e.g., `"mp4"`, not `".mp4"`).
+This is the original's extension validation regex, transcribed exactly. It accepts lowercase alphanumeric extensions of 1–14 characters where hyphens are permitted in interior positions but not at the start or end. The regex is applied to the extension string *without* the leading dot (e.g., `"mp4"`, not `".mp4"`).
 
-This pattern is configurable (DEV-14) — users who encounter legitimate extensions rejected by this pattern can relax it in their config file. The default preserves the original's behavior.
+**Known edge case:** The original implementation treats dotfiles (Unix hidden files like `.gitignore`, `.bashrc` that begin with a dot and contain no other dots) as having an extension equal to the entire name after the dot. When `MakeObject` encounters `.gitignore`, it extracts `gitignore` as the extension and validates it against the pattern above. This is a semantic error — by convention, dotfiles have no file extension.
+
+**Improved validation (with dotfile protection):**
+
+The port fixes this edge case with a two-stage validation strategy:
+
+1. **Dotfile detection (prerequisite check):** Before applying the extension validation regex, determine whether the file is a dotfile. A filename is classified as a dotfile if:
+   - Its basename (after stripping directory path) begins with a dot
+   - The basename contains **no additional dots** beyond the initial one
+   
+   Files matching this pattern are dotfiles. They have **no extension** and MUST NOT be subjected to extension validation.
+
+2. **Extension pattern validation:** For files that are NOT dotfiles and have an extracted extension, apply the regex:
+
+   ```python
+   EXTENSION_VALIDATION_PATTERN = r"^(([a-z0-9]){1,2}|([a-z0-9])([a-z0-9\-]){1,12}([a-z0-9]))$"
+   ```
+
+The regex itself is unchanged from the original, ensuring backward compatibility for all existing valid extensions. The improvement lies in the guarding logic that prevents incorrect application to dotfiles.
+
+**Validation examples:**
+
+| Filename | Dotfile? | Extracted Extension | Validation Result |
+|----------|----------|---------------------|-------------------|
+| `video.mp4` | No | `mp4` | ✓ Validates against regex |
+| `.gitignore` | Yes | *(none)* | ✓ Regex not applied (dotfile) |
+| `.bashrc` | Yes | *(none)* | ✓ Regex not applied (dotfile) |
+| `.vimrc` | Yes | *(none)* | ✓ Regex not applied (dotfile) |
+| `.config.json` | No | `json` | ✓ Validates against regex |
+| `archive.tar.gz` | No | `gz` | ✓ Validates against regex |
+| `main.js` | No | `js` | ✓ Validates against regex |
+| `.DS_Store` | Yes | *(none)* | ✓ Regex not applied (dotfile) |
+
+**Implementation note:** The Python `os.path.splitext()` function exhibits the dotfile behavior inherited from the original — `os.path.splitext(".gitignore")` returns `(".gitignore", "")`, correctly treating the file as having no extension. The port's implementation in `core/filesystem.py` (§6.2) leverages this behavior and adds an explicit dotfile check to ensure the extension validation step is skipped entirely for these files.
+
+This pattern remains configurable (DEV-14) — users who encounter legitimate extensions rejected by the pattern can relax it in their config file. The default preserves the original's validation logic while fixing the dotfile semantic error.
 
 #### Filesystem exclusion defaults
 
@@ -310,7 +347,7 @@ The complete pattern inventory, transcribed from `MakeIndex(MetadataFileParser).
 **JsonMetadata:**
 ```python
 (
-    r'_directorymeta\.json$',
+    r'_directorymeta2?\.json$',
     r'_(subs|subtitles)\.json$',
     # BCP 47 language-code subtitles in JSON format
     r'\.(aa|af|sq|gsw-fr|ase|am|ar|arq|abv|arz|acm|ajp|afb-kw|apc|ayl|ary|acx|'
@@ -386,19 +423,21 @@ The Subtitles pattern list reuses the same BCP 47 language-code alternation as t
 
 The original's `$MetadataFileParser.Indexer` sub-object contains two derived arrays:
 
-- `Exclude`: Regex patterns for files that should be excluded from the index entirely (e.g., existing `_meta.json` sidecar files, thumbnail database files). These files are not indexed as standalone items when encountered during traversal.
+- `Exclude`: Regex patterns for files that should be excluded from the index entirely (e.g., existing indexer sidecar output files, thumbnail database files). These files are not indexed as standalone items when encountered during traversal.
 - `Include`: A union of all patterns from the `Identify` sub-object, computed at load time by iterating `$MetadataFileParser.Identify.Keys` and collecting all per-type patterns into a flat array.
 - `ExcludeString` / `IncludeString`: The `Exclude` and `Include` arrays joined with `|` into single alternation strings.
 
-The port preserves the `Exclude` patterns as `metadata_exclude_patterns`:
+The port preserves and extends the `Exclude` patterns as `metadata_exclude_patterns`:
 
 ```python
 METADATA_EXCLUDE_PATTERNS = (
-    re.compile(r'_(meta|directorymeta)\.json$', re.IGNORECASE),
+    re.compile(r'_(meta2?|directorymeta2?)\.json$', re.IGNORECASE),
     re.compile(r'\.(cover|thumb|thumb(s|db|index|nail))$', re.IGNORECASE),
     re.compile(r'^(thumb|thumb(s|db|index|nail))\.db$', re.IGNORECASE),
 )
 ```
+
+**v1/v2 sidecar coexistence in the exclusion pattern.** The first pattern uses the `2?` quantifier to match both the original v1 naming convention (`_meta.json`, `_directorymeta.json`) and the port's v2 naming convention (`_meta2.json`, `_directorymeta2.json`). This is necessary because the indexer may operate on directory trees that contain legacy v1 sidecar files from previous `MakeIndex` runs, newly generated v2 sidecar files from the port, or both simultaneously during a migration period. Both generations of sidecar output files are indexer artifacts and MUST be excluded from traversal to prevent the indexer from indexing its own output. See §5.13 for the full v1/v2 coexistence rationale and §6.9 for the v2 naming convention used by the serializer.
 
 > **Improvement over original:** The original pre-joins the `Include` and `Exclude` arrays into single `IncludeString` / `ExcludeString` alternation strings for use with PowerShell's `-match` operator. This is an optimization for PowerShell's regex engine, which compiles the pattern on every `-match` call. In Python, patterns are compiled once via `re.compile()` and reused. The pre-joined alternation strings are unnecessary — the port stores individual compiled patterns and iterates them. This is equally fast for the small number of patterns involved (typically under 30 total) and simpler to maintain, debug, and extend. The `IncludeString` / `ExcludeString` fields are not ported.
 
@@ -471,7 +510,7 @@ This means type ordering in the configuration is significant when patterns could
 
 #### Indexer exclusion during traversal
 
-Independently from sidecar identification, the traversal module (§6.1) and entry construction module (§6.8) use `metadata_exclude_patterns` to skip certain files entirely. These are files that are themselves indexer output artifacts (e.g., `_meta.json`, `_directorymeta.json`) or thumbnail databases that are not meaningful to index. When MetaMerge is active, files matching any `metadata_identify` pattern for the current item's basename are also excluded from the regular item list (they are processed as sidecars rather than indexed as standalone items).
+Independently from sidecar identification, the traversal module (§6.1) and entry construction module (§6.8) use `metadata_exclude_patterns` to skip certain files entirely. These are files that are themselves indexer output artifacts — both v1 legacy sidecars (`_meta.json`, `_directorymeta.json`) and v2 sidecars (`_meta2.json`, `_directorymeta2.json`) — or thumbnail databases that are not meaningful to index. When MetaMerge is active, files matching any `metadata_identify` pattern for the current item's basename are also excluded from the regular item list (they are processed as sidecars rather than indexed as standalone items).
 
 The distinction is important: `metadata_identify` determines *type classification* of sidecars. `metadata_exclude_patterns` determines which files to *skip entirely* during traversal. The two systems are complementary but serve different purposes.
 
@@ -513,7 +552,7 @@ A complete example showing every configurable field:
 
 # Traversal and identity
 recursive = true
-id_algorithm = "sha256"       # "md5" or "sha256"
+id_algorithm = "md5"          # "md5" or "sha256"
 compute_sha512 = false
 
 # Output routing (typically set via CLI, not config file)
@@ -577,7 +616,7 @@ desktop_ini = ['\.desktop\.ini$', 'desktop\.ini$']
 
 [metadata_exclude]
 patterns = [
-    '_(meta|directorymeta)\.json$',
+    '_(meta2?|directorymeta2?)\.json$',
     '\.(cover|thumb|thumb(s|db|index|nail))$',
     '^(thumb|thumb(s|db|index|nail))\.db$',
 ]
@@ -614,7 +653,7 @@ When multiple configuration layers are present (compiled defaults, user config f
 
 For scalar fields (`bool`, `str`, `Path | None`, `int`), the highest-priority layer that specifies a value wins. Lower-priority values are completely replaced.
 
-Example: If the compiled default for `id_algorithm` is `"sha256"` and the user config file specifies `id_algorithm = "md5"`, the resolved value is `"md5"`. If the CLI then passes `--id-type sha256`, the resolved value reverts to `"sha256"`.
+Example: If the compiled default for `id_algorithm` is `"md5"` and the user config file specifies `id_algorithm = "sha256"`, the resolved value is `"sha256"`. If the CLI then passes `--id-type md5`, the resolved value reverts to `"md5"`.
 
 #### Collection fields: replace by default, append on request
 
