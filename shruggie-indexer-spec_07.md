@@ -19,7 +19,7 @@ class IndexerConfig:
 
     # Target and traversal
     recursive: bool = True
-    id_algorithm: str = "sha256"  # "md5" or "sha256"
+    id_algorithm: str = "md5"  # "md5" or "sha256"
     compute_sha512: bool = False
 
     # Output routing
