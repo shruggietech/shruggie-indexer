@@ -1,10 +1,10 @@
 ## 6. Core Operations
 
-This section defines the behavioral contract for every operation in the indexing engine — the inputs each operation accepts, the outputs it produces, the invariants it maintains, the error conditions it handles, and the deviations it makes from the original implementation. Each subsection corresponds to one operation category from the Operations Catalog (§1.5) and to one or more `core/` modules from the source package layout (§3.2). Together, these subsections constitute the complete specification of what the `core/` subpackage does and how it does it.
+This section defines the behavioral contract for every operation in the indexing engine â€” the inputs each operation accepts, the outputs it produces, the invariants it maintains, the error conditions it handles, and the deviations it makes from the original implementation. Each subsection corresponds to one operation category from the Operations Catalog (Â§1.5) and to one or more `core/` modules from the source package layout (Â§3.2). Together, these subsections constitute the complete specification of what the `core/` subpackage does and how it does it.
 
 The operations are presented in dependency order: foundational operations (traversal, path manipulation, hashing) before the operations that depend on them (entry construction, serialization). An implementer working through these subsections top-to-bottom will build the leaf modules first and the orchestrator last, with each module's dependencies already specified by the time it is reached.
 
-§4 (Architecture) defines the structural relationships between modules — who calls whom. This section defines the behavioral detail within each module — what each function does when called. §5 (Output Schema) defines the data structures that these operations produce. The three sections are complementary: §4 provides the wiring diagram, §6 provides the logic, and §5 provides the output contract.
+Â§4 (Architecture) defines the structural relationships between modules â€” who calls whom. This section defines the behavioral detail within each module â€” what each function does when called. Â§5 (Output Schema) defines the data structures that these operations produce. The three sections are complementary: Â§4 provides the wiring diagram, Â§6 provides the logic, and Â§5 provides the output contract.
 
 ### 6.1. Filesystem Traversal and Discovery
 
@@ -14,7 +14,7 @@ The operations are presented in dependency order: foundational operations (trave
 
 #### Purpose
 
-Enumerates the set of filesystem items (files and subdirectories) to be indexed within a target path. The traversal module is Stage 3 of the processing pipeline (§4.1) — it sits between target resolution (Stage 2) and entry construction (Stage 4). It does not build index entries; it produces an ordered sequence of `Path` objects that the entry builder will process.
+Enumerates the set of filesystem items (files and subdirectories) to be indexed within a target path. The traversal module is Stage 3 of the processing pipeline (Â§4.1) â€” it sits between target resolution (Stage 2) and entry construction (Stage 4). It does not build index entries; it produces an ordered sequence of `Path` objects that the entry builder will process.
 
 #### Public interface
 
@@ -32,27 +32,27 @@ def list_children(
     """
 ```
 
-The caller — `core/entry.build_directory_entry()` — invokes `list_children()` once per directory being indexed. For recursive mode, the caller recurses into each returned subdirectory; for flat mode, the caller processes only the immediate children. The traversal module itself does not recurse — recursion is controlled by the entry builder (§6.8), consistent with the separation of traversal from construction described in §4.1.
+The caller â€” `core/entry.build_directory_entry()` â€” invokes `list_children()` once per directory being indexed. For recursive mode, the caller recurses into each returned subdirectory; for flat mode, the caller processes only the immediate children. The traversal module itself does not recurse â€” recursion is controlled by the entry builder (Â§6.8), consistent with the separation of traversal from construction described in Â§4.1.
 
-> **Deviation from original (DEV-03):** The original has two near-identical traversal code paths: `MakeDirectoryIndexRecursiveLogic` (which calls itself for child directories) and `MakeDirectoryIndexLogic` (which does not recurse). Both paths enumerate children, separate files from directories, filter exclusions, and feed items to `MakeObject` — with almost completely duplicated logic. The port replaces both with a single `list_children()` function that returns files and directories. The recursive/flat distinction is handled by the caller, not by the traversal module. This eliminates the duplication without changing the logical behavior.
+> **Deviation from original (DEV-03):** The original has two near-identical traversal code paths: `MakeDirectoryIndexRecursiveLogic` (which calls itself for child directories) and `MakeDirectoryIndexLogic` (which does not recurse). Both paths enumerate children, separate files from directories, filter exclusions, and feed items to `MakeObject` â€” with almost completely duplicated logic. The port replaces both with a single `list_children()` function that returns files and directories. The recursive/flat distinction is handled by the caller, not by the traversal module. This eliminates the duplication without changing the logical behavior.
 
 #### Enumeration strategy
 
-`list_children()` enumerates directory contents using `os.scandir()` in a single pass. Each `DirEntry` object returned by `os.scandir()` is classified as a file or directory using `DirEntry.is_file(follow_symlinks=False)` and `DirEntry.is_dir(follow_symlinks=False)`. The `follow_symlinks=False` argument ensures that symlinks are classified based on the link itself, not the link target — a symlink to a directory appears in the files list (or the directories list if it is a directory symlink), and its symlink status is resolved later during entry construction (§6.4).
+`list_children()` enumerates directory contents using `os.scandir()` in a single pass. Each `DirEntry` object returned by `os.scandir()` is classified as a file or directory using `DirEntry.is_file(follow_symlinks=False)` and `DirEntry.is_dir(follow_symlinks=False)`. The `follow_symlinks=False` argument ensures that symlinks are classified based on the link itself, not the link target â€” a symlink to a directory appears in the files list (or the directories list if it is a directory symlink), and its symlink status is resolved later during entry construction (Â§6.4).
 
 `os.scandir()` is preferred over `Path.iterdir()` because `DirEntry` objects cache the results of `is_file()` and `is_dir()` from the underlying `readdir` call on platforms that support it, avoiding redundant `stat()` calls. For large directories (tens of thousands of entries), this caching produces a measurable performance improvement.
 
-> **Improvement over original:** The original performs two separate `Get-ChildItem` calls — one with `-File` and one with `-Directory` — to separate files from directories. This iterates the directory twice. `os.scandir()` classifies entries in a single pass.
+> **Improvement over original:** The original performs two separate `Get-ChildItem` calls â€” one with `-File` and one with `-Directory` â€” to separate files from directories. This iterates the directory twice. `os.scandir()` classifies entries in a single pass.
 
 #### Ordering
 
-The returned file list and directory list are each sorted lexicographically by name (case-insensitive). Files are processed before directories by convention — the caller iterates the file list first, then the directory list. This matches the original's traversal order and produces output where file entries precede subdirectory entries within any `items` array.
+The returned file list and directory list are each sorted lexicographically by name (case-insensitive). Files are processed before directories by convention â€” the caller iterates the file list first, then the directory list. This matches the original's traversal order and produces output where file entries precede subdirectory entries within any `items` array.
 
 The sort is performed via `sorted(entries, key=lambda e: e.name.lower())`. The case-insensitive comparison ensures consistent ordering across platforms (Windows is case-insensitive by default; Linux is case-sensitive).
 
 #### Filesystem exclusion filters
 
-Before returning, `list_children()` removes entries whose names match the configured exclusion set. The exclusion set is defined in `config.filesystem_excludes` — a set of case-insensitive name patterns. The default exclusion set covers cross-platform system artifacts:
+Before returning, `list_children()` removes entries whose names match the configured exclusion set. The exclusion set is defined in `config.filesystem_excludes` â€” a set of case-insensitive name patterns. The default exclusion set covers cross-platform system artifacts:
 
 | Platform | Default exclusions |
 |----------|-------------------|
@@ -61,7 +61,7 @@ Before returning, `list_children()` removes entries whose names match the config
 | Linux | `.Trash-*` (glob pattern) |
 | All | `.git` (optional, configurable) |
 
-The default set includes all platform-specific entries regardless of the current platform. Filtering a macOS entry on Windows is a no-op (the entry will not exist), but including it in the default list ensures that indexes produced from cross-platform network shares or external drives are clean. See §7 for the configuration schema and override mechanism.
+The default set includes all platform-specific entries regardless of the current platform. Filtering a macOS entry on Windows is a no-op (the entry will not exist), but including it in the default list ensures that indexes produced from cross-platform network shares or external drives are clean. See Â§7 for the configuration schema and override mechanism.
 
 > **Deviation from original (DEV-10):** The original hardcodes only `$RECYCLE.BIN` and `System Volume Information` as inline `Where-Object` filters. The port externalizes the exclusion list into configuration and expands the default set to cover all three target platforms.
 
@@ -69,13 +69,13 @@ Exclusion matching is performed by checking `entry.name.lower()` against the set
 
 #### Error handling
 
-If `os.scandir()` raises `PermissionError` or `OSError` for the directory itself, the error is a **fatal** condition for that directory — the directory cannot be enumerated. The error propagates to the caller (`build_directory_entry`), which handles it according to the item-level error tier (§4.5): the directory is either skipped or included with an empty `items` list and a warning logged.
+If `os.scandir()` raises `PermissionError` or `OSError` for the directory itself, the error is a **fatal** condition for that directory â€” the directory cannot be enumerated. The error propagates to the caller (`build_directory_entry`), which handles it according to the item-level error tier (Â§4.5): the directory is either skipped or included with an empty `items` list and a warning logged.
 
 If an individual `DirEntry` raises an exception during `.is_file()` or `.is_dir()` (rare but possible on network filesystems or corrupted directories), that single entry is skipped with a warning. The remaining entries are still returned.
 
 #### Single-file scenario
 
-When the target is a single file (§4.6), the traversal module is not called. The entry builder processes the file directly without enumeration. The `list_children()` function is only invoked for directory targets.
+When the target is a single file (Â§4.6), the traversal module is not called. The entry builder processes the file directly without enumeration. The `list_children()` function is only invoked for directory targets.
 
 ---
 
@@ -87,7 +87,7 @@ When the target is a single file (§4.6), the traversal module is not called. Th
 
 #### Purpose
 
-Provides all path-related operations used by the rest of the indexing engine: resolving paths to canonical absolute form, extracting path components (name, stem, suffix, parent), validating file extensions, and constructing derived paths for output files. This is the single source of truth for path handling — no other module performs its own path manipulation.
+Provides all path-related operations used by the rest of the indexing engine: resolving paths to canonical absolute form, extracting path components (name, stem, suffix, parent), validating file extensions, and constructing derived paths for output files. This is the single source of truth for path handling â€” no other module performs its own path manipulation.
 
 #### Public interface
 
@@ -134,13 +134,13 @@ def build_storage_path(
     """
 ```
 
-> **Deviation from original (DEV-04):** The original contains three independent copies of path-resolution logic: `ResolvePath` inside `MakeIndex`, `FileId-ResolvePath` inside `FileId`, and `DirectoryId-ResolvePath` inside `DirectoryId`. All three do the same thing — call `Resolve-Path` with a `GetFullPath()` fallback for non-existent paths. The port provides exactly one `resolve_path()` function, called from everywhere. The original also uses `GetParentPath` (a manual `Split-Path` wrapper) and direct `[System.IO.Path]` calls for component extraction. The port consolidates all of these into `extract_components()` using `pathlib` properties.
+> **Deviation from original (DEV-04):** The original contains three independent copies of path-resolution logic: `ResolvePath` inside `MakeIndex`, `FileId-ResolvePath` inside `FileId`, and `DirectoryId-ResolvePath` inside `DirectoryId`. All three do the same thing â€” call `Resolve-Path` with a `GetFullPath()` fallback for non-existent paths. The port provides exactly one `resolve_path()` function, called from everywhere. The original also uses `GetParentPath` (a manual `Split-Path` wrapper) and direct `[System.IO.Path]` calls for component extraction. The port consolidates all of these into `extract_components()` using `pathlib` properties.
 
 #### Path resolution behavior
 
 `resolve_path()` calls `Path.resolve(strict=True)` for paths that exist on the filesystem. This resolves symlinks, normalizes directory separators, and produces an absolute path. If the path does not exist, `resolve_path()` falls back to `Path.resolve(strict=False)`, which normalizes the path without verifying existence. If neither resolution produces a usable path, an `IndexerError` is raised.
 
-The `strict=True` → `strict=False` fallback mirrors the original's `Resolve-Path` → `GetFullPath()` fallback pattern, but without requiring a try/except around the initial resolution — `pathlib` handles the dispatch cleanly.
+The `strict=True` â†’ `strict=False` fallback mirrors the original's `Resolve-Path` â†’ `GetFullPath()` fallback pattern, but without requiring a try/except around the initial resolution â€” `pathlib` handles the dispatch cleanly.
 
 #### Component extraction
 
@@ -150,8 +150,8 @@ The `strict=True` → `strict=False` fallback mirrors the original's `Resolve-Pa
 |-----------|-------------------|-------|
 | `name` | `path.name` | Full filename including extension. |
 | `stem` | `path.stem` | Filename without the final extension. |
-| `suffix` | `path.suffix` | The final extension, including the leading dot. Converted to lowercase and stripped of the leading dot before returning. Empty string → `None`. |
-| `parent_name` | `path.parent.name` | The leaf name of the parent directory. For root-level items (e.g., `C:\file.txt`), this is an empty string — the caller handles this as the "no parent" case. |
+| `suffix` | `path.suffix` | The final extension, including the leading dot. Converted to lowercase and stripped of the leading dot before returning. Empty string â†’ `None`. |
+| `parent_name` | `path.parent.name` | The leaf name of the parent directory. For root-level items (e.g., `C:\file.txt`), this is an empty string â€” the caller handles this as the "no parent" case. |
 | `parent_path` | `path.parent` | The absolute path to the parent directory. |
 
 The suffix is always lowercased for consistency. The original lowercases extensions via `.ToLower()` in `MakeObject`; the port does the same via `.lower()`.
@@ -164,13 +164,13 @@ The suffix is always lowercased for consistency. The original lowercases extensi
 Original: ^(([a-z0-9]){1,2}|([a-z0-9]){1}([a-z0-9\-]){1,12}([a-z0-9]){1})$
 ```
 
-This pattern accepts extensions that are 1–2 alphanumeric characters, or 3–14 characters where the first and last are alphanumeric and interior characters may include hyphens. The purpose is to reject malformed or suspiciously long extensions that might indicate corrupted filenames or path components misidentified as extensions.
+This pattern accepts extensions that are 1â€“2 alphanumeric characters, or 3â€“14 characters where the first and last are alphanumeric and interior characters may include hyphens. The purpose is to reject malformed or suspiciously long extensions that might indicate corrupted filenames or path components misidentified as extensions.
 
 The port uses `re.fullmatch()` with the pattern compiled once from `config.extension_validation_pattern`. This is the same regex content as the original's but applied via Python's `re` module rather than PowerShell's `-match` operator.
 
 > **Deviation from original (DEV-14):** The extension validation regex is externalized into the configuration system rather than hardcoded. Users who encounter legitimate long extensions (e.g., `.numbers`, `.download`, `.crdownload`) can adjust the pattern without editing source code.
 
-When validation fails, the extension is treated as absent — the entry's `extension` field is set to `null` and the `storage_name` is constructed from the `id` alone (no extension appended). A debug-level log message is emitted noting the rejected extension.
+When validation fails, the extension is treated as absent â€” the entry's `extension` field is set to `null` and the `storage_name` is constructed from the `id` alone (no extension appended). A debug-level log message is emitted noting the rejected extension.
 
 #### Path construction
 
@@ -178,12 +178,12 @@ When validation fails, the extension is treated as absent — the entry's `exten
 
 | Item type | Sidecar path pattern | Example |
 |-----------|---------------------|---------|
-| File | `{parent_dir}/{filename}_meta2.json` | `photos/sunset.jpg` → `photos/sunset.jpg_meta2.json` |
-| Directory | `{directory}/_directorymeta2.json` | `photos/vacation/` → `photos/vacation/_directorymeta2.json` |
+| File | `{parent_dir}/{filename}_meta2.json` | `photos/sunset.jpg` â†’ `photos/sunset.jpg_meta2.json` |
+| Directory | `{directory}/_directorymeta2.json` | `photos/vacation/` â†’ `photos/vacation/_directorymeta2.json` |
 
-The `2` suffix in `_meta2.json` and `_directorymeta2.json` prevents collision with existing v1 sidecar files (`_meta.json`, `_directorymeta.json`) during a migration period. See §5.13.
+The `2` suffix in `_meta2.json` and `_directorymeta2.json` prevents collision with existing v1 sidecar files (`_meta.json`, `_directorymeta.json`) during a migration period. See Â§5.13.
 
-`build_storage_path()` constructs the rename-target path by joining the item's parent directory with its `storage_name`. No separator management is needed — `pathlib`'s `/` operator handles platform-correct path construction.
+`build_storage_path()` constructs the rename-target path by joining the item's parent directory with its `storage_name`. No separator management is needed â€” `pathlib`'s `/` operator handles platform-correct path construction.
 
 > **Improvement over original:** The original constructs renamed paths by concatenating strings with the `$Sep` global variable. The port uses `pathlib` path arithmetic, eliminating manual separator handling entirely.
 
@@ -197,7 +197,7 @@ The `2` suffix in `_meta2.json` and `_directorymeta2.json` prevents collision wi
 
 #### Purpose
 
-Computes cryptographic hash digests of file contents and name strings, and from those digests produces the deterministic unique identifiers (`id` field) that are the foundation of the indexing system. This is the most dependency-consolidated module in the port — it replaces four separate locations in the original where hashing logic was independently implemented.
+Computes cryptographic hash digests of file contents and name strings, and from those digests produces the deterministic unique identifiers (`id` field) that are the foundation of the indexing system. This is the most dependency-consolidated module in the port â€” it replaces four separate locations in the original where hashing logic was independently implemented.
 
 > **Deviation from original (DEV-01):** The original has no fewer than four independent implementations of the same hashing logic: `FileId` (8 sub-functions for file content and name hashing), `DirectoryId` (4 sub-functions for directory name hashing), `ReadMetaFile-GetNameHashMD5` / `-SHA256` (sidecar file name hashing inside MakeIndex), and `MetaFileRead-Sha256-File` / `-Sha256-String` (content and name hashing inside MetaFileRead). The port provides one hashing module with reusable functions, called from everywhere.
 
@@ -227,9 +227,9 @@ def hash_directory_id(
     """Compute directory identity using the two-layer hashing scheme.
 
     Algorithm:
-      1. hash(name)       → name_digest
-      2. hash(parent_name) → parent_digest
-      3. hash(name_digest + parent_digest) → final_digest
+      1. hash(name)       â†’ name_digest
+      2. hash(parent_name) â†’ parent_digest
+      3. hash(name_digest + parent_digest) â†’ final_digest
 
     Returns a HashSet containing the final digests.
     """
@@ -252,14 +252,14 @@ NULL_HASHES: HashSet  # Hash of empty string b'' for each algorithm
 
 The port computes MD5 and SHA256 by default for all hash operations. SHA512 is computed when explicitly enabled in the configuration (`config.compute_sha512 = True`). SHA1 is not computed.
 
-> **Deviation from original:** The original's `FileId` and `DirectoryId` accept an `IncludeHashTypes` parameter defaulting to `@('md5', 'sha256')`, and the output schema defines fields for SHA1 and SHA512 that remain empty at runtime. The port drops SHA1 entirely (see §5.2.1 for the rationale — SHA1 serves no unique purpose and adds overhead). SHA512 is available as an opt-in for consumers who want high-strength digests. MD5 and SHA256 are always computed because they serve the identity system: MD5 is the legacy default `id_algorithm`, and SHA256 is the recommended alternative.
+> **Deviation from original:** The original's `FileId` and `DirectoryId` accept an `IncludeHashTypes` parameter defaulting to `@('md5', 'sha256')`, and the output schema defines fields for SHA1 and SHA512 that remain empty at runtime. The port drops SHA1 entirely (see Â§5.2.1 for the rationale â€” SHA1 serves no unique purpose and adds overhead). SHA512 is available as an opt-in for consumers who want high-strength digests. MD5 and SHA256 are always computed because they serve the identity system: MD5 is the legacy default `id_algorithm`, and SHA256 is the recommended alternative.
 
 #### Multi-algorithm single-pass hashing
 
-`hash_file()` reads the file in fixed-size chunks and feeds each chunk to all active hash objects simultaneously. This is the core performance optimization described in §17.1:
+`hash_file()` reads the file in fixed-size chunks and feeds each chunk to all active hash objects simultaneously. This is the core performance optimization described in Â§17.1:
 
 ```python
-# Illustrative — not the exact implementation.
+# Illustrative â€” not the exact implementation.
 def hash_file(path: Path, algorithms: tuple[str, ...] = ("md5", "sha256")) -> HashSet:
     hashers = {alg: hashlib.new(alg) for alg in algorithms}
     with open(path, "rb") as f:
@@ -273,7 +273,7 @@ def hash_file(path: Path, algorithms: tuple[str, ...] = ("md5", "sha256")) -> Ha
     )
 ```
 
-The chunk size (`CHUNK_SIZE`) defaults to 65,536 bytes (64 KB). This value balances memory usage against read-call overhead — Python's `hashlib` documentation recommends chunk sizes between 4 KB and 128 KB for stream hashing. The chunk size is not configurable; it is an implementation detail of the hashing module.
+The chunk size (`CHUNK_SIZE`) defaults to 65,536 bytes (64 KB). This value balances memory usage against read-call overhead â€” Python's `hashlib` documentation recommends chunk sizes between 4 KB and 128 KB for stream hashing. The chunk size is not configurable; it is an implementation detail of the hashing module.
 
 > **Improvement over original (DEV-02):** The original computes each hash algorithm in a separate pass, opening and reading the file once per algorithm. For a file hashed with two algorithms, this means two complete reads. The port reads the file once and updates all hash objects from each chunk, halving the I/O for the default two-algorithm case.
 
@@ -301,14 +301,14 @@ NULL_HASHES = HashSet(
 
 `hash_directory_id()` implements the original's two-layer directory identity algorithm:
 
-1. Compute `hash(directory_name)` → `name_digest` (a hex string).
-2. Compute `hash(parent_directory_name)` → `parent_digest` (a hex string).
+1. Compute `hash(directory_name)` â†’ `name_digest` (a hex string).
+2. Compute `hash(parent_directory_name)` â†’ `parent_digest` (a hex string).
 3. Concatenate the two hex strings: `combined = name_digest + parent_digest`.
-4. Compute `hash(combined)` → `final_digest`.
+4. Compute `hash(combined)` â†’ `final_digest`.
 
 This is performed independently for each active hash algorithm. Step 3 concatenates the uppercase hex representations of the digests (not the raw bytes), matching the original's `[BitConverter]::ToString()` output concatenation. The concatenation order is name-first, parent-second.
 
-When the parent name is an empty string (the directory is at a filesystem root), step 2 produces the null-hash constant. This matches the original's behavior — `DirectoryId-HashString` returns the hardcoded null-hash for empty inputs.
+When the parent name is an empty string (the directory is at a filesystem root), step 2 produces the null-hash constant. This matches the original's behavior â€” `DirectoryId-HashString` returns the hardcoded null-hash for empty inputs.
 
 #### Identity prefix convention
 
@@ -318,7 +318,7 @@ When the parent name is an empty string (the directory is at a filesystem root),
 | Directory | `x` | `x3B4F479E9F880E438882FC34B67D352C` |
 | Generated metadata | `z` | `z7E240DE74FB1ED08FA08D38063F6A6A9` |
 
-The `select_id()` function applies the appropriate prefix to the digest selected by `config.id_algorithm` (either `"md5"` or `"sha256"`). The prefix is prepended as a literal character — `f"{prefix}{digest}"` — producing the `id` field value for the output schema.
+The `select_id()` function applies the appropriate prefix to the digest selected by `config.id_algorithm` (either `"md5"` or `"sha256"`). The prefix is prepended as a literal character â€” `f"{prefix}{digest}"` â€” producing the `id` field value for the output schema.
 
 The `z` prefix for generated metadata entries (exiftool output) is a v2 addition. In v1, generated metadata entries use the `y` prefix (same as files) because their identity is derived from content hashing. In v2, the `z` prefix provides a namespace that distinguishes generated entries from sidecar entries without inspecting the `origin` field.
 
@@ -328,7 +328,7 @@ All hex digest strings are uppercased via `hexdigest().upper()`. The original us
 
 #### Symlink hashing fallback
 
-When a file is a symlink, content hashing is replaced by name hashing — `hash_file()` is not called, and `hash_string(filename)` is used instead to produce the `hashes` field. The symlink detection itself is handled by the entry builder (§6.8) or by a dedicated check described in §6.4; the hashing module does not detect symlinks. It simply provides `hash_file()` for content and `hash_string()` for names, and the caller chooses which to invoke.
+When a file is a symlink, content hashing is replaced by name hashing â€” `hash_file()` is not called, and `hash_string(filename)` is used instead to produce the `hashes` field. The symlink detection itself is handled by the entry builder (Â§6.8) or by a dedicated check described in Â§6.4; the hashing module does not detect symlinks. It simply provides `hash_file()` for content and `hash_string()` for names, and the caller chooses which to invoke.
 
 This matches the original's behavior in `FileId`, where the `ReparsePoint` attribute check gates whether the content hash or name hash is used.
 
@@ -353,7 +353,7 @@ Symlink detection uses a single call: `path.is_symlink()`. This works cross-plat
 | Windows | Detects NTFS reparse points (symlinks, junctions). Equivalent to the original's `Attributes -band ReparsePoint` check. |
 | Linux/macOS | Detects POSIX symbolic links via `lstat()`. |
 
-The call is performed on the original path (before symlink resolution) using `os.lstat()` semantics — `Path.is_symlink()` does not follow the link.
+The call is performed on the original path (before symlink resolution) using `os.lstat()` semantics â€” `Path.is_symlink()` does not follow the link.
 
 > **Improvement over original:** The original uses `(Get-Item).Attributes -band [System.IO.FileAttributes]::ReparsePoint`, a Windows-specific bitwise attribute check. `Path.is_symlink()` is the correct cross-platform equivalent and is strictly simpler.
 
@@ -363,12 +363,12 @@ When `is_symlink` is `True`:
 
 | Operation | Normal behavior | Symlink behavior |
 |-----------|----------------|------------------|
-| File content hashing (§6.3) | `hash_file(path)` — hash file bytes | `hash_string(filename)` — hash name string instead |
-| EXIF extraction (§6.6) | Invoke exiftool | Skip entirely — return `None` |
-| Timestamp extraction (§6.5) | `os.stat()` (follows symlink) | `os.lstat()` (reads symlink metadata itself) |
+| File content hashing (Â§6.3) | `hash_file(path)` â€” hash file bytes | `hash_string(filename)` â€” hash name string instead |
+| EXIF extraction (Â§6.6) | Invoke exiftool | Skip entirely â€” return `None` |
+| Timestamp extraction (Â§6.5) | `os.stat()` (follows symlink) | `os.lstat()` (reads symlink metadata itself) |
 | `hashes` field in output | Content hash digest set | Name hash digest set (same values as `name.hashes`) |
 
-For directory symlinks, the identity scheme is unchanged — directory identity is always based on name hashing (the two-layer scheme in §6.3), so no fallback is needed.
+For directory symlinks, the identity scheme is unchanged â€” directory identity is always based on name hashing (the two-layer scheme in Â§6.3), so no fallback is needed.
 
 #### Dead code: `ValidateIsLink`
 
@@ -390,7 +390,7 @@ A dangling symlink (one whose target does not exist) is treated as an item-level
 
 #### Purpose
 
-Extracts filesystem timestamps from stat results and produces both Unix-millisecond integers and ISO 8601 formatted strings for each of the three standard timestamp types: accessed, created, and modified. The output populates the `timestamps` field of the v2 schema (`TimestampsObject` containing three `TimestampPair` values — see §5.7).
+Extracts filesystem timestamps from stat results and produces both Unix-millisecond integers and ISO 8601 formatted strings for each of the three standard timestamp types: accessed, created, and modified. The output populates the `timestamps` field of the v2 schema (`TimestampsObject` containing three `TimestampPair` values â€” see Â§5.7).
 
 #### Public interface
 
@@ -412,9 +412,9 @@ def extract_timestamps(
     """
 ```
 
-The stat result is obtained by the entry builder (§6.8) before calling this function. The entry builder chooses between `os.stat()` (for regular files/directories) and `os.lstat()` (for symlinks) and passes the result.
+The stat result is obtained by the entry builder (Â§6.8) before calling this function. The entry builder chooses between `os.stat()` (for regular files/directories) and `os.lstat()` (for symlinks) and passes the result.
 
-#### Derivation — Unix timestamps
+#### Derivation â€” Unix timestamps
 
 Unix timestamps are derived directly from the stat result's floating-point values, converted to milliseconds:
 
@@ -424,20 +424,20 @@ Unix timestamps are derived directly from the stat result's floating-point value
 | `modified.unix` | `st_mtime` | `int(stat_result.st_mtime * 1000)` |
 | `created.unix` | See below | See below |
 
-> **Deviation from original (DEV-07):** The original performs an unnecessary round-trip: it formats a datetime to a string via `.ToString($DateFormat)`, then passes that string to `Date2UnixTime`, which parses it back into a `DateTimeOffset` to call `.ToUnixTimeMilliseconds()`. The port derives Unix timestamps directly from the stat float values — no intermediate string representation, no round-trip parsing, and `Date2UnixTime` (along with its entire internal dependency chain: `Date2FormatCode`, `Date2UnixTimeSquash`, `Date2UnixTimeCountDigits`, `Date2UnixTimeFormatCode`) is eliminated.
+> **Deviation from original (DEV-07):** The original performs an unnecessary round-trip: it formats a datetime to a string via `.ToString($DateFormat)`, then passes that string to `Date2UnixTime`, which parses it back into a `DateTimeOffset` to call `.ToUnixTimeMilliseconds()`. The port derives Unix timestamps directly from the stat float values â€” no intermediate string representation, no round-trip parsing, and `Date2UnixTime` (along with its entire internal dependency chain: `Date2FormatCode`, `Date2UnixTimeSquash`, `Date2UnixTimeCountDigits`, `Date2UnixTimeFormatCode`) is eliminated.
 
 #### Creation time portability
 
-Creation time handling varies by platform and is one of the primary portability concerns for the timestamp module (see §15.5 for the full platform analysis). The resolution strategy is:
+Creation time handling varies by platform and is one of the primary portability concerns for the timestamp module (see Â§15.5 for the full platform analysis). The resolution strategy is:
 
 1. Attempt `stat_result.st_birthtime`. This is the true file creation time and is available on macOS (all filesystems), Windows (NTFS), and some Linux configurations (kernel 4.11+ with `statx` support on ext4/XFS/Btrfs). If the attribute exists, use it.
 
-2. Fall back to `stat_result.st_ctime`. On Windows, `st_ctime` is the creation time (Python's Windows `stat()` maps it correctly). On Linux and macOS, `st_ctime` is the inode change time (metadata modification), not the creation time — but it is the best available approximation.
+2. Fall back to `stat_result.st_ctime`. On Windows, `st_ctime` is the creation time (Python's Windows `stat()` maps it correctly). On Linux and macOS, `st_ctime` is the inode change time (metadata modification), not the creation time â€” but it is the best available approximation.
 
-The implementation wraps the `st_birthtime` access in a try/except for `AttributeError`, since the attribute is absent on platforms that do not support it. This is not a per-file error condition — it is a platform characteristic discovered once. The timestamps module MAY cache the platform's creation-time capability after the first successful or failed `st_birthtime` access to avoid redundant exception handling on subsequent calls.
+The implementation wraps the `st_birthtime` access in a try/except for `AttributeError`, since the attribute is absent on platforms that do not support it. This is not a per-file error condition â€” it is a platform characteristic discovered once. The timestamps module MAY cache the platform's creation-time capability after the first successful or failed `st_birthtime` access to avoid redundant exception handling on subsequent calls.
 
 ```python
-# Illustrative — not the exact implementation.
+# Illustrative â€” not the exact implementation.
 def _get_creation_time(stat_result: os.stat_result) -> float:
     try:
         return stat_result.st_birthtime
@@ -445,14 +445,14 @@ def _get_creation_time(stat_result: os.stat_result) -> float:
         return stat_result.st_ctime
 ```
 
-No warning is emitted for the `st_ctime` fallback — it is expected behavior on most Linux systems and would produce noise without actionable information.
+No warning is emitted for the `st_ctime` fallback â€” it is expected behavior on most Linux systems and would produce noise without actionable information.
 
-#### Derivation — ISO 8601 strings
+#### Derivation â€” ISO 8601 strings
 
 ISO strings are produced from `datetime` objects constructed from the same stat float values:
 
 ```python
-# Illustrative — not the exact implementation.
+# Illustrative â€” not the exact implementation.
 from datetime import datetime, timezone
 
 def _stat_to_iso(timestamp_float: float) -> str:
@@ -462,11 +462,11 @@ def _stat_to_iso(timestamp_float: float) -> str:
 
 The `datetime.fromtimestamp()` call interprets the float as seconds since the Unix epoch and attaches the UTC timezone. The `.astimezone()` call converts to the local timezone, producing an ISO 8601 string with the local timezone offset (e.g., `2024-03-15T14:30:22.123456-04:00`).
 
-The `timespec="microseconds"` argument produces 6-digit fractional seconds. The original's .NET format string `yyyy-MM-ddTHH:mm:ss.fffffffzzz` produces 7-digit fractional seconds. Python's `datetime` provides microsecond precision (6 digits); .NET provides tick precision (7 digits). This is a minor, acceptable deviation — the 7th digit is always zero in practice for filesystem timestamps, which have at most microsecond resolution.
+The `timespec="microseconds"` argument produces 6-digit fractional seconds. The original's .NET format string `yyyy-MM-ddTHH:mm:ss.fffffffzzz` produces 7-digit fractional seconds. Python's `datetime` provides microsecond precision (6 digits); .NET provides tick precision (7 digits). This is a minor, acceptable deviation â€” the 7th digit is always zero in practice for filesystem timestamps, which have at most microsecond resolution.
 
 #### The `TimestampPair` assembly
 
-For each of the three timestamp types, the module constructs a `TimestampPair` (§5.2.4):
+For each of the three timestamp types, the module constructs a `TimestampPair` (Â§5.2.4):
 
 ```python
 TimestampPair(
@@ -475,7 +475,7 @@ TimestampPair(
 )
 ```
 
-These are assembled into a `TimestampsObject` (§5.2.5):
+These are assembled into a `TimestampsObject` (Â§5.2.5):
 
 ```python
 TimestampsObject(
@@ -497,7 +497,7 @@ The complete `TimestampsObject` is returned to the entry builder, which places i
 
 #### Purpose
 
-Invokes the `exiftool` binary to extract embedded EXIF, XMP, and IPTC metadata from a file. The extracted metadata is returned as a Python dictionary (parsed from exiftool's JSON output), with unwanted system keys removed. The result is wrapped into a `MetadataEntry` with `origin: "generated"` and `attributes.type: "exiftool.json_metadata"` during entry construction (§6.8).
+Invokes the `exiftool` binary to extract embedded EXIF, XMP, and IPTC metadata from a file. The extracted metadata is returned as a Python dictionary (parsed from exiftool's JSON output), with unwanted system keys removed. The result is wrapped into a `MetadataEntry` with `origin: "generated"` and `attributes.type: "exiftool.json_metadata"` during entry construction (Â§6.8).
 
 #### Public interface
 
@@ -521,7 +521,7 @@ def extract_exif(
 Before the first exiftool invocation, the module checks whether `exiftool` is available on the system PATH. This probe happens once per process lifetime (not once per file) and the result is cached in a module-level variable.
 
 ```python
-# Illustrative — not the exact implementation.
+# Illustrative â€” not the exact implementation.
 _exiftool_available: bool | None = None  # None = not yet checked
 
 def _check_exiftool() -> bool:
@@ -535,7 +535,7 @@ def _check_exiftool() -> bool:
     return _exiftool_available
 ```
 
-> **Improvement over original:** The original invokes exiftool for every eligible file without checking availability first. If exiftool is missing, each invocation fails independently, producing a per-file error. The port's probe-once approach avoids spawning doomed subprocesses and reduces log noise to a single warning. See §4.5 for the full discussion.
+> **Improvement over original:** The original invokes exiftool for every eligible file without checking availability first. If exiftool is missing, each invocation fails independently, producing a per-file error. The port's probe-once approach avoids spawning doomed subprocesses and reduces log noise to a single warning. See Â§4.5 for the full discussion.
 
 #### Extension exclusion
 
@@ -543,14 +543,14 @@ Before invoking exiftool, the module checks `path.suffix.lower()` (without the l
 
 `csv`, `htm`, `html`, `json`, `tsv`, `xml`
 
-The exclusion list is configurable (§7.4). When a file is excluded, the function returns `None` and a debug-level message is logged.
+The exclusion list is configurable (Â§7.4). When a file is excluded, the function returns `None` and a debug-level message is logged.
 
 #### Invocation
 
 Exiftool is invoked via `subprocess.run()` with arguments passed as a Python list:
 
 ```python
-# Illustrative — not the exact implementation.
+# Illustrative â€” not the exact implementation.
 result = subprocess.run(
     [
         "exiftool",
@@ -573,7 +573,7 @@ result = subprocess.run(
 )
 ```
 
-> **Deviation from original (DEV-05):** The original stores exiftool arguments as Base64-encoded strings in the PowerShell source, decodes them at runtime via `Base64DecodeString` (which itself calls `certutil` on Windows), writes them to a temporary file via `TempOpen`, passes the temporary file to exiftool via its `-@` argfile switch, and cleans up via `TempClose`. The port defines the arguments as a plain Python list and passes them directly to `subprocess.run()`. This eliminates four dependencies in one stroke: `Base64DecodeString`, `certutil`, `TempOpen`, and `TempClose`. The temporary argument file is also eliminated — `subprocess` handles argument passing on all platforms without an intermediary file.
+> **Deviation from original (DEV-05):** The original stores exiftool arguments as Base64-encoded strings in the PowerShell source, decodes them at runtime via `Base64DecodeString` (which itself calls `certutil` on Windows), writes them to a temporary file via `TempOpen`, passes the temporary file to exiftool via its `-@` argfile switch, and cleans up via `TempClose`. The port defines the arguments as a plain Python list and passes them directly to `subprocess.run()`. This eliminates four dependencies in one stroke: `Base64DecodeString`, `certutil`, `TempOpen`, and `TempClose`. The temporary argument file is also eliminated â€” `subprocess` handles argument passing on all platforms without an intermediary file.
 
 The `-quiet` flag is appended when the logging level is above DEBUG, matching the original's behavior of suppressing exiftool's informational output when verbosity is off.
 
@@ -618,7 +618,7 @@ In all cases, the entry builder proceeds with `metadata` containing no exiftool 
 
 #### Batch mode consideration
 
-For large directory trees, spawning a new exiftool process per file introduces significant overhead. The `PyExifTool` library maintains a persistent exiftool process and communicates via stdin/stdout, which is substantially faster for batch operations. The port SHOULD support both modes: direct `subprocess` invocation (default, zero third-party dependencies) and `PyExifTool` batch mode (optional, enabled when the library is installed). The batch mode implementation is deferred to a performance optimization pass — the `subprocess` mode is sufficient for MVP.
+For large directory trees, spawning a new exiftool process per file introduces significant overhead. The `PyExifTool` library maintains a persistent exiftool process and communicates via stdin/stdout, which is substantially faster for batch operations. The port SHOULD support both modes: direct `subprocess` invocation (default, zero third-party dependencies) and `PyExifTool` batch mode (optional, enabled when the library is installed). The batch mode implementation is deferred to a performance optimization pass â€” the `subprocess` mode is sufficient for MVP.
 
 ---
 
@@ -630,7 +630,7 @@ For large directory trees, spawning a new exiftool process per file introduces s
 
 #### Purpose
 
-Discovers, classifies, reads, and parses sidecar metadata files that live alongside the files they describe. A sidecar file is any file in the same directory as the indexed item whose name matches a known metadata suffix pattern (e.g., `video.mp4.info.json`, `photo.jpg_thumbnail.jpg`, `document.pdf.description`). The module produces `MetadataEntry` objects (§5.10) for each discovered sidecar, carrying the full provenance information needed for MetaMergeDelete reversal.
+Discovers, classifies, reads, and parses sidecar metadata files that live alongside the files they describe. A sidecar file is any file in the same directory as the indexed item whose name matches a known metadata suffix pattern (e.g., `video.mp4.info.json`, `photo.jpg_thumbnail.jpg`, `document.pdf.description`). The module produces `MetadataEntry` objects (Â§5.10) for each discovered sidecar, carrying the full provenance information needed for MetaMergeDelete reversal.
 
 #### Public interface
 
@@ -658,11 +658,11 @@ def discover_and_parse(
     """
 ```
 
-The `siblings` list is provided by the entry builder, which already has the directory listing from `list_children()`. This avoids re-scanning the directory for each file being indexed — a significant optimization for directories containing many files with few sidecars.
+The `siblings` list is provided by the entry builder, which already has the directory listing from `list_children()`. This avoids re-scanning the directory for each file being indexed â€” a significant optimization for directories containing many files with few sidecars.
 
 #### Sidecar discovery
 
-Discovery matches sibling filenames against the indexed item's name combined with known metadata suffix patterns. The identification patterns are defined in `config.metadata_identify` — a dict mapping type names to lists of compiled regex patterns. These patterns are ported from the original `$global:MetadataFileParser.Identify` configuration.
+Discovery matches sibling filenames against the indexed item's name combined with known metadata suffix patterns. The identification patterns are defined in `config.metadata_identify` â€” a dict mapping type names to lists of compiled regex patterns. These patterns are ported from the original `$global:MetadataFileParser.Identify` configuration.
 
 The discovery algorithm:
 
@@ -671,7 +671,7 @@ The discovery algorithm:
 3. Exclude sidecars whose names match the configured exclusion patterns (`config.metadata_exclude_patterns`).
 4. Return the matched sidecars grouped by type.
 
-> **Improvement over original:** The original's `GetFileMetaSiblings` rescans the parent directory via `Get-ChildItem` for every indexed file. In a directory with 1,000 files, this means 1,000 redundant directory reads. The port's approach — passing the pre-enumerated `siblings` list — performs the directory read once.
+> **Improvement over original:** The original's `GetFileMetaSiblings` rescans the parent directory via `Get-ChildItem` for every indexed file. In a directory with 1,000 files, this means 1,000 redundant directory reads. The port's approach â€” passing the pre-enumerated `siblings` list â€” performs the directory read once.
 
 #### Type detection
 
@@ -679,18 +679,18 @@ Each discovered sidecar is classified into exactly one type by matching its file
 
 | Type key | Description | Data handling |
 |----------|-------------|---------------|
-| `description` | Text description files (youtube-dl `.description`) | JSON → text → binary fallback |
+| `description` | Text description files (youtube-dl `.description`) | JSON â†’ text â†’ binary fallback |
 | `desktop_ini` | Windows `desktop.ini` files | Text |
-| `generic_metadata` | Generic config/metadata (`.cfg`, `.conf`, `.yaml`, `.meta`) | JSON → text → binary fallback |
+| `generic_metadata` | Generic config/metadata (`.cfg`, `.conf`, `.yaml`, `.meta`) | JSON â†’ text â†’ binary fallback |
 | `hash` | Hash/checksum files (`.md5`, `.sha256`, `.crc32`) | Lines (non-empty lines only) |
 | `json_metadata` | JSON metadata (`.info.json`, `.meta.json`) | JSON |
 | `link` | URL shortcuts (`.url`) and filesystem shortcuts (`.lnk`) | URL/path extraction |
 | `screenshot` | Screen capture images | Base64-encoded binary |
-| `subtitles` | Subtitle tracks (`.srt`, `.sub`, `.vtt`, `.lrc`) | JSON → text → binary fallback |
+| `subtitles` | Subtitle tracks (`.srt`, `.sub`, `.vtt`, `.lrc`) | JSON â†’ text â†’ binary fallback |
 | `thumbnail` | Thumbnail/cover images (`.cover`, `.thumb`) | Base64-encoded binary |
 | `torrent` | Torrent files | Base64-encoded binary |
 
-If a sidecar matches zero patterns, it is ignored (not an error — the file simply is not a recognized sidecar type). If a sidecar matches multiple patterns, it is logged as a warning and classified as the first match, consistent with the original's behavior (which also takes the first match from iterating `$MetadataFileParser.Identify` keys).
+If a sidecar matches zero patterns, it is ignored (not an error â€” the file simply is not a recognized sidecar type). If a sidecar matches multiple patterns, it is logged as a warning and classified as the first match, consistent with the original's behavior (which also takes the first match from iterating `$MetadataFileParser.Identify` keys).
 
 #### Format-specific readers
 
@@ -706,7 +706,7 @@ After type detection, the sidecar's content is read by a format-specific handler
 
 **Binary reader.** Reads the file as raw bytes and Base64-encodes them via `base64.b64encode(path.read_bytes()).decode("ascii")`. Used for `screenshot`, `thumbnail`, and `torrent` types, and as the final fallback for types where text and JSON reading both fail.
 
-> **Improvement over original:** The original's binary reader (`MetaFileRead-Data-Base64Encode`) uses `certutil -encode` to convert binary data to Base64, writing to a temporary file and stripping the header/footer lines that `certutil` adds. The port uses `base64.b64encode()` directly — one function call, no external binary, no temporary file.
+> **Improvement over original:** The original's binary reader (`MetaFileRead-Data-Base64Encode`) uses `certutil -encode` to convert binary data to Base64, writing to a temporary file and stripping the header/footer lines that `certutil` adds. The port uses `base64.b64encode()` directly â€” one function call, no external binary, no temporary file.
 
 **Link reader.** For `.url` files, parses the INI-format content to extract the `URL=` value. For `.lnk` files on Windows, the port MAY use `pylnk3` or `comtypes` to resolve the shortcut target; on non-Windows platforms, `.lnk` files are read as binary (Base64-encoded), since the `.lnk` format is Windows-specific. The original uses the external pslib functions `UrlFile2Url` and `Lnk2Path` for this; the port internalizes the logic.
 
@@ -714,15 +714,15 @@ After type detection, the sidecar's content is read by a format-specific handler
 
 For types that support multiple formats (`description`, `generic_metadata`, `subtitles`), the reader attempts formats in order:
 
-1. JSON → if valid JSON, store as `format: "json"` with `transforms: ["json_compact"]`.
-2. Text → if readable as UTF-8 text, store as `format: "text"` with `transforms: []`.
-3. Binary → Base64-encode the raw bytes, store as `format: "base64"` with `transforms: ["base64_encode"]`.
+1. JSON â†’ if valid JSON, store as `format: "json"` with `transforms: ["json_compact"]`.
+2. Text â†’ if readable as UTF-8 text, store as `format: "text"` with `transforms: []`.
+3. Binary â†’ Base64-encode the raw bytes, store as `format: "base64"` with `transforms: ["base64_encode"]`.
 
 Each step catches the relevant exception (JSON parse error, Unicode decode error) and falls to the next. Only if all three fail is the sidecar recorded with `attributes.type: "error"` and `data: null`.
 
 #### MetadataEntry construction
 
-For each successfully read sidecar, the module constructs a `MetadataEntry` (§5.10) with full provenance:
+For each successfully read sidecar, the module constructs a `MetadataEntry` (Â§5.10) with full provenance:
 
 | MetadataEntry field | Source |
 |---------------------|--------|
@@ -739,11 +739,11 @@ For each successfully read sidecar, the module constructs a `MetadataEntry` (§5
 | `attributes.source_media_type` | MIME type of binary sidecars (e.g., `"image/jpeg"` for thumbnails); `null` for text-based sidecars |
 | `data` | Parsed content (varies by format) |
 
-The provenance fields (`file_system`, `size`, `timestamps`) are the v2 additions that enable MetaMergeDelete reversal (§5.10, principle P3). They are present only for sidecar entries (`origin: "sidecar"`) and absent for generated entries.
+The provenance fields (`file_system`, `size`, `timestamps`) are the v2 additions that enable MetaMergeDelete reversal (Â§5.10, principle P3). They are present only for sidecar entries (`origin: "sidecar"`) and absent for generated entries.
 
 #### MetaMergeDelete queue
 
-When `config.meta_merge_delete` is `True` and the `delete_queue` parameter is not `None`, each successfully parsed sidecar's absolute path is appended to the delete queue. The actual deletion is deferred to Stage 6 post-processing (§4.4) — the sidecar module only records the path. This separation ensures that if the process is interrupted, no sidecar files have been deleted while their parent entries may be only partially written.
+When `config.meta_merge_delete` is `True` and the `delete_queue` parameter is not `None`, each successfully parsed sidecar's absolute path is appended to the delete queue. The actual deletion is deferred to Stage 6 post-processing (Â§4.4) â€” the sidecar module only records the path. This separation ensures that if the process is interrupted, no sidecar files have been deleted while their parent entries may be only partially written.
 
 The original's `$global:DeleteQueue` pattern is preserved but with explicit parameter passing rather than global state.
 
@@ -757,7 +757,7 @@ The original's `$global:DeleteQueue` pattern is preserved but with explicit para
 
 #### Purpose
 
-Orchestrates the assembly of a complete `IndexEntry` (the v2 schema object defined in §5) from a filesystem path. This is the hub of the hub-and-spoke architecture described in §4.2 — `entry.py` is the sole module that calls into the component modules (`paths`, `hashing`, `timestamps`, `exif`, `sidecar`) and wires their outputs together into the final schema object. No component module calls another component module directly; all coordination flows through `entry.py`.
+Orchestrates the assembly of a complete `IndexEntry` (the v2 schema object defined in Â§5) from a filesystem path. This is the hub of the hub-and-spoke architecture described in Â§4.2 â€” `entry.py` is the sole module that calls into the component modules (`paths`, `hashing`, `timestamps`, `exif`, `sidecar`) and wires their outputs together into the final schema object. No component module calls another component module directly; all coordination flows through `entry.py`.
 
 #### Public interface
 
@@ -776,7 +776,7 @@ def build_file_entry(
         siblings: Pre-enumerated sibling files in the same directory
                   (for sidecar discovery). If None, the module will
                   enumerate the parent directory.
-        delete_queue: MetaMergeDelete accumulator (see §6.7).
+        delete_queue: MetaMergeDelete accumulator (see Â§6.7).
 
     Returns a fully populated IndexEntry conforming to the v2 schema.
     """
@@ -786,6 +786,8 @@ def build_directory_entry(
     config: IndexerConfig,
     recursive: bool = False,
     delete_queue: list[Path] | None = None,
+    progress_callback: Callable[[ProgressEvent], None] | None = None,
+    cancel_event: threading.Event | None = None,
 ) -> IndexEntry:
     """Build a complete IndexEntry for a directory.
 
@@ -798,19 +800,34 @@ def build_directory_entry(
         config: Resolved configuration.
         recursive: Whether to descend into subdirectories.
         delete_queue: MetaMergeDelete accumulator.
+        progress_callback: Optional callable invoked after each child
+            item is processed and once after child discovery. See
+            ProgressEvent (\xc2\xa79.4) for the event contract.
+        cancel_event: Optional threading.Event checked before each
+            child item. When set, raises IndexerCancellationError.
 
     Returns a fully populated IndexEntry conforming to the v2 schema.
+
+    Raises:
+        IndexerCancellationError: cancel_event was set during
+            the child-processing loop.
     """
 
 def index_path(
     target: Path,
     config: IndexerConfig,
+    *,
+    progress_callback: Callable[[ProgressEvent], None] | None = None,
+    cancel_event: threading.Event | None = None,
 ) -> IndexEntry:
     """Top-level entry point: classify target and dispatch.
 
     This is the single function consumed by the CLI, GUI, and public API.
     Resolves the target, determines whether it is a file or directory,
     and delegates to build_file_entry() or build_directory_entry().
+    Forwards progress_callback and cancel_event to
+    build_directory_entry() for directory targets; both parameters
+    are ignored for single-file targets.
     """
 ```
 
@@ -818,31 +835,31 @@ def index_path(
 
 `build_file_entry()` executes the following steps in order. Each step calls into a component module and contributes one or more fields to the final `IndexEntry`.
 
-**Step 1 — Path components.** Call `paths.extract_components(path)` to obtain `name`, `stem`, `suffix`, `parent_name`, and `parent_path`. Validate the extension via `paths.validate_extension()`.
+**Step 1 â€” Path components.** Call `paths.extract_components(path)` to obtain `name`, `stem`, `suffix`, `parent_name`, and `parent_path`. Validate the extension via `paths.validate_extension()`.
 
-**Step 2 — Stat and symlink detection.** Call `path.is_symlink()` to determine symlink status. Call `path.stat()` (or `path.lstat()` for symlinks) to obtain the stat result for timestamp and size extraction.
+**Step 2 â€” Stat and symlink detection.** Call `path.is_symlink()` to determine symlink status. Call `path.stat()` (or `path.lstat()` for symlinks) to obtain the stat result for timestamp and size extraction.
 
-**Step 3 — Hashing.** If the file is not a symlink, call `hashing.hash_file(path)` to compute content hashes. If it is a symlink, call `hashing.hash_string(name)` to compute name hashes as the fallback. Also call `hashing.hash_string(name)` unconditionally to produce the `name.hashes` field.
+**Step 3 â€” Hashing.** If the file is not a symlink, call `hashing.hash_file(path)` to compute content hashes. If it is a symlink, call `hashing.hash_string(name)` to compute name hashes as the fallback. Also call `hashing.hash_string(name)` unconditionally to produce the `name.hashes` field.
 
-**Step 4 — Identity selection.** Call `hashing.select_id(content_hashes, config.id_algorithm, "y")` to derive the `id` field.
+**Step 4 â€” Identity selection.** Call `hashing.select_id(content_hashes, config.id_algorithm, "y")` to derive the `id` field.
 
-**Step 5 — Timestamps.** Call `timestamps.extract_timestamps(stat_result, is_symlink=...)` to produce the `TimestampsObject`.
+**Step 5 â€” Timestamps.** Call `timestamps.extract_timestamps(stat_result, is_symlink=...)` to produce the `TimestampsObject`.
 
-**Step 6 — Size.** Construct a `SizeObject` from `stat_result.st_size`. The `text` field is a human-readable representation (e.g., `"1.23 MB"`). For symlinks where the stat result comes from `lstat()`, the size reflects the symlink entry itself, not the target.
+**Step 6 â€” Size.** Construct a `SizeObject` from `stat_result.st_size`. The `text` field is a human-readable representation (e.g., `"1.23 MB"`). For symlinks where the stat result comes from `lstat()`, the size reflects the symlink entry itself, not the target.
 
-**Step 7 — Parent identity.** Compute the parent directory's identity via `hashing.hash_directory_id(parent_name, grandparent_name)`, then `hashing.select_id(..., "x")`. Construct a `ParentObject`. When the file is at a filesystem root (empty parent name), set `parent` to `null`.
+**Step 7 â€” Parent identity.** Compute the parent directory's identity via `hashing.hash_directory_id(parent_name, grandparent_name)`, then `hashing.select_id(..., "x")`. Construct a `ParentObject`. When the file is at a filesystem root (empty parent name), set `parent` to `null`.
 
-**Step 8 — EXIF metadata.** If `config.extract_exif` is `True` and the file is not a symlink, call `exif.extract_exif(path, config)`. If the result is non-None, wrap it in a `MetadataEntry` with `origin: "generated"`, `attributes.type: "exiftool.json_metadata"`, `attributes.format: "json"`, and `attributes.transforms: ["key_filter"]`.
+**Step 8 â€” EXIF metadata.** If `config.extract_exif` is `True` and the file is not a symlink, call `exif.extract_exif(path, config)`. If the result is non-None, wrap it in a `MetadataEntry` with `origin: "generated"`, `attributes.type: "exiftool.json_metadata"`, `attributes.format: "json"`, and `attributes.transforms: ["key_filter"]`.
 
-**Step 9 — Sidecar metadata.** If `config.meta_merge` is `True`, call `sidecar.discover_and_parse(path, name, siblings, config, delete_queue)`. Collect the returned `MetadataEntry` objects.
+**Step 9 â€” Sidecar metadata.** If `config.meta_merge` is `True`, call `sidecar.discover_and_parse(path, name, siblings, config, delete_queue)`. Collect the returned `MetadataEntry` objects.
 
-**Step 10 — Metadata assembly.** Combine the exiftool entry (if any) and sidecar entries into the `metadata` array. If metadata processing was active but produced no results, `metadata` is an empty list `[]`. If metadata processing was not active (neither exif nor sidecar flags enabled), `metadata` is `null`. See §5.10 for the semantic distinction.
+**Step 10 â€” Metadata assembly.** Combine the exiftool entry (if any) and sidecar entries into the `metadata` array. If metadata processing was active but produced no results, `metadata` is an empty list `[]`. If metadata processing was not active (neither exif nor sidecar flags enabled), `metadata` is `null`. See Â§5.10 for the semantic distinction.
 
-**Step 11 — Storage name.** Construct `attributes.storage_name` from the `id` and `extension`: `f"{id}.{extension}"` for files with extensions, or just `id` for files without.
+**Step 11 â€” Storage name.** Construct `attributes.storage_name` from the `id` and `extension`: `f"{id}.{extension}"` for files with extensions, or just `id` for files without.
 
-**Step 12 — Assembly.** Construct the final `IndexEntry` with all fields populated. Set `schema_version` to `2`, `type` to `"file"`, `items` to `null`.
+**Step 12 â€” Assembly.** Construct the final `IndexEntry` with all fields populated. Set `schema_version` to `2`, `type` to `"file"`, `items` to `null`.
 
-> **Deviation from original:** The original's `MakeObject` contains a `switch` statement with five near-identical branches (`makeobjectfile`, `makeobjectdirectory`, `makeobjectdirectoryrecursive`, plus defaults) that all construct the same `[PSCustomObject]@{...}` with minor variations. The port uses a single construction path per item type — `build_file_entry()` for files and `build_directory_entry()` for directories — with no switch duplication.
+> **Deviation from original:** The original's `MakeObject` contains a `switch` statement with five near-identical branches (`makeobjectfile`, `makeobjectdirectory`, `makeobjectdirectoryrecursive`, plus defaults) that all construct the same `[PSCustomObject]@{...}` with minor variations. The port uses a single construction path per item type â€” `build_file_entry()` for files and `build_directory_entry()` for directories â€” with no switch duplication.
 
 #### Directory entry construction sequence
 
@@ -850,25 +867,27 @@ def index_path(
 
 | Step | File behavior | Directory behavior |
 |------|--------------|-------------------|
-| 3 — Hashing | `hash_file()` for content | `hash_directory_id(name, parent_name)` for name-based identity |
-| 4 — Identity | Prefix `y` | Prefix `x` |
-| 6 — Size | `stat_result.st_size` | Sum of all child sizes (computed after child entries are built) |
-| 8 — EXIF | Active for eligible files | Skipped (directories have no embedded metadata) |
-| 9 — Sidecar | Active for files | Not applicable for the directory itself (but active for child files) |
-| 12 — Items | `items = null` | `items = [child entries]` |
+| 3 â€” Hashing | `hash_file()` for content | `hash_directory_id(name, parent_name)` for name-based identity |
+| 4 â€” Identity | Prefix `y` | Prefix `x` |
+| 6 â€” Size | `stat_result.st_size` | Sum of all child sizes (computed after child entries are built) |
+| 8 â€” EXIF | Active for eligible files | Skipped (directories have no embedded metadata) |
+| 9 â€” Sidecar | Active for files | Not applicable for the directory itself (but active for child files) |
+| 12 â€” Items | `items = null` | `items = [child entries]` |
 
-After constructing its own identity and timestamps, `build_directory_entry()` enumerates children via `traversal.list_children(path, config)` and recursively builds child entries:
+After constructing its own identity and timestamps, `build_directory_entry()` enumerates children via `traversal.list_children(path, config)` and builds child entries in a loop that integrates progress reporting and cooperative cancellation:
 
-1. For each child file: call `build_file_entry(child, config, siblings=all_child_files, delete_queue=...)`.
-2. For each child subdirectory (when `recursive=True`): call `build_directory_entry(child, config, recursive=True, delete_queue=...)`.
-3. Collect all child `IndexEntry` objects into the `items` list (files first, then directories, each group sorted by name).
-4. Compute the directory's `size.bytes` as the sum of all child `size.bytes` values (recursive — includes all descendants).
+1. **Discovery.** Call `traversal.list_children(path, config)` to obtain the sorted file and directory lists. If `progress_callback` is not `None`, emit a `ProgressEvent` with `phase="discovery"`, `items_total` set to `len(files) + len(directories)`, `items_completed=0`, and `level="info"`.
+2. **Cancellation checkpoint.** At the top of each loop iteration (before processing the next child, whether file or subdirectory), check `cancel_event.is_set()` if `cancel_event` is not `None`. If the event is set, raise `IndexerCancellationError` immediately. No partial results are returned — the partially assembled `items` list is discarded.
+3. **File children.** For each child file: call `build_file_entry(child, config, siblings=all_child_files, delete_queue=...)`. After the call returns (or the child is skipped due to error), if `progress_callback` is not `None`, emit a `ProgressEvent` with `phase="processing"`, the updated `items_completed` count, `current_path=child`, and `level="info"` (or `"warning"` if the child was skipped).
+4. **Directory children.** For each child subdirectory (when `recursive=True`): call `build_directory_entry(child, config, recursive=True, delete_queue=..., progress_callback=progress_callback, cancel_event=cancel_event)`. The same `progress_callback` and `cancel_event` are forwarded so that progress spans the entire tree and cancellation is effective at any recursion depth. After the recursive call returns, emit a `ProgressEvent` with updated counts.
+5. **Assembly.** Collect all child `IndexEntry` objects into the `items` list (files first, then directories, each group sorted by name).
+6. **Size aggregation.** Compute the directory's `size.bytes` as the sum of all child `size.bytes` values (recursive â€” includes all descendants).
 
-When `recursive=False` (flat mode), child subdirectories are still processed by `build_directory_entry()` but with `recursive=False`, so they have a single level of children (or none, depending on implementation — the original processes immediate children only in flat mode). The flat-mode behavior produces a two-level tree: the target directory containing its immediate children, with child directories having their own identity and timestamps but no populated `items`.
+When `recursive=False` (flat mode), child subdirectories are still processed by `build_directory_entry()` but with `recursive=False`, so they have a single level of children (or none, depending on implementation â€” the original processes immediate children only in flat mode). The flat-mode behavior produces a two-level tree: the target directory containing its immediate children, with child directories having their own identity and timestamps but no populated `items`.
 
 #### Error handling during construction
 
-Per-item error handling follows the strategy defined in §4.5:
+Per-item error handling follows the strategy defined in Â§4.5:
 
 | Error condition | Behavior |
 |----------------|----------|
@@ -877,8 +896,9 @@ Per-item error handling follows the strategy defined in §4.5:
 | Exiftool fails for this file | Exiftool entry omitted from `metadata`. Warning logged. |
 | Sidecar file cannot be read | That sidecar's `MetadataEntry` has `attributes.type: "error"` and `data: null`. Warning logged. Other sidecars unaffected. |
 | Child entry construction fails | Child excluded from parent's `items`. Warning logged. Remaining children processed. |
+| `cancel_event` is set | `IndexerCancellationError` raised immediately at the next item boundary. Partially built `items` list is discarded. This is an invocation-level interrupt, not an item-level failure. |
 
-The entry builder never raises exceptions for item-level or field-level failures. Only fatal conditions (target path does not exist, configuration is invalid) produce exceptions that propagate to the caller.
+The entry builder never raises exceptions for item-level or field-level failures. Cancellation is the sole exception to this rule — `IndexerCancellationError` is an invocation-level interrupt that propagates to the caller, not an item-level or field-level failure. Only fatal conditions (target path does not exist, configuration is invalid, or cancellation requested) produce exceptions that propagate to the caller.
 
 ---
 
@@ -890,7 +910,7 @@ The entry builder never raises exceptions for item-level or field-level failures
 
 #### Purpose
 
-Converts `IndexEntry` model instances to JSON text and routes the result to one or more output destinations. This is Stage 5 of the processing pipeline (§4.1). The serializer is a pure presentation layer — it does not modify the `IndexEntry` data, only formats and delivers it.
+Converts `IndexEntry` model instances to JSON text and routes the result to one or more output destinations. This is Stage 5 of the processing pipeline (Â§4.1). The serializer is a pure presentation layer â€” it does not modify the `IndexEntry` data, only formats and delivers it.
 
 #### Public interface
 
@@ -933,7 +953,7 @@ def write_inplace(
 
 Serialization converts an `IndexEntry` dataclass to JSON via a two-step process: `dataclasses.asdict(entry)` to produce a plain dict, followed by `json.dumps()` to produce the JSON string.
 
-The serialization helper applies the invariants defined in §5.12:
+The serialization helper applies the invariants defined in Â§5.12:
 
 1. `schema_version` is placed first in the output by using an `OrderedDict` or a custom key-sorting function. JSON objects are unordered, but the serializer places `schema_version` first by convention for human readability.
 
@@ -959,7 +979,7 @@ The output routing model simplifies the original's seven-scenario matrix into th
 
 Any combination of these flags is valid. When no output flags are specified, the default is `--stdout` only (matching the original's default behavior).
 
-> **Improvement over original:** The original's 7-scenario routing switch (`StandardOutput`/`NoStandardOutput` combined with `OutFile`/`OutFileInPlace`/both/neither) is replaced by three independent flags. The routing logic becomes a simple check-and-write for each enabled destination, with no complex scenario matrix. The `NoStandardOutput` negative flag is eliminated — the absence of `--stdout` is sufficient.
+> **Improvement over original:** The original's 7-scenario routing switch (`StandardOutput`/`NoStandardOutput` combined with `OutFile`/`OutFileInPlace`/both/neither) is replaced by three independent flags. The routing logic becomes a simple check-and-write for each enabled destination, with no complex scenario matrix. The `NoStandardOutput` negative flag is eliminated â€” the absence of `--stdout` is sufficient.
 
 #### Timing of writes
 
@@ -967,9 +987,9 @@ Any combination of these flags is valid. When no output flags are specified, the
 |-------------|-------------|
 | `--stdout` | After the complete entry tree is assembled (end of Stage 4). The entire tree is serialized and written in one operation. |
 | `--outfile` | After the complete entry tree is assembled. The entire tree is serialized and written to the file in one operation. |
-| `--inplace` | During traversal (within the Stage 3–4 loop). Each item's sidecar file is written as soon as that item's `IndexEntry` is complete, before the next item is processed. |
+| `--inplace` | During traversal (within the Stage 3â€“4 loop). Each item's sidecar file is written as soon as that item's `IndexEntry` is complete, before the next item is processed. |
 
-The in-place write timing is a deliberate design choice preserved from the original: it ensures that partial results survive process interruption. If the indexer is killed mid-traversal, the sidecar files written so far are valid and usable. Stdout and outfile writes, by contrast, happen only after full completion — there is no meaningful partial-output behavior for a single JSON document.
+The in-place write timing is a deliberate design choice preserved from the original: it ensures that partial results survive process interruption. If the indexer is killed mid-traversal, the sidecar files written so far are valid and usable. Stdout and outfile writes, by contrast, happen only after full completion â€” there is no meaningful partial-output behavior for a single JSON document.
 
 #### File encoding
 
@@ -985,7 +1005,7 @@ All output files are written as UTF-8 without a BOM, using `Path.write_text(json
 
 #### Purpose
 
-Implements the `StorageName` rename operation: renames files and directories from their original names to their deterministic, hash-based `storage_name` values (§5.8). The rename operation is destructive — the original filename is replaced on disk — but the original name is preserved in the `IndexEntry.name.text` field of the in-place sidecar file that is always written alongside a rename (since the sidecar serves as the manifest for reversal).
+Implements the `StorageName` rename operation: renames files and directories from their original names to their deterministic, hash-based `storage_name` values (Â§5.8). The rename operation is destructive â€” the original filename is replaced on disk â€” but the original name is preserved in the `IndexEntry.name.text` field of the in-place sidecar file that is always written alongside a rename (since the sidecar serves as the manifest for reversal).
 
 #### Public interface
 
@@ -1010,17 +1030,17 @@ def rename_item(
 
 The rename operation constructs the target path via `paths.build_storage_path(original_path, entry.attributes.storage_name)` and executes `original_path.rename(target_path)`.
 
-`Path.rename()` performs an atomic rename when the source and target are on the same filesystem. For cross-filesystem moves (which should not occur in normal usage — the rename target is always in the same directory), the operation falls back to `shutil.move()`.
+`Path.rename()` performs an atomic rename when the source and target are on the same filesystem. For cross-filesystem moves (which should not occur in normal usage â€” the rename target is always in the same directory), the operation falls back to `shutil.move()`.
 
 #### Collision detection
 
-Before renaming, the module checks whether the target path already exists. If it does, and it is not the same inode as the source (checked via `os.stat()` comparison), a `RenameError` is raised. This prevents data loss from two files that happen to produce the same `storage_name` (which would require an identity hash collision — astronomically unlikely, but the guard is cheap and worth having).
+Before renaming, the module checks whether the target path already exists. If it does, and it is not the same inode as the source (checked via `os.stat()` comparison), a `RenameError` is raised. This prevents data loss from two files that happen to produce the same `storage_name` (which would require an identity hash collision â€” astronomically unlikely, but the guard is cheap and worth having).
 
 If the target path exists and is the same inode as the source (meaning the file was already renamed in a previous run), the rename is a no-op and the existing path is returned.
 
 #### Rename implies in-place output
 
-When the `--rename` flag is active, the configuration MUST also activate `--inplace` output. The rename module does not write sidecar files itself — that is handled by `serializer.write_inplace()`. The configuration loader enforces the implication: `config.rename = True` → `config.output_inplace = True`. This matches the original's safety behavior (`MakeIndex` forces `OutFileInPlace = $true` when `Rename = $true`).
+When the `--rename` flag is active, the configuration MUST also activate `--inplace` output. The rename module does not write sidecar files itself â€” that is handled by `serializer.write_inplace()`. The configuration loader enforces the implication: `config.rename = True` â†’ `config.output_inplace = True`. This matches the original's safety behavior (`MakeIndex` forces `OutFileInPlace = $true` when `Rename = $true`).
 
 The sidecar file written alongside each renamed item serves as the reversal manifest: it contains the original filename in `name.text`, allowing a future revert operation to reconstruct the original path.
 
@@ -1038,4 +1058,4 @@ The `dry_run` parameter causes the function to compute and return the target pat
 
 #### Revert capability
 
-The original's source comments include a "To-Do" note about adding a `Revert` parameter. The v2 schema's enriched `MetadataEntry` provenance fields (§5.10, principle P3) and the in-place sidecar files provide the data foundation for reversal. A `revert_rename()` function that reads the sidecar's `name.text` field and renames the file back to its original name is a natural post-MVP enhancement. The architecture supports it without structural changes — the sidecar file is the revert manifest.
+The original's source comments include a "To-Do" note about adding a `Revert` parameter. The v2 schema's enriched `MetadataEntry` provenance fields (Â§5.10, principle P3) and the in-place sidecar files provide the data foundation for reversal. A `revert_rename()` function that reads the sidecar's `name.text` field and renames the file back to its original name is a natural post-MVP enhancement. The architecture supports it without structural changes â€” the sidecar file is the revert manifest.

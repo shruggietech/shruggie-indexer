@@ -6,7 +6,7 @@ The CLI module is `cli/main.py` (§3.2). The entry point is registered as `shrug
 
 **CLI framework:** The CLI uses `click` as its argument parsing framework. `click` is declared as an optional dependency in `pyproject.toml` under the `cli` extra (§12.3). If `click` is not installed, the CLI entry point MUST fail with a clear error message directing the user to install the dependency (`pip install shruggie-indexer[cli]`). The core library does not depend on `click` — consumers who use `shruggie_indexer` as a Python library never import it.
 
-> **Deviation from original:** The original's CLI is the `Param()` block of a PowerShell function — 14 parameters with aliases, switches, and manual validation logic spanning ~200 lines. The port replaces this with `click` decorators, which handle type conversion, mutual exclusion, default propagation, and help text generation declaratively. The port also adds capabilities absent from the original: `--version`, `--dry-run`, `--config`, `--no-stdout`, and structured exit codes.
+> **Deviation from original:** The original's CLI is the `Param()` block of a PowerShell function — 14 parameters with aliases, switches, and manual validation logic spanning ~200 lines. The port replaces this with `click` decorators, which handle type conversion, mutual exclusion, default propagation, and help text generation declaratively. The port also adds capabilities absent from the original: `--version`, `--dry-run`, `--config`, `--no-stdout`, structured exit codes, and graceful interrupt handling (§8.11).
 
 ### 8.1. Command Structure
 
@@ -365,7 +365,7 @@ shruggie-indexer /path/to/dir --outfile out.json -q
 
 ### 8.10. Exit Codes
 
-The CLI uses structured exit codes to communicate outcome status to calling processes. Exit codes are integers in the range 0–4.
+The CLI uses structured exit codes to communicate outcome status to calling processes. Exit codes are integers in the range 0–5.
 
 | Code | Name | Meaning |
 |------|------|---------|
@@ -374,6 +374,7 @@ The CLI uses structured exit codes to communicate outcome status to calling proc
 | 2 | `CONFIGURATION_ERROR` | The invocation failed before any processing began due to invalid configuration: invalid flag combination (e.g., `--meta-merge-delete` without a persistent output), unreadable configuration file, invalid TOML syntax, or unrecognized `--id-type` value. No output is produced. |
 | 3 | `TARGET_ERROR` | The target path does not exist, is not accessible, or is neither a file nor a directory. This is the exit code produced when `click.Path(exists=True)` rejects the target, or when the resolved target fails classification (§4.6). No output is produced. |
 | 4 | `RUNTIME_ERROR` | An unexpected error occurred during processing that prevented the tool from completing. This covers unhandled exceptions, filesystem errors that affect the entire operation (e.g., the output file path becomes unwritable mid-operation), or `exiftool` crashes that propagate beyond the per-item error boundary. Partial output may exist for `--inplace` mode (sidecar files written before the failure); `--stdout` and `--outfile` output is not produced. |
+| 5 | `INTERRUPTED` | The operation was cancelled by the user via `SIGINT` (`Ctrl+C`). See §8.11 for the full signal handling specification. Partial `--inplace` sidecar output may exist on disk for items completed before the interrupt. No `--stdout` or `--outfile` output is produced. The MetaMergeDelete deletion queue (§4.1, Stage 6) is discarded — no sidecar files are deleted. |
 
 Exit codes are defined as an `IntEnum` in `cli/main.py`:
 
@@ -386,6 +387,7 @@ class ExitCode(IntEnum):
     CONFIGURATION_ERROR = 2
     TARGET_ERROR = 3
     RUNTIME_ERROR = 4
+    INTERRUPTED = 5
 ```
 
 The `main()` function wraps the entire invocation in a `try`/`except` structure that maps exception types to exit codes:
@@ -393,15 +395,31 @@ The `main()` function wraps the entire invocation in a `try`/`except` structure 
 ```python
 # Illustrative — not the exact implementation.
 def main():
+    cancel_event = threading.Event()
+    _install_signal_handlers(cancel_event)  # §8.11
+
     try:
-        # ... click CLI setup, config construction, index_path() call ...
+        # ... click CLI setup, config construction ...
+        entry = index_path(
+            target, config,
+            progress_callback=progress_cb,
+            cancel_event=cancel_event,
+        )
+        # ... output routing ...
         if failed_items > 0:
             sys.exit(ExitCode.PARTIAL_FAILURE)
         sys.exit(ExitCode.SUCCESS)
+    except IndexerCancellationError:
+        logger.warning("Operation interrupted — exiting cleanly.")
+        sys.exit(ExitCode.INTERRUPTED)
     except ConfigurationError:
         sys.exit(ExitCode.CONFIGURATION_ERROR)
     except TargetError:
         sys.exit(ExitCode.TARGET_ERROR)
+    except KeyboardInterrupt:
+        # Second Ctrl+C bypassed cooperative cancellation (§8.11)
+        logger.warning("Forced termination.")
+        sys.exit(ExitCode.INTERRUPTED)
     except Exception:
         logger.exception("Unexpected error during indexing")
         sys.exit(ExitCode.RUNTIME_ERROR)
@@ -411,8 +429,105 @@ def main():
 
 #### Exit code interaction with `--quiet`
 
-When `--quiet` is active, the exit code becomes the primary signal for success or failure. The calling process MUST inspect `$?` (shell) or the subprocess return code (Python) to determine the outcome. Fatal error messages (exit codes 2–4) are still emitted to `stderr` even in quiet mode — `--quiet` suppresses informational and warning messages, not fatal errors.
+When `--quiet` is active, the exit code becomes the primary signal for success or failure. The calling process MUST inspect `$?` (shell) or the subprocess return code (Python) to determine the outcome. Fatal error messages (exit codes 2–4) are still emitted to `stderr` even in quiet mode — `--quiet` suppresses informational and warning messages, not fatal errors. The interruption message (exit code 5) is also emitted to `stderr` in quiet mode, as it represents a non-normal termination the caller must be able to detect.
 
 #### Exit code interaction with `--inplace`
 
-Because `--inplace` writes sidecar files incrementally during traversal (§6.9), a `RUNTIME_ERROR` (exit code 4) does not necessarily mean zero output was produced. Sidecar files written before the failure point are valid and usable. Calling processes that use `--inplace` SHOULD handle exit code 4 by checking for partial sidecar output rather than assuming complete failure.
+Because `--inplace` writes sidecar files incrementally during traversal (§6.9), a `RUNTIME_ERROR` (exit code 4) or `INTERRUPTED` (exit code 5) does not necessarily mean zero output was produced. Sidecar files written before the failure or interruption point are valid and usable. Calling processes that use `--inplace` SHOULD handle exit codes 4 and 5 by checking for partial sidecar output rather than assuming complete failure.
+
+### 8.11. Signal Handling and Graceful Interruption
+
+The CLI supports cooperative cancellation via `SIGINT` (`Ctrl+C`), reusing the same cancellation infrastructure defined for the GUI (§10.5). This ensures that long-running indexing operations on large directory trees can be interrupted cleanly — with the current item allowed to complete, partial `--inplace` output preserved, and destructive operations (MetaMergeDelete) safely aborted.
+
+#### Design rationale
+
+Without explicit signal handling, Python's default `SIGINT` behavior raises `KeyboardInterrupt` at an arbitrary point in execution. This is problematic for `shruggie-indexer` because an uncontrolled interrupt can leave partially written sidecar files, corrupt an in-progress `--outfile` write, or — most critically — interrupt a MetaMergeDelete operation after some sidecar files have been deleted but before their content has been persisted to the aggregate output. The cooperative model eliminates these failure modes by channeling interruption through the same `cancel_event` mechanism the GUI uses, which the engine checks only at safe item boundaries.
+
+#### Mechanism
+
+The CLI installs a custom `SIGINT` handler before invoking the indexing engine. The handler interacts with the `cancel_event` (`threading.Event`) that is passed to `index_path()`.
+
+```python
+import signal
+import threading
+import sys
+
+def _install_signal_handlers(cancel_event: threading.Event) -> None:
+    """Install SIGINT handler for cooperative cancellation.
+
+    First SIGINT: set the cancel_event so the engine stops at the
+    next item boundary. Second SIGINT: restore default behavior and
+    re-raise, forcing immediate termination.
+    """
+    def _handle_sigint(signum, frame):
+        if cancel_event.is_set():
+            # Second interrupt — user wants out NOW.
+            signal.signal(signal.SIGINT, signal.SIG_DFL)
+            raise KeyboardInterrupt
+        cancel_event.set()
+        # Message goes to stderr so it doesn't corrupt stdout JSON.
+        print(
+            "\nInterrupt received — finishing current item. "
+            "Press Ctrl+C again to force quit.",
+            file=sys.stderr,
+        )
+
+    signal.signal(signal.SIGINT, _handle_sigint)
+```
+
+#### Two-phase interruption model
+
+The handler implements a two-phase model that balances safety with user control:
+
+**Phase 1 — Cooperative cancellation (first `Ctrl+C`):**
+
+1. The handler sets `cancel_event`.
+2. A message is printed to `stderr` informing the user that the current item will complete before the operation stops.
+3. The indexing engine detects `cancel_event.is_set()` at the next item boundary in the child-processing loop of `build_directory_entry()` (§6.8) and raises `IndexerCancellationError`.
+4. The `main()` function catches `IndexerCancellationError`, logs a clean shutdown message, and exits with code 5 (`INTERRUPTED`).
+
+**Phase 2 — Forced termination (second `Ctrl+C`):**
+
+1. Because `cancel_event` is already set, the handler knows this is a repeat interrupt.
+2. The handler restores Python's default `SIGINT` disposition (`signal.SIG_DFL`) and raises `KeyboardInterrupt`.
+3. The `main()` function catches `KeyboardInterrupt` in its outermost exception handler and exits with code 5 (`INTERRUPTED`).
+4. If `main()` does not catch it (e.g., the interrupt occurs in a context where the handler's frame is inside a system call), Python's default behavior terminates the process immediately.
+
+The two-phase model is a well-established CLI pattern (used by `git`, `rsync`, `docker`, among others) that gives the user an escape hatch without sacrificing safety in the common case.
+
+#### Cancellation granularity
+
+Cancellation is per-item, not mid-item. This is inherited from the core engine's cancellation contract (§6.8, §10.5). Once the engine begins processing a single file or directory entry — hashing, exiftool invocation, sidecar discovery — that item runs to completion before the cancellation flag is checked. This guarantee ensures that every item in the output is complete: no partial hashes, no half-written sidecar files, no items with metadata from exiftool but missing hash fields.
+
+For single-file targets, cooperative cancellation has no practical effect — the entire operation is essentially atomic (a single `build_file_entry()` call). The `cancel_event` is passed to `index_path()` but is only checked during directory traversal loops. A `SIGINT` during single-file processing falls through to the `KeyboardInterrupt` handler in `main()` and exits with code 5.
+
+#### Cancellation and output state
+
+The following table describes what happens to each output destination when the operation is interrupted:
+
+| Output mode | State after interruption |
+|------------|------------------------|
+| `--stdout` | No output produced. The JSON tree is serialized only after the complete `IndexEntry` is assembled (§6.9), which does not happen on cancellation. |
+| `--outfile` | No output produced. The aggregate file is written atomically after processing completes. If the file existed before the invocation, it is not modified (the write had not yet begun). |
+| `--inplace` | Partial output. Sidecar files for items completed before the interrupt are valid and present on disk. No sidecar exists for the item that was in progress when `cancel_event` was set (it completes, but the engine raises `IndexerCancellationError` before advancing to the next item — the just-completed item's sidecar IS written). |
+
+#### Cancellation and MetaMergeDelete
+
+If a MetaMergeDelete operation is interrupted, the deletion queue (Stage 6, §4.1) is discarded. No sidecar files are deleted. This matches the GUI's cancellation behavior (§10.5) and is the safe default — the user can re-run the operation to completion if desired, and all source sidecar files remain intact.
+
+#### Cancellation and `--rename`
+
+If a rename operation is interrupted, files renamed before the interrupt retain their new names. The corresponding in-place sidecar files (the reversal manifests) are present alongside each renamed file. Files not yet reached by the traversal retain their original names. This is the same partial-completion behavior as `--inplace` — the operation is idempotent with respect to re-execution, since already-renamed files will produce the same `storage_name` on a subsequent run.
+
+#### Platform considerations
+
+`SIGINT` handling via `signal.signal()` is portable across all target platforms (Windows, Linux, macOS). On Windows, `SIGINT` is delivered when the user presses `Ctrl+C` in a console window or when `GenerateConsoleCtrlEvent(CTRL_C_EVENT)` is called programmatically. The `signal` module's behavior on Windows has some limitations (signals can only be handled on the main thread, `SIGINT` is the only reliably catchable signal), but these do not affect the CLI's use case — the CLI runs on the main thread and only needs to catch `SIGINT`.
+
+`SIGTERM` is not handled by the CLI. On Unix systems, `SIGTERM` defaults to process termination, which is the expected behavior for external process managers (systemd, Docker, etc.) that send `SIGTERM` as a "please shut down" signal. Adding `SIGTERM` handling with cooperative cancellation is a reasonable future enhancement but is not required for the MVP — `SIGTERM` senders typically follow up with `SIGKILL` after a timeout, and the two-phase `SIGINT` model already covers the interactive use case.
+
+#### Progress bar interaction
+
+When the CLI is displaying a progress bar (via `tqdm` or `rich`, see §11.6), the interrupt message from Phase 1 must not corrupt the progress bar rendering. Both `tqdm` and `rich` provide mechanisms for this: `tqdm.write()` prints a message without disrupting the active progress bar, and `rich.console.Console` supports `stderr` output that coexists with progress displays. The interrupt message MUST use the progress library's safe-print mechanism rather than a bare `print()` call. The illustrative code in the mechanism section above uses `print()` for clarity; the implementation MUST substitute the appropriate library-aware output method.
+
+> **Improvement over original:** The original PowerShell implementation has no interrupt handling. `Ctrl+C` during a `MakeIndex` invocation triggers PowerShell's default `StopProcessing()` behavior, which terminates the pipeline immediately with no cleanup. This can leave partially written output files, orphaned temporary files (from `TempOpen`/`TempClose`), and — in MetaMergeDelete mode — a state where some sidecar files have been deleted but the aggregate output was never written. The port's cooperative cancellation model eliminates all of these failure modes.
+
