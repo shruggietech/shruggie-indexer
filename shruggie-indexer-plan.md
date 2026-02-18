@@ -1,1 +1,2 @@
-# Shruggie-Indexer — Plan of Action
+# shruggie-indexer — Plan of Action
+
