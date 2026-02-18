@@ -14,3 +14,4 @@ Additionally, observe the following critical rules:
 - You MUST challenge assumptions and surface architectural weaknesses when detected.
 - Improvements should be proportional to the scope of the change.
 - Avoid unnecessary architectural expansion.
+- Always save files using UTF-8 encoding without BOM.
