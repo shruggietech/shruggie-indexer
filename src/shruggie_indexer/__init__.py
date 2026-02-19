@@ -24,26 +24,26 @@ from shruggie_indexer.exceptions import (
 # import once the corresponding sprint delivers the module.
 
 with contextlib.suppress(ImportError):
-    from shruggie_indexer.config.loader import load_config
+    from shruggie_indexer.config.loader import load_config  # type: ignore[import-not-found]
 
 with contextlib.suppress(ImportError):
-    from shruggie_indexer.config.types import IndexerConfig, MetadataTypeAttributes
+    from shruggie_indexer.config.types import IndexerConfig, MetadataTypeAttributes  # type: ignore[import-not-found]
 
 with contextlib.suppress(ImportError):
-    from shruggie_indexer.core.entry import (
+    from shruggie_indexer.core.entry import (  # type: ignore[import-not-found]
         build_directory_entry,
         build_file_entry,
         index_path,
     )
 
 with contextlib.suppress(ImportError):
-    from shruggie_indexer.core.progress import ProgressEvent
+    from shruggie_indexer.core.progress import ProgressEvent  # type: ignore[import-not-found]
 
 with contextlib.suppress(ImportError):
-    from shruggie_indexer.core.serializer import serialize_entry
+    from shruggie_indexer.core.serializer import serialize_entry  # type: ignore[import-not-found]
 
 with contextlib.suppress(ImportError):
-    from shruggie_indexer.models.schema import (
+    from shruggie_indexer.models.schema import (  # type: ignore[import-not-found]
         HashSet,
         IndexEntry,
         MetadataEntry,

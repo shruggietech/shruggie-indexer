@@ -99,6 +99,7 @@
         },
         "[log]": {
             "editor.wordWrap": "off"
-        }
+        },
+        "evenBetterToml.schema.enabled": false
     }
 }
