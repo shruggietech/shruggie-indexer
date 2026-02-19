@@ -9,6 +9,13 @@ built out across sprints.
 import contextlib
 
 from shruggie_indexer._version import __version__
+
+# ─── Lazy imports for modules not yet implemented ───────────────────────────
+# Guarded by contextlib.suppress so the package remains importable before
+# the target modules exist.  Each block will be replaced with a direct
+# import once the corresponding sprint delivers the module.
+from shruggie_indexer.config.loader import load_config
+from shruggie_indexer.config.types import IndexerConfig, MetadataTypeAttributes
 from shruggie_indexer.exceptions import (
     IndexerCancellationError,
     IndexerConfigError,
@@ -17,17 +24,6 @@ from shruggie_indexer.exceptions import (
     IndexerTargetError,
     RenameError,
 )
-
-# ─── Lazy imports for modules not yet implemented ───────────────────────────
-# These are guarded by contextlib.suppress so the package remains importable
-# before the target modules exist. Each block will be replaced with a direct
-# import once the corresponding sprint delivers the module.
-
-with contextlib.suppress(ImportError):
-    from shruggie_indexer.config.loader import load_config  # type: ignore[import-not-found]
-
-with contextlib.suppress(ImportError):
-    from shruggie_indexer.config.types import IndexerConfig, MetadataTypeAttributes  # type: ignore[import-not-found]
 
 with contextlib.suppress(ImportError):
     from shruggie_indexer.core.entry import (  # type: ignore[import-not-found]
@@ -42,19 +38,23 @@ with contextlib.suppress(ImportError):
 with contextlib.suppress(ImportError):
     from shruggie_indexer.core.serializer import serialize_entry  # type: ignore[import-not-found]
 
-with contextlib.suppress(ImportError):
-    from shruggie_indexer.models.schema import (  # type: ignore[import-not-found]
-        HashSet,
-        IndexEntry,
-        MetadataEntry,
-        NameObject,
-        ParentObject,
-        SizeObject,
-        TimestampPair,
-        TimestampsObject,
-    )
+from shruggie_indexer.models.schema import (
+    AttributesObject,
+    FileSystemObject,
+    HashSet,
+    IndexEntry,
+    MetadataAttributes,
+    MetadataEntry,
+    NameObject,
+    ParentObject,
+    SizeObject,
+    TimestampPair,
+    TimestampsObject,
+)
 
 __all__ = [
+    "AttributesObject",
+    "FileSystemObject",
     "HashSet",
     "IndexEntry",
     "IndexerCancellationError",
@@ -63,6 +63,7 @@ __all__ = [
     "IndexerError",
     "IndexerRuntimeError",
     "IndexerTargetError",
+    "MetadataAttributes",
     "MetadataEntry",
     "MetadataTypeAttributes",
     "NameObject",

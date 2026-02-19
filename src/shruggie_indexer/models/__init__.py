@@ -1,10 +1,25 @@
 """Data models for shruggie-indexer v2 schema output."""
 
-import contextlib
+from shruggie_indexer.models.schema import (
+    AttributesObject,
+    FileSystemObject,
+    HashSet,
+    IndexEntry,
+    MetadataAttributes,
+    MetadataEntry,
+    NameObject,
+    ParentObject,
+    SizeObject,
+    TimestampPair,
+    TimestampsObject,
+)
 
 __all__ = [
+    "AttributesObject",
+    "FileSystemObject",
     "HashSet",
     "IndexEntry",
+    "MetadataAttributes",
     "MetadataEntry",
     "NameObject",
     "ParentObject",
@@ -12,15 +27,3 @@ __all__ = [
     "TimestampPair",
     "TimestampsObject",
 ]
-
-with contextlib.suppress(ImportError):
-    from shruggie_indexer.models.schema import (
-        HashSet,
-        IndexEntry,
-        MetadataEntry,
-        NameObject,
-        ParentObject,
-        SizeObject,
-        TimestampPair,
-        TimestampsObject,
-    )
