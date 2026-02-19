@@ -403,7 +403,7 @@ The original PowerShell source code is closed-source and is not included in the 
 
 **G4 — Externalized, user-modifiable configuration.** The original hardcodes all configuration in the `$global:MetadataFileParser` PowerShell object and in various literal values scattered across the function body (exclusion lists, extension validation regex, exiftool argument strings, system directory filters). The port externalizes all such values into a typed configuration system with sensible defaults, a documented configuration file format, and a merge/override mechanism for user customization. A user SHOULD be able to add a new sidecar metadata pattern, extend the exiftool exclusion list, or modify the filesystem exclusion filters without editing source code.
 
-**G5 — Dependency minimization.** The port's core indexing engine MUST run using only the Python standard library plus `exiftool` as an external binary. No third-party Python packages are required for the core pipeline. Third-party packages (such as `click` for CLI, `orjson` for fast serialization, `PyExifTool` for batch performance, `tqdm` or `rich` for progress reporting, and `customtkinter` for the GUI) are used as optional enhancements and are isolated behind import guards or declared as extras in `pyproject.toml`.
+**G5 — Dependency minimization.** The port declares a small, deliberately chosen set of required runtime dependencies — `click` (CLI parsing), `orjson` (JSON serialization performance), `pyexiftool` (batch exiftool invocation with safe Unicode argument passing), and `tqdm` (progress reporting) — alongside `exiftool` as the sole required external binary. These four packages are listed in `[project.dependencies]` in `pyproject.toml` and are installed by a bare `pip install shruggie-indexer`. Each was promoted from optional to required because it replaces functionality that would otherwise need to be built from scratch, re-implemented with inferior characteristics, or deferred to post-MVP (see DEV-15, DEV-16, and the per-package rationale in [§12.3](#123-third-party-python-packages)). The GUI package (`customtkinter`) remains optional and is declared as an extra. Development and testing tools (`rich`, `pytest`, `ruff`, etc.) are also declared as extras. The core indexing engine has no other third-party runtime dependencies beyond the four listed above.
 
 **G6 — AI-agent implementability.** Every section of this specification provides sufficient detail for an AI implementation agent to produce correct, complete code for the described component within a single context window, without interactive clarification or access to the original source. Cross-references between sections are explicit. Ambiguous behavioral questions are resolved in the specification text rather than left to implementer judgment. This is the document's primary design constraint and the reason for its level of explicitness.
 
@@ -477,12 +477,12 @@ This section catalogs the architectural and behavioral decisions where the port 
 
 **Port:** A single hashing utility module provides `hash_file()` and `hash_string()` functions consumed by all callers. This eliminates approximately 17 redundant sub-functions. See [§6.3](#63-hashing-and-identity-generation).
 
-<a id="dev-02-all-four-hash-algorithms-computed-by-default"></a>
-#### DEV-02 — All four hash algorithms computed by default
+<a id="dev-02-multi-algorithm-single-pass-hashing"></a>
+#### DEV-02 — Multi-algorithm single-pass hashing
 
-**Original:** Only MD5 and SHA256 are computed at runtime, despite the output schema defining fields for SHA1 and SHA512. The additional algorithm fields are left `$null` in practice.
+**Original:** Only MD5 and SHA256 are computed at runtime, despite the output schema defining fields for SHA1 and SHA512. The additional algorithm fields are left `$null` in practice. Each algorithm is computed in a separate file-read pass.
 
-**Port:** All four algorithms (MD5, SHA1, SHA256, SHA512) are computed in every indexing pass. Because `hashlib` can feed the same byte chunks to multiple hash objects in a single file read, the marginal cost of additional algorithms is near-zero. This fills previously-empty schema fields and enables downstream consumers to select their preferred algorithm without re-indexing. See [§6.3](#63-hashing-and-identity-generation).
+**Port:** MD5 and SHA256 are always computed. SHA512 is computed when explicitly enabled in the configuration (`config.compute_sha512 = True`). SHA1 is not computed — it serves no unique purpose in the identity system and adds overhead without benefit (see [§5.2.1](#521-hashset) for the rationale). All active algorithms are computed in a single file read using `hashlib`'s ability to feed the same byte chunks to multiple hash objects simultaneously, halving the I/O for the default two-algorithm case compared to the original's one-pass-per-algorithm approach. See [§6.3](#63-hashing-and-identity-generation).
 
 <a id="dev-03-unified-filesystem-traversal"></a>
 #### DEV-03 — Unified filesystem traversal
@@ -503,7 +503,7 @@ This section catalogs the architectural and behavioral decisions where the port 
 
 **Original:** Exiftool arguments are stored as Base64-encoded strings in the source code, decoded at runtime by `Base64DecodeString` (which itself calls `certutil` on Windows and handles URL-encoding as a separate opcode), written to a temporary file via `TempOpen`, passed to exiftool via its `-@` argfile switch, and cleaned up via `TempClose`.
 
-**Port:** Exiftool arguments are defined as plain Python string lists and passed directly to `subprocess.run()`. This eliminates four dependencies in one stroke: `Base64DecodeString`, `certutil`, `TempOpen`, and `TempClose`. See [§6.6](#66-exif-and-embedded-metadata-extraction).
+**Port:** The Base64 encoding pipeline and its four dependencies (`Base64DecodeString`, `certutil`, `TempOpen`, `TempClose`) are eliminated entirely. The primary exiftool interface is `pyexiftool` (DEV-16), which communicates with exiftool's `-stay_open` mode via stdin/stdout pipes — arguments are never written to disk. The fallback interface passes arguments via a `subprocess.run()` call with a `-@` argfile written through Python's `tempfile` module, using `-charset filename=utf8` for Unicode safety. In both cases, exiftool arguments are defined as plain Python string lists — no Base64 encoding, no `certutil`, no Windows-specific decoding. See [§6.6](#66-exif-and-embedded-metadata-extraction).
 
 <a id="dev-06-elimination-of-jq"></a>
 #### DEV-06 — Elimination of jq
@@ -567,6 +567,22 @@ This section catalogs the architectural and behavioral decisions where the port 
 **Original:** The extension validation regex `^(([a-z0-9]){1,2}|([a-z0-9]){1}([a-z0-9\-]){1,12}([a-z0-9]){1})$` is hardcoded in `MakeObject`. It rejects extensions longer than 14 characters or those containing non-alphanumeric characters (beyond hyphens).
 
 **Port:** The extension validation pattern is externalized into the configuration system so users can adjust it for edge cases (e.g., `.numbers`, `.download`, or other legitimate long extensions) without editing source code. The default pattern preserves the original's intent. See [§7](#7-configuration).
+
+<a id="dev-15-unconditional-nfc-normalization-before-string-hashing"></a>
+#### DEV-15 — Unconditional NFC normalization before string hashing
+
+**Original:** String values (filenames, directory names) are hashed as-is, using whatever byte representation the OS returns. Because macOS HFS+ stores filenames in NFD (decomposed) form while Windows NTFS and most Linux filesystems store them in NFC (composed) form, the same logical filename produces different hash digests depending on the platform. The original runs exclusively on Windows (NFC), so this discrepancy is unobservable.
+
+**Port:** `hash_string()` applies `unicodedata.normalize('NFC', value)` unconditionally on all platforms before encoding to UTF-8 and hashing. This ensures that a file named `café.txt` produces identical identity hashes regardless of whether the filesystem returned the name in NFC (`é` = U+00E9) or NFD (`e` + U+0301). The normalization is unconditional rather than platform-conditional because APFS (macOS) preserves whichever form was used at creation, so NFD filenames can appear on any macOS volume — not just HFS+. Unconditional NFC is the simplest invariant: every string is NFC-normalized before hashing, period.
+
+This is a deliberate break from the "hash what the filesystem returns" philosophy stated in the original's portable hashing model. The original never needed to address cross-platform filename equivalence because it ran on a single platform. The port prioritizes cross-platform hash determinism — the same logical filename MUST produce the same identity on all supported platforms. See [§6.3](#63-hashing-and-identity-generation) and [§15.3](#153-linux-and-macos-considerations).
+
+<a id="dev-16-pyexiftool-batch-mode-as-primary-exiftool-strategy"></a>
+#### DEV-16 — PyExifTool batch mode as primary exiftool strategy
+
+**Original:** Exiftool is invoked once per file through a Base64-decoded argument file pipeline (`Base64DecodeString` → `TempOpen` → exiftool `-@` argfile → `TempClose`). Every invocation spawns a new Perl process and a new `certutil` process for argument decoding.
+
+**Port:** The `pyexiftool` package (`>=0.5`) is a required runtime dependency. It uses exiftool's `-stay_open` mode to keep a single persistent Perl process alive for the duration of the indexing run. File paths and arguments are written to the process's stdin pipe one per line — this is semantically equivalent to a continuously open argfile and inherits the same Unicode safety guarantees documented in exiftool's FAQ §18 (`-charset filename=utf8`). Per-file exiftool cost drops from 200–500 ms (process startup dominated) to 20–50 ms (metadata extraction only). A `subprocess.run()` + argfile fallback is retained for environments where `pyexiftool` cannot maintain a stable connection. See [§6.6](#66-exif-and-embedded-metadata-extraction) and [§17.5](#175-exiftool-invocation-strategy).
 
 <a id="3-repository-structure"></a>
 ## 3. Repository Structure
@@ -673,12 +689,12 @@ The `core/` subpackage contains all indexing logic. Every module in `core/` corr
 |--------|-------------------------------|----------------|
 | `traversal.py` | Cat 1 (Filesystem Traversal & Discovery) | Enumerates files and directories within a target path. Supports recursive and non-recursive modes via a single parameterized function (DEV-03). Applies configurable filesystem exclusion filters. Classifies items as files or directories. Yields items to the entry-construction pipeline. |
 | `paths.py` | Cat 2 (Path Resolution & Manipulation) | The single `resolve_path()` utility (DEV-04) plus path component extraction (parent, name, stem, suffix) and extension validation against the configurable regex pattern (DEV-14). All callers — traversal, hashing, entry construction — use this one module for path operations. |
-| `hashing.py` | Cat 3 (Hashing & Identity Generation) | Provides `hash_file()` (content hashing) and `hash_string()` (name hashing) functions that compute all four algorithms (MD5, SHA1, SHA256, SHA512) in a single pass (DEV-01, DEV-02). Computes null-hash constants at module load time (DEV-09). Constructs `HashSet` objects. Implements the directory two-layer identity scheme (`hash(hash(name) + hash(parentName))`). Prefixes identities with `y` (file), `x` (directory), or `z` (generated metadata). |
+| `hashing.py` | Cat 3 (Hashing & Identity Generation) | Provides `hash_file()` (content hashing) and `hash_string()` (name hashing) functions that compute MD5 and SHA256 by default (with SHA512 opt-in) in a single pass (DEV-01, DEV-02). SHA1 is not computed. Applies unconditional NFC Unicode normalization before string hashing (DEV-15). Computes null-hash constants at module load time (DEV-09). Constructs `HashSet` objects. Implements the directory two-layer identity scheme (`hash(hash(name) + hash(parentName))`). Prefixes identities with `y` (file), `x` (directory), or `z` (generated metadata). |
 | `timestamps.py` | Cat 5 (Filesystem Timestamps & Date Conversion) | Derives Unix timestamps (milliseconds) and ISO 8601 strings directly from `os.stat()` results (DEV-07). Handles creation-time portability: `st_birthtime` on macOS, `st_ctime` on Windows, documented fallback on Linux. Constructs `TimestampPair` and `TimestampsObject` model instances. |
-| `exif.py` | Cat 6 (EXIF / Embedded Metadata Extraction) | Invokes `exiftool` as a subprocess with arguments passed as plain Python lists (DEV-05). Parses JSON output directly with `json.loads()` (DEV-06). Filters unwanted keys via dict comprehension. Respects the configurable exiftool file-type exclusion list. Handles `exiftool` absence gracefully (warning, not fatal). |
+| `exif.py` | Cat 6 (EXIF / Embedded Metadata Extraction) | Invokes `exiftool` using `pyexiftool`'s `-stay_open` batch mode as the primary backend (DEV-05, DEV-16), with a `subprocess.run()` + argfile fallback. Parses JSON output directly with `json.loads()` (DEV-06). Filters unwanted keys via dict comprehension. Respects the configurable exiftool file-type exclusion list. Handles `exiftool` absence gracefully (warning, not fatal). |
 | `sidecar.py` | Cat 7 (Sidecar Metadata File Handling) | Discovers sidecar metadata files by matching filenames against the configurable regex identification patterns from `MetadataFileParser`. Classifies sidecars by type (Description, JsonMetadata, Hash, Link, Subtitles, Thumbnail, etc.). Reads and parses sidecar content with format-specific handlers (JSON, plain text, hash files, URL/LNK shortcuts). Constructs `MetadataEntry` model instances. This is the Python equivalent of the original `MetaFileRead` function. |
 | `entry.py` | Cat 8 (Output Object Construction & Schema) | Orchestrates the construction of a single `IndexEntry` from a filesystem path. Calls into `paths`, `hashing`, `timestamps`, `exif`, and `sidecar` to gather all components, then assembles the final v2 schema object. This is the Python equivalent of the original `MakeObject` / `MakeFileIndex` / `MakeDirectoryIndex` family of functions. |
-| `serializer.py` | Cat 9 (JSON Serialization & Output Routing) | Converts `IndexEntry` model instances to JSON. Routes output to stdout, a single aggregate file, or per-item in-place sidecar files (`_meta2.json` / `_directorymeta2.json`), depending on the active output mode. Handles pretty-printing vs. compact output. Optionally uses `orjson` for performance when available. |
+| `serializer.py` | Cat 9 (JSON Serialization & Output Routing) | Converts `IndexEntry` model instances to JSON. Routes output to stdout, a single aggregate file, or per-item in-place sidecar files (`_meta2.json` / `_directorymeta2.json`), depending on the active output mode. Handles pretty-printing vs. compact output. Uses `orjson` as the primary serializer with a `json.dumps()` stdlib fallback for resilience. |
 | `rename.py` | Cat 10 (File Rename & In-Place Write) | Implements the `StorageName` rename operation: renames files and directories from their original names to their hash-based `storage_name` values. Handles collision detection, dry-run mode, and rollback on partial failure. |
 
 The `core/__init__.py` file SHOULD re-export the primary orchestration functions (e.g., `index_path`, `index_file`, `index_directory`) so that internal callers can write `from shruggie_indexer.core import index_path` without reaching into individual modules. The individual modules remain importable for callers who need fine-grained access (e.g., `from shruggie_indexer.core.hashing import hash_file`).
@@ -688,7 +704,7 @@ The `core/__init__.py` file SHOULD re-export the primary orchestration functions
 
 | Module | Responsibility |
 |--------|----------------|
-| `schema.py` | Defines the v2 output schema as Python data structures — `IndexEntry`, `NameObject`, `HashSet`, `SizeObject`, `TimestampPair`, `TimestampsObject`, `ParentObject`, `MetadataEntry`, and any supporting types. Implemented as `dataclasses` for the stdlib-only core (see G5 in [§2.3](#23-design-goals-and-non-goals)), with optional Pydantic models behind an import guard for consumers who want runtime schema validation. Includes serialization helpers (`to_dict()`, `to_json()`) that produce schema-compliant output. |
+| `schema.py` | Defines the v2 output schema as Python data structures — `IndexEntry`, `NameObject`, `HashSet`, `SizeObject`, `TimestampPair`, `TimestampsObject`, `ParentObject`, `MetadataEntry`, and any supporting types. Implemented as `dataclasses` (the stdlib primitive, chosen for zero-dependency portability of the model layer), with optional Pydantic models behind an import guard for consumers who want runtime schema validation. Includes serialization helpers (`to_dict()`, `to_json()`) that produce schema-compliant output. |
 
 **Rationale for `models/` as a separate subpackage:** In `shruggie-feedtools`, the Pydantic schema models live inside `core/schema.py`. That works for feedtools because its model layer is relatively flat (one `FeedOutput` model with nested item objects). The indexer's model layer is more complex — the v2 schema defines seven distinct sub-object types, the `IndexEntry` itself is recursive (the `items` field contains child `IndexEntry` objects), and the configuration system introduces a parallel set of typed structures (see `config/types.py` below). Separating `models/` from `core/` avoids circular import risks between the configuration types that `core/` modules consume and the schema types that `core/` modules produce. It also provides a clean import path for external consumers who need the types without pulling in the engine: `from shruggie_indexer.models import IndexEntry`.
 
@@ -710,7 +726,7 @@ The `config/__init__.py` file SHOULD export `IndexerConfig`, `load_config()`, an
 
 | Module | Responsibility |
 |--------|----------------|
-| `main.py` | Defines the CLI entry point using `click` (preferred) or `argparse` (stdlib fallback). Parses command-line arguments, constructs an `IndexerConfig`, calls into `core/` to perform the requested operation, and routes output via `serializer`. Contains no indexing logic — it is a pure presentation layer. Registered as the `shruggie-indexer` console script entry point in `pyproject.toml`. See [§8](#8-cli-interface). |
+| `main.py` | Defines the CLI entry point using `click`. Parses command-line arguments, constructs an `IndexerConfig`, calls into `core/` to perform the requested operation, and routes output via `serializer`. Contains no indexing logic — it is a pure presentation layer. Registered as the `shruggie-indexer` console script entry point in `pyproject.toml`. See [§8](#8-cli-interface). |
 
 The `cli/` subpackage is intentionally minimal for the MVP. If the CLI grows to support subcommands in future versions, additional modules (e.g., `cli/commands/`) can be added without restructuring.
 
@@ -2243,10 +2259,11 @@ def hash_file(path: Path, algorithms: tuple[str, ...] = ("md5", "sha256")) -> Ha
     """
 
 def hash_string(value: str, algorithms: tuple[str, ...] = ("md5", "sha256")) -> HashSet:
-    """Compute hashes of a UTF-8 encoded string.
+    """Compute hashes of a NFC-normalized, UTF-8 encoded string.
 
-    Encodes the string to UTF-8 bytes and computes the requested
-    digests. Returns a HashSet.
+    Applies unicodedata.normalize('NFC', value) before encoding to
+    UTF-8 bytes (DEV-15). Computes the requested digests. Returns a
+    HashSet.
     """
 
 def hash_directory_id(
@@ -2312,7 +2329,7 @@ The chunk size (`CHUNK_SIZE`) defaults to 65,536 bytes (64 KB). This value balan
 <a id="string-hashing"></a>
 #### String hashing
 
-`hash_string()` encodes the input string to UTF-8 bytes via `value.encode("utf-8")` and computes the requested digests in a single pass. This mirrors the original's `[System.Text.Encoding]::UTF8.GetBytes()` conversion.
+`hash_string()` first applies `unicodedata.normalize('NFC', value)` to the input string, then encodes the NFC-normalized result to UTF-8 bytes via `.encode("utf-8")`, and computes the requested digests in a single pass. The NFC normalization step (DEV-15) ensures that the same logical string produces identical hash digests regardless of whether the source filesystem returned the name in NFC (Windows, most Linux) or NFD (macOS HFS+). This is an intentional deviation from the original's `[System.Text.Encoding]::UTF8.GetBytes()` conversion, which hashed the raw bytes without normalization — an approach that was safe only because the original ran exclusively on Windows.
 
 For `None` or empty-string inputs, `hash_string()` returns the `NULL_HASHES` constant rather than computing the hash of an empty byte sequence. The result is identical (the hash of `b""` is the null-hash constant for each algorithm), but returning the precomputed constant avoids unnecessary hash construction.
 
@@ -2604,37 +2621,55 @@ The exclusion list is configurable ([§7.4](#74-exiftool-exclusion-lists)). When
 <a id="invocation"></a>
 #### Invocation
 
-Exiftool is invoked via `subprocess.run()` with arguments passed as a Python list:
+The exif module supports two invocation backends, selected automatically based on package availability. Both backends use the same exiftool argument set; they differ only in process lifecycle management and argument delivery mechanism.
+
+**Primary backend: `pyexiftool` batch mode (DEV-16).** When the `pyexiftool` package is installed (it is a required runtime dependency), the module uses `exiftool.ExifToolHelper` to maintain a single persistent exiftool process for the duration of the indexing run. File paths and arguments are written to exiftool's stdin pipe — one per line — using exiftool's `-stay_open` protocol. This is semantically equivalent to a continuously open argfile and inherits the same Unicode safety guarantees documented in exiftool's FAQ §18. Per-file cost drops from 200–500 ms (process startup) to 20–50 ms (metadata extraction only).
 
 ```python
 # Illustrative — not the exact implementation.
-result = subprocess.run(
-    [
-        "exiftool",
-        "-json",
-        "-n",
-        "-extractEmbedded",
-        "-scanForXMP",
-        "-unknown2",
-        "-G3:1",
-        "-struct",
-        "-ignoreMinorErrors",
-        "-charset", "filename=utf8",
-        "-api", "requestall=3",
-        "-api", "largefilesupport=1",
-        str(path),
-    ],
-    capture_output=True,
-    text=True,
-    timeout=30,
-)
+import exiftool
+
+EXIFTOOL_COMMON_ARGS = [
+    "-json",
+    "-n",
+    "-extractEmbedded",
+    "-scanForXMP",
+    "-unknown2",
+    "-G3:1",
+    "-struct",
+    "-ignoreMinorErrors",
+    "-charset", "filename=utf8",
+    "-api", "requestall=3",
+    "-api", "largefilesupport=1",
+]
+
+with exiftool.ExifToolHelper(common_args=EXIFTOOL_COMMON_ARGS) as et:
+    metadata_list = et.get_metadata(str(path))
 ```
 
-> **Deviation from original (DEV-05):** The original stores exiftool arguments as Base64-encoded strings in the PowerShell source, decodes them at runtime via `Base64DecodeString` (which itself calls `certutil` on Windows), writes them to a temporary file via `TempOpen`, passes the temporary file to exiftool via its `-@` argfile switch, and cleans up via `TempClose`. The port defines the arguments as a plain Python list and passes them directly to `subprocess.run()`. This eliminates four dependencies in one stroke: `Base64DecodeString`, `certutil`, `TempOpen`, and `TempClose`. The temporary argument file is also eliminated — `subprocess` handles argument passing on all platforms without an intermediary file.
+Error isolation in batch mode is handled by wrapping each per-file `get_metadata()` call in a try/except. If the persistent process dies, the `ExifToolHelper` context manager is re-entered to spawn a fresh process, and the failed file is logged as a field-level error. The `-quiet` flag is appended to `common_args` when the logging level is above DEBUG.
 
-The `-quiet` flag is appended when the logging level is above DEBUG, matching the original's behavior of suppressing exiftool's informational output when verbosity is off.
+**Fallback backend: `subprocess.run()` with argfile.** If `pyexiftool` is unavailable or if the persistent process cannot be maintained (e.g., in constrained environments), the module falls back to a per-file `subprocess.run()` invocation. Arguments are written to a temporary file via `tempfile.NamedTemporaryFile` and passed to exiftool via its `-@` argfile switch, with `-charset filename=utf8` ensuring Unicode filename safety:
 
-The `timeout=30` parameter prevents a hung exiftool process from blocking the indexer indefinitely. If the timeout is exceeded, the function returns `None` and a warning is logged. The timeout value is not currently configurable but MAY be exposed in a future configuration update if users encounter legitimate long-running extractions.
+```python
+# Illustrative — not the exact implementation.
+import tempfile
+
+args_content = "\n".join(EXIFTOOL_COMMON_ARGS + [str(path)])
+with tempfile.NamedTemporaryFile(mode="w", suffix=".args", delete=True, encoding="utf-8") as f:
+    f.write(args_content)
+    f.flush()
+    result = subprocess.run(
+        ["exiftool", "-@", f.name],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+```
+
+> **Deviation from original (DEV-05, DEV-16):** The original stores exiftool arguments as Base64-encoded strings in the PowerShell source, decodes them at runtime via `Base64DecodeString` (which itself calls `certutil` on Windows), writes them to a temporary file via `TempOpen`, passes the temporary file to exiftool via its `-@` argfile switch, and cleans up via `TempClose`. The port eliminates the Base64 pipeline entirely. The primary backend (`pyexiftool`) communicates via stdin pipes with no disk I/O for arguments. The fallback backend writes a temporary argfile using `tempfile`, which is cross-platform and handles cleanup automatically. Both backends define arguments as plain Python lists — no Base64 encoding, no `certutil`, no Windows-specific decoding.
+
+The `timeout=30` parameter (fallback backend only — the batch backend enforces timeouts at the `ExifToolHelper` level) prevents a hung exiftool process from blocking the indexer indefinitely. If the timeout is exceeded, the function returns `None` and a warning is logged. The timeout value is not currently configurable but MAY be exposed in a future configuration update if users encounter legitimate long-running extractions.
 
 <a id="output-parsing-and-key-filtering"></a>
 #### Output parsing and key filtering
@@ -2675,10 +2710,16 @@ The excluded key set is not currently configurable. Unlike the extension exclusi
 
 In all cases, the entry builder proceeds with `metadata` containing no exiftool entry (or with the exiftool entry omitted from the metadata array). No exiftool failure is fatal.
 
-<a id="batch-mode-consideration"></a>
-#### Batch mode consideration
+<a id="backend-selection-logic"></a>
+#### Backend selection logic
 
-For large directory trees, spawning a new exiftool process per file introduces significant overhead. The `PyExifTool` library maintains a persistent exiftool process and communicates via stdin/stdout, which is substantially faster for batch operations. The port SHOULD support both modes: direct `subprocess` invocation (default, zero third-party dependencies) and `PyExifTool` batch mode (optional, enabled when the library is installed). The batch mode implementation is deferred to a performance optimization pass — the `subprocess` mode is sufficient for MVP.
+The exif module selects its invocation backend once at module load time. The selection is logged at `DEBUG` level:
+
+1. If `pyexiftool` is importable and exiftool is on PATH → use batch mode (primary).
+2. If `pyexiftool` is not importable but exiftool is on PATH → use subprocess+argfile mode (fallback). Log an `INFO`-level message noting that batch mode is unavailable.
+3. If exiftool is not on PATH → disable metadata extraction entirely. Log a single `WARNING`.
+
+The backend selection is cached in a module-level variable and never re-evaluated during the process lifetime.
 
 ---
 
@@ -3916,7 +3957,7 @@ This section defines the command-line interface for `shruggie-indexer` — the c
 
 The CLI module is `cli/main.py` ([§3.2](#32-source-package-layout)). The entry point is registered as `shruggie-indexer = "shruggie_indexer.cli.main:main"` in `pyproject.toml` ([§2.1](#21-project-identity)), and `python -m shruggie_indexer` invokes the same function via `__main__.py`.
 
-**CLI framework:** The CLI uses `click` as its argument parsing framework. `click` is declared as an optional dependency in `pyproject.toml` under the `cli` extra ([§12.3](#123-third-party-python-packages)). If `click` is not installed, the CLI entry point MUST fail with a clear error message directing the user to install the dependency (`pip install shruggie-indexer[cli]`). The core library does not depend on `click` — consumers who use `shruggie_indexer` as a Python library never import it.
+**CLI framework:** The CLI uses `click` as its argument parsing framework. `click` is a required runtime dependency declared in `[project.dependencies]` in `pyproject.toml` ([§12.3](#123-third-party-python-packages)). A resilience-only import guard in `__main__.py` catches `ImportError` and produces a clear message directing the user to reinstall (`pip install shruggie-indexer`) — this path is not expected in normal operation. The core library modules do not import `click` — it is consumed exclusively by `cli/main.py`.
 
 > **Deviation from original:** The original's CLI is the `Param()` block of a PowerShell function — 14 parameters with aliases, switches, and manual validation logic spanning ~200 lines. The port replaces this with `click` decorators, which handle type conversion, mutual exclusion, default propagation, and help text generation declaratively. The port also adds capabilities absent from the original: `--version`, `--dry-run`, `--config`, `--no-stdout`, structured exit codes, and graceful interrupt handling ([§8.11](#811-signal-handling-and-graceful-interruption)).
 
@@ -3929,7 +3970,7 @@ The CLI module is `cli/main.py` ([§3.2](#32-source-package-layout)). The entry 
 shruggie-indexer [OPTIONS] [TARGET]
 ```
 
-The command name when installed via `pip install -e ".[cli]"` is `shruggie-indexer` (hyphenated). The `python -m shruggie_indexer` invocation behaves identically.
+The command name when installed via `pip install -e .` is `shruggie-indexer` (hyphenated). The `python -m shruggie_indexer` invocation behaves identically.
 
 <a id="help-output"></a>
 #### Help output
@@ -4563,9 +4604,9 @@ For the v0.1.0 MVP release, the public API is provisional. Breaking changes may 
 <a id="dependency-isolation"></a>
 #### Dependency isolation
 
-The public API does not require any optional dependencies. All exported names are importable with only the Python standard library installed. Optional dependencies (`click` for CLI, `customtkinter` for GUI, `orjson` for fast serialization, `pydantic` for runtime validation) are isolated behind import guards in their respective modules — they are never imported at the top-level `__init__.py` scope.
+The public API does not require any optional dependencies beyond the four required runtime packages (`click`, `orjson`, `pyexiftool`, `tqdm`). All exported names are importable after a standard `pip install shruggie-indexer`. The optional GUI dependency (`customtkinter`) is isolated behind an import guard in its module — it is never imported at the top-level `__init__.py` scope.
 
-This is an explicit design constraint: a consumer who `pip install shruggie-indexer` (with no extras) can immediately `from shruggie_indexer import index_path, load_config` and use the library without encountering `ImportError`. The CLI and GUI extras add presentation layers, not core functionality.
+This is an explicit design constraint: a consumer who `pip install shruggie-indexer` can immediately `from shruggie_indexer import index_path, load_config` and use the library without encountering `ImportError`. The GUI extra adds a presentation layer, not core functionality.
 
 <a id="92-core-functions"></a>
 ### 9.2. Core Functions
@@ -6381,7 +6422,7 @@ The CLI's progress presentation depends on the verbosity level and available thi
 2026-02-15 14:30:14  a1b2c3d4  INFO      shruggie_indexer.core.entry  Completed in 12.4s (3 warnings)
 ```
 
-**With `tqdm` installed and `-v` active.** The CLI MAY display a `tqdm` progress bar on stderr instead of percentage log lines. `tqdm` is listed as a recommended optional dependency ([§12.3](#123-third-party-python-packages)). The progress callback feeds `tqdm.update()` calls, and `tqdm.write()` is used for log messages to avoid disrupting the progress bar. This is strictly optional enhancement — the log-based progress reporting described above is the baseline behavior.
+**With `-v` active.** The CLI displays a `tqdm` progress bar on stderr instead of percentage log lines. `tqdm` is a required dependency ([§12.3](#123-third-party-python-packages)). The progress callback feeds `tqdm.update()` calls, and `tqdm.write()` is used for log messages to avoid disrupting the progress bar. The log-based progress reporting described above serves as the fallback for non-TTY environments or when `--no-progress` is specified.
 
 **With `-q` (quiet mode).** No progress output of any kind. The `progress_callback` is still invoked (it has negligible overhead), but the CLI's callback implementation ignores all events.
 
@@ -6465,7 +6506,7 @@ The per-item errors were already logged individually as `ERROR` or `WARNING` mes
 
 This section catalogs every dependency — binary, standard library, and third-party — that `shruggie-indexer` consumes at runtime, during testing, or during build/packaging. It defines which dependencies are required, which are optional, how optional dependencies are declared and gated, and which original dependencies are eliminated by the port. The section serves both as a dependency manifest for implementers and as the normative reference for the `[project.dependencies]` and `[project.optional-dependencies]` tables in `pyproject.toml` ([§13.2](#132-pyprojecttoml-configuration)).
 
-The dependency architecture implements design goal G5 ([§2.3](#23-design-goals-and-non-goals)): the core indexing engine runs using only the Python standard library plus `exiftool` as an external binary. All third-party Python packages are optional enhancements isolated behind import guards or declared as extras. A bare `pip install shruggie-indexer` installs zero third-party packages — the `[project.dependencies]` list is empty.
+The dependency architecture implements design goal G5 ([§2.3](#23-design-goals-and-non-goals)): the port declares four required runtime Python dependencies — `click`, `orjson`, `pyexiftool`, and `tqdm` — plus `exiftool` as an external binary. A bare `pip install shruggie-indexer` installs all four packages. The GUI package (`customtkinter`) is declared as an optional extra. Development and testing tools are declared in the `dev` extra. See [§12.3](#123-third-party-python-packages) for the per-package rationale.
 
 > **Dependency philosophy:** The original `MakeIndex` has an implicit dependency set — it calls functions, invokes binaries, and reads global variables without any declaration mechanism. An implementer must trace every code path to discover what is required. The port makes every dependency explicit: external binaries are probed at runtime ([§12.5](#125-dependency-verification-at-runtime)), standard library modules are imported at the top of each file, and third-party packages are declared in `pyproject.toml` with version constraints. Nothing is silently assumed to exist.
 
@@ -6511,14 +6552,14 @@ The core indexing engine (`core/`, `config/`, `models/`) uses only standard libr
 | `pathlib` | `core/traversal.py`, `core/paths.py`, `core/entry.py`, `core/rename.py`, `config/loader.py` | Path resolution, component extraction, directory enumeration (`Path.iterdir()`), glob matching, and path arithmetic. Central to the cross-platform path abstraction ([§6.2](#62-path-resolution-and-manipulation)). |
 | `re` | `core/sidecar.py`, `config/defaults.py`, `config/loader.py` | Regex matching for sidecar file type detection, filesystem exclusion filters, and extension validation. Compiles the patterns from the `MetadataFileParser` configuration ([§7.3](#73-metadata-file-parser-configuration)). |
 | `shutil` | `core/exif.py`, `core/rename.py` | `shutil.which()` for exiftool binary probing ([§12.5](#125-dependency-verification-at-runtime)). `shutil.move()` as a cross-filesystem rename fallback ([§6.10](#610-file-rename-and-in-place-write-operations)). |
-| `subprocess` | `core/exif.py` | Invocation of `exiftool` via `subprocess.run()` with argument lists ([§6.6](#66-exif-and-embedded-metadata-extraction)). |
-| `tempfile` | (not used) | See note below. |
+| `subprocess` | `core/exif.py` | Fallback exiftool invocation via `subprocess.run()` with argfile when `pyexiftool` batch mode is unavailable ([§6.6](#66-exif-and-embedded-metadata-extraction)). |
+| `tempfile` | `core/exif.py` | `tempfile.NamedTemporaryFile` for writing exiftool argfiles in the `subprocess.run()` fallback backend ([§6.6](#66-exif-and-embedded-metadata-extraction)). Not used by the primary `pyexiftool` batch backend. |
 | `time` | `cli/main.py`, `core/entry.py` | `time.perf_counter()` for elapsed-time measurement in progress reporting and per-item trace logging ([§11.6](#116-progress-reporting)). |
 | `tomllib` | `config/loader.py` | TOML configuration file parsing ([§7.6](#76-configuration-file-format)). Standard library since Python 3.11; the `>=3.12` floor ([§2.5](#25-python-version-requirements)) guarantees availability. |
 | `typing` | All modules | Type annotations: `Optional`, `Callable`, `Sequence`, `Literal`, etc. Used for function signatures, dataclass field types, and `TYPE_CHECKING` import guards. |
 | `uuid` | `cli/main.py`, `gui/app.py` | Session ID generation via `uuid.uuid4()` ([§11.4](#114-session-identifiers)). |
 
-**Note on `tempfile`:** The original uses `TempOpen`/`TempClose` for temporary file management during exiftool argument passing. The port eliminates temporary files entirely (DEV-05, [§2.6](#26-intentional-deviations-from-the-original)) — exiftool arguments are passed as a direct argument list to `subprocess.run()`, requiring no intermediary file. Python's `tempfile` module is not imported by any module in the source package. If a future enhancement requires temporary files (e.g., for batch exiftool mode via `-@ argfile`), `tempfile.NamedTemporaryFile` with automatic cleanup is the correct approach — not a reimplementation of the `TempOpen`/`TempClose` pattern.
+**Note on `tempfile`:** The original uses `TempOpen`/`TempClose` for temporary file management during exiftool argument passing. The port's primary exiftool backend (`pyexiftool` batch mode, DEV-16) communicates via stdin/stdout pipes and requires no temporary files at all. The fallback backend (`subprocess.run()` + argfile) uses `tempfile.NamedTemporaryFile` with automatic cleanup for writing exiftool argument files — this is a cross-platform replacement for the original's `TempOpen`/`TempClose` pattern. The `TempOpen`/`TempClose` functions themselves are not carried forward (DEV-05, [§2.6](#26-intentional-deviations-from-the-original)).
 
 <a id="additional-stdlib-modules-used-by-entry-points-and-packaging"></a>
 #### Additional stdlib modules used by entry points and packaging
@@ -6535,41 +6576,81 @@ The core indexing engine (`core/`, `config/`, `models/`) uses only standard libr
 <a id="123-third-party-python-packages"></a>
 ### 12.3. Third-Party Python Packages
 
-All third-party packages are optional. The `[project.dependencies]` list in `pyproject.toml` is empty — a bare `pip install shruggie-indexer` installs zero third-party runtime dependencies. Third-party packages are declared as extras in `[project.optional-dependencies]` and are imported behind conditional guards that fail gracefully (with a clear error message or silent fallback) when the package is not installed.
+The port declares four required runtime dependencies in `[project.dependencies]` — a bare `pip install shruggie-indexer` installs all four. Each was promoted from optional to required because it replaces functionality that would otherwise require significant reimplementation, degrade correctness (Unicode safety), or sacrifice order-of-magnitude performance gains that affect the tool's primary value proposition:
 
-The extras are organized by delivery surface, matching the three-surface architecture (G3, [§2.3](#23-design-goals-and-non-goals)):
+| Package | Version | Justification for required status |
+|---------|---------|-----------------------------------|
+| `click` | `>=8.1` | Replaces manual argparse reimplementation of decorator-based option groups, mutual exclusion, and composable help text. The CLI is a primary delivery surface (G3). |
+| `orjson` | `>=3.9` | Eliminates `dataclasses.asdict()` overhead and provides 5–10× serialization speedup. JSON output is the tool's sole product — serialization performance is core, not peripheral. |
+| `pyexiftool` | `>=0.5` | Enables `-stay_open` batch mode (DEV-16) for ~100× faster metadata extraction. Also provides inherent Unicode filename safety via stdin pipe protocol, eliminating the argfile character-encoding risks documented in exiftool's FAQ §18. |
+| `tqdm` | `>=4.65` | Provides progress bar display for interactive CLI sessions. Replaces log-line milestone reporting with a real-time visual progress indicator that is expected by users processing large directory trees. |
+
+Additional third-party packages are declared as optional extras in `[project.optional-dependencies]` for the GUI delivery surface and for development/testing:
 
 ```toml
 # pyproject.toml (illustrative excerpt — see §13.2 for the full file)
 
+[project.dependencies]
+click = ">=8.1"
+orjson = ">=3.9"
+pyexiftool = ">=0.5"
+tqdm = ">=4.65"
+
 [project.optional-dependencies]
-cli = ["click>=8.1"]
 gui = ["customtkinter>=5.2"]
-perf = ["orjson>=3.9", "pyexiftool>=0.5"]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "jsonschema>=4.17",
     "pydantic>=2.0",
     "ruff>=0.3",
-    "tqdm>=4.65",
     "rich>=13.0",
 ]
-all = ["shruggie-indexer[cli,gui,perf]"]
+all = ["shruggie-indexer[gui]"]
 ```
 
 <a id="per-package-details"></a>
-#### Per-package details
+#### Per-package details — required dependencies
 
-**`click`** (extra: `cli`)
+**`click`** (required)
 
 | Field | Value |
 |-------|-------|
 | Version constraint | `>=8.1` |
 | Purpose | CLI argument parsing, option groups, help text generation, mutual exclusion enforcement ([§8](#8-cli-interface)) |
 | Imported by | `cli/main.py` exclusively |
-| Import guard | The `cli/main.py` module imports `click` at the top level. If `click` is not installed and the user invokes the CLI entry point, the `ImportError` is caught in `__main__.py` and produces a clear message: `"The CLI requires the 'click' package. Install it with: pip install shruggie-indexer[cli]"`. |
-| Why not `argparse` | `click` provides decorator-based option declaration, automatic mutual exclusion (`@click.option(cls=MutuallyExclusiveOption)`), typed parameter conversion, and composable help text groups — all of which the CLI requires ([§8](#8-cli-interface)). Using `argparse` would require reimplementing these capabilities manually. The `click` dependency is scoped to the `cli` extra and does not affect library consumers. |
+| Why required | `click` provides decorator-based option declaration, automatic mutual exclusion (`@click.option(cls=MutuallyExclusiveOption)`), typed parameter conversion, and composable help text groups — all of which the CLI requires ([§8](#8-cli-interface)). Using `argparse` would require reimplementing these capabilities manually. The CLI is one of three primary delivery surfaces (G3) and is installed by default — there is no use case for installing the package without CLI capability. |
+
+**`orjson`** (required)
+
+| Field | Value |
+|-------|-------|
+| Version constraint | `>=3.9` |
+| Purpose | High-performance JSON serialization, native dataclass support without `dataclasses.asdict()` overhead ([§6.9](#69-json-serialization-and-output-routing)) |
+| Imported by | `core/serializer.py` |
+| Fallback | The serializer retains a `json.dumps()` fallback path behind a runtime check (`if orjson is not None:`). This fallback ensures the tool remains functional if `orjson` is uninstalled or cannot be imported, but it is not a supported configuration — the fallback exists for resilience, not as a design target. |
+| Why required | JSON output is the tool's sole product. `orjson` eliminates the `dataclasses.asdict()` deep-copy overhead (which can take 1–2 seconds and double memory usage for 10,000-entry trees) and provides 5–10× faster serialization. Pre-built wheels are available for all supported platforms (Windows, Linux, macOS on x86-64 and ARM64). |
+
+**`pyexiftool`** (required)
+
+| Field | Value |
+|-------|-------|
+| Version constraint | `>=0.5` |
+| Purpose | Persistent exiftool process for batch metadata extraction via `-stay_open` mode, with inherent Unicode filename safety via stdin pipe protocol (DEV-16, [§6.6](#66-exif-and-embedded-metadata-extraction)) |
+| Imported by | `core/exif.py` |
+| Fallback | The exif module retains a `subprocess.run()` + argfile fallback backend (see [§6.6](#66-exif-and-embedded-metadata-extraction), Backend selection logic). This fallback is used when `pyexiftool` cannot maintain a stable connection to the exiftool process, but it is not a supported primary configuration. |
+| Why required | Exiftool invocation is the dominant per-file cost in the indexing pipeline ([§17.5](#175-exiftool-invocation-strategy)). The `-stay_open` batch mode reduces per-file cost from 200–500 ms to 20–50 ms — a ~10× improvement that is the single largest performance optimization available. Additionally, the stdin pipe protocol inherits the Unicode safety guarantees of exiftool's argfile interface (FAQ §18), resolving the special-character argument-passing risks that motivated the original's Base64 encoding pipeline. |
+
+**`tqdm`** (required)
+
+| Field | Value |
+|-------|-------|
+| Version constraint | `>=4.65` |
+| Purpose | Progress bar display for interactive CLI sessions ([§11.6](#116-progress-reporting)) |
+| Imported by | `cli/main.py` |
+| Why required | Real-time progress feedback is a baseline expectation for a CLI tool that processes potentially thousands of files. The log-line milestone approach is retained as a fallback for non-TTY environments (piped output, CI), but the `tqdm` progress bar is the standard interactive experience. `tqdm` is a pure-Python package with no compilation requirements and minimal footprint. |
+
+#### Per-package details — optional dependencies
 
 **`customtkinter`** (extra: `gui`)
 
@@ -6578,38 +6659,8 @@ all = ["shruggie-indexer[cli,gui,perf]"]
 | Version constraint | `>=5.2` |
 | Purpose | Desktop GUI widget toolkit ([§10](#10-gui-application)) |
 | Imported by | `gui/app.py` exclusively |
-| Import guard | Same pattern as `click`: `ImportError` caught at the GUI entry point, with a message directing the user to `pip install shruggie-indexer[gui]`. |
+| Import guard | `ImportError` caught at the GUI entry point, with a message directing the user to `pip install shruggie-indexer[gui]`. |
 | Transitive dependencies | `customtkinter` depends on `darkdetect` and `packaging`. These are installed automatically as transitive dependencies and are not interacted with directly by any `shruggie-indexer` module. |
-
-**`orjson`** (extra: `perf`)
-
-| Field | Value |
-|-------|-------|
-| Version constraint | `>=3.9` |
-| Purpose | High-performance JSON serialization as a drop-in replacement for `json.dumps()` in the serializer ([§6.9](#69-json-serialization-and-output-routing)) |
-| Imported by | `core/serializer.py` |
-| Import guard | `try: import orjson` / `except ImportError: orjson = None`. The serializer checks `if orjson is not None:` before each serialization call and falls back to `json.dumps()` seamlessly. No user-facing error — the fallback is silent and functionally equivalent. |
-| Why optional | `orjson` is a compiled C extension. Making it required would break installation on platforms without pre-built wheels and would violate G5's "standard library only for core" principle. The performance benefit is meaningful only for very large directory trees (thousands of entries) where serialization becomes a measurable fraction of total runtime. |
-
-**`pyexiftool`** (extra: `perf`)
-
-| Field | Value |
-|-------|-------|
-| Version constraint | `>=0.5` |
-| Purpose | Persistent exiftool process for batch metadata extraction, avoiding per-file subprocess spawn overhead ([§6.6](#66-exif-and-embedded-metadata-extraction)) |
-| Imported by | `core/exif.py` |
-| Import guard | `try: import exiftool` / `except ImportError: exiftool = None`. The exif module selects the invocation strategy based on availability: `pyexiftool` batch mode if installed, `subprocess.run()` per-file mode otherwise. The selection is logged at `DEBUG` level. |
-| Why optional | The `subprocess.run()` invocation strategy is correct and sufficient for the MVP. `pyexiftool` is a performance optimization for large-scale indexing runs. Making it required would add a dependency that most users — indexing single files or small directories — would never benefit from. The batch mode implementation is deferred to a performance optimization pass ([§6.6](#66-exif-and-embedded-metadata-extraction)). |
-
-**`tqdm`** (extra: `dev`)
-
-| Field | Value |
-|-------|-------|
-| Version constraint | `>=4.65` |
-| Purpose | Optional progress bar display for the CLI ([§11.6](#116-progress-reporting)) |
-| Imported by | `cli/main.py` |
-| Import guard | `try: import tqdm` / `except ImportError: tqdm = None`. The CLI constructs a `tqdm` progress bar if the library is available and `-v` is active; otherwise, it falls back to the log-line-based progress reporting described in [§11.6](#116-progress-reporting). |
-| Why in `dev` and not `cli` | The `tqdm` progress bar is a convenience enhancement for developers and power users running the tool interactively. The log-based milestone reporting ([§11.6](#116-progress-reporting)) is the baseline behavior and is sufficient for all use cases including piped output and CI environments. Bundling `tqdm` into the `cli` extra would add a dependency that the PyInstaller-built standalone executable would need to include, increasing bundle size for a non-essential feature. Users who want it can install it separately. |
 
 **`rich`** (extra: `dev`)
 
@@ -6619,7 +6670,7 @@ all = ["shruggie-indexer[cli,gui,perf]"]
 | Purpose | Colorized log output via `rich.logging.RichHandler` as an optional enhancement to the CLI's stderr log stream ([§11.1](#111-logging-architecture)) |
 | Imported by | `cli/main.py` |
 | Import guard | `try: from rich.logging import RichHandler` / `except ImportError: RichHandler = None`. The CLI uses `RichHandler` as the stderr handler if available, falling back to the standard `logging.StreamHandler` otherwise. |
-| Why in `dev` and not `cli` | Same rationale as `tqdm`: visual enhancement, not functional requirement. The standard `StreamHandler` with the format string defined in [§11.1](#111-logging-architecture) produces perfectly adequate log output. `rich` adds syntax highlighting, automatic log-level coloring, and improved traceback formatting, which are valuable during development but not required for production use. |
+| Why optional | Visual enhancement, not functional requirement. The standard `StreamHandler` with the format string defined in [§11.1](#111-logging-architecture) produces perfectly adequate log output. `rich` adds syntax highlighting, automatic log-level coloring, and improved traceback formatting, which are valuable during development but not required for production use. |
 
 **`jsonschema`** (extra: `dev`)
 
@@ -6777,7 +6828,7 @@ def serialize_entry(entry: IndexEntry, ...) -> str:
 
 The consumer never knows or cares which serializer was used — the output is identical (modulo insignificant whitespace differences). The selection is logged at `DEBUG` level for diagnostic purposes.
 
-**Hard failure with guidance** — for surface-specific packages (`click`, `customtkinter`) where no fallback exists:
+**Hard failure with guidance** — for surface-specific packages (`customtkinter` for the GUI) where no fallback exists, or as a resilience guard for required packages (`click`) that should always be installed:
 
 ```python
 # __main__.py
@@ -6787,7 +6838,7 @@ def main() -> None:
     except ImportError:
         print(
             "The CLI requires the 'click' package.\n"
-            "Install it with: pip install shruggie-indexer[cli]",
+            "Install it with: pip install shruggie-indexer",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -6864,22 +6915,24 @@ requires-python = ">=3.12"
 authors = [{name = "William Thompson"}]
 keywords = ["indexer", "filesystem", "metadata", "exif", "hashing"]
 dynamic = ["version"]
-dependencies = []
+dependencies = [
+    "click>=8.1",
+    "orjson>=3.9",
+    "pyexiftool>=0.5",
+    "tqdm>=4.65",
+]
 
 [project.optional-dependencies]
-cli = ["click>=8.1"]
 gui = ["customtkinter>=5.2"]
-perf = ["orjson>=3.9", "pyexiftool>=0.5"]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "jsonschema>=4.17",
     "pydantic>=2.0",
     "ruff>=0.3",
-    "tqdm>=4.65",
     "rich>=13.0",
 ]
-all = ["shruggie-indexer[cli,gui,perf]"]
+all = ["shruggie-indexer[gui]"]
 
 # ─── Entry points ──────────────────────────────────────────────────────────
 
@@ -6945,7 +6998,7 @@ known-first-party = ["shruggie_indexer"]
 <a id="notable-design-decisions"></a>
 #### Notable design decisions
 
-**Empty `dependencies` list.** The `[project.dependencies]` list is deliberately empty ([§12.3](#123-third-party-python-packages)). A bare `pip install shruggie-indexer` installs zero third-party packages. All third-party dependencies are optional extras. This is the implementation of design goal G5 ([§2.3](#23-design-goals-and-non-goals)): the core indexing engine runs on the standard library alone.
+**Four required runtime dependencies.** The `[project.dependencies]` list declares `click`, `orjson`, `pyexiftool`, and `tqdm` ([§12.3](#123-third-party-python-packages)). A bare `pip install shruggie-indexer` installs all four. This is the implementation of design goal G5 ([§2.3](#23-design-goals-and-non-goals)): the dependency set is small and deliberately chosen — each package replaces functionality that would otherwise require significant reimplementation, degrade correctness, or sacrifice order-of-magnitude performance. The GUI package (`customtkinter`) remains optional.
 
 **`[project.scripts]` vs. `[project.gui-scripts]`.** The CLI entry point is registered under `[project.scripts]`, which creates a platform-appropriate console script wrapper (`shruggie-indexer` on Linux/macOS, `shruggie-indexer.exe` on Windows). The GUI entry point is registered under `[project.gui-scripts]`, which on Windows creates a wrapper that does not allocate a console window — this prevents the "flash of black console window" that would occur if a GUI application were launched from a `[project.scripts]` entry point. On Linux and macOS, `[project.gui-scripts]` behaves identically to `[project.scripts]`. The distinction matters only for the `pip install` development workflow; the PyInstaller-built standalone executables handle console/no-console via their own `--windowed` flag ([§13.4](#134-standalone-executable-builds)).
 
@@ -6967,10 +7020,10 @@ The package registers two entry points — one for the CLI and one for the GUI �
 |---|---|
 | Entry point string | `shruggie-indexer = "shruggie_indexer.cli.main:main"` |
 | Invocation | `shruggie-indexer [OPTIONS] [TARGET]` |
-| Requires | `click` (installed via the `cli` extra) |
+| Requires | `click` (required runtime dependency, installed automatically) |
 | Failure without dependency | `ImportError` caught in `__main__.py`; prints install instructions to stderr; exits with code 1 |
 
-When `pip install -e ".[cli]"` is executed, pip creates a wrapper script named `shruggie-indexer` (or `shruggie-indexer.exe` on Windows) in the virtual environment's `bin/` (or `Scripts/`) directory. This wrapper imports `shruggie_indexer.cli.main` and calls its `main()` function. The wrapper is a platform-native console script — on Linux/macOS it is a small Python script with a shebang line pointing to the venv interpreter; on Windows it is a `.exe` launcher generated by pip.
+When `pip install -e .` is executed, pip creates a wrapper script named `shruggie-indexer` (or `shruggie-indexer.exe` on Windows) in the virtual environment's `bin/` (or `Scripts/`) directory. This wrapper imports `shruggie_indexer.cli.main` and calls its `main()` function. The wrapper is a platform-native console script — on Linux/macOS it is a small Python script with a shebang line pointing to the venv interpreter; on Windows it is a `.exe` launcher generated by pip.
 
 <a id="gui-entry-point-shruggie-indexer-gui"></a>
 #### GUI entry point: `shruggie-indexer-gui`
@@ -7006,7 +7059,7 @@ def main() -> None:
     except ImportError:
         print(
             "The CLI requires the 'click' package.\n"
-            "Install it with: pip install shruggie-indexer[cli]",
+            "Install it with: pip install shruggie-indexer",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -7170,7 +7223,7 @@ exe = EXE(
 
 **`excludes` lists.** Each spec file excludes packages that the other target requires but the current target does not. The CLI spec excludes `customtkinter`, `tkinter`, and `_tkinter` — the GUI toolkit and its underlying C extension are substantial (several MB) and are never imported by the CLI. The GUI spec excludes `click` — the GUI does not use the CLI's argument parser. These exclusions reduce bundle size and eliminate false-positive hidden-import detection.
 
-**`hiddenimports`.** PyInstaller's static analysis cannot always detect dynamic imports (e.g., the `try: import orjson` pattern in the serializer). The `hiddenimports` list explicitly declares packages that PyInstaller should include even if they are not statically visible. The lists shown above are the minimum set; the implementer SHOULD add entries for any optional packages that the build environment has installed and that should be included in the bundle (e.g., `orjson` if the performance-optimized serializer should be available in the release build). Packages listed in `hiddenimports` that are not installed in the build environment are silently skipped — they do not cause build failures.
+**`hiddenimports`.** PyInstaller's static analysis cannot always detect dynamic imports (e.g., the `try: import orjson` pattern in the serializer, or the `pyexiftool` batch mode backend). The `hiddenimports` list explicitly declares packages that PyInstaller should include even if they are not statically visible. The lists shown above are the minimum set and should include the four required runtime dependencies (`click`, `orjson`, `pyexiftool`, `tqdm`). For optional packages (e.g., `customtkinter` for the GUI build), add entries if installed in the build environment. Packages listed in `hiddenimports` that are not installed in the build environment are silently skipped — they do not cause build failures.
 
 **`datas` list.** Both spec files declare an empty `datas` list. The indexer has no bundled data files (no templates, no asset images, no embedded configuration files). If a future enhancement requires bundled data (e.g., a default configuration file or GUI icon), the `datas` list is the correct mechanism for including it.
 
@@ -7287,7 +7340,7 @@ Each matrix entry runs on a GitHub Actions runner for the target platform. The `
 
 The pipeline executes the following stages on each matrix runner:
 
-**Stage 1 — Checkout and environment setup.** Checks out the repository at the tag commit. Installs Python 3.12 using `actions/setup-python`. Creates a virtual environment and installs the package with all extras: `pip install -e ".[cli,gui,perf]"`. Installs PyInstaller: `pip install pyinstaller`.
+**Stage 1 — Checkout and environment setup.** Checks out the repository at the tag commit. Installs Python 3.12 using `actions/setup-python`. Creates a virtual environment and installs the package with all extras: `pip install -e ".[gui,dev]"`. Installs PyInstaller: `pip install pyinstaller`.
 
 **Stage 2 — Test.** Runs the test suite (`pytest tests/ -m "not requires_exiftool"`) to verify that the codebase is healthy before building release artifacts. The `requires_exiftool` marker is excluded because exiftool may not be installed on all CI runners. If tests fail, the pipeline aborts — no artifacts are produced.
 
@@ -7834,7 +7887,7 @@ The double-marker pattern (`@pytest.mark.platform_windows` plus `@pytest.mark.sk
 <a id="146-backward-compatibility-validation"></a>
 ### 14.6. Backward Compatibility Validation
 
-Backward compatibility tests validate that the port produces output semantically equivalent to the original `MakeIndex` implementation for the same input paths — accounting for the documented v1-to-v2 schema restructuring ([§5](#5-output-schema)) and the fourteen intentional deviations ([§2.6](#26-intentional-deviations-from-the-original)). These tests are not schema conformance tests (those validate structure); they are semantic equivalence tests (these validate that the indexer computes the correct values).
+Backward compatibility tests validate that the port produces output semantically equivalent to the original `MakeIndex` implementation for the same input paths — accounting for the documented v1-to-v2 schema restructuring ([§5](#5-output-schema)) and the sixteen intentional deviations ([§2.6](#26-intentional-deviations-from-the-original)). These tests are not schema conformance tests (those validate structure); they are semantic equivalence tests (these validate that the indexer computes the correct values).
 
 <a id="reference-data-approach"></a>
 #### Reference data approach
@@ -7858,11 +7911,11 @@ Reference data files follow a naming convention: `tests/fixtures/reference/{test
 <a id="intentional-deviation-exclusions"></a>
 #### Intentional deviation exclusions
 
-The fourteen intentional deviations (DEV-01 through DEV-14, [§2.6](#26-intentional-deviations-from-the-original)) produce expected differences from the original's output. Backward compatibility tests explicitly account for these:
+The sixteen intentional deviations (DEV-01 through DEV-16, [§2.6](#26-intentional-deviations-from-the-original)) produce expected differences from the original's output. Backward compatibility tests explicitly account for these:
 
 | Deviation | Impact on backward compatibility test |
 |-----------|--------------------------------------|
-| DEV-02 (all four algorithms computed) | Reference data includes SHA-1 and SHA-512 values. The original would have `null` for these; the port populates them. Tests validate the populated values against independently computed hashes, not against the original's `null`. |
+| DEV-02 (multi-algorithm single-pass hashing) | Reference data includes SHA-256 (and optionally SHA-512) values. SHA-1 is dropped. Tests validate the populated values against independently computed hashes, not against the original's outputs. |
 | DEV-07 (direct timestamp derivation) | Timestamps derived from `os.stat()` floats rather than formatted strings. Tests allow a ±1 second tolerance window for ISO timestamps and ±1000 for Unix millisecond values. |
 | DEV-09 (computed null-hash constants) | The port computes null hashes at module load time. Reference data reflects the computed values (`hash(b"0")`), not the original's hardcoded constants (which should be identical, but the test verifies this). |
 
@@ -7875,7 +7928,7 @@ Reference fixtures are created once during the initial porting effort and commit
 
 1. Running the original `MakeIndex` on the controlled input files.
 2. Converting v1 output to v2 structure using the field mapping from [§5.11](#511-dropped-and-restructured-fields).
-3. Applying the fourteen deviation adjustments.
+3. Applying the sixteen deviation adjustments.
 4. Committing the updated fixtures with a description of what changed.
 
 This is a manual process — automated reference generation would require running the original PowerShell implementation, which is not available in the CI environment and is not included in the repository ([§1.2](#12-scope)).
@@ -7890,14 +7943,15 @@ Performance benchmarks validate that the indexer operates within acceptable time
 
 | Scenario | Input | Measured metric | Baseline expectation |
 |----------|-------|-----------------|---------------------|
-| Single file hashing (small) | A 1 KB file, all four algorithms | Wall-clock time for `hash_file()` | < 10 ms. Hash computation for small files should be dominated by file-open overhead, not computation. |
-| Single file hashing (large) | A 100 MB file, all four algorithms | Wall-clock time and throughput (MB/s) | Throughput within 50% of raw `hashlib` speed on the same file. Validates that the multi-algorithm single-pass approach does not introduce unexpected overhead. |
+| Single file hashing (small) | A 1 KB file, MD5 + SHA-256 (default algorithms) | Wall-clock time for `hash_file()` | < 10 ms. Hash computation for small files should be dominated by file-open overhead, not computation. |
+| Single file hashing (large) | A 100 MB file, MD5 + SHA-256 (default algorithms) | Wall-clock time and throughput (MB/s) | Throughput within 50% of raw `hashlib` speed on the same file. Validates that the multi-algorithm single-pass approach does not introduce unexpected overhead. |
 | Directory traversal (wide) | A directory with 10,000 files | Wall-clock time for `list_children()` | < 5 seconds. Single-pass `os.scandir()` enumeration should be I/O-bound. |
 | Directory traversal (deep) | A 50-level deep directory chain | Wall-clock time for recursive `index_path()` | Completes without stack overflow. Python's default recursion limit (1000) is not exceeded for reasonable depths. |
 | Full pipeline (small tree) | A directory tree with 100 files across 10 subdirectories | Wall-clock time for `index_path()` with `recursive=True` | < 5 seconds (excluding exiftool). Establishes a baseline for per-file overhead. |
 | Full pipeline (medium tree) | A directory tree with 1,000 files across 100 subdirectories | Wall-clock time for `index_path()` with `recursive=True` | < 60 seconds (excluding exiftool). Linear scaling from the small-tree baseline. |
 | Serialization (large output) | An `IndexEntry` tree with 1,000 entries | Wall-clock time for `serialize_entry()` | < 2 seconds with `json.dumps()`. Faster with `orjson` if available. |
-| Exiftool invocation | 10 JPEG files via `subprocess.run()` (per-file mode) | Wall-clock time per file | < 500 ms per file. Dominated by exiftool startup time. |
+| Exiftool invocation (batch) | 10 JPEG files via `PyExifTool` batch mode | Wall-clock time per file | < 50 ms per file after process startup. Batch mode amortizes the exiftool startup cost across all files. |
+| Exiftool invocation (fallback) | 10 JPEG files via `subprocess.run()` (per-file mode) | Wall-clock time per file | < 500 ms per file. Dominated by exiftool startup time. |
 
 <a id="benchmark-implementation"></a>
 #### Benchmark implementation
@@ -7911,17 +7965,17 @@ import pytest
 
 @pytest.mark.slow
 def test_benchmark_hash_large_file(tmp_path):
-    """Benchmark: hash a 100 MB file with all four algorithms."""
+    """Benchmark: hash a 100 MB file with default algorithms (MD5 + SHA-256)."""
     large_file = tmp_path / "large.bin"
     large_file.write_bytes(b"\x00" * (100 * 1024 * 1024))
 
     start = time.perf_counter()
-    result = hash_file(large_file, algorithms=("md5", "sha1", "sha256", "sha512"))
+    result = hash_file(large_file, algorithms=("md5", "sha256"))
     elapsed = time.perf_counter() - start
 
     # Log the result for regression tracking
     throughput = 100 / elapsed  # MB/s
-    print(f"\n  hash_file (100 MB, 4 algorithms): {elapsed:.3f}s ({throughput:.1f} MB/s)")
+    print(f"\n  hash_file (100 MB, 2 algorithms): {elapsed:.3f}s ({throughput:.1f} MB/s)")
 
     # Soft assertion — failure logs a warning, does not fail the test
     assert result.md5 is not None  # Sanity check
@@ -8090,9 +8144,9 @@ macOS uses APFS (on SSDs since macOS 10.13) or HFS+ (on HDDs and older systems).
 
 APFS does not normalize — it preserves whatever form was used at creation. Most macOS tools use NFC, so APFS filenames are typically NFC.
 
-This normalization difference affects name hashing: `hash_string("café")` produces different results depending on whether the name is NFC or NFD, because the UTF-8 byte sequences differ. The indexer hashes the name exactly as returned by the filesystem — it does not normalize to NFC or NFD before hashing. This means the same conceptual filename can produce different `name.hashes` values on HFS+ (NFD) vs. APFS (NFC) or Linux/Windows (NFC).
+This normalization difference affects name hashing: `hash_string("café")` would produce different results depending on whether the name is NFC or NFD, because the UTF-8 byte sequences differ. To ensure cross-platform hash determinism, `hash_string()` applies `unicodedata.normalize('NFC', value)` unconditionally on all platforms before encoding to UTF-8 and hashing (DEV-15). This guarantees that a file named `café.txt` produces identical identity hashes regardless of whether the filesystem returned the name in NFC (Windows, typical APFS) or NFD (HFS+). The NFC normalization is applied on all platforms — not just macOS — because APFS preserves whatever form was used at creation, meaning NFD filenames can appear on any macOS volume.
 
-This is an acceptable deviation. Normalizing all names to a canonical form before hashing would ensure cross-platform hash consistency, but would break the invariant that re-indexing the same file on the same filesystem produces the same identity. The implementer SHOULD add a comment in `core/hashing.hash_string()` documenting this behavior. A future enhancement could add an optional `--normalize-unicode` flag that forces NFC normalization before hashing, with a clear warning that it changes identity values.
+> **Note:** This is a deliberate break from the "hash what the filesystem returns" approach. The original never needed to address cross-platform filename equivalence because it ran exclusively on Windows (which always uses NFC). The port prioritizes cross-platform hash determinism: the same logical filename MUST produce the same identity on all supported platforms. The tradeoff is that re-indexing the same file on an HFS+ volume will produce an identity hash based on the NFC normalization of the filename rather than the NFD form stored on disk — but this is the correct behavior, because the hashed value represents the *logical* filename, not its filesystem-specific encoding.
 
 <a id="macos-extended-attributes-and-quarantine"></a>
 #### macOS: extended attributes and quarantine
@@ -8434,7 +8488,7 @@ This pattern has three safety problems. First, the fixed temp directory path (`C
 <a id="port-approach-elimination"></a>
 #### Port approach: elimination
 
-The port eliminates temporary file creation entirely for the exiftool use case. Exiftool arguments are defined as a Python list and passed directly to `subprocess.run()` ([§6.6](#66-exif-and-embedded-metadata-extraction), DEV-05). The `-@` argfile switch, the Base64 encoding/decoding pipeline, and the `TempOpen`/`TempClose` lifecycle are all removed. This is the cleanest safety improvement: no temporary files means no orphaned files, no cleanup races, no fixed-path dependencies.
+The port eliminates the original's temporary file creation pattern for the exiftool use case. The primary backend uses `PyExifTool`'s `-stay_open` batch mode ([§6.6](#66-exif-and-embedded-metadata-extraction), DEV-05, DEV-16), which communicates via stdin/stdout pipes — no temporary files involved. The subprocess fallback path uses `tempfile`-managed argfiles with automatic cleanup via context managers. In both cases, the original's `-@` argfile switch with manual `TempOpen`/`TempClose` lifecycle and Base64 encoding/decoding pipeline are eliminated.
 
 <a id="remaining-temporary-file-scenarios"></a>
 #### Remaining temporary file scenarios
@@ -8445,7 +8499,7 @@ Two scenarios in the port may still involve temporary file creation:
 
 The `tempfile` module creates files with restrictive permissions (mode `0o600` on POSIX) and uses OS-provided mechanisms for unique naming, avoiding the collision and permission issues of the original's manual UUID scheme.
 
-**Exiftool batch mode (future).** If the optional `PyExifTool` batch mode ([§6.6](#66-exif-and-embedded-metadata-extraction)) is implemented in a future optimization pass, it maintains a persistent exiftool process communicating via stdin/stdout pipes rather than argfiles. No temporary files are involved — the batch protocol is entirely in-memory.
+**Exiftool batch mode (primary).** The `PyExifTool` batch mode ([§6.6](#66-exif-and-embedded-metadata-extraction), DEV-16) maintains a persistent exiftool process communicating via stdin/stdout pipes rather than argfiles. No temporary files are involved — the batch protocol is entirely in-memory. If the batch backend is unavailable, the subprocess fallback uses `tempfile`-based argfiles (see [§12.2](#122-python-standard-library-modules)).
 
 <a id="cleanup-guarantee"></a>
 #### Cleanup guarantee
@@ -8751,28 +8805,23 @@ These estimates assume approximately 4 KB of JSON per entry (the average for ent
 <a id="the-orjson-acceleration-path"></a>
 #### The `orjson` acceleration path
 
-When the optional `orjson` package is installed (via the `perf` extra, [§12.3](#123-third-party-python-packages)), the serializer uses `orjson.dumps()` as a drop-in replacement. `orjson` is a Rust-backed JSON library that serializes Python dicts 3–10× faster than `json.dumps()` for typical workloads. For a 10,000-entry tree, serialization drops from approximately 5 seconds to under 1 second.
+The `orjson` package (a required dependency, [§12.3](#123-third-party-python-packages)) provides the primary serialization path via `orjson.dumps()`. `orjson` is a Rust-backed JSON library that serializes Python dicts 3–10× faster than `json.dumps()` for typical workloads. For a 10,000-entry tree, serialization drops from approximately 5 seconds to under 1 second.
 
-The `orjson` path is gated by a try/except import and is transparent to callers ([§12.5](#125-dependency-verification-at-runtime)):
+Because `orjson` is a required dependency, the serializer uses it as the primary path with a `json.dumps()` fallback for resilience ([§12.5](#125-dependency-verification-at-runtime)):
 
 ```python
 # Illustrative — not the exact implementation.
-try:
-    import orjson
-except ImportError:
-    orjson = None
+import orjson
 
 def serialize_entry(entry: IndexEntry, *, compact: bool = False) -> str:
     entry_dict = dataclasses.asdict(entry)
-    if orjson is not None:
-        option = 0 if compact else orjson.OPT_INDENT_2
-        return orjson.dumps(entry_dict, option=option).decode("utf-8")
-    return json.dumps(entry_dict, indent=None if compact else 2, ensure_ascii=False)
+    option = 0 if compact else orjson.OPT_INDENT_2
+    return orjson.dumps(entry_dict, option=option).decode("utf-8")
 ```
 
-The `orjson` path returns bytes, which are decoded to a UTF-8 string for API compatibility. The decode cost is minor relative to the serialization savings.
+The `orjson` path returns bytes, which are decoded to a UTF-8 string for API compatibility. The decode cost is minor relative to the serialization savings. A `json.dumps()` fallback is retained as a defensive measure in case `orjson` is somehow unavailable at runtime.
 
-For users who index large trees (10,000+ entries) and use `--stdout` or `--outfile` output modes, installing the `perf` extra is the single highest-impact performance improvement available. Users of `--inplace` mode (which serializes one entry at a time) see proportionally less benefit because individual entry serialization is already fast.
+For large trees (10,000+ entries) using `--stdout` or `--outfile` output modes, the `orjson` serialization path provides substantial acceleration automatically. Users of `--inplace` mode (which serializes one entry at a time) see proportionally less benefit because individual entry serialization is already fast.
 
 <a id="dataclassesasdict-overhead"></a>
 #### `dataclasses.asdict()` overhead
@@ -8798,51 +8847,48 @@ The `--compact` flag ([§8.3](#83-output-mode-options)) selects compact output. 
 
 For files that have embedded metadata, the `exiftool` invocation ([§6.6](#66-exif-and-embedded-metadata-extraction)) is overwhelmingly the most expensive per-file operation in the indexing pipeline. Hashing a 10 MB JPEG takes approximately 20–40 ms (limited by file read speed). Extracting EXIF metadata from the same file via `exiftool` takes 200–500 ms — an order of magnitude more. The cost is almost entirely `exiftool` process startup: the Perl interpreter loads, exiftool's module tree initializes, the file is read, metadata is extracted, and JSON output is produced. For a directory of 1,000 JPEG files, exiftool invocations alone can account for 3–8 minutes of total runtime, dwarfing the combined cost of hashing, stat calls, sidecar discovery, and serialization.
 
-This cost profile is inherited from the original, which invokes exiftool once per file via `GetFileExifRun`. The original routes the invocation through a Base64-decoded argument file and a `jq` post-processing pipeline, adding further per-file overhead (temporary file creation, `certutil` invocation for Base64 decoding, `jq` process startup, and temporary file cleanup). The port eliminates the argument-file machinery and the `jq` pipeline (DEV-05, DEV-06), reducing the per-invocation overhead to the subprocess spawn plus exiftool execution.
+This cost profile is inherited from the original, which invokes exiftool once per file via `GetFileExifRun`. The original routes the invocation through a Base64-decoded argument file and a `jq` post-processing pipeline, adding further per-file overhead (temporary file creation, `certutil` invocation for Base64 decoding, `jq` process startup, and temporary file cleanup). The port eliminates the argument-file machinery and the `jq` pipeline (DEV-05, DEV-06) and uses `pyexiftool`'s `-stay_open` batch mode (DEV-16) as the primary backend, reducing per-file cost from 200–500 ms to 20–50 ms.
 
-<a id="per-file-invocation-the-mvp-approach"></a>
-#### Per-file invocation: the MVP approach
+<a id="batch-invocation-the-primary-approach"></a>
+#### Batch invocation: the primary approach (DEV-16)
 
-The MVP implementation invokes `exiftool` as a separate `subprocess.run()` call for each eligible file. This is the simplest correct implementation and matches the original's one-file-per-invocation behavior (minus the argument-file indirection).
+The primary exiftool backend uses the `pyexiftool` package (`>=0.5`, a required runtime dependency) to maintain a single persistent exiftool process for the duration of the indexing run. `pyexiftool` wraps exiftool's `-stay_open` mode: file paths and arguments are written to exiftool's stdin pipe one per line, and JSON output is read from stdout for each file as it completes. The per-file cost drops from 200–500 ms (dominated by process startup) to 20–50 ms (dominated by actual metadata extraction).
+
+```python
+# Illustrative — not the exact implementation.
+import exiftool
+
+with exiftool.ExifToolHelper(common_args=EXIFTOOL_COMMON_ARGS) as et:
+    for path in eligible_files:
+        try:
+            metadata = et.get_metadata(str(path))
+        except Exception:
+            # Per-file error handling — see below
+            ...
+```
+
+The stdin pipe protocol provides an additional benefit: it inherits the same Unicode safety guarantees as exiftool's `-@` argfile interface (documented in exiftool FAQ §18 and the WINDOWS UNICODE FILE NAMES section). File paths written to stdin are passed directly to exiftool's internal filename handler with `-charset filename=utf8`, bypassing shell escaping and OS-level command-line argument encoding entirely. This resolves the special-character argument-passing risks that motivated the original's Base64 encoding pipeline.
+
+**Error isolation in batch mode.** The persistent-process model changes the error isolation characteristics compared to per-file `subprocess.run()`. If exiftool crashes mid-batch, the `ExifToolHelper` context manager detects the failure. The exif module wraps each per-file `get_metadata()` call in a try/except and handles process death by re-entering the `ExifToolHelper` context to spawn a fresh process. The failed file is logged as a field-level error and processing continues. This provides the same item-level error boundary defined in [§4.5](#45-error-handling-strategy) — a single file's exiftool failure does not affect any other file — but with the added cost of a process restart (amortized across subsequent files).
+
+<a id="subprocess-argfile-the-fallback-approach"></a>
+#### Subprocess + argfile: the fallback approach
+
+If `pyexiftool` cannot maintain a stable connection to the exiftool process (e.g., in constrained environments, or if the package is uninstalled), the exif module falls back to a per-file `subprocess.run()` invocation. Arguments are written to a temporary file via `tempfile.NamedTemporaryFile` and passed to exiftool via its `-@` argfile switch:
 
 ```python
 # Illustrative — not the exact implementation.
 result = subprocess.run(
-    ["exiftool", "-json", "-n", ...flags..., str(path)],
+    ["exiftool", "-@", argfile_path],
     capture_output=True,
     text=True,
     timeout=30,
 )
 ```
 
-The per-file approach has one significant advantage: error isolation. If exiftool crashes, hangs, or produces corrupt output for a single file, the failure is contained to that file — the next file gets a fresh exiftool process. The `timeout=30` parameter ([§6.6](#66-exif-and-embedded-metadata-extraction)) bounds the worst-case latency for a single invocation. This isolation property matches the item-level error boundary defined in [§4.5](#45-error-handling-strategy): a single file's exiftool failure does not affect any other file.
+The fallback uses argfile-based argument passing (not direct command-line arguments) to preserve Unicode filename safety — the argfile mechanism respects `-charset filename=utf8` and avoids the shell escaping issues that affect direct argument passing on some platforms. The `timeout=30` parameter bounds worst-case latency for a single invocation.
 
-<a id="batch-invocation-the-post-mvp-optimization"></a>
-#### Batch invocation: the post-MVP optimization
-
-Exiftool supports a `-stay_open` mode that keeps a single Perl process alive across multiple file inputs, amortizing the startup cost over the entire invocation. In this mode, the caller writes file paths to exiftool's stdin (one per line, terminated by a sentinel), and exiftool writes JSON output to stdout for each file as it completes. The per-file cost drops from 200–500 ms (dominated by process startup) to 20–50 ms (dominated by actual metadata extraction).
-
-The optional `pyexiftool` package (declared in the `perf` extra alongside `orjson`, [§12.3](#123-third-party-python-packages)) provides a Python wrapper around `-stay_open` mode. When `pyexiftool` is available, the exif module MAY use it as an alternative backend:
-
-```python
-# Illustrative — not the exact implementation.
-try:
-    import exiftool as pyexiftool
-except ImportError:
-    pyexiftool = None
-
-# If pyexiftool is available, use batch mode:
-# with pyexiftool.ExifToolHelper() as et:
-#     metadata_list = et.get_metadata(paths)
-```
-
-The batch optimization is deferred to post-MVP for three reasons.
-
-First, the `pyexiftool` dependency introduces a long-lived subprocess that complicates error handling. If the exiftool process dies mid-batch, all remaining files in the batch fail — breaking the per-file error isolation that the MVP's per-invocation approach provides. The batch wrapper must implement reconnection logic and per-file timeout enforcement that the simple `subprocess.run()` approach gets for free.
-
-Second, the batch approach changes the invocation model from synchronous one-file-at-a-time (which fits naturally into the Stage 4 entry-construction loop) to an asynchronous or pre-batched model that requires either collecting file paths ahead of entry construction or restructuring the pipeline to separate EXIF extraction from entry assembly. Both of these are manageable but represent non-trivial architectural changes that should not be attempted in the initial port.
-
-Third, the per-file approach is correct and complete. Users who need faster EXIF extraction for large media libraries can install the `perf` extra and benefit from the batch optimization when it ships, without any change to the output format or behavioral contract. The architecture supports the upgrade path without structural changes — `core/exif.py` already encapsulates all exiftool interaction behind the `extract_exif()` interface, so swapping the backend from subprocess-per-file to `pyexiftool` batch mode is an implementation change within a single module.
+This fallback exists for resilience. It is not a supported primary configuration — users who install the package normally will always have `pyexiftool` available. The fallback is retained because the cost of maintaining it is near-zero and it provides a safety net for edge cases.
 
 <a id="availability-probe-cost"></a>
 #### Availability probe cost
@@ -8861,7 +8907,7 @@ The exclusion check is a `frozenset` membership test — O(1) per file. For a mi
 <a id="timeout-as-a-safety-bound"></a>
 #### Timeout as a safety bound
 
-The 30-second timeout on `subprocess.run()` ([§6.6](#66-exif-and-embedded-metadata-extraction)) serves as both a safety mechanism ([§16.5](#165-large-file-and-deep-recursion-handling)) and a performance bound. Without a timeout, a pathological file — a multi-gigabyte video with deeply nested metadata structures, or a corrupted file that causes exiftool to enter an infinite analysis loop — could block the indexer indefinitely. The timeout ensures that no single file can consume more than 30 seconds of exiftool processing time. When the timeout fires, the file's metadata is recorded as `None` (the exiftool `MetadataEntry` is omitted from the `metadata` array), a warning is logged, and processing continues with the next file.
+The 30-second per-file timeout ([§6.6](#66-exif-and-embedded-metadata-extraction)) serves as both a safety mechanism ([§16.5](#165-large-file-and-deep-recursion-handling)) and a performance bound. In the batch backend (`pyexiftool`), the timeout is enforced at the `ExifToolHelper` level per `get_metadata()` call. In the subprocess fallback, it is the `timeout` parameter on `subprocess.run()`. Without a timeout, a pathological file — a multi-gigabyte video with deeply nested metadata structures, or a corrupted file that causes exiftool to enter an infinite analysis loop — could block the indexer indefinitely. The timeout ensures that no single file can consume more than 30 seconds of exiftool processing time. When the timeout fires, the file's metadata is recorded as `None` (the exiftool `MetadataEntry` is omitted from the `metadata` array), a warning is logged, and processing continues with the next file.
 
 The 30-second value is generous for normal operations — typical EXIF extraction completes in under 1 second for even large media files — but it could be exceeded for very large video files with embedded subtitle tracks or chapter metadata. The timeout is currently not configurable. If users report legitimate timeout hits on files that exiftool can process (just slowly), the value MAY be exposed as a configuration parameter in a future update. For the MVP, 30 seconds provides a wide safety margin without requiring user tuning.
 
@@ -8906,15 +8952,9 @@ A `revert_rename()` function would read the sidecar's `name.text` field and rena
 <a id="1813-exiftool-batch-mode-via-pyexiftool"></a>
 #### 18.1.3. Exiftool Batch Mode via PyExifTool
 
-**Originating references:** [§6.6](#66-exif-and-embedded-metadata-extraction), [§12.3](#123-third-party-python-packages), [§16.3](#163-temporary-file-handling), [§17.5](#175-exiftool-invocation-strategy).
+**Status: Implemented in MVP (DEV-16).** The `pyexiftool` package is a required runtime dependency. The batch mode implementation using `ExifToolHelper` and exiftool's `-stay_open` protocol is the primary exiftool backend in the MVP. See [§6.6](#66-exif-and-embedded-metadata-extraction) and [§17.5](#175-exiftool-invocation-strategy) for the full implementation details including error isolation, backend selection logic, and the subprocess+argfile fallback.
 
-The MVP invokes `exiftool` as a separate `subprocess.run()` call for each eligible file. For directories with thousands of media files, process startup overhead dominates runtime. The `pyexiftool` library's `-stay_open` mode keeps a single Perl process alive across multiple file inputs, reducing per-file cost from 200–500 ms (process startup) to 20–50 ms (metadata extraction only).
-
-The batch mode implementation is deferred to post-MVP for three reasons documented in [§17.5](#175-exiftool-invocation-strategy): it breaks per-file error isolation, it changes the invocation model from synchronous to batched or asynchronous, and the per-file approach is correct and sufficient. The upgrade path is clean because `core/exif.py` already encapsulates all exiftool interaction behind the `extract_exif()` interface — swapping the backend from subprocess-per-file to `pyexiftool` batch mode is an implementation change within a single module.
-
-**Preconditions:** The `perf` extra must be declared in `pyproject.toml` (it already is, [§12.3](#123-third-party-python-packages)). The batch mode wrapper must implement reconnection logic for process failures and per-file timeout enforcement. The selection between batch and per-file mode should be logged at `DEBUG` level.
-
-**Architectural impact:** Low. Changes are confined to `core/exif.py`. The module already contains the import guard structure (`try: import exiftool as pyexiftool / except ImportError: pyexiftool = None`). The public `extract_exif()` interface does not change.
+**Remaining post-MVP work:** The current implementation processes files one at a time through the batch pipe (synchronous per-file `get_metadata()` calls within the `ExifToolHelper` context). A further optimization could pre-batch file paths and process them in parallel query groups, or overlap exiftool I/O with hashing I/O using an async pipeline. These are incremental improvements within the existing `core/exif.py` module boundary and do not require structural changes.
 
 <a id="1814-cli-graceful-interrupt-handling-sigint"></a>
 #### 18.1.4. CLI Graceful Interrupt Handling (SIGINT)
@@ -8942,18 +8982,18 @@ The implementation is straightforward: replace the boolean `recursive` parameter
 
 **Architectural impact:** Low. A parameter type change in `core/entry.py` and `core/traversal.py`, a new CLI flag, and a corresponding API parameter. The recursive call structure does not change — only the recursion guard condition.
 
-<a id="1816-unicode-normalization-flag"></a>
-#### 18.1.6. Unicode Normalization Flag
+<a id="1816-unicode-normalization-control"></a>
+#### 18.1.6. Unicode Normalization Control
 
-**Originating references:** [§15.2](#152-windows-specific-considerations) (Filesystem Behavior Differences).
+**Originating references:** [§6.3](#63-hashing-and-identity-generation) (DEV-15), [§15.3](#153-linux-and-macos-considerations) (macOS HFS+/APFS).
 
-macOS's HFS+ and APFS filesystems store filenames in NFD (decomposed) Unicode normalization form, while Windows NTFS and most Linux filesystems store them as-provided (often NFC). This means the same logical filename can produce different hash values on different platforms, because the raw UTF-8 bytes fed to `hash_string()` differ.
+**Status: Partially implemented in MVP.** The MVP applies unconditional NFC normalization to all strings before hashing (DEV-15), ensuring cross-platform hash determinism. This resolves the original concern about HFS+ NFD filenames producing different hashes than NFC filenames on other platforms.
 
-A `--normalize-unicode` CLI flag (or `normalize_unicode` config option) would force NFC normalization on all filename strings before hashing. This would ensure cross-platform hash consistency at the cost of breaking the invariant that re-indexing the same file on the same filesystem always produces the same identity (if the filesystem stores NFD and the tool normalizes to NFC, the hashed string differs from the stored filename).
+A future enhancement could add a `--no-normalize-unicode` CLI flag (or `normalize_unicode: false` config option) that disables NFC normalization, reverting to the "hash what the filesystem returns" behavior. This would be useful for users who need filesystem-level fidelity over cross-platform consistency — for example, forensic analysis of macOS HFS+ volumes where the NFD form is meaningful.
 
-**Preconditions:** None. Python's `unicodedata.normalize('NFC', name)` provides the normalization primitive.
+**Preconditions:** The NFC normalization implementation (DEV-15) must be stable and well-tested.
 
-**Architectural impact:** Low. A conditional `unicodedata.normalize()` call in `core/hashing.hash_string()`, gated by a config flag. The config system, CLI parser, and API surface each gain one additional option.
+**Architectural impact:** Low. A conditional gate around the existing `unicodedata.normalize()` call in `core/hashing.hash_string()`, controlled by a config flag. The config system, CLI parser, and API surface each gain one additional option.
 
 <a id="1817-windows-lnk-shortcut-resolution"></a>
 #### 18.1.7. Windows `.lnk` Shortcut Resolution
