@@ -1,0 +1,94 @@
+{
+  "_id": "yC20A9A07B48A6FC4A151B8CA4B2A0A5C",
+  "Ids": {
+    "MD5": "yC20A9A07B48A6FC4A151B8CA4B2A0A5C",
+    "SHA256": "y4538C2F273B89F0A0C53193B9CF63730A5984CEED24546B87B6F5D16413C1CDD"
+  },
+  "Name": "SearchMyFiles.chm",
+  "NameHashes": {
+    "MD5": "62B477A3E8F955D68F9A24CAB79795D0",
+    "SHA256": "36D1C2788D3384A3DF2AC392B76978AE99747C2518DF0E77F0FC12254C1636FA"
+  },
+  "ContentHashes": {
+    "MD5": "C20A9A07B48A6FC4A151B8CA4B2A0A5C",
+    "SHA256": "4538C2F273B89F0A0C53193B9CF63730A5984CEED24546B87B6F5D16413C1CDD"
+  },
+  "Extension": "chm",
+  "BaseName": "SearchMyFiles",
+  "StorageName": "yC20A9A07B48A6FC4A151B8CA4B2A0A5C.chm",
+  "Encoding": {
+    "IsSingleByte": true,
+    "Preamble": null,
+    "BodyName": "us-ascii",
+    "EncodingName": "US-ASCII",
+    "HeaderName": "us-ascii",
+    "WebName": "us-ascii",
+    "WindowsCodePage": 1252,
+    "IsBrowserDisplay": false,
+    "IsBrowserSave": false,
+    "IsMailNewsDisplay": true,
+    "IsMailNewsSave": true,
+    "EncoderFallback": {
+      "DefaultString": "?",
+      "MaxCharCount": 1
+    },
+    "DecoderFallback": {
+      "DefaultString": "?",
+      "MaxCharCount": 1
+    },
+    "IsReadOnly": true,
+    "CodePage": 20127
+  },
+  "Size": 25682,
+  "IsDirectory": false,
+  "IsLink": false,
+  "ParentId": "x3B4F479E9F880E438882FC34B67D352C",
+  "ParentIds": {
+    "MD5": "x3B4F479E9F880E438882FC34B67D352C",
+    "SHA256": "x492850C3148F2281718DBAC0B68B8B76B8C6E57C4BA0B71CE8699BF27E8DF587"
+  },
+  "ParentName": ".test",
+  "ParentNameHashes": {
+    "MD5": "5E7576E3CD79114D46850714E998A3B0",
+    "SHA256": "5559EC61AE317CDF207A17666B01777B00DDF4AB1044BE5CC213DD3618E5F98C"
+  },
+  "UnixTimeAccessed": 1771165697693,
+  "UnixTimeCreated": 1771165697693,
+  "UnixTimeModified": 1724095026000,
+  "TimeAccessed": "2026-02-15T09:28:17.6938636-05:00",
+  "TimeCreated": "2026-02-15T09:28:17.6934626-05:00",
+  "TimeModified": "2024-08-19T15:17:06.0000000-04:00",
+  "Metadata": [
+    {
+      "Source": "ExifTool",
+      "Type": "JsonMetadata",
+      "Name": null,
+      "NameHashes": null,
+      "Data": {
+        "SourceFile": "SearchMyFiles.chm",
+        "ExifTool:Now": "2026:02:15 09:30:11-05:00",
+        "ExifTool:ProcessingTime": "0.00341 s",
+        "System:FileSize": "26 kB",
+        "System:FileModifyDate": "2024:08:19 15:17:06-04:00",
+        "System:FileAccessDate": "2026:02:15 09:30:11-05:00",
+        "System:FileCreateDate": "2026:02:15 09:28:17-05:00",
+        "System:FileAttributes": "Regular; (none); Archive",
+        "File:FileType": "CHM",
+        "File:FileTypeExtension": "chm",
+        "File:MIMEType": "application/x-chm",
+        "EXE:CHMVersion": 3,
+        "EXE:LanguageCode": "Hebrew"
+      }
+    },
+    {
+      "Source": "MetaFile",
+      "Type": "GenericMetadata",
+      "Name": "SearchMyFiles.cfg",
+      "NameHashes": {
+        "MD5": "F7C7D9A200708A8AE7E674EC9864F0CA",
+        "SHA256": "A785FA67E24AA0959E87A34B5184A1316609E6D543856B23AF8E9B9922FDC78C"
+      },
+      "Data": "\r\n[General]\r\nNewWildcardMode=1\r\nShowGridLines=0\r\nSaveFilterIndex=0\r\nShowInfoTip=1\r\nShowTimeInGMT=0\r\nRetrieveEntryModified=1\r\nMaxMRU=10\r\nDontSaveMRULists=0\r\nDontSaveSearchOptions=0\r\nOpenFileOnDoubleClick=0\r\nMarkDuplicateFiles=1\r\nSetFocusOnSearcnEnd=1\r\nSetFocusOnSearcnStart=0\r\nAutoSizeColumnsOnSearcnEnd=0\r\nAddExportHeaderLine=0\r\nMinimizeRestoreWindows=0\r\nSummaryIncludeSubfolders=0\r\nHideEmptySummaryFolders=0\r\nSummaryFileSizeUnit=2\r\nFileSizeUnit=1\r\nShowDuplicateFiles=1\r\nDuplicateColorSet=1\r\nCloseOptionsOnSearcnStart=0\r\nRetrieveFileOwner=1\r\nDoubleClickAction=1\r\nEnterKeyAction=0\r\nFindLengthMode=0\r\nFindLengthValue=100\r\nMainFont=00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\r\nFilesWildcard=*\r\nSubfoldersWildcard=*\r\nBaseFolder=\r\nExcludedFolder=\r\nIncludeOnlyFolders=\r\nExcludeExtensions=\r\nScanSubfolders=1\r\nFindFiles=1\r\nFindFolders=0\r\nScanNTFSLinks=0\r\nUseFileSizeAtLeast=0\r\nUseFileSizeAtMost=0\r\nFileSizeAtLeast=0\r\nFileSizeAtMost=1000\r\nFileSizeAtLeastUnit=1\r\nFileSizeAtMostUnit=1\r\nFileAttrReadOnly=1\r\nFileAttrSystem=1\r\nFileAttrHidden=1\r\nFileAttrArchive=1\r\nFileAttrCompressed=1\r\nFileAttrEncrypted=1\r\nFileContains=0\r\nFileContainsText=\r\nFileContainsFlag=1\r\nFileTimeCreated=0\r\nFileTimeModified=0\r\nFileTimeAccessed=0\r\nFileTimeCreatedLastXX=1\r\nFileTimeModifiedLastXX=1\r\nFileTimeAccessedLastXX=1\r\nFileContainsCaseSensitive=0\r\nFileContainsMultiValues=0\r\nUseMaxNumOfFiles=1\r\nMaxNumOfFiles=10000\r\nSubFolderDepth=0\r\nSearchMode=1\r\nDuplicateNamesMode=1\r\nDuplicateNamesCompareMode=1\r\nSummaryMode=1\r\nFileContainsMultiValuesAndOr=1\r\nSearchHandlers=0\r\nFileContainsStreamsMode=1\r\nExcludeFilesMode=1\r\nFileTimeAccessed1=19-10-2024 17:18:35\r\nFileTimeAccessed2=19-10-2024 17:18:35\r\nFileTimeModified1=19-10-2024 17:18:35\r\nFileTimeModified2=19-10-2024 17:18:35\r\nFileTimeCreated1=19-10-2024 17:18:35\r\nFileTimeCreated2=19-10-2024 17:18:35\r\nOwnerFilter=0\r\nOwnerFilterString=\r\nWinPos=2C 00 00 00 00 00 00 00 01 00 00 00 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF EA 00 00 00 EA 00 00 00 FE 0A 00 00 F7 04 00 00\r\nSearchOptionsWinPos=2C 00 00 00 00 00 00 00 01 00 00 00 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 37 05 00 00 7C 01 00 00 38 08 00 00 EF 03 00 00\r\nColumns=96 00 00 00 2C 01 01 00 78 00 02 00 6E 00 03 00 6E 00 04 00 6E 00 05 00 6E 00 06 00 64 00 07 00 64 00 08 00 5A 00 09 00 5A 00 0A 00 5A 00 0B 00 5A 00 0C 00 5A 00 0D 00 82 00 0E 00 78 00 0F 00\r\nSort=0\r\nSummaryColumns=FA 00 00 00 78 00 01 00 64 00 02 00 64 00 03 00 64 00 04 00 64 00 05 00 64 00 06 00 64 00 07 00 64 00 08 00 64 00 09 00 64 00 0A 00 64 00 0B 00 64 00 0C 00 78 00 0D 00 78 00 0E 00\r\nSummarySort=0\r\n[BaseFolderMRU]\r\n0=\r\n1=\r\n2=\r\n3=\r\n4=\r\n5=\r\n6=\r\n7=\r\n8=\r\n9=\r\n[ExecludedFoldersMRU]\r\n0=\r\n1=\r\n2=\r\n3=\r\n4=\r\n5=\r\n6=\r\n7=\r\n8=\r\n9=\r\n[IncludeOnlyFoldersMRU]\r\n0=\r\n1=\r\n2=\r\n3=\r\n4=\r\n5=\r\n6=\r\n7=\r\n8=\r\n9=\r\n[FolderWildcardMRU]\r\n0=*\r\n1=\r\n2=\r\n3=\r\n4=\r\n5=\r\n6=\r\n7=\r\n8=\r\n9=\r\n[WildcardMRU]\r\n0=*\r\n1=\r\n2=\r\n3=\r\n4=\r\n5=\r\n6=\r\n7=\r\n8=\r\n9=\r\n[FileContainsTextMRU]\r\n0=\r\n1=\r\n2=\r\n3=\r\n4=\r\n5=\r\n6=\r\n7=\r\n8=\r\n9=\r\n[FileContainsBinaryMRU]\r\n0=\r\n1=\r\n2=\r\n3=\r\n4=\r\n5=\r\n6=\r\n7=\r\n8=\r\n9=\r\n[ExecludeExtensions]\r\n0=\r\n1=\r\n2=\r\n3=\r\n4=\r\n5=\r\n6=\r\n7=\r\n8=\r\n9=\r\n[RecentConfigFiles]\r\n0=\r\n1=\r\n2=\r\n3=\r\n4=\r\n5=\r\n6=\r\n7=\r\n8=\r\n9=\r\n"
+    }
+  ]
+}

@@ -35,6 +35,7 @@
   - [3.4. Test Directory Layout](#34-test-directory-layout)
   - [3.5. Scripts and Build Tooling](#35-scripts-and-build-tooling)
   - [3.6. Documentation Artifacts](#36-documentation-artifacts)
+  - [3.7. Documentation Site](#37-documentation-site)
 - [4. Architecture](#4-architecture)
   - [4.1. High-Level Processing Pipeline](#41-high-level-processing-pipeline)
   - [4.2. Module Decomposition](#42-module-decomposition)
@@ -309,6 +310,7 @@ The following documents inform this specification. All repository paths are rela
 | Document | Location | Description |
 |----------|----------|-------------|
 | v2 Schema (canonical) | [schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json) | The canonical JSON Schema definition for the v2 index entry output format. This is the target schema for all implementation work. Defines all fields, types, nullability, required properties, definitions (`NameObject`, `HashSet`, `SizeObject`, `TimestampPair`, `TimestampsObject`, `ParentObject`, `MetadataEntry`), and structural constraints. [§5](#5-output-schema) of this specification interprets and extends the schema with behavioral guidance but does not supersede it for field-level definitions. |
+| v2 Schema (local copy) | [`./docs/schema/shruggie-indexer-v2.schema.json`](./docs/schema/shruggie-indexer-v2.schema.json) | Local copy of the canonical v2 schema, committed to the repository. Used by the documentation site ([§3.7](#37-documentation-site)) and as a local validation reference. This file MUST be kept in sync with the canonical hosted version. |
 | v1 Schema (porting reference) | [`./docs/porting-reference/MakeIndex_OutputSchema.json`](./docs/porting-reference/MakeIndex_OutputSchema.json) | The JSON Schema definition for the original MakeIndex v1 output format. Retained as a porting reference for understanding the original implementation's output structure and for informing the eventual v1-to-v2 migration utility. The port does NOT target this schema. |
 
 <a id="operations-reference"></a>
@@ -580,9 +582,11 @@ All paths in this section are relative to the repository root unless otherwise n
 shruggie-indexer/
 ├── .github/
 │   └── workflows/
+│       ├── docs.yml
 │       └── release.yml
 ├── docs/
 │   ├── porting-reference/
+│   ├── schema/
 │   └── user/
 ├── scripts/
 ├── src/
@@ -592,6 +596,7 @@ shruggie-indexer/
 ├── .python-version
 ├── LICENSE
 ├── README.md
+├── mkdocs.yml
 ├── pyproject.toml
 ├── shruggie-indexer-plan.md
 └── shruggie-indexer-spec.md
@@ -599,14 +604,15 @@ shruggie-indexer/
 
 | Path | Type | Description |
 |------|------|-------------|
-| `.github/workflows/` | Directory | GitHub Actions CI/CD pipeline definitions. Contains at minimum `release.yml` for the release build pipeline (see [§13](#13-packaging-and-distribution)). |
-| `docs/` | Directory | All project documentation beyond the top-level planning and specification files. Subdivided into `porting-reference/` (original implementation reference materials) and `user/` (end-user documentation). See [§3.6](#36-documentation-artifacts). |
+| `.github/workflows/` | Directory | GitHub Actions CI/CD pipeline definitions. Contains `release.yml` for the release build pipeline (see [§13](#13-packaging-and-distribution)) and `docs.yml` for automated documentation site deployment to GitHub Pages (see [§3.7](#37-documentation-site)). |
+| `docs/` | Directory | All project documentation beyond the top-level planning and specification files. Subdivided into `schema/` (canonical v2 JSON Schema and validation examples), `porting-reference/` (original implementation reference materials), and `user/` (end-user documentation). See [§3.6](#36-documentation-artifacts) and [§3.7](#37-documentation-site). |
 | `scripts/` | Directory | Platform-paired shell scripts for development environment setup, build automation, and test execution. See [§3.5](#35-scripts-and-build-tooling). |
 | `src/shruggie_indexer/` | Directory | The Python source package. All importable code lives here. See [§3.2](#32-source-package-layout). |
 | `tests/` | Directory | All test code. Mirrors the source package structure. See [§3.4](#34-test-directory-layout). |
-| `.gitignore` | File | Standard Python `.gitignore` covering `__pycache__/`, `*.pyc`, `.venv/`, `dist/`, `build/`, `*.egg-info/`, IDE/editor files, OS artifacts, and PyInstaller working directories. |
+| `.gitignore` | File | Standard Python `.gitignore` covering `__pycache__/`, `*.pyc`, `.venv/`, `dist/`, `build/`, `*.egg-info/`, `site/`, IDE/editor files, OS artifacts, and PyInstaller working directories. |
 | `.python-version` | File | Contains the string `3.12` (no minor patch). Used by `pyenv` and similar version managers to auto-select the correct interpreter. |
 | `LICENSE` | File | Full Apache 2.0 license text, obtained from [https://www.apache.org/licenses/LICENSE-2.0.txt](https://www.apache.org/licenses/LICENSE-2.0.txt). |
+| `mkdocs.yml` | File | MkDocs configuration for the documentation site. Defines navigation structure, Material for MkDocs theme settings, and plugin configuration. See [§3.7](#37-documentation-site). |
 | `README.md` | File | Project overview, installation instructions, quick-start usage examples, and links to full documentation. |
 | `pyproject.toml` | File | Centralized project metadata, build system configuration, dependency declarations, entry points, and tool settings (`ruff`, `pytest`, `pyinstaller`). See [§13.2](#132-pyprojecttoml-configuration). |
 | `shruggie-indexer-plan.md` | File | Sprint-based implementation plan. Lives at the repository root for top-level visibility, consistent with `shruggie-feedtools`. |
@@ -816,12 +822,20 @@ Scripts MUST be executable without arguments for the default behavior. Optional 
 
 All scripts assume they are invoked from the repository root. They MUST NOT `cd` into subdirectories as part of their operation — all paths within the scripts are relative to the repository root.
 
+The documentation site build configuration (`mkdocs.yml`) lives at the repository root rather than in `scripts/` — it is consumed directly by `mkdocs build` and `mkdocs serve`. See [§3.7](#37-documentation-site) for full documentation site details.
+
 <a id="36-documentation-artifacts"></a>
 ### 3.6. Documentation Artifacts
 
 ```
 docs/
+├── index.md
+├── schema/
+│   ├── shruggie-indexer-v2.schema.json
+│   └── examples/
+│       └── flashplayer.exe_meta2.json
 ├── porting-reference/
+│   ├── index.md
 │   ├── MakeIndex_DependencyCatalog.md
 │   ├── Base64DecodeString_DependencyCatalog.md
 │   ├── Date2UnixTime_DependencyCatalog.md
@@ -833,17 +847,120 @@ docs/
 │   ├── Vbs_DependencyCatalog.md
 │   ├── MakeIndex_OperationsCatalog.md
 │   ├── MakeIndex_OutputSchema.json
-│   └── MakeIndex(MetadataFileParser).ps1
+│   ├── MakeIndex(MetadataFileParser).ps1
+│   └── v1-examples/
+│       ├── apktool.jar_meta.json
+│       ├── exiftool.exe_meta.json
+│       ├── flashplayer.exe_meta.json
+│       └── SearchMyFiles.chm_meta.json
 └── user/
-    └── (end-user documentation, post-MVP)
+    ├── index.md
+    ├── installation.md
+    ├── quickstart.md
+    ├── configuration.md
+    └── changelog.md
 ```
 
-| Directory | Purpose |
-|-----------|---------|
-| `porting-reference/` | Reference materials derived from the original PowerShell implementation. These documents inform the port but are not part of the runtime codebase. They include dependency catalogs for each of the eight ported pslib functions, the operations catalog mapping original logic to Python modules, the v1 output schema (for porting reference only — the port does not target v1), and the isolated `MetadataFileParser` object definition. These files are committed to the repository for traceability and to support AI implementation agents who may need to consult them during sprint execution. They are read-only reference artifacts — they are never modified after initial commit unless an error in the original documentation is discovered. |
-| `user/` | End-user documentation: installation guide, usage examples, configuration reference, and changelog. This directory is a post-MVP deliverable. For the v0.1.0 release, user-facing documentation is limited to the `README.md` at the repository root. |
+| Path | Purpose |
+|------|---------|
+| `index.md` | Documentation site landing page. Provides a project overview and links to the three documentation sections (schema reference, porting reference, user guide). Rendered as the site home page by MkDocs. See [§3.7](#37-documentation-site). |
+| `schema/` | Canonical v2 JSON Schema definition (`shruggie-indexer-v2.schema.json`) and validation examples (`examples/`). The schema file is the local copy of the canonical schema hosted at [schemas.shruggie.tech](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json). The `examples/` subdirectory contains real-world v2-compliant output files used for manual validation reference and documentation. |
+| `porting-reference/` | Reference materials derived from the original PowerShell implementation. These documents inform the port but are not part of the runtime codebase. They include dependency catalogs for each of the eight ported pslib functions, the operations catalog mapping original logic to Python modules, the v1 output schema (for porting reference only — the port does not target v1), the v1 output examples (`v1-examples/`), and the isolated `MetadataFileParser` object definition. An `index.md` provides a navigable overview for the documentation site. These files are committed to the repository for traceability and to support AI implementation agents who may need to consult them during sprint execution. They are read-only reference artifacts — they are never modified after initial commit unless an error in the original documentation is discovered. |
+| `porting-reference/v1-examples/` | Real-world v1 output examples from the original `MakeIndex` function. These files demonstrate the v1 schema structure as produced by the original implementation and serve as backward-compatibility validation fixtures for the eventual v1-to-v2 migration utility. |
+| `user/` | End-user documentation: installation guide (`installation.md`), quick-start tutorial (`quickstart.md`), configuration reference (`configuration.md`), and changelog (`changelog.md`). An `index.md` provides the user guide landing page. Stub pages are created as part of the MVP repository scaffolding to establish the site navigation skeleton. **Content authoring** is incremental — pages are populated as the CLI interface and configuration system stabilize. |
 
 **Important constraint (reiterated from [§1.2](#12-scope)):** The original PowerShell source code for the `MakeIndex` function — including its complete function body, parameter block, and all nested sub-functions — SHALL NOT be included in the repository in any form. The `MakeIndex(MetadataFileParser).ps1` file in `porting-reference/` is permitted because it contains only the configuration data object, not the function's implementation logic. The dependency catalogs and operations catalog describe behavior in prose, not source code. No file in `porting-reference/` contains executable `MakeIndex` source.
+
+<a id="37-documentation-site"></a>
+### 3.7. Documentation Site
+
+The project documentation is published as a static site built with [MkDocs](https://www.mkdocs.org/) using the [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) theme. MkDocs is a Python-native, Markdown-first static site generator that reads directly from the `docs/` directory — making it the natural choice for a Python project whose documentation artifacts are already authored in Markdown.
+
+<a id="371-site-configuration"></a>
+#### 3.7.1. Site Configuration
+
+The site is configured by `mkdocs.yml` at the repository root. Key configuration settings:
+
+| Setting | Value | Purpose |
+|---------|-------|---------|
+| `site_name` | `shruggie-indexer` | Displayed in the site header and browser title. |
+| `site_description` | Project tagline for SEO and social metadata. | |
+| `site_url` | The GitHub Pages URL for the project. | Base URL for canonical links and sitemap generation. |
+| `docs_dir` | `docs` | MkDocs reads all documentation source from the `docs/` directory. |
+| `theme.name` | `material` | Activates the Material for MkDocs theme. |
+| `theme.features` | Navigation tabs, instant loading, search highlighting, content tabs. | Provides a polished, responsive documentation experience. |
+
+The `nav` key in `mkdocs.yml` defines the sidebar navigation structure explicitly rather than relying on directory auto-discovery. This ensures predictable ordering and human-readable section labels:
+
+```yaml
+nav:
+  - Home: index.md
+  - Schema Reference:
+    - Overview: schema/index.md
+    - V2 JSON Schema: schema/shruggie-indexer-v2.schema.json
+    - Examples: schema/examples/
+  - Porting Reference:
+    - Overview: porting-reference/index.md
+    - Operations Catalog: porting-reference/MakeIndex_OperationsCatalog.md
+    - MetadataFileParser: porting-reference/MakeIndex(MetadataFileParser).ps1
+    - V1 Output Schema: porting-reference/MakeIndex_OutputSchema.json
+    - Dependency Catalogs:
+      - MakeIndex: porting-reference/MakeIndex_DependencyCatalog.md
+      - Base64DecodeString: porting-reference/Base64DecodeString_DependencyCatalog.md
+      - Date2UnixTime: porting-reference/Date2UnixTime_DependencyCatalog.md
+      - DirectoryId: porting-reference/DirectoryId_DependencyCatalog.md
+      - FileId: porting-reference/FileId_DependencyCatalog.md
+      - MetaFileRead: porting-reference/MetaFileRead_DependencyCatalog.md
+      - TempOpen: porting-reference/TempOpen_DependencyCatalog.md
+      - TempClose: porting-reference/TempClose_DependencyCatalog.md
+      - Vbs: porting-reference/Vbs_DependencyCatalog.md
+    - V1 Output Examples: porting-reference/v1-examples/
+  - User Guide:
+    - Overview: user/index.md
+    - Installation: user/installation.md
+    - Quick Start: user/quickstart.md
+    - Configuration: user/configuration.md
+    - Changelog: user/changelog.md
+```
+
+<a id="372-non-markdown-asset-handling"></a>
+#### 3.7.2. Non-Markdown Asset Handling
+
+The `docs/` directory contains non-Markdown files (`.json`, `.ps1`) that are reference artifacts rather than documentation pages. MkDocs copies these files to the built site as static assets. They are linked from their parent section's `index.md` page as downloadable files rather than rendered as documentation content. The navigation entries for `.json` and `.ps1` files produce direct download links in the built site.
+
+<a id="373-build-and-preview"></a>
+#### 3.7.3. Build and Preview
+
+| Command | Purpose |
+|---------|---------|
+| `mkdocs serve` | Starts a local development server with live reload. Used during documentation authoring to preview changes. Serves at `http://127.0.0.1:8000/` by default. |
+| `mkdocs build` | Produces the static site in the `site/` directory. The `site/` directory is listed in `.gitignore` and is never committed. |
+
+<a id="374-deployment"></a>
+#### 3.7.4. Deployment
+
+The documentation site is deployed to GitHub Pages via a dedicated GitHub Actions workflow (`.github/workflows/docs.yml`). The workflow:
+
+- **Triggers** on push to `main` when files in `docs/` or `mkdocs.yml` change.
+- **Builds** the site using `mkdocs build --strict` (strict mode fails the build on warnings such as broken links or missing pages).
+- **Deploys** the built `site/` directory to the `gh-pages` branch using `mkdocs gh-deploy --force`.
+
+The `--strict` flag ensures that documentation quality is enforced in CI — broken internal links, missing navigation targets, and unreferenced pages cause build failures rather than silent degradation.
+
+<a id="375-dependencies"></a>
+#### 3.7.5. Dependencies
+
+`mkdocs` and `mkdocs-material` are added as optional development dependencies in `pyproject.toml` under a `[project.optional-dependencies]` docs group:
+
+```toml
+[project.optional-dependencies]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+]
+```
+
+These packages are NOT required for using, developing, or testing `shruggie-indexer` itself. They are required only for building or previewing the documentation site. The `venv-setup` scripts ([§3.5](#35-scripts-and-build-tooling)) do not install the `docs` extra by default — documentation authors install it explicitly with `pip install -e ".[docs]"`.
 
 <a id="4-architecture"></a>
 ## 4. Architecture
@@ -8913,13 +9030,15 @@ Formal accessibility work would involve audit against WCAG guidelines, addition 
 <a id="18113-end-user-documentation"></a>
 #### 18.1.13. End-User Documentation
 
-**Originating references:** [§3.6](#36-documentation-artifacts) (Documentation Artifacts).
+**Originating references:** [§3.6](#36-documentation-artifacts) (Documentation Artifacts), [§3.7](#37-documentation-site) (Documentation Site).
 
-The `docs/user/` directory is a post-MVP deliverable. For the v0.1.0 release, user-facing documentation is limited to the `README.md` at the repository root. A complete documentation set would include an installation guide, usage examples, configuration reference, and changelog.
+The documentation site infrastructure — MkDocs with Material for MkDocs, the `mkdocs.yml` configuration, the GitHub Actions deployment workflow, and the `docs/user/` stub pages — is created as part of the MVP repository scaffolding. This establishes the complete site navigation skeleton and deployment pipeline from day one.
 
-**Preconditions:** A stable CLI interface and configuration system. Documentation written against an unstable interface creates maintenance burden.
+**Content authoring** for user-facing documentation (`docs/user/`) is incremental and is not gated on the MVP release. Pages are populated as the CLI interface and configuration system stabilize. For the v0.1.0 release, user-facing documentation content is limited to the `README.md` at the repository root, while the `docs/user/` stub pages contain placeholder text directing readers to the README. A complete documentation set — authored incrementally post-MVP — would include an installation guide, quick-start tutorial, configuration reference, and changelog.
 
-**Architectural impact:** None. Documentation artifacts only.
+**Preconditions for content authoring:** A stable CLI interface and configuration system. Documentation written against an unstable interface creates maintenance burden. The documentation site infrastructure itself has no preconditions — it is deployable with stub content.
+
+**Architectural impact:** Minimal. Adds `mkdocs.yml` at the repository root, a GitHub Actions workflow (`.github/workflows/docs.yml`), optional Python dependencies (`mkdocs`, `mkdocs-material`) in the `docs` extras group, and stub Markdown files in `docs/user/`. No impact on the core engine, CLI, or GUI.
 
 <a id="18114-session-id-in-json-output"></a>
 #### 18.1.14. Session ID in JSON Output
