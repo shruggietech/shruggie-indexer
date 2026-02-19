@@ -40,7 +40,7 @@ Milestone 2: Processing Engine + CLI
 Milestone 3: GUI + Packaging + Release Infrastructure
     │  Sprint 3.1 → Sprint 3.2 → Sprint 3.3
     │
-    │  provides: gui/app.py, scripts/, .spec files, CI workflows,
+    │  provides: gui/app.py, scripts/build.*, .spec files, CI workflows,
     │            mkdocs.yml, platform tests, README.md
     ▼
    MVP Complete (v0.1.0)
@@ -536,7 +536,7 @@ The implementing agent for Sprint 3.1 MUST have the following in its context win
 
 ### Sprint 3.2 — Build Scripts, Packaging, and CI/CD
 
-**Goal:** Create all build and setup scripts (PowerShell + Bash pairs), PyInstaller spec files for CLI and GUI executables, and GitHub Actions CI/CD workflows for automated releases and documentation deployment.
+**Goal:** Create the PyInstaller build scripts (PowerShell + Bash), PyInstaller spec files for CLI and GUI executables, and GitHub Actions CI/CD workflows for automated releases and documentation deployment. The `venv-setup` and `test` script pairs were created during pre-sprint scaffolding and already exist in `scripts/`.
 
 #### Spec References
 
@@ -559,12 +559,10 @@ The implementing agent for Sprint 3.2 MUST have the following in its context win
 
 | File | Description |
 |------|-------------|
-| `scripts/venv-setup.ps1` | PowerShell: create `.venv/`, install `pip install -e ".[dev,gui]"`, verify `shruggie-indexer` on PATH. |
-| `scripts/venv-setup.sh` | Bash equivalent. |
 | `scripts/build.ps1` | PowerShell: PyInstaller build for CLI + GUI executables. |
 | `scripts/build.sh` | Bash equivalent. |
-| `scripts/test.ps1` | PowerShell: run `pytest` with optional scope argument. |
-| `scripts/test.sh` | Bash equivalent. |
+
+> **Note:** `scripts/venv-setup.ps1`, `scripts/venv-setup.sh`, `scripts/test.ps1`, and `scripts/test.sh` already exist (created during pre-sprint scaffolding). They are not deliverables of this sprint.
 
 **PyInstaller Spec Files:**
 
@@ -582,21 +580,16 @@ The implementing agent for Sprint 3.2 MUST have the following in its context win
 
 #### Steps
 
-1. Create `scripts/venv-setup.ps1`: detect Python 3.12+, create `.venv/`, activate, run `pip install -e ".[dev,gui]"`, verify `shruggie-indexer --version`.
-2. Create `scripts/venv-setup.sh`: equivalent Bash script with platform detection.
-3. Create `scripts/build.ps1`: activate venv, run PyInstaller with both spec files, verify output executables in `dist/`.
-4. Create `scripts/build.sh`: equivalent Bash script.
-5. Create `scripts/test.ps1`: activate venv, accept optional scope argument (unit/integration/conformance/platform/all), run `pytest` with appropriate markers.
-6. Create `scripts/test.sh`: equivalent Bash script.
-7. Create `shruggie-indexer-cli.spec`: PyInstaller spec for `--onefile --console`, exclude tkinter/customtkinter, enable UPX compression.
-8. Create `shruggie-indexer-gui.spec`: PyInstaller spec for `--onefile --windowed`, exclude click, enable UPX compression, bundle CustomTkinter assets.
-9. Create `.github/workflows/release.yml`: trigger on `v*` tag push, 4-platform matrix (windows-latest, ubuntu-latest, macos-13, macos-latest), stages for checkout → test → build → rename → upload → release. Produce 8 artifacts per release (CLI + GUI × 4 platforms).
-10. Create `.github/workflows/docs.yml`: trigger on docs changes, run `mkdocs build --strict`, deploy with `mkdocs gh-deploy --force`.
-11. Validate all scripts are syntactically correct and the YAML workflows pass `yamllint` or equivalent.
+1. Create `scripts/build.ps1`: activate venv, run PyInstaller with both spec files, verify output executables in `dist/`.
+2. Create `scripts/build.sh`: equivalent Bash script.
+3. Create `shruggie-indexer-cli.spec`: PyInstaller spec for `--onefile --console`, exclude tkinter/customtkinter, enable UPX compression.
+4. Create `shruggie-indexer-gui.spec`: PyInstaller spec for `--onefile --windowed`, exclude click, enable UPX compression, bundle CustomTkinter assets.
+5. Create `.github/workflows/release.yml`: trigger on `v*` tag push, 4-platform matrix (windows-latest, ubuntu-latest, macos-13, macos-latest), stages for checkout → test → build → rename → upload → release. Produce 8 artifacts per release (CLI + GUI × 4 platforms).
+6. Create `.github/workflows/docs.yml`: trigger on docs changes, run `mkdocs build --strict`, deploy with `mkdocs gh-deploy --force`.
+7. Validate all scripts are syntactically correct and the YAML workflows pass `yamllint` or equivalent.
 
 #### Exit Criteria
 
-- [ ] `scripts/venv-setup.ps1` creates and configures a working venv on Windows.
 - [ ] `scripts/build.ps1` produces `dist/shruggie-indexer-cli.exe` and `dist/shruggie-indexer-gui.exe`.
 - [ ] `shruggie-indexer-cli.spec` and `shruggie-indexer-gui.spec` are valid PyInstaller spec files.
 - [ ] `.github/workflows/release.yml` is valid YAML with correct matrix and stage definitions.
