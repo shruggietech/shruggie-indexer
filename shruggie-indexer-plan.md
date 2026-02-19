@@ -48,6 +48,21 @@ Milestone 3: GUI + Packaging + Release Infrastructure
 
 ---
 
+## Repository Baseline
+
+The following files and directories are pre-committed in the repository and are **not** sprint deliverables. Implementing agents MUST NOT attempt to create these files — they already exist:
+
+| Pre-Existing Path | Description |
+|-------------------|-------------|
+| `LICENSE` | MIT license file. |
+| `README.md` | Exists as a placeholder; **content** is populated in Sprint 3.3. |
+| `docs/` | All documentation stub pages (`docs/index.md`, `docs/user/`, `docs/schema/`, `docs/porting-reference/`). |
+| `shruggie-indexer-spec.md` | The full technical specification (input to all sprints). |
+| `shruggie-indexer-plan.md` | This plan document. |
+| `shruggie-indexer.code-workspace` | VS Code workspace file. |
+
+---
+
 ## Milestone 1 — Scaffold, Data Layer, and Core Utilities
 
 **Goal:** Establish the repository skeleton, define all data structures and configuration types, and implement the stateless utility modules that every subsequent module depends on. At the end of this milestone, the project is installable (`pip install -e .`), all model classes are importable, configuration loads from defaults, and the three foundational core modules (paths, hashing, timestamps) are functional and unit-tested.
@@ -68,6 +83,7 @@ The implementing agent for Sprint 1.1 MUST have the following in its context win
 | [§2.5 — Python Version Requirements](shruggie-indexer-spec.md#25-python-version-requirements) | Minimum Python version, version pinning strategy |
 | [§3.1 — Top-Level Layout](shruggie-indexer-spec.md#31-top-level-layout) | Root-level file inventory and descriptions |
 | [§3.2 — Source Package Layout](shruggie-indexer-spec.md#32-source-package-layout) | Full `src/shruggie_indexer/` directory tree, sub-package descriptions |
+| [§3.5 — Scripts and Build Tooling](shruggie-indexer-spec.md#35-scripts-and-build-tooling) | Script inventory, naming conventions, purposes (for `venv-setup` and `test` scripts) |
 | [§4.5 — Error Handling Strategy](shruggie-indexer-spec.md#45-error-handling-strategy) | Exception class hierarchy, severity tiers |
 | [§9.1 — Public API Surface](shruggie-indexer-spec.md#91-public-api-surface) | `__init__.py` re-exports, `__all__` contents |
 | [§9.4 — Data Classes and Type Definitions](shruggie-indexer-spec.md#94-data-classes-and-type-definitions) | Exception classes: `IndexerError`, `IndexerConfigError`, `IndexerTargetError`, `IndexerRuntimeError`, `RenameError`, `IndexerCancellationError` |
@@ -93,6 +109,10 @@ The implementing agent for Sprint 1.1 MUST have the following in its context win
 | `src/shruggie_indexer/cli/__init__.py` | Empty. |
 | `src/shruggie_indexer/gui/__init__.py` | Empty. |
 | `src/shruggie_indexer/exceptions.py` | `IndexerError` (base), `IndexerConfigError`, `IndexerTargetError`, `IndexerRuntimeError`, `RenameError`, `IndexerCancellationError`. |
+| `scripts/venv-setup.ps1` | PowerShell: Create/activate Python venv, install `pip install -e ".[dev]"`. |
+| `scripts/venv-setup.sh` | Bash equivalent of `venv-setup.ps1`. |
+| `scripts/test.ps1` | PowerShell: Activate venv, run `pytest` with standard options. |
+| `scripts/test.sh` | Bash equivalent of `test.ps1`. |
 
 #### Steps
 
@@ -102,14 +122,18 @@ The implementing agent for Sprint 1.1 MUST have the following in its context win
 4. Create `__main__.py` with the `python -m shruggie_indexer` entry point.
 5. Create `exceptions.py` with the full exception hierarchy per §4.5 and §9.4.
 6. Populate `__init__.py` in each sub-package with appropriate stub imports and re-exports per §9.1.
-7. Verify installability: `pip install -e ".[dev]"` must succeed.
-8. Verify import: `python -c "from shruggie_indexer._version import __version__; print(__version__)"` must print `0.1.0`.
+7. Create `scripts/venv-setup.ps1` and `scripts/venv-setup.sh`: create/activate a Python venv and run `pip install -e ".[dev]"`.
+8. Create `scripts/test.ps1` and `scripts/test.sh`: activate venv and run `pytest` with standard options.
+9. Verify installability: `pip install -e ".[dev]"` must succeed.
+10. Verify import: `python -c "from shruggie_indexer._version import __version__; print(__version__)"` must print `0.1.0`.
 
 #### Exit Criteria
 
 - [ ] `pip install -e ".[dev]"` succeeds from the repository root.
 - [ ] `python -c "from shruggie_indexer._version import __version__"` succeeds.
 - [ ] All sub-package `__init__.py` files are importable without error.
+- [ ] `scripts/venv-setup.ps1` and `scripts/venv-setup.sh` exist and are syntactically valid.
+- [ ] `scripts/test.ps1` and `scripts/test.sh` exist and are syntactically valid.
 - [ ] `ruff check src/` — zero errors.
 
 ---
@@ -536,7 +560,7 @@ The implementing agent for Sprint 3.1 MUST have the following in its context win
 
 ### Sprint 3.2 — Build Scripts, Packaging, and CI/CD
 
-**Goal:** Create the PyInstaller build scripts (PowerShell + Bash), PyInstaller spec files for CLI and GUI executables, and GitHub Actions CI/CD workflows for automated releases and documentation deployment. The `venv-setup` and `test` script pairs were created during pre-sprint scaffolding and already exist in `scripts/`.
+**Goal:** Create the PyInstaller build scripts (PowerShell + Bash), PyInstaller spec files for CLI and GUI executables, and GitHub Actions CI/CD workflows for automated releases and documentation deployment.
 
 #### Spec References
 
@@ -562,7 +586,7 @@ The implementing agent for Sprint 3.2 MUST have the following in its context win
 | `scripts/build.ps1` | PowerShell: PyInstaller build for CLI + GUI executables. |
 | `scripts/build.sh` | Bash equivalent. |
 
-> **Note:** `scripts/venv-setup.ps1`, `scripts/venv-setup.sh`, `scripts/test.ps1`, and `scripts/test.sh` already exist (created during pre-sprint scaffolding). They are not deliverables of this sprint.
+> **Note:** `scripts/venv-setup.ps1`, `scripts/venv-setup.sh`, `scripts/test.ps1`, and `scripts/test.sh` are delivered in Sprint 1.1. They are not deliverables of this sprint.
 
 **PyInstaller Spec Files:**
 
@@ -642,6 +666,20 @@ The implementing agent for Sprint 3.3 MUST have the following in its context win
 | `tests/platform/test_timestamps_platform.py` | 4 cases: `st_birthtime` availability (macOS/Windows), `st_ctime` fallback (Linux), creation time accuracy, timezone handling. |
 | `tests/platform/test_symlinks_platform.py` | 5 cases: symlink detection, dangling symlink handling, directory symlink, junction detection (Windows), symlink name-hash fallback. |
 
+**Backward Compatibility Test Skeleton (§14.6):**
+
+| File | Description |
+|------|-------------|
+| `tests/conformance/test_backward_compat.py` | Skeleton test file with `@pytest.mark.skip(reason="Reference data not yet generated")` decorators. Scaffolds the v1→v2 backward compatibility validation framework defined in §14.6. |
+| `tests/fixtures/reference/.gitkeep` | Empty directory placeholder for future v1 reference data. |
+
+**Performance Benchmark Tests (§14.7):**
+
+| File | Description |
+|------|-------------|
+| `tests/benchmarks/__init__.py` | Empty. |
+| `tests/benchmarks/test_performance.py` | 8 benchmark scenarios per §14.7, all decorated with `@pytest.mark.slow`. Covers: single small file, single large file (>100MB), flat directory (1000 files), recursive directory (nested 5 levels), exiftool extraction throughput, sidecar discovery throughput, serialization throughput, rename dry-run throughput. |
+
 #### Steps
 
 1. Create `mkdocs.yml` with the full Material theme configuration per §3.7.1. Define the complete navigation structure referencing all existing docs. Enable strict mode.
@@ -650,16 +688,21 @@ The implementing agent for Sprint 3.3 MUST have the following in its context win
 4. Create `tests/platform/__init__.py`.
 5. Write `tests/platform/test_timestamps_platform.py` — 4 platform-conditional test cases: `st_birthtime` availability test (macOS/Windows only), `st_ctime` fallback test (Linux only), creation time accuracy validation, timezone handling verification. Use `pytest.mark.skipif` for platform-gating.
 6. Write `tests/platform/test_symlinks_platform.py` — 5 platform-conditional test cases: symlink detection, dangling symlink handling, directory symlink traversal, junction detection (Windows only), symlink name-hash fallback.
-7. Run `mkdocs build --strict` — must succeed without warnings.
-8. Run `pytest tests/platform/` — must pass on the current platform (skipping non-applicable tests).
-9. Run the full test suite: `pytest tests/` — all tests across all directories must pass.
-10. Run `ruff check src/` — zero errors.
-11. Verify the complete file manifest against the list below.
+7. Create `tests/conformance/test_backward_compat.py` with skeleton test cases per §14.6. All tests decorated with `@pytest.mark.skip(reason="Reference data not yet generated")`. Create `tests/fixtures/reference/.gitkeep`.
+8. Create `tests/benchmarks/__init__.py` and `tests/benchmarks/test_performance.py` with 8 benchmark scenarios per §14.7. All tests decorated with `@pytest.mark.slow`.
+9. Run `mkdocs build --strict` — must succeed without warnings.
+10. Run `pytest tests/platform/` — must pass on the current platform (skipping non-applicable tests).
+11. Run `pytest tests/benchmarks/ -m "not slow"` — collection succeeds (no import errors), slow tests are skipped.
+12. Run the full test suite: `pytest tests/` — all tests across all directories must pass.
+13. Run `ruff check src/` — zero errors.
+14. Verify the complete file manifest against the list below.
 
 #### Exit Criteria
 
 - [ ] `mkdocs build --strict` — succeeds without warnings.
 - [ ] `pytest tests/platform/` — passes on the current platform (skips non-applicable tests).
+- [ ] `tests/conformance/test_backward_compat.py` exists and collects without import errors (all tests skipped).
+- [ ] `tests/benchmarks/test_performance.py` exists and collects without import errors (all tests skipped via `-m "not slow"`).
 - [ ] `pytest tests/` — full suite passes.
 - [ ] `ruff check src/` — zero errors.
 - [ ] `README.md` contains installation instructions, quick-start, and links to docs.
@@ -670,9 +713,9 @@ The implementing agent for Sprint 3.3 MUST have the following in its context win
 
 All files created or modified across all three milestones, in dependency order.
 
-### Milestone 1 — 22 files (3 sprints)
+### Milestone 1 — 26 files (3 sprints)
 
-**Sprint 1.1 — 12 files:**
+**Sprint 1.1 — 16 files:**
 ```
 pyproject.toml
 .gitignore
@@ -686,6 +729,10 @@ src/shruggie_indexer/models/__init__.py
 src/shruggie_indexer/config/__init__.py
 src/shruggie_indexer/cli/__init__.py
 src/shruggie_indexer/gui/__init__.py
+scripts/venv-setup.ps1
+scripts/venv-setup.sh
+scripts/test.ps1
+scripts/test.sh
 ```
 
 **Sprint 1.2 — 4 files:**
@@ -750,26 +797,24 @@ tests/fixtures/                                (directory + sample files)
 
 ### Milestone 3 — 16 files (3 sprints)
 
+> **Note:** 4 helper scripts (`venv-setup.ps1`, `venv-setup.sh`, `test.ps1`, `test.sh`) moved to Sprint 1.1.
+
 **Sprint 3.1 — 1 file:**
 ```
 src/shruggie_indexer/gui/app.py
 ```
 
-**Sprint 3.2 — 10 files:**
+**Sprint 3.2 — 6 files:**
 ```
-scripts/venv-setup.ps1
-scripts/venv-setup.sh
 scripts/build.ps1
 scripts/build.sh
-scripts/test.ps1
-scripts/test.sh
 shruggie-indexer-cli.spec
 shruggie-indexer-gui.spec
 .github/workflows/release.yml
 .github/workflows/docs.yml
 ```
 
-**Sprint 3.3 — 5 files:**
+**Sprint 3.3 — 9 files:**
 ```
 mkdocs.yml
 docs/schema/index.md
@@ -777,9 +822,13 @@ README.md                                      (content populated)
 tests/platform/__init__.py
 tests/platform/test_timestamps_platform.py
 tests/platform/test_symlinks_platform.py
+tests/conformance/test_backward_compat.py
+tests/fixtures/reference/.gitkeep
+tests/benchmarks/__init__.py
+tests/benchmarks/test_performance.py
 ```
 
-**Total: ~63 files** across 3 milestones / 9 sprints.
+**Total: ~67 files** across 3 milestones / 9 sprints.
 
 ---
 
