@@ -5782,7 +5782,7 @@ When the background thread finishes (successfully, with error, or by cancellatio
 |---------|-------------|-------------|------------|--------------|
 | Success | 100%, green tint | "Completed — N items indexed in MM:SS" | Final summary appended | Populated with JSON output |
 | Partial failure | 100%, amber tint | "Completed with N warnings — M of N items indexed" | Warning summary appended | Populated with JSON output (with degraded fields) |
-| Error | Red tint, stopped | "Failed — [error message]" | Error details appended | Displays error JSON or message |
+| Error | Red tint, stopped | "Failed — `[error message]`" | Error details appended | Displays error JSON or message |
 | Cancelled | Amber tint, stopped | "Cancelled after N of M items" | Cancellation notice appended | Empty or partial output (not displayed) |
 
 For the success and partial-failure cases, the progress display is replaced by the JSON output in the output panel after a brief delay (500ms) to allow the user to see the completion status. The user can toggle back to the progress/log view via a tab or toggle button at the top of the output panel (see [§10.6](#106-output-display-and-export)).
@@ -5816,7 +5816,7 @@ Syntax highlighting is a SHOULD requirement, not a MUST. If implementation compl
 
 1. For outputs under 1 MB, load the full text into the textbox.
 2. For outputs between 1 MB and 10 MB, load the text but disable syntax highlighting (tag application is the expensive operation, not text insertion).
-3. For outputs over 10 MB, display a summary message in the viewer: _"Output is [size] — too large for inline display. Use Save to export."_ The full output is held in memory and available via the Save button.
+3. For outputs over 10 MB, display a summary message in the viewer: _"Output is `[size]` — too large for inline display. Use Save to export."_ The full output is held in memory and available via the Save button.
 
 These thresholds are approximate and SHOULD be tuned during implementation based on observed performance.
 
