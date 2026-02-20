@@ -88,6 +88,13 @@ select = [
     "RUF",  # ruff-specific rules
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "N",    # pep8-naming
+    "SIM",  # flake8-simplify
+    "TCH"   # flake8-type-checking
+]
+
 [tool.ruff.lint.isort]
 known-first-party = ["shruggie_indexer"]
 
