@@ -42,4 +42,5 @@ nav:
       - Installation: user/installation.md
       - Quick Start: user/quickstart.md
       - Configuration: user/configuration.md
+      - Testing Troubleshooting: user/testing-troubleshooting.md
       - Changelog: user/changelog.md
