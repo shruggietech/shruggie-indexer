@@ -1,0 +1,45 @@
+# MkDocs configuration for shruggie-indexer documentation site.
+# See §3.7.1 for full specification.
+
+site_name: shruggie-indexer
+site_description: >-
+  Filesystem indexer with hash-based identity, metadata extraction,
+  and structured JSON output.
+site_url: https://shruggietech.github.io/shruggie-indexer/
+repo_url: https://github.com/shruggietech/shruggie-indexer
+repo_name: shruggietech/shruggie-indexer
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.instant
+    - search.highlight
+    - content.tabs.link
+
+strict: true
+
+nav:
+  - Home: index.md
+  - Schema Reference:
+      - Overview: schema/index.md
+  - Porting Reference:
+      - Overview: porting-reference/index.md
+      - Operations Catalog: porting-reference/MakeIndex_OperationsCatalog.md
+      - Dependency Catalogs:
+          - MakeIndex: porting-reference/MakeIndex_DependencyCatalog.md
+          - Base64DecodeString: porting-reference/Base64DecodeString_DependencyCatalog.md
+          - Date2UnixTime: porting-reference/Date2UnixTime_DependencyCatalog.md
+          - DirectoryId: porting-reference/DirectoryId_DependencyCatalog.md
+          - FileId: porting-reference/FileId_DependencyCatalog.md
+          - MetaFileRead: porting-reference/MetaFileRead_DependencyCatalog.md
+          - TempOpen: porting-reference/TempOpen_DependencyCatalog.md
+          - TempClose: porting-reference/TempClose_DependencyCatalog.md
+          - Vbs: porting-reference/Vbs_DependencyCatalog.md
+  - User Guide:
+      - Overview: user/index.md
+      - Installation: user/installation.md
+      - Quick Start: user/quickstart.md
+      - Configuration: user/configuration.md
+      - Changelog: user/changelog.md
