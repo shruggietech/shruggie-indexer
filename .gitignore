@@ -31,6 +31,9 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+# Un-ignore our PyInstaller spec files (project deliverables, not generated)
+!shruggie-indexer-cli.spec
+!shruggie-indexer-gui.spec
 
 # Installer logs
 pip-log.txt

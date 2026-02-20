@@ -32,6 +32,10 @@ dev = [
     "ruff>=0.3",
     "rich>=13.0",
 ]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+]
 all = ["shruggie-indexer[gui]"]
 
 # ─── Entry points ──────────────────────────────────────────────────────────
@@ -68,6 +72,7 @@ markers = [
 target-version = "py312"
 line-length = 100
 src = ["src"]
+extend-exclude = ["*.spec"]
 
 [tool.ruff.lint]
 select = [
