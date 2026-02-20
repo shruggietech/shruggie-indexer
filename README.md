@@ -16,7 +16,7 @@ Download pre-built executables from [GitHub Releases](https://github.com/shruggi
 
 ### From Source (Contributors)
 
-```bash
+```
 git clone https://github.com/shruggietech/shruggie-indexer.git
 cd shruggie-indexer
 python -m venv .venv
@@ -27,52 +27,108 @@ pip install -e ".[dev,cli]"
 
 For the GUI application:
 
-```bash
+```
 pip install -e ".[dev,cli,gui]"
 ```
+
+### ExifTool (External Dependency)
+
+[ExifTool](https://exiftool.org/) by Phil Harvey is the sole external binary dependency. It is required only for embedded metadata extraction (the `--meta` flag). All other functionality — hashing, timestamps, sidecar handling, renaming — works without it. When ExifTool is not installed, the `metadata` array in output entries simply omits the `exiftool.json_metadata` entry.
+
+**Minimum version:** 12.0 or later.
+
+**Windows:**
+
+Download the standalone Windows executable from [https://exiftool.org/](https://exiftool.org/). Extract `exiftool(-k).exe`, rename it to `exiftool.exe`, and place it in a directory that is on your system `PATH` (e.g., `C:\Windows\` or any custom directory you've added to `PATH`). Alternatively, install via [Chocolatey](https://community.chocolatey.org/packages/exiftool):
+
+```
+choco install exiftool
+```
+
+Or via [winget](https://github.com/microsoft/winget-cli):
+
+```
+winget install OliverBetz.ExifTool
+```
+
+**macOS:**
+
+Install via [Homebrew](https://brew.sh/):
+
+```
+brew install exiftool
+```
+
+**Linux (Debian/Ubuntu):**
+
+```
+sudo apt install libimage-exiftool-perl
+```
+
+**Linux (Fedora/RHEL):**
+
+```
+sudo dnf install perl-Image-ExifTool
+```
+
+**Linux (Arch):**
+
+```
+sudo pacman -S perl-image-exiftool
+```
+
+**Verification:**
+
+After installing, verify that ExifTool is accessible on your `PATH` and meets the minimum version requirement:
+
+```
+exiftool -ver
+```
+
+This should print a version number of `12.00` or higher.
 
 ## Quick Start
 
 ### Index a Single File
 
-```bash
+```
 shruggie-indexer path/to/file.ext
 ```
 
 ### Index a Directory (Recursive)
 
-```bash
+```
 shruggie-indexer path/to/directory --recursive
 ```
 
 ### Write Output to a File
 
-```bash
+```
 shruggie-indexer path/to/target --outfile index.json
 ```
 
 ### Write Sidecar Files In-Place
 
-```bash
+```
 shruggie-indexer path/to/directory --inplace
 ```
 
 ### Include EXIF Metadata
 
-```bash
+```
 shruggie-indexer path/to/file.jpg --meta
 ```
 
 ### Rename Files to Storage Names (Dry Run)
 
-```bash
+```
 shruggie-indexer path/to/directory --rename --dry-run
 ```
 
 ## CLI Options
 
 | Option | Description |
-|--------|-------------|
+| --- | --- |
 | `--file` / `--directory` | Force target type interpretation |
 | `--recursive` / `--no-recursive` | Enable or disable recursive directory traversal |
 | `--stdout` / `--no-stdout` | Control JSON output to stdout |
@@ -105,10 +161,10 @@ print(json_output)
 
 ## Documentation
 
-- [User Guide](https://shruggietech.github.io/shruggie-indexer/user/)
-- [Schema Reference](https://shruggietech.github.io/shruggie-indexer/schema/)
-- [Porting Reference](https://shruggietech.github.io/shruggie-indexer/porting-reference/)
-- [Technical Specification](shruggie-indexer-spec.md)
+* [User Guide](https://shruggietech.github.io/shruggie-indexer/user/)
+* [Schema Reference](https://shruggietech.github.io/shruggie-indexer/schema/)
+* [Porting Reference](https://shruggietech.github.io/shruggie-indexer/porting-reference/)
+* [Technical Specification](shruggie-indexer-spec.md)
 
 ## License
 
