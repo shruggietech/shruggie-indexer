@@ -43,6 +43,7 @@ from shruggie_indexer.models.schema import (
 
 if TYPE_CHECKING:
     import re
+    from collections.abc import Mapping
     from pathlib import Path
 
     from shruggie_indexer.config.types import IndexerConfig
@@ -90,7 +91,7 @@ def _human_readable_size(size_bytes: int) -> str:
 
 def _detect_type(
     filename: str,
-    metadata_identify: dict[str, tuple[re.Pattern[str], ...]],
+    metadata_identify: Mapping[str, tuple[re.Pattern[str], ...]],
 ) -> str | None:
     """Determine the sidecar type of a filename by regex matching.
 
@@ -205,7 +206,7 @@ def _read_lnk_file(path: Path) -> str | None:
     """
     # Try pylnk3 if available.
     try:
-        import pylnk3
+        import pylnk3  # type: ignore[import-untyped]
 
         lnk = pylnk3.parse(str(path))
         if hasattr(lnk, "path") and lnk.path:

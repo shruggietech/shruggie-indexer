@@ -218,6 +218,7 @@ def _extract_subprocess(path: Path) -> dict[str, Any] | None:
             argfile.write(str(path) + "\n")
             argfile_path = argfile.name
 
+        assert isinstance(_exiftool_path, str)  # guaranteed by _ensure_probed
         result = subprocess.run(
             [_exiftool_path, "-@", argfile_path],
             capture_output=True,
