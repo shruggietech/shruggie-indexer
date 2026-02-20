@@ -1,21 +1,20 @@
 """shruggie-indexer: Filesystem indexer with hash-based identity, metadata extraction,
 and structured JSON output.
 
-Public API surface (section 9.1 of the spec). Names are imported lazily — modules that
-do not yet exist are silently skipped. The full set becomes available as the package is
-built out across sprints.
+Public API surface (section 9.1 of the spec). The full set of names is available
+as the core modules are delivered across sprints.
 """
 
-import contextlib
-
 from shruggie_indexer._version import __version__
-
-# ─── Lazy imports for modules not yet implemented ───────────────────────────
-# Guarded by contextlib.suppress so the package remains importable before
-# the target modules exist.  Each block will be replaced with a direct
-# import once the corresponding sprint delivers the module.
 from shruggie_indexer.config.loader import load_config
 from shruggie_indexer.config.types import IndexerConfig, MetadataTypeAttributes
+from shruggie_indexer.core.entry import (
+    build_directory_entry,
+    build_file_entry,
+    index_path,
+)
+from shruggie_indexer.core.progress import ProgressEvent
+from shruggie_indexer.core.serializer import serialize_entry
 from shruggie_indexer.exceptions import (
     IndexerCancellationError,
     IndexerConfigError,
@@ -24,20 +23,6 @@ from shruggie_indexer.exceptions import (
     IndexerTargetError,
     RenameError,
 )
-
-with contextlib.suppress(ImportError):
-    from shruggie_indexer.core.entry import (  # type: ignore[import-not-found]
-        build_directory_entry,
-        build_file_entry,
-        index_path,
-    )
-
-with contextlib.suppress(ImportError):
-    from shruggie_indexer.core.progress import ProgressEvent  # type: ignore[import-not-found]
-
-with contextlib.suppress(ImportError):
-    from shruggie_indexer.core.serializer import serialize_entry  # type: ignore[import-not-found]
-
 from shruggie_indexer.models.schema import (
     AttributesObject,
     FileSystemObject,

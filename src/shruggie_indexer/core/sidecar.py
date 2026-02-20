@@ -30,6 +30,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
+from shruggie_indexer.core._formatting import human_readable_size as _human_readable_size
 from shruggie_indexer.core.hashing import hash_file, hash_string, select_id
 from shruggie_indexer.core.timestamps import extract_timestamps
 from shruggie_indexer.models.schema import (
@@ -53,35 +54,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Size formatting helper
-# ---------------------------------------------------------------------------
-
-_SIZE_UNITS: tuple[str, ...] = ("B", "KB", "MB", "GB", "TB")
-
-
-def _human_readable_size(size_bytes: int) -> str:
-    """Format a byte count as a human-readable string using decimal SI units.
-
-    Examples: ``'0 B'``, ``'1.50 KB'``, ``'15.28 MB'``.
-    """
-    if size_bytes == 0:
-        return "0 B"
-
-    value = float(size_bytes)
-    for unit in _SIZE_UNITS[:-1]:
-        if abs(value) < 1000.0:
-            if value == int(value):
-                return f"{int(value)} {unit}"
-            return f"{value:.2f} {unit}"
-        value /= 1000.0
-
-    # TB or larger
-    if value == int(value):
-        return f"{int(value)} {_SIZE_UNITS[-1]}"
-    return f"{value:.2f} {_SIZE_UNITS[-1]}"
 
 
 # ---------------------------------------------------------------------------
@@ -462,8 +434,8 @@ def _build_metadata_entry(
         # If we can't hash the file, use name hashes.
         file_hashes = hash_string(sidecar_path.name, algorithms=algorithms)
 
-    # Identity: "y" + sha256 digest.
-    entry_id = select_id(file_hashes, "sha256", "y")
+    # Identity: "y" + digest selected by configured algorithm.
+    entry_id = select_id(file_hashes, config.id_algorithm, "y")
 
     # Name hashing.
     name_hashes = hash_string(sidecar_path.name, algorithms=algorithms)
