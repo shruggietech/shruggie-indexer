@@ -1,6 +1,6 @@
 """Unit tests for config/loader.py and config/types.py — §7 Configuration.
 
-8 test cases per §14.2.
+11 test cases per §14.2.
 """
 
 from __future__ import annotations
@@ -13,6 +13,9 @@ import pytest
 from shruggie_indexer.config.loader import load_config
 from shruggie_indexer.config.types import IndexerConfig
 from shruggie_indexer.exceptions import IndexerConfigError
+
+# Resolved path to the config fixture directory.
+_CONFIG_FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "config_files"
 
 
 # ---------------------------------------------------------------------------
@@ -56,6 +59,13 @@ class TestTomlLoading:
         toml_file.write_text("[[invalid toml ===", encoding="utf-8")
         with pytest.raises(IndexerConfigError, match="Invalid TOML"):
             load_config(config_file=toml_file)
+
+    def test_invalid_toml_fixture(self) -> None:
+        """The invalid.toml fixture file is rejected by the config loader."""
+        fixture = _CONFIG_FIXTURES / "invalid.toml.fixture"
+        assert fixture.exists(), f"Fixture missing: {fixture}"
+        with pytest.raises(IndexerConfigError, match="Invalid TOML"):
+            load_config(config_file=fixture)
 
     def test_unknown_keys_ignored(self, tmp_path: Path) -> None:
         """Unknown keys in TOML do not raise errors."""
@@ -107,6 +117,27 @@ class TestSidecarPatternConfig:
         assert "custom_type" in config.metadata_identify
         patterns = config.metadata_identify["custom_type"]
         assert len(patterns) >= 1
+
+
+class TestFixtureFiles:
+    """Tests that exercise the config fixture files on disk."""
+
+    def test_valid_fixture(self) -> None:
+        """valid.toml fixture loads without error and applies overrides."""
+        fixture = _CONFIG_FIXTURES / "valid.toml"
+        assert fixture.exists(), f"Fixture missing: {fixture}"
+        config = load_config(config_file=fixture)
+        assert config.recursive is False
+        assert config.id_algorithm == "sha256"
+
+    def test_partial_fixture(self) -> None:
+        """partial.toml overrides id_algorithm; other fields retain defaults."""
+        fixture = _CONFIG_FIXTURES / "partial.toml"
+        assert fixture.exists(), f"Fixture missing: {fixture}"
+        config = load_config(config_file=fixture)
+        assert config.id_algorithm == "sha256"
+        # Non-overridden defaults preserved
+        assert config.recursive is True
 
 
 class TestExiftoolExclusionConfig:

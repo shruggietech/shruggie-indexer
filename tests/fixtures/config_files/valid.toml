@@ -1,4 +1,3 @@
-[indexer]
 recursive = false
 id_algorithm = "sha256"
 
