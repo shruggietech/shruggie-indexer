@@ -1,0 +1,6 @@
+[indexer]
+recursive = false
+id_algorithm = "sha256"
+
+[exiftool]
+exclude_extensions = ["csv", "json"]

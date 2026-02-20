@@ -1,0 +1,12 @@
+{
+  "id": "sample_video",
+  "title": "Sample Video Title",
+  "upload_date": "20240615",
+  "uploader": "TestUser",
+  "duration": 632,
+  "view_count": 12345,
+  "like_count": 678,
+  "description": "A sample video for testing.",
+  "categories": ["Education", "Technology"],
+  "tags": ["test", "sample", "video"]
+}

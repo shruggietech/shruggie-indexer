@@ -245,7 +245,10 @@ class MetadataEntry:
             "data": self.data,
         }
         if self.file_system is not None:
-            d["file_system"] = self.file_system.to_dict()
+            # MetadataEntry file_system only includes "relative" per the v2
+            # schema (no "parent" — the parent is always the owning item's
+            # parent and would be redundant).
+            d["file_system"] = {"relative": self.file_system.relative}
         if self.size is not None:
             d["size"] = self.size.to_dict()
         if self.timestamps is not None:
