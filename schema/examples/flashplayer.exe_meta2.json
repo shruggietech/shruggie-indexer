@@ -1,0 +1,160 @@
+{
+  "schema_version": 2,
+  "id": "yA8A8C089A6A8583B24C85F5A4A41F5AC",
+  "id_algorithm": "md5",
+  "type": "file",
+  "name": {
+    "text": "flashplayer.exe",
+    "hashes": {
+      "md5": "3470F718BA9457335A59CE06239A9250",
+      "sha256": "4DC834B31A1A5967F7A97AAD3D62EE91CCCC99B2034748135AFC193889B9A0EB"
+    }
+  },
+  "extension": "exe",
+  "mime_type": "application/octet-stream",
+  "size": {
+    "text": "15.28 MB",
+    "bytes": 16027648
+  },
+  "hashes": {
+    "md5": "A8A8C089A6A8583B24C85F5A4A41F5AC",
+    "sha256": "B6BA115C2B43D87AADDF0060C44726E7AF1A12C9501FC63DE652A9517D7367DB"
+  },
+  "file_system": {
+    "relative": ".test/flashplayer.exe",
+    "parent": {
+      "id": "x3B4F479E9F880E438882FC34B67D352C",
+      "name": {
+        "text": ".test",
+        "hashes": {
+          "md5": "5E7576E3CD79114D46850714E998A3B0",
+          "sha256": "5559EC61AE317CDF207A17666B01777B00DDF4AB1044BE5CC213DD3618E5F98C"
+        }
+      }
+    }
+  },
+  "timestamps": {
+    "created": {
+      "iso": "2026-02-15T09:28:17.4084620-05:00",
+      "unix": 1771165697408
+    },
+    "modified": {
+      "iso": "2023-08-03T19:47:44.0000000-04:00",
+      "unix": 1691106464000
+    },
+    "accessed": {
+      "iso": "2026-02-15T09:28:18.1093900-05:00",
+      "unix": 1771165698109
+    }
+  },
+  "attributes": {
+    "is_link": false,
+    "storage_name": "yA8A8C089A6A8583B24C85F5A4A41F5AC.exe"
+  },
+  "metadata": [
+    {
+      "id": "z84FB97FF8C9B8AE3AA66777AD2E604D8",
+      "origin": "generated",
+      "name": {
+        "text": null,
+        "hashes": null
+      },
+      "hashes": {
+        "md5": "84FB97FF8C9B8AE3AA66777AD2E604D8",
+        "sha256": "878CD261DB8C5FC2E71BAD9CE651A6429802CFF3A26FAA17FAB26EED838DB3B5"
+      },
+      "attributes": {
+        "type": "exiftool.json_metadata",
+        "format": "json",
+        "transforms": []
+      },
+      "data": {
+        "SourceFile": "flashplayer.exe",
+        "ExifTool:Now": "2026:02:15 09:29:53-05:00",
+        "ExifTool:ProcessingTime": "0.0118 s",
+        "System:FileSize": "16 MB",
+        "System:FileModifyDate": "2023:08:03 19:47:44-04:00",
+        "System:FileAccessDate": "2026:02:15 09:29:53-05:00",
+        "System:FileCreateDate": "2026:02:15 09:28:17-05:00",
+        "System:FileAttributes": "Regular; (none); Archive",
+        "File:FileType": "Win32 EXE",
+        "File:FileTypeExtension": "exe",
+        "File:MIMEType": "application/octet-stream",
+        "EXE:MachineType": "Intel 386 or later, and compatibles",
+        "EXE:TimeStamp": "2018:04:29 01:58:17-04:00",
+        "EXE:ImageFileCharacteristics": "Executable, 32-bit",
+        "EXE:PEType": "PE32",
+        "EXE:LinkerVersion": 9,
+        "EXE:CodeSize": 10554880,
+        "EXE:InitializedDataSize": 5464064,
+        "EXE:UninitializedDataSize": 0,
+        "EXE:EntryPoint": "0x8afb12",
+        "EXE:OSVersion": 5,
+        "EXE:ImageVersion": 0,
+        "EXE:SubsystemVersion": 5,
+        "EXE:Subsystem": "Windows GUI",
+        "EXE:FileVersionNumber": "29.0.0.171",
+        "EXE:ProductVersionNumber": "29.0.0.171",
+        "EXE:FileFlagsMask": "0x003f",
+        "EXE:FileFlags": "(none)",
+        "EXE:FileOS": "Win32",
+        "EXE:ObjectFileType": "Dynamic link library",
+        "EXE:FileSubtype": 0,
+        "EXE:LanguageCode": "English (U.S.)",
+        "EXE:CharacterSet": "Unicode",
+        "EXE:CompanyName": "Adobe Systems, Inc.",
+        "EXE:FileDescription": "Adobe Flash Player 29.0 r0",
+        "EXE:FileVersion": "29,0,0,171",
+        "EXE:InternalName": "Adobe Flash Player 29.0",
+        "EXE:LegalCopyright": "Adobe\u00ae Flash\u00ae Player. Copyright \u00a9 1996-2018 Adobe Systems Incorporated. All Rights Reserved. Adobe and Flash are either trademarks or registered trademarks in the United States and/or other countries.",
+        "EXE:LegalTrademarks": "Adobe Flash Player",
+        "EXE:OriginalFileName": "SAFlashPlayer.exe",
+        "EXE:ProductName": "Shockwave Flash",
+        "EXE:ProductVersion": "29,0,0,171",
+        "EXE:Debugger": 0
+      }
+    },
+    {
+      "id": "y2903A4E0C208884B5952FF3076C1AF04",
+      "origin": "sidecar",
+      "name": {
+        "text": "flashplayer.cfg",
+        "hashes": {
+          "md5": "F7C7D9A200708A8AE7E674EC9864F0CA",
+          "sha256": "A785FA67E24AA0959E87A34B5184A1316609E6D543856B23AF8E9B9922FDC78C"
+        }
+      },
+      "hashes": {
+        "md5": "2903A4E0C208884B5952FF3076C1AF04",
+        "sha256": "32206D4D3EBB26DB0BDC31B8CB8CDD34462E283940E7185F78D848C4C67D3E1F"
+      },
+      "file_system": {
+        "relative": ".test/flashplayer.cfg"
+      },
+      "size": {
+        "text": "135 B",
+        "bytes": 135
+      },
+      "timestamps": {
+        "created": {
+          "iso": "2026-02-15T09:28:17.4084620-05:00",
+          "unix": 1771165697408
+        },
+        "modified": {
+          "iso": "2023-08-03T19:47:44.0000000-04:00",
+          "unix": 1691106464000
+        },
+        "accessed": {
+          "iso": "2026-02-15T09:28:18.1093900-05:00",
+          "unix": 1771165698109
+        }
+      },
+      "attributes": {
+        "type": "generic_metadata",
+        "format": "text",
+        "transforms": []
+      },
+      "data": "\r\n[General]\r\nNewWildcardMode=1\r\nShowGridLines=0\r\nSaveFilterIndex=0\r\nShowInfoTip=1\r\nShowTimeInGMT=0\r\nRetrieveEntryModified=1\r\nMaxMRU=10\n"
+    }
+  ]
+}

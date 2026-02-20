@@ -1,0 +1,2146 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Filesystem indexer with hash-based identity, metadata extraction, and structured JSON output.">
+      
+      
+      
+        <link rel="canonical" href="https://shruggietech.github.io/shruggie-indexer/porting-reference/MetaFileRead_DependencyCatalog/">
+      
+      
+        <link rel="prev" href="../FileId_DependencyCatalog/">
+      
+      
+        <link rel="next" href="../TempOpen_DependencyCatalog/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>MetaFileRead - shruggie-indexer</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#metafileread-dependency-catalog" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="shruggie-indexer" class="md-header__button md-logo" aria-label="shruggie-indexer" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            shruggie-indexer
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              MetaFileRead
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/shruggietech/shruggie-indexer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    shruggietech/shruggie-indexer
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../schema/" class="md-tabs__link">
+          
+  
+  
+  Schema Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  Porting Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../user/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="shruggie-indexer" class="md-nav__button md-logo" aria-label="shruggie-indexer" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    shruggie-indexer
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/shruggietech/shruggie-indexer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    shruggietech/shruggie-indexer
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Schema Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Porting Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Porting Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MakeIndex_OperationsCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Catalog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Catalogs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dependency Catalogs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MakeIndex_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MakeIndex
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Base64DecodeString_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base64DecodeString
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Date2UnixTime_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Date2UnixTime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../DirectoryId_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectoryId
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FileId_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FileId
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MetaFileRead
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MetaFileRead
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-external-pslib-functions-called" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. External PsLib Functions Called
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. External PsLib Functions Called">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#implicit-external-dependency-globalmetadatafileparser" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implicit External Dependency: $global:MetadataFileParser
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-external-variables-loaded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. External Variables Loaded
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-external-binaries-executables-invoked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. External Binaries / Executables Invoked
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. External Binaries / Executables Invoked">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#note-on-binary-resolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Note on Binary Resolution
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-internal-sub-functions-defined-within-metafileread" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Internal Sub-Functions (Defined Within MetaFileRead)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Internal Sub-Functions (Defined Within MetaFileRead)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#top-level-internal-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-Level Internal Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nested-internal-functions-defined-inside-other-internal-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nested Internal Functions (defined inside other internal functions)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-internal-logic-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Internal Logic Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-output-object-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Output Object Properties
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-net-types-and-methods-used" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. .NET Types and Methods Used
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-powershell-built-in-cmdlets-used" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. PowerShell Built-in Cmdlets Used
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-return-value" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Return Value
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-call-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Call Graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TempOpen_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TempOpen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TempClose_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TempClose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Vbs_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-external-pslib-functions-called" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. External PsLib Functions Called
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. External PsLib Functions Called">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#implicit-external-dependency-globalmetadatafileparser" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implicit External Dependency: $global:MetadataFileParser
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-external-variables-loaded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. External Variables Loaded
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-external-binaries-executables-invoked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. External Binaries / Executables Invoked
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. External Binaries / Executables Invoked">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#note-on-binary-resolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Note on Binary Resolution
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-internal-sub-functions-defined-within-metafileread" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Internal Sub-Functions (Defined Within MetaFileRead)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Internal Sub-Functions (Defined Within MetaFileRead)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#top-level-internal-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-Level Internal Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nested-internal-functions-defined-inside-other-internal-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nested Internal Functions (defined inside other internal functions)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-internal-logic-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Internal Logic Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-output-object-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Output Object Properties
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-net-types-and-methods-used" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. .NET Types and Methods Used
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-powershell-built-in-cmdlets-used" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. PowerShell Built-in Cmdlets Used
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-return-value" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Return Value
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-call-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Call Graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="metafileread-dependency-catalog">MetaFileRead — Dependency Catalog</h1>
+<blockquote>
+<p><strong>Source:</strong> <code>main.ps1</code>, line 10233<br />
+<strong>Purpose:</strong> Reads and parses metadata sidecar files, determining their type, associated parent file, and internal data content<br />
+<strong>Audience:</strong> AI-first, Human-second  </p>
+</blockquote>
+<hr />
+<h2 id="1-external-pslib-functions-called">1. External PsLib Functions Called</h2>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Defined At</th>
+<th>Called From</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Lnk2Path</code></td>
+<td>main.ps1:7283</td>
+<td><code>MetaFileRead-Data-ReadLink</code></td>
+<td>Resolves a <code>.lnk</code> shortcut file to its target path</td>
+</tr>
+<tr>
+<td><code>UrlFile2Url</code></td>
+<td>main.ps1:15843</td>
+<td><code>MetaFileRead-Data-ReadLink</code></td>
+<td>Extracts the URL from a <code>.url</code> internet shortcut file</td>
+</tr>
+<tr>
+<td><code>ValidateIsFile</code></td>
+<td>main.ps1:16098</td>
+<td>Top-level body</td>
+<td>Validates that the input string references an existing file. Returns a boolean</td>
+</tr>
+<tr>
+<td><code>ValidateIsJson</code></td>
+<td>main.ps1:16189</td>
+<td><code>MetaFileRead-Data</code></td>
+<td>Validates whether a file contains valid JSON. Returns a boolean</td>
+</tr>
+<tr>
+<td><code>Vbs</code></td>
+<td>main.ps1:16412</td>
+<td>Throughout (via <code>VbsFormatter</code> wrapper)</td>
+<td>Verbose/logging output handler. Called indirectly through the internal <code>VbsFormatter</code> wrapper, which auto-formats messages with progress strings when available</td>
+</tr>
+</tbody>
+</table>
+<h3 id="implicit-external-dependency-globalmetadatafileparser">Implicit External Dependency: <code>$global:MetadataFileParser</code></h3>
+<p>This function receives the <code>$global:MetadataFileParser</code> configuration object as both a parameter default and a passed-through argument to multiple sub-functions. The <code>MetadataFileParser</code> object (defined at main.ps1:16977) governs all type-detection regex patterns, file-extension classification rules, and indexer include/exclude patterns. Without this object being populated at runtime, the function cannot detect meta file types or validate input files.</p>
+<hr />
+<h2 id="2-external-variables-loaded">2. External Variables Loaded</h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Defined At</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$global:MetadataFileParser</code></td>
+<td>main.ps1:16977</td>
+<td><code>[ordered]@{}</code> (Hashtable)</td>
+<td>Large configuration object governing metadata file parsing behavior. Consumed sub-properties include:<br><code>.Indexer.IncludeString</code> — Regex string used to validate that the input file qualifies as a metadata file<br><code>.Identify.&lt;Key&gt;</code> — Sub-objects mapping metadata file types (Description, GenericMetadata, Hash, JsonMetadata, Link, Screenshot, Subtitles, Thumbnail, Torrent) to their regex detection patterns</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-external-binaries-executables-invoked">3. External Binaries / Executables Invoked</h2>
+<table>
+<thead>
+<tr>
+<th>Binary</th>
+<th>Called From (within MetaFileRead)</th>
+<th>How Invoked</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>certutil</code></td>
+<td><code>MetaFileRead-Data-Base64Encode</code></td>
+<td><code>certutil -encode "$FilePath" "$TempFile" &gt; $null</code></td>
+<td>Encodes binary file data to Base64 (used for Screenshot, Thumbnail, Torrent, and binary fallback data)</td>
+</tr>
+<tr>
+<td><code>jq</code></td>
+<td><code>MetaFileRead-Data-ReadJson</code></td>
+<td><code>jq -c '.' "$FilePath" 2&gt; $null</code></td>
+<td>Reads and compacts JSON data from metadata files. Output is piped through <code>ConvertFrom-Json</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="note-on-binary-resolution">Note on Binary Resolution</h3>
+<p>Neither <code>certutil</code> nor <code>jq</code> are referenced via absolute paths. <code>certutil</code> is a Windows system utility and is expected to be available in the system PATH. <code>jq</code> must also be available in the system PATH. The <code>jq</code> dependency is shared with the <code>MakeIndex</code> function which also uses <code>jq</code> for JSON processing.</p>
+<hr />
+<h2 id="4-parameters">4. Parameters</h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Alias(es)</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>File</code></td>
+<td><code>[System.String]</code></td>
+<td><code>inputfile</code></td>
+<td><em>(none)</em></td>
+<td>The absolute path to the metadata file to read</td>
+</tr>
+<tr>
+<td><code>Format</code></td>
+<td><code>[System.String]</code></td>
+<td><em>(none)</em></td>
+<td><code>'json'</code></td>
+<td>Output format. ValidatePattern: <code>^(json|object|text)$</code></td>
+</tr>
+<tr>
+<td><code>ProgressString</code></td>
+<td><code>[System.String]</code></td>
+<td><em>(none)</em></td>
+<td><em>(none)</em></td>
+<td>Optional progress prefix string prepended to verbose messages by the <code>VbsFormatter</code> wrapper</td>
+</tr>
+<tr>
+<td><code>Verbosity</code></td>
+<td><code>[System.Boolean]</code></td>
+<td><code>v</code></td>
+<td><code>$false</code></td>
+<td>Controls whether verbose/log messages are printed to the console</td>
+</tr>
+<tr>
+<td><code>$global:MetadataFileParser</code></td>
+<td><code>[System.Object]</code></td>
+<td><em>(none)</em></td>
+<td><code>$global:MetadataFileParser</code></td>
+<td>Internal parameter: the metadata parser configuration object passed through from the global scope</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="5-internal-sub-functions-defined-within-metafileread">5. Internal Sub-Functions (Defined Within MetaFileRead)</h2>
+<h3 id="top-level-internal-functions">Top-Level Internal Functions</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Purpose</th>
+<th>Calls (internal)</th>
+<th>Calls (external)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MetaFileRead-Data</code></td>
+<td>Dispatcher: reads the internal data of a meta file based on its detected type. Routes to type-specific reader sub-functions</td>
+<td><code>MetaFileRead-Data-Base64Encode</code>, <code>MetaFileRead-Data-IsText</code>, <code>MetaFileRead-Data-ReadBinary</code>, <code>MetaFileRead-Data-ReadJson</code>, <code>MetaFileRead-Data-ReadLink</code>, <code>MetaFileRead-Data-ReadText</code>, <code>MetaFileRead-Data-ReadText-Hash</code>, <code>MetaFileRead-Data-ReadText-Subtitles</code></td>
+<td><code>ValidateIsJson</code>, <code>VbsFormatter</code></td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Detect</code></td>
+<td>Iterates through <code>$MetadataFileParser.Identify</code> keys and matches the input file name against regex patterns to determine the meta file type</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Parent</code></td>
+<td>Determines the parent file/directory associated with a given meta file by analyzing sibling files in the same directory</td>
+<td><code>MetaFileRead-Parent-Base</code>, <code>MetaFileRead-Parent-Keys-Orphan</code>, <code>MetaFileRead-Parent-Keys-Directory</code>, <code>MetaFileRead-Parent-Keys-File</code>, <code>MetaFileRead-Parent-List-Audio</code>, <code>MetaFileRead-Parent-List-Image</code>, <code>MetaFileRead-Parent-List-Other</code>, <code>MetaFileRead-Parent-List-Video</code></td>
+<td><code>VbsFormatter</code></td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Sha256-File</code></td>
+<td>Computes SHA256 hash of a file's contents (used for the <code>_id</code> field)</td>
+<td>—</td>
+<td><code>VbsFormatter</code></td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Sha256-String</code></td>
+<td>Computes SHA256 hash of a string (used for <code>NameHash</code> fields)</td>
+<td>—</td>
+<td><code>VbsFormatter</code></td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Temp-Close</code></td>
+<td>Deletes a temporary file by path</td>
+<td>—</td>
+<td><code>VbsFormatter</code></td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Temp-Open</code></td>
+<td>Creates a temporary file in <code>$D_PSLIB_TEMP</code> and returns its path. Uses UUID+timestamp naming</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>VbsFormatter</code></td>
+<td>Internal wrapper around the external <code>Vbs</code> function. Auto-prepends the <code>$ProgressString</code> to log messages when present</td>
+<td>—</td>
+<td><code>Vbs</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="nested-internal-functions-defined-inside-other-internal-functions">Nested Internal Functions (defined inside other internal functions)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Parent Function</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MetaFileRead-Data-Base64Encode</code></td>
+<td><code>MetaFileRead-Data</code></td>
+<td>Encodes file data to Base64 using <code>certutil</code>. Creates and cleans up a temp file</td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Data-IsText</code></td>
+<td><code>MetaFileRead-Data</code></td>
+<td>Tests whether a file contains valid text by attempting <code>Get-Content -Raw</code> in a try/catch</td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Data-ReadBinary</code></td>
+<td><code>MetaFileRead-Data</code></td>
+<td>Reads binary file data by delegating to <code>MetaFileRead-Data-Base64Encode</code></td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Data-ReadJson</code></td>
+<td><code>MetaFileRead-Data</code></td>
+<td>Reads JSON file data using <code>jq -c '.'</code> piped through <code>ConvertFrom-Json</code></td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Data-ReadLink</code></td>
+<td><code>MetaFileRead-Data</code></td>
+<td>Reads <code>.url</code> files via <code>UrlFile2Url</code> or <code>.lnk</code> files via <code>Lnk2Path</code></td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Data-ReadText</code></td>
+<td><code>MetaFileRead-Data</code></td>
+<td>Reads file as UTF8 text via <code>[System.IO.File]::ReadAllText()</code></td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Data-ReadText-Hash</code></td>
+<td><code>MetaFileRead-Data</code></td>
+<td>Reads hash files as text lines via <code>Get-Content</code>, filtering out empty lines</td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Data-ReadText-Subtitles</code></td>
+<td><code>MetaFileRead-Data</code></td>
+<td>Reads subtitle files as text lines via <code>Get-Content</code>, filtering out empty lines</td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Parent-Base</code></td>
+<td><code>MetaFileRead-Parent</code></td>
+<td>Strips the metadata suffix from the meta file name to derive the base parent file name. Uses single-pass or multi-pass regex replacement depending on the meta type</td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Parent-Keys-Orphan</code></td>
+<td><code>MetaFileRead-Parent</code></td>
+<td>Returns a PSCustomObject with orphan parent properties (Name=null, Type="orphan", Exists=$false)</td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Parent-Keys-Directory</code></td>
+<td><code>MetaFileRead-Parent</code></td>
+<td>Returns a PSCustomObject with directory parent properties</td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Parent-Keys-File</code></td>
+<td><code>MetaFileRead-Parent</code></td>
+<td>Returns a PSCustomObject with file parent properties</td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Parent-List-Audio</code></td>
+<td><code>MetaFileRead-Parent</code></td>
+<td>Filters directory matches to audio file extensions</td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Parent-List-Image</code></td>
+<td><code>MetaFileRead-Parent</code></td>
+<td>Filters directory matches to image file extensions</td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Parent-List-Other</code></td>
+<td><code>MetaFileRead-Parent</code></td>
+<td>Filters directory matches to other file extensions</td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Parent-List-Video</code></td>
+<td><code>MetaFileRead-Parent</code></td>
+<td>Filters directory matches to video file extensions</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-internal-logic-summary">6. Internal Logic Summary</h2>
+<p><strong>Processing Pipeline:</strong></p>
+<ol>
+<li>
+<p><strong>Input Validation:</strong> The input file path is checked for non-empty string and existence via <code>ValidateIsFile</code>. The file is then matched against <code>$global:MetadataFileParser.Indexer.IncludeString</code> to confirm it qualifies as a metadata file.</p>
+</li>
+<li>
+<p><strong>Type Detection:</strong> The <code>MetaFileRead-Detect</code> function iterates through all keys in <code>$MetadataFileParser.Identify</code> and matches the file name against each type's regex pattern array. A single match is expected; zero or multiple matches produce an error and an empty output.</p>
+</li>
+<li>
+<p><strong>Parent Resolution:</strong> The <code>MetaFileRead-Parent</code> function determines which file or directory the metadata file is associated with. It strips the metadata suffix from the file name to produce a "base" string, then scans sibling entries in the same directory for matches. Matches are classified by media type (audio, image, video, other) and the parent is assigned based on the meta file type's prioritization rules (e.g., Description files prioritize video parents; Subtitles prioritize video then audio). Unmatched meta files are classified as orphans.</p>
+</li>
+<li>
+<p><strong>Data Reading:</strong> The <code>MetaFileRead-Data</code> function dispatches to a type-specific reader based on the detected meta type. Text-based types are tested with both JSON and text validation; binary types (Screenshot, Thumbnail, Torrent) are Base64-encoded via <code>certutil</code>. Link types are resolved to their target paths.</p>
+</li>
+<li>
+<p><strong>Output Assembly:</strong> The final output object is constructed with <code>_id</code> (SHA256 of file contents), <code>Name</code>, <code>NameHash</code>, <code>Path</code>, <code>Type</code>, <code>Parent</code> (sub-object), and <code>Data</code> fields. Output is formatted as JSON, object, or text based on the <code>-Format</code> parameter.</p>
+</li>
+</ol>
+<p><strong>Recognized Meta File Types:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Data Handling</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Description</code></td>
+<td>JSON → text → binary fallback chain</td>
+</tr>
+<tr>
+<td><code>GenericMetadata</code></td>
+<td>JSON → text → binary fallback chain</td>
+</tr>
+<tr>
+<td><code>Hash</code></td>
+<td>Read as text lines (single-line expected)</td>
+</tr>
+<tr>
+<td><code>JsonMetadata</code></td>
+<td>Read directly as JSON via <code>jq</code></td>
+</tr>
+<tr>
+<td><code>Link</code></td>
+<td>Resolve <code>.url</code> via <code>UrlFile2Url</code> or <code>.lnk</code> via <code>Lnk2Path</code></td>
+</tr>
+<tr>
+<td><code>Screenshot</code></td>
+<td>Base64-encode binary data</td>
+</tr>
+<tr>
+<td><code>Subtitles</code></td>
+<td>JSON → text → binary fallback chain</td>
+</tr>
+<tr>
+<td><code>Thumbnail</code></td>
+<td>Base64-encode binary data</td>
+</tr>
+<tr>
+<td><code>Torrent</code></td>
+<td>Base64-encode binary data</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-output-object-properties">7. Output Object Properties</h2>
+<p>The full <code>[PSCustomObject]</code> (returned when <code>-Format "object"</code> is specified) contains:</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_id</code></td>
+<td><code>[String]</code></td>
+<td>SHA256 hash of the meta file's contents</td>
+</tr>
+<tr>
+<td><code>Name</code></td>
+<td><code>[String]</code></td>
+<td>The file name of the meta file</td>
+</tr>
+<tr>
+<td><code>NameHash</code></td>
+<td><code>[String]</code></td>
+<td>SHA256 hash of the file name string</td>
+</tr>
+<tr>
+<td><code>Path</code></td>
+<td><code>[String]</code></td>
+<td>Absolute path to the meta file</td>
+</tr>
+<tr>
+<td><code>Type</code></td>
+<td><code>[String]</code></td>
+<td>The detected meta file type (e.g., <code>Description</code>, <code>JsonMetadata</code>)</td>
+</tr>
+<tr>
+<td><code>Parent</code></td>
+<td><code>[PSCustomObject]</code></td>
+<td>Sub-object describing the associated parent. Properties: <code>Base</code>, <code>Name</code>, <code>NameHash</code>, <code>Path</code>, <code>Type</code> ("file"/"orphan"/"directory"), <code>Extension</code>, <code>Exists</code>, <code>PossibleMatches</code></td>
+</tr>
+<tr>
+<td><code>Data</code></td>
+<td><code>[Object]</code></td>
+<td>The parsed internal data of the meta file. Type varies: string, PSCustomObject (from JSON), array of lines, Base64 string, or <code>$null</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-net-types-and-methods-used">8. .NET Types and Methods Used</h2>
+<table>
+<thead>
+<tr>
+<th>Type / Method</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[System.IO.File]::OpenRead()</code></td>
+<td>File content hashing for <code>_id</code> generation</td>
+</tr>
+<tr>
+<td><code>[System.IO.File]::ReadAllText()</code></td>
+<td>Reading text-based meta file contents (UTF8)</td>
+</tr>
+<tr>
+<td><code>[System.IO.Path]::GetDirectoryName()</code></td>
+<td>Extracting parent directory path from meta file path</td>
+</tr>
+<tr>
+<td><code>[System.IO.Path]::GetFileName()</code></td>
+<td>Extracting file name from path</td>
+</tr>
+<tr>
+<td><code>[System.Security.Cryptography.SHA256]::Create()</code></td>
+<td>SHA256 hash computation (for <code>_id</code> and <code>NameHash</code>)</td>
+</tr>
+<tr>
+<td><code>[System.Text.Encoding]::UTF8</code></td>
+<td>Encoding constant for string-to-bytes conversion and file reading</td>
+</tr>
+<tr>
+<td><code>[BitConverter]::ToString()</code></td>
+<td>Byte-array → hex-string conversion</td>
+</tr>
+<tr>
+<td><code>[System.GUID]::NewGuid()</code></td>
+<td>UUID generation for temp file names</td>
+</tr>
+<tr>
+<td><code>[DateTimeOffset]::Now.ToUnixTimeMilliseconds()</code></td>
+<td>Timestamp component in temp file names</td>
+</tr>
+<tr>
+<td><code>[Regex]::Escape()</code></td>
+<td>Escaping base name strings for regex matching</td>
+</tr>
+<tr>
+<td><code>[PSCustomObject]@{}</code></td>
+<td>Output object and parent object construction</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-powershell-built-in-cmdlets-used">9. PowerShell Built-in Cmdlets Used</h2>
+<table>
+<thead>
+<tr>
+<th>Cmdlet</th>
+<th>Usage Context</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Add-Content</code></td>
+<td>(Not directly used, but <code>certutil</code> writes to the temp file)</td>
+</tr>
+<tr>
+<td><code>ConvertFrom-Json</code></td>
+<td>Parsing <code>jq</code> output into PowerShell objects</td>
+</tr>
+<tr>
+<td><code>ConvertTo-Json</code></td>
+<td>Serializing final output when <code>-Format "json"</code> (<code>-Depth 100</code>)</td>
+</tr>
+<tr>
+<td><code>Get-ChildItem</code></td>
+<td>Listing directory contents to find sibling files for parent resolution (<code>-LiteralPath</code>, <code>-Force</code>)</td>
+</tr>
+<tr>
+<td><code>Get-Content</code></td>
+<td>Reading text-based meta file data (<code>-LiteralPath</code>, <code>-Encoding "UTF8"</code>, <code>-Raw</code>)</td>
+</tr>
+<tr>
+<td><code>Get-Item</code></td>
+<td>Retrieving file/directory properties (Name, Extension, FullName, PSIsContainer) (<code>-LiteralPath</code>, <code>-Force</code>)</td>
+</tr>
+<tr>
+<td><code>New-Item</code></td>
+<td>Creating temporary files (<code>-ItemType File</code>, <code>-Force</code>)</td>
+</tr>
+<tr>
+<td><code>Remove-Item</code></td>
+<td>Deleting temporary files (<code>-LiteralPath</code>, <code>-Force</code>)</td>
+</tr>
+<tr>
+<td><code>Resolve-Path</code></td>
+<td>Resolving file paths to absolute form (<code>-LiteralPath</code>)</td>
+</tr>
+<tr>
+<td><code>Select-Object</code></td>
+<td>Skipping certutil header/footer lines (<code>-Skip 1</code>, <code>-SkipLast 1</code>)</td>
+</tr>
+<tr>
+<td><code>Set-Content</code></td>
+<td>(Not used directly in MetaFileRead but available in the broader pipeline)</td>
+</tr>
+<tr>
+<td><code>Test-Path</code></td>
+<td>Validating file/directory existence (<code>-LiteralPath</code>, <code>-PathType Leaf/Container</code>)</td>
+</tr>
+<tr>
+<td><code>Where-Object</code></td>
+<td>Filtering empty lines from file contents; filtering directory matches by name</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="10-return-value">10. Return Value</h2>
+<p>With <code>-Format "json"</code> (default): Returns a JSON-formatted string of the full output object.</p>
+<p>With <code>-Format "object"</code>: Returns the <code>[PSCustomObject]</code> described in Section 7.</p>
+<p>With <code>-Format "text"</code>: Returns only the <code>Type</code> property as a string.</p>
+<p>Returns <code>$null</code> if the input file is empty, does not exist, or does not validate as a meta file.</p>
+<p>Returns an empty object (<code>'{}'</code> for JSON, <code>[PSCustomObject]@{}</code> for object, <code>'null'</code> for text) if type detection fails (zero or multiple type matches).</p>
+<hr />
+<h2 id="11-call-graph">11. Call Graph</h2>
+<pre><code>MetaFileRead
+├── [validates File parameter is non-empty]
+│   └── VbsFormatter → Vbs ◄── external pslib
+├── ValidateIsFile ◄── external pslib
+├── [matches against MetadataFileParser.Indexer.IncludeString]
+├── MetaFileRead-Detect (type detection via MetadataFileParser.Identify)
+├── MetaFileRead-Parent (parent resolution)
+│   ├── MetaFileRead-Parent-Base (strip suffix)
+│   ├── Get-ChildItem (list siblings)
+│   ├── MetaFileRead-Parent-List-Audio/Image/Other/Video (classify matches)
+│   └── MetaFileRead-Parent-Keys-File / -Directory / -Orphan (build parent object)
+│       └── MetaFileRead-Sha256-String (hash parent name)
+├── MetaFileRead-Data (data reading)
+│   ├── ValidateIsJson ◄── external pslib
+│   ├── MetaFileRead-Data-IsText
+│   ├── MetaFileRead-Data-ReadJson → jq ◄── BINARY
+│   ├── MetaFileRead-Data-ReadText
+│   ├── MetaFileRead-Data-ReadText-Hash
+│   ├── MetaFileRead-Data-ReadText-Subtitles
+│   ├── MetaFileRead-Data-ReadBinary
+│   │   └── MetaFileRead-Data-Base64Encode → certutil ◄── BINARY
+│   │       ├── MetaFileRead-Temp-Open
+│   │       └── MetaFileRead-Temp-Close
+│   └── MetaFileRead-Data-ReadLink
+│       ├── UrlFile2Url ◄── external pslib
+│       └── Lnk2Path ◄── external pslib
+├── MetaFileRead-Sha256-String (hash file name → NameHash)
+├── MetaFileRead-Sha256-File (hash file contents → _id)
+└── [format output based on -Format parameter]
+</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.instant", "search.highlight", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,1866 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Filesystem indexer with hash-based identity, metadata extraction, and structured JSON output.">
+      
+      
+      
+        <link rel="canonical" href="https://shruggietech.github.io/shruggie-indexer/porting-reference/FileId_DependencyCatalog/">
+      
+      
+        <link rel="prev" href="../DirectoryId_DependencyCatalog/">
+      
+      
+        <link rel="next" href="../MetaFileRead_DependencyCatalog/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>FileId - shruggie-indexer</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#fileid-dependency-catalog" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="shruggie-indexer" class="md-header__button md-logo" aria-label="shruggie-indexer" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            shruggie-indexer
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              FileId
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/shruggietech/shruggie-indexer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    shruggietech/shruggie-indexer
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../schema/" class="md-tabs__link">
+          
+  
+  
+  Schema Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  Porting Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../user/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="shruggie-indexer" class="md-nav__button md-logo" aria-label="shruggie-indexer" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    shruggie-indexer
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/shruggietech/shruggie-indexer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    shruggietech/shruggie-indexer
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Schema Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Porting Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Porting Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MakeIndex_OperationsCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Catalog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Catalogs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dependency Catalogs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MakeIndex_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MakeIndex
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Base64DecodeString_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base64DecodeString
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Date2UnixTime_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Date2UnixTime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../DirectoryId_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectoryId
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FileId
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FileId
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-external-pslib-functions-called" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. External PsLib Functions Called
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-external-variables-loaded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. External Variables Loaded
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-external-binaries-executables-invoked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. External Binaries / Executables Invoked
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-internal-sub-functions-defined-within-fileid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Internal Sub-Functions (Defined Within FileId)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-internal-logic-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Internal Logic Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-output-object-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Output Object Properties
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-net-types-and-methods-used" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. .NET Types and Methods Used
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-powershell-built-in-cmdlets-used" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. PowerShell Built-in Cmdlets Used
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-return-value" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Return Value
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-call-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Call Graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MetaFileRead_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MetaFileRead
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TempOpen_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TempOpen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TempClose_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TempClose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Vbs_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-external-pslib-functions-called" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. External PsLib Functions Called
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-external-variables-loaded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. External Variables Loaded
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-external-binaries-executables-invoked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. External Binaries / Executables Invoked
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-internal-sub-functions-defined-within-fileid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Internal Sub-Functions (Defined Within FileId)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-internal-logic-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Internal Logic Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-output-object-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Output Object Properties
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-net-types-and-methods-used" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. .NET Types and Methods Used
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-powershell-built-in-cmdlets-used" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. PowerShell Built-in Cmdlets Used
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-return-value" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Return Value
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-call-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Call Graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="fileid-dependency-catalog">FileId — Dependency Catalog</h1>
+<blockquote>
+<p><strong>Source:</strong> <code>main.ps1</code>, line 4941<br />
+<strong>Purpose:</strong> Generates hash-based unique identifiers for files based on file content hashing (or name hashing for symbolic links)<br />
+<strong>Audience:</strong> AI-first, Human-second  </p>
+</blockquote>
+<hr />
+<h2 id="1-external-pslib-functions-called">1. External PsLib Functions Called</h2>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Defined At</th>
+<th>Called From</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Vbs</code></td>
+<td>main.ps1:16412</td>
+<td>Top-level body and <code>FileId-ResolvePath</code></td>
+<td>Verbose/logging output handler. Called with <code>-Caller</code>, <code>-Status</code> (e/w), <code>-Message</code>, <code>-Verbosity</code></td>
+</tr>
+</tbody>
+</table>
+<p>This function has a minimal external dependency footprint. It only calls <code>Vbs</code> for error/warning logging (missing input, invalid file, invalid hash types, empty path in resolution).</p>
+<hr />
+<h2 id="2-external-variables-loaded">2. External Variables Loaded</h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Defined At</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>(none)</em></td>
+<td>—</td>
+<td>—</td>
+<td>This function does not reference any script-level or global variables. All state is derived from its own parameters and the filesystem.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-external-binaries-executables-invoked">3. External Binaries / Executables Invoked</h2>
+<table>
+<thead>
+<tr>
+<th>Binary</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>(none)</em></td>
+<td>This function is entirely .NET-based and does not invoke any external executables.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-parameters">4. Parameters</h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Alias(es)</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FileIdPendingFile</code></td>
+<td><code>[System.String]</code></td>
+<td><em>(none)</em></td>
+<td><code>$null</code></td>
+<td>The file path to generate an identifier for</td>
+</tr>
+<tr>
+<td><code>OutputObject</code></td>
+<td><code>[Switch]</code></td>
+<td><code>o</code></td>
+<td><code>$false</code></td>
+<td>Return a <code>[PSCustomObject]</code> with all properties</td>
+</tr>
+<tr>
+<td><code>OutputJson</code></td>
+<td><code>[Switch]</code></td>
+<td><code>j</code></td>
+<td><code>$false</code></td>
+<td>Return a JSON-formatted string of the full result object</td>
+</tr>
+<tr>
+<td><code>IncludeHashTypes</code></td>
+<td><code>[System.Array]</code></td>
+<td><em>(none)</em></td>
+<td><code>@('md5','sha256')</code></td>
+<td>Array of hash algorithms to use. Valid values: <code>md5</code>, <code>sha1</code>, <code>sha256</code>, <code>sha512</code>, <code>all</code>. Case-insensitive. Specifying <code>all</code> expands to all four types</td>
+</tr>
+<tr>
+<td><code>Verbosity</code></td>
+<td><code>[System.Boolean]</code></td>
+<td><code>v</code></td>
+<td><code>$true</code></td>
+<td>Controls whether verbose/log messages are printed to the console</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="5-internal-sub-functions-defined-within-fileid">5. Internal Sub-Functions (Defined Within FileId)</h2>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Line</th>
+<th>Purpose</th>
+<th>Nesting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FileId-GetName</code></td>
+<td>main.ps1:5041</td>
+<td>Extracts the simple file name from a path using <code>[System.IO.Path]::GetFileName()</code>. Returns <code>$null</code> for empty paths</td>
+<td>Top-level internal</td>
+</tr>
+<tr>
+<td><code>FileId-HashMd5</code></td>
+<td>main.ps1:5063</td>
+<td>Computes MD5 hash of <strong>file contents</strong> via <code>[System.IO.File]::OpenRead()</code> and <code>[System.Security.Cryptography.MD5]::Create()</code></td>
+<td>Top-level internal</td>
+</tr>
+<tr>
+<td><code>FileId-HashMd5-String</code></td>
+<td>main.ps1:5076</td>
+<td>Computes MD5 hash of a <strong>string</strong> value. Returns null-hash constant for empty/null inputs</td>
+<td>Top-level internal</td>
+</tr>
+<tr>
+<td><code>FileId-HashSha1</code></td>
+<td>main.ps1:5094</td>
+<td>Computes SHA1 hash of <strong>file contents</strong></td>
+<td>Top-level internal</td>
+</tr>
+<tr>
+<td><code>FileId-HashSha1-String</code></td>
+<td>main.ps1:5107</td>
+<td>Computes SHA1 hash of a <strong>string</strong> value. Returns null-hash constant for empty/null inputs</td>
+<td>Top-level internal</td>
+</tr>
+<tr>
+<td><code>FileId-HashSha256</code></td>
+<td>main.ps1:5125</td>
+<td>Computes SHA256 hash of <strong>file contents</strong></td>
+<td>Top-level internal</td>
+</tr>
+<tr>
+<td><code>FileId-HashSha256-String</code></td>
+<td>main.ps1:5138</td>
+<td>Computes SHA256 hash of a <strong>string</strong> value. Returns null-hash constant for empty/null inputs</td>
+<td>Top-level internal</td>
+</tr>
+<tr>
+<td><code>FileId-HashSha512</code></td>
+<td>main.ps1:5156</td>
+<td>Computes SHA512 hash of <strong>file contents</strong></td>
+<td>Top-level internal</td>
+</tr>
+<tr>
+<td><code>FileId-HashSha512-String</code></td>
+<td>main.ps1:5169</td>
+<td>Computes SHA512 hash of a <strong>string</strong> value. Returns null-hash constant for empty/null inputs</td>
+<td>Top-level internal</td>
+</tr>
+<tr>
+<td><code>FileId-ResolvePath</code></td>
+<td>main.ps1:5187</td>
+<td>Resolves a file path to its absolute form using <code>Resolve-Path</code> with a <code>[System.IO.Path]::GetFullPath()</code> fallback</td>
+<td>Top-level internal</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-internal-logic-summary">6. Internal Logic Summary</h2>
+<p><strong>ID Generation Algorithm:</strong></p>
+<p>Unlike <code>DirectoryId</code> (which hashes directory + parent name), <code>FileId</code> hashes file <strong>contents</strong> directly:</p>
+<ol>
+<li>Resolve the file path to absolute form</li>
+<li>Detect if the file is a symbolic link (via <code>ReparsePoint</code> attribute check)</li>
+<li>For each requested hash type:</li>
+<li>If the file <strong>is</strong> a symbolic link → hash the <strong>file name string</strong> instead of contents</li>
+<li>If the file <strong>is not</strong> a symbolic link → hash the <strong>file contents</strong> via file stream</li>
+<li>Prepend <code>"y"</code> to each content hash to form the final ID</li>
+</ol>
+<p>The <code>"y"</code> prefix distinguishes file IDs from directory IDs (which use the <code>"x"</code> prefix in <code>DirectoryId</code>).</p>
+<p><strong>Symlink Handling:</strong></p>
+<p>Symbolic links are detected via: <code>(Get-Item -LiteralPath $FilePath -Force).Attributes -band [System.IO.FileAttributes]::ReparsePoint</code></p>
+<p>When a file is a symlink, the content hash is replaced with the name hash, ensuring the ID remains deterministic without requiring the link target to be accessible.</p>
+<p><strong>Name Hashes:</strong></p>
+<p>Name hashes (MD5, SHA1, SHA256, SHA512 of the file name string) are always computed regardless of the <code>IncludeHashTypes</code> parameter, as they are low-overhead and are needed for the symlink fallback path.</p>
+<hr />
+<h2 id="7-output-object-properties">7. Output Object Properties</h2>
+<p>The full <code>[PSCustomObject]</code> (returned when <code>-OutputObject</code> is used) contains:</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IsDirectory</code></td>
+<td><code>[Boolean]</code></td>
+<td>Always <code>$false</code> for valid file inputs</td>
+</tr>
+<tr>
+<td><code>IsFile</code></td>
+<td><code>[Boolean]</code></td>
+<td><code>$true</code> if the file exists</td>
+</tr>
+<tr>
+<td><code>IsLink</code></td>
+<td><code>[Boolean]</code></td>
+<td><code>$true</code> if the file is a symbolic link (ReparsePoint)</td>
+</tr>
+<tr>
+<td><code>Name</code></td>
+<td><code>[String]</code></td>
+<td>The simple file name (with extension, no path)</td>
+</tr>
+<tr>
+<td><code>Path</code></td>
+<td><code>[String]</code></td>
+<td>The resolved absolute file path</td>
+</tr>
+<tr>
+<td><code>NameMD5</code></td>
+<td><code>[String]</code></td>
+<td>MD5 hash of the file name string</td>
+</tr>
+<tr>
+<td><code>NameSHA1</code></td>
+<td><code>[String]</code></td>
+<td>SHA1 hash of the file name string</td>
+</tr>
+<tr>
+<td><code>NameSHA256</code></td>
+<td><code>[String]</code></td>
+<td>SHA256 hash of the file name string</td>
+</tr>
+<tr>
+<td><code>NameSHA512</code></td>
+<td><code>[String]</code></td>
+<td>SHA512 hash of the file name string</td>
+</tr>
+<tr>
+<td><code>ContentMD5</code></td>
+<td><code>[String]</code> or <code>$null</code></td>
+<td>MD5 hash of file contents (or name hash if symlink). <code>$null</code> if not in <code>IncludeHashTypes</code></td>
+</tr>
+<tr>
+<td><code>ContentSHA1</code></td>
+<td><code>[String]</code> or <code>$null</code></td>
+<td>SHA1 hash of file contents (or name hash if symlink). <code>$null</code> if not requested</td>
+</tr>
+<tr>
+<td><code>ContentSHA256</code></td>
+<td><code>[String]</code> or <code>$null</code></td>
+<td>SHA256 hash of file contents (or name hash if symlink). <code>$null</code> if not requested</td>
+</tr>
+<tr>
+<td><code>ContentSHA512</code></td>
+<td><code>[String]</code> or <code>$null</code></td>
+<td>SHA512 hash of file contents (or name hash if symlink). <code>$null</code> if not requested</td>
+</tr>
+<tr>
+<td><code>IdMD5</code></td>
+<td><code>[String]</code> or <code>$null</code></td>
+<td><code>"y"</code> + ContentMD5. <code>$null</code> if not requested</td>
+</tr>
+<tr>
+<td><code>IdSHA1</code></td>
+<td><code>[String]</code> or <code>$null</code></td>
+<td><code>"y"</code> + ContentSHA1. <code>$null</code> if not requested</td>
+</tr>
+<tr>
+<td><code>IdSHA256</code></td>
+<td><code>[String]</code> or <code>$null</code></td>
+<td><code>"y"</code> + ContentSHA256. <code>$null</code> if not requested</td>
+</tr>
+<tr>
+<td><code>IdSHA512</code></td>
+<td><code>[String]</code> or <code>$null</code></td>
+<td><code>"y"</code> + ContentSHA512. <code>$null</code> if not requested</td>
+</tr>
+<tr>
+<td><code>ContentHashTypes</code></td>
+<td><code>[Array]</code></td>
+<td>Array of hash type strings that were actually processed</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-net-types-and-methods-used">8. .NET Types and Methods Used</h2>
+<table>
+<thead>
+<tr>
+<th>Type / Method</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[System.IO.File]::OpenRead()</code></td>
+<td>Opening file stream for content hashing</td>
+</tr>
+<tr>
+<td><code>[System.IO.FileAttributes]::ReparsePoint</code></td>
+<td>Symbolic link detection via bitwise AND</td>
+</tr>
+<tr>
+<td><code>[System.IO.Path]::GetFileName()</code></td>
+<td>Extracting file name from path</td>
+</tr>
+<tr>
+<td><code>[System.IO.Path]::GetFullPath()</code></td>
+<td>Resolving hypothetical paths</td>
+</tr>
+<tr>
+<td><code>[System.Security.Cryptography.MD5]::Create()</code></td>
+<td>MD5 hash computation</td>
+</tr>
+<tr>
+<td><code>[System.Security.Cryptography.SHA1]::Create()</code></td>
+<td>SHA1 hash computation</td>
+</tr>
+<tr>
+<td><code>[System.Security.Cryptography.SHA256]::Create()</code></td>
+<td>SHA256 hash computation</td>
+</tr>
+<tr>
+<td><code>[System.Security.Cryptography.SHA512]::Create()</code></td>
+<td>SHA512 hash computation</td>
+</tr>
+<tr>
+<td><code>[System.Text.Encoding]::UTF8.GetBytes()</code></td>
+<td>String → byte-array conversion for name hashing</td>
+</tr>
+<tr>
+<td><code>[BitConverter]::ToString()</code></td>
+<td>Byte-array → hex-string conversion</td>
+</tr>
+<tr>
+<td><code>[PSCustomObject]@{}</code></td>
+<td>Output object construction</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-powershell-built-in-cmdlets-used">9. PowerShell Built-in Cmdlets Used</h2>
+<table>
+<thead>
+<tr>
+<th>Cmdlet</th>
+<th>Usage Context</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ConvertTo-Json</code></td>
+<td>Serializing output when <code>-OutputJson</code> is specified (<code>-Depth 100</code>)</td>
+</tr>
+<tr>
+<td><code>Get-Item</code></td>
+<td>Checking file attributes for symlink detection (<code>-Force</code>, <code>-LiteralPath</code>)</td>
+</tr>
+<tr>
+<td><code>Resolve-Path</code></td>
+<td>Resolving file paths to absolute form (<code>-LiteralPath</code>)</td>
+</tr>
+<tr>
+<td><code>Test-Path</code></td>
+<td>Validating file existence (<code>-LiteralPath</code>, <code>-PathType Leaf/Container</code>)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="10-return-value">10. Return Value</h2>
+<p>Default (no output switches): Returns a <code>[System.String]</code> containing the <strong>last</strong> content hash ID processed (corresponds to the last element in the <code>IncludeHashTypes</code> array; with defaults this is the SHA256-based ID prefixed with <code>"y"</code>).</p>
+<p>With <code>-OutputObject</code>: Returns the full <code>[PSCustomObject]</code> described in Section 7.</p>
+<p>With <code>-OutputJson</code>: Returns a JSON-formatted string of the full result object.</p>
+<p>Returns <code>$null</code> if the input file is missing, does not exist, or no valid hash types were processed.</p>
+<hr />
+<h2 id="11-call-graph">11. Call Graph</h2>
+<pre><code>FileId
+├── [validates FileIdPendingFile is non-empty and exists]
+│   └── Vbs ◄── external pslib (on error)
+├── FileId-ResolvePath
+│   └── Vbs ◄── external pslib (on empty input)
+├── FileId-GetName
+├── [compute name hashes — always performed]
+│   ├── FileId-HashMd5-String
+│   ├── FileId-HashSha1-String
+│   ├── FileId-HashSha256-String
+│   └── FileId-HashSha512-String
+├── [detect symbolic link via ReparsePoint]
+├── [expand &quot;all&quot; keyword in IncludeHashTypes]
+├── [for each requested hash type]
+│   ├── (is symlink) → use name hash as content hash
+│   └── (not symlink) → compute content hash via:
+│       ├── FileId-HashMd5 (file stream)
+│       ├── FileId-HashSha1 (file stream)
+│       ├── FileId-HashSha256 (file stream)
+│       └── FileId-HashSha512 (file stream)
+│   └── prepend &quot;y&quot; to form final ID
+└── [format output based on switches]
+</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.instant", "search.highlight", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

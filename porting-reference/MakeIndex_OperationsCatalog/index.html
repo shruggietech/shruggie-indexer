@@ -1,0 +1,4519 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Filesystem indexer with hash-based identity, metadata extraction, and structured JSON output.">
+      
+      
+      
+        <link rel="canonical" href="https://shruggietech.github.io/shruggie-indexer/porting-reference/MakeIndex_OperationsCatalog/">
+      
+      
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="../MakeIndex_DependencyCatalog/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>Operations Catalog - shruggie-indexer</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#operations-catalog-makeindex-port-to-python" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="shruggie-indexer" class="md-header__button md-logo" aria-label="shruggie-indexer" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            shruggie-indexer
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Operations Catalog
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/shruggietech/shruggie-indexer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    shruggietech/shruggie-indexer
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../schema/" class="md-tabs__link">
+          
+  
+  
+  Schema Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  Porting Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../user/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="shruggie-indexer" class="md-nav__button md-logo" aria-label="shruggie-indexer" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    shruggie-indexer
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/shruggietech/shruggie-indexer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    shruggietech/shruggie-indexer
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Schema Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Porting Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Porting Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Catalog
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Catalog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-read-this-document" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to Read This Document
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#category-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category Index
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-filesystem-traversal-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Filesystem Traversal &amp; Discovery
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Filesystem Traversal &amp; Discovery">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-path-resolution-manipulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Path Resolution &amp; Manipulation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Path Resolution &amp; Manipulation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-hashing-identity-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Hashing &amp; Identity Generation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Hashing &amp; Identity Generation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-symlink-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Symlink Detection
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Symlink Detection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-filesystem-timestamps-date-conversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Filesystem Timestamps &amp; Date Conversion
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Filesystem Timestamps &amp; Date Conversion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-exif-embedded-metadata-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. EXIF / Embedded Metadata Extraction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. EXIF / Embedded Metadata Extraction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-sidecar-metadata-file-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Sidecar Metadata File Handling
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Sidecar Metadata File Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-output-object-construction-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Output Object Construction &amp; Schema
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Output Object Construction &amp; Schema">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-json-serialization-output-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. JSON Serialization &amp; Output Routing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. JSON Serialization &amp; Output Routing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-file-rename-in-place-write-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. File Rename &amp; In-Place Write Operations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. File Rename &amp; In-Place Write Operations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-configuration-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Configuration Management
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11. Configuration Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-logging-verbosity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Logging &amp; Verbosity
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. Logging &amp; Verbosity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-progress-reporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. Progress Reporting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="13. Progress Reporting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-cli-argument-parsing-entry-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. CLI Argument Parsing &amp; Entry Point
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="14. CLI Argument Parsing &amp; Entry Point">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-temporary-file-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. Temporary File Management
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="15. Temporary File Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eliminated-dependencies-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eliminated Dependencies Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-reference-output-schema-fields-operation-categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Reference: Output Schema Fields → Operation Categories
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#minimum-viable-dependency-set" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum Viable Dependency Set
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Minimum Viable Dependency Set">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#required-standard-library-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required (Standard Library Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#required-external" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required (External)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommended-third-party-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended (Third-Party, Optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Catalogs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dependency Catalogs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MakeIndex_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MakeIndex
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Base64DecodeString_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base64DecodeString
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Date2UnixTime_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Date2UnixTime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../DirectoryId_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectoryId
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FileId_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FileId
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MetaFileRead_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MetaFileRead
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TempOpen_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TempOpen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TempClose_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TempClose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Vbs_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-read-this-document" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to Read This Document
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#category-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category Index
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-filesystem-traversal-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Filesystem Traversal &amp; Discovery
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Filesystem Traversal &amp; Discovery">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-path-resolution-manipulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Path Resolution &amp; Manipulation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Path Resolution &amp; Manipulation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-hashing-identity-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Hashing &amp; Identity Generation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Hashing &amp; Identity Generation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-symlink-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Symlink Detection
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Symlink Detection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-filesystem-timestamps-date-conversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Filesystem Timestamps &amp; Date Conversion
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Filesystem Timestamps &amp; Date Conversion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-exif-embedded-metadata-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. EXIF / Embedded Metadata Extraction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. EXIF / Embedded Metadata Extraction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-sidecar-metadata-file-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Sidecar Metadata File Handling
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Sidecar Metadata File Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-output-object-construction-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Output Object Construction &amp; Schema
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Output Object Construction &amp; Schema">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-json-serialization-output-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. JSON Serialization &amp; Output Routing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. JSON Serialization &amp; Output Routing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-file-rename-in-place-write-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. File Rename &amp; In-Place Write Operations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. File Rename &amp; In-Place Write Operations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-configuration-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Configuration Management
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11. Configuration Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-logging-verbosity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Logging &amp; Verbosity
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. Logging &amp; Verbosity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-progress-reporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. Progress Reporting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="13. Progress Reporting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-cli-argument-parsing-entry-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. CLI Argument Parsing &amp; Entry Point
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="14. CLI Argument Parsing &amp; Entry Point">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-temporary-file-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. Temporary File Management
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="15. Temporary File Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lives-original_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where It Lives (Original)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-modules_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improvement-notes_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improvement Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eliminated-dependencies-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eliminated Dependencies Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-reference-output-schema-fields-operation-categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Reference: Output Schema Fields → Operation Categories
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#minimum-viable-dependency-set" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum Viable Dependency Set
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Minimum Viable Dependency Set">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#required-standard-library-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required (Standard Library Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#required-external" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required (External)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommended-third-party-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended (Third-Party, Optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="operations-catalog-makeindex-port-to-python">Operations Catalog — MakeIndex Port to Python</h1>
+<blockquote>
+<p><strong>Purpose:</strong> Categorize all logical operations found in the original MakeIndex function (and its dependency tree) into defined groups, correlate each group to recommended Python modules/libraries, and flag improvements over the original implementation.<br />
+<strong>Audience:</strong> AI-first, Human-second<br />
+<strong>Scope:</strong> Covers MakeIndex, its 8 external pslib dependencies (Base64DecodeString, Date2UnixTime, DirectoryId, FileId, MetaFileRead, TempOpen, TempClose, Vbs), 2 external binaries (exiftool, jq), and all internal sub-functions.<br />
+<strong>Schema Reference:</strong> <code>MakeIndex_OutputSchema.json</code> — the <code>Encoding</code> key is intentionally excluded from the ported software per project requirements.</p>
+</blockquote>
+<hr />
+<h2 id="how-to-read-this-document">How to Read This Document</h2>
+<p>Each operation category below contains:</p>
+<ul>
+<li><strong>What It Does:</strong> A summary of the original behavior across MakeIndex and its dependencies.</li>
+<li><strong>Where It Lives (Original):</strong> The specific functions/sub-functions in the PowerShell source that implement the operation.</li>
+<li><strong>Python Modules:</strong> The recommended Python standard-library or third-party modules for the ported implementation.</li>
+<li><strong>Improvement Notes:</strong> Where the original logic was inefficient, fragile, or platform-locked, and how the Python port should diverge.</li>
+</ul>
+<p>Categories are ordered by architectural importance (foundational operations first, output/presentation operations last).</p>
+<hr />
+<h2 id="category-index">Category Index</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Category</th>
+<th>Primary Python Modules</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Filesystem Traversal &amp; Discovery</td>
+<td><code>pathlib</code>, <code>os</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Path Resolution &amp; Manipulation</td>
+<td><code>pathlib</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Hashing &amp; Identity Generation</td>
+<td><code>hashlib</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Symlink Detection</td>
+<td><code>pathlib</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Filesystem Timestamps &amp; Date Conversion</td>
+<td><code>datetime</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>EXIF / Embedded Metadata Extraction</td>
+<td><code>subprocess</code> + <code>exiftool</code>, <code>json</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Sidecar Metadata File Handling</td>
+<td><code>json</code>, <code>re</code>, <code>pathlib</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Output Object Construction &amp; Schema</td>
+<td><code>dataclasses</code>, <code>json</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td>JSON Serialization &amp; Output Routing</td>
+<td><code>json</code> (or <code>orjson</code>), <code>pathlib</code>, <code>sys</code></td>
+</tr>
+<tr>
+<td>10</td>
+<td>File Rename &amp; In-Place Write Operations</td>
+<td><code>pathlib</code>, <code>shutil</code></td>
+</tr>
+<tr>
+<td>11</td>
+<td>Configuration Management</td>
+<td><code>dataclasses</code>, <code>tomllib</code> (or <code>pyyaml</code>)</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Logging &amp; Verbosity</td>
+<td><code>logging</code></td>
+</tr>
+<tr>
+<td>13</td>
+<td>Progress Reporting</td>
+<td><code>tqdm</code> (or <code>rich</code>)</td>
+</tr>
+<tr>
+<td>14</td>
+<td>CLI Argument Parsing &amp; Entry Point</td>
+<td><code>click</code> (or <code>argparse</code>)</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Temporary File Management</td>
+<td><code>tempfile</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="1-filesystem-traversal-discovery">1. Filesystem Traversal &amp; Discovery</h2>
+<h3 id="what-it-does">What It Does</h3>
+<p>Enumerates files and directories within a target path. Supports recursive and non-recursive modes. Filters out system artifacts (<code>$RECYCLE.BIN</code>, <code>System Volume Information</code>). Separates child items into file and directory lists. Counts items for progress reporting. Handles the three input scenarios: single file, single directory (flat), and directory tree (recursive).</p>
+<h3 id="where-it-lives-original">Where It Lives (Original)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MakeDirectoryIndexRecursiveLogic</code></td>
+<td>Recursive tree walk via <code>Get-ChildItem -Force -Recurse</code> combined with self-recursive calls per child directory</td>
+</tr>
+<tr>
+<td><code>MakeDirectoryIndexLogic</code></td>
+<td>Non-recursive single-directory enumeration via <code>Get-ChildItem -Force</code></td>
+</tr>
+<tr>
+<td><code>MakeFileIndex</code></td>
+<td>Single-file path; skips traversal entirely, calls <code>Get-Item</code> on one file</td>
+</tr>
+<tr>
+<td><code>Where-Object</code> filters</td>
+<td>Excludes <code>$RECYCLE.BIN</code> and <code>System Volume Information</code> by name match</td>
+</tr>
+<tr>
+<td><code>[System.Collections.ArrayList]</code></td>
+<td>Combines file and directory child arrays into a single ordered collection</td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-modules">Python Modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pathlib.Path.iterdir()</code></td>
+<td>Non-recursive directory listing</td>
+</tr>
+<tr>
+<td><code>pathlib.Path.rglob('*')</code></td>
+<td>Recursive traversal (replaces <code>Get-ChildItem -Recurse</code>)</td>
+</tr>
+<tr>
+<td><code>os.scandir()</code></td>
+<td>High-performance directory iteration when <code>pathlib</code> overhead matters (large trees)</td>
+</tr>
+<tr>
+<td><code>pathlib.Path.is_file()</code> / <code>.is_dir()</code></td>
+<td>Item type classification (replaces <code>Where-Object</code> separation)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="improvement-notes">Improvement Notes</h3>
+<p>The original uses two entirely separate code paths for recursive vs. non-recursive traversal (<code>MakeDirectoryIndexRecursiveLogic</code> which calls itself, vs. <code>MakeDirectoryIndexLogic</code>). This created near-complete code duplication. The Python port should use a single traversal function parameterized by a <code>recursive: bool</code> flag. When <code>recursive=True</code>, use <code>Path.rglob('*')</code> or <code>os.walk()</code>. When <code>recursive=False</code>, use <code>Path.iterdir()</code>. Both paths feed into the same object-construction pipeline.</p>
+<p>The original manually assembles an <code>ArrayList</code> from two separate <code>Get-ChildItem</code> calls (one for files, one for directories). Python's <code>os.scandir()</code> returns <code>DirEntry</code> objects that already expose <code>.is_file()</code> and <code>.is_dir()</code> without additional stat calls, making the separation trivially cheap in a single pass.</p>
+<p>The hardcoded exclusion of <code>$RECYCLE.BIN</code> and <code>System Volume Information</code> is Windows-specific. The port should externalize the exclusion list into configuration (see Category 11) and default to a cross-platform set that also covers <code>.DS_Store</code>, <code>.Spotlight-V100</code>, <code>.Trashes</code>, and similar platform artifacts.</p>
+<hr />
+<h2 id="2-path-resolution-manipulation">2. Path Resolution &amp; Manipulation</h2>
+<h3 id="what-it-does_1">What It Does</h3>
+<p>Resolves relative, hypothetical, or symbolic paths into absolute canonical forms. Extracts parent directories, basenames, extensions, and filenames from path strings. Constructs new paths for renamed files and sidecar metadata outputs. Validates extension strings against a regex pattern to reject malformed or suspiciously long extensions.</p>
+<h3 id="where-it-lives-original_1">Where It Lives (Original)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ResolvePath</code></td>
+<td>Resolves real paths via <code>Resolve-Path</code>; falls back to <code>[System.IO.Path]::GetFullPath()</code> for hypothetical (non-existent) paths</td>
+</tr>
+<tr>
+<td><code>GetParentPath</code></td>
+<td>Extracts parent directory via <code>Split-Path</code></td>
+</tr>
+<tr>
+<td><code>MakeObject</code></td>
+<td>Extracts extension, basename, filename via <code>[System.IO.Path]</code> methods; validates extension with regex <code>^(([a-z0-9]){1,2}\|([a-z0-9]){1}([a-z0-9\-]){1,12}([a-z0-9]){1})$</code></td>
+</tr>
+<tr>
+<td><code>FileId-ResolvePath</code> / <code>DirectoryId-ResolvePath</code></td>
+<td>Redundant copies of the same resolve logic inside FileId and DirectoryId</td>
+</tr>
+<tr>
+<td><code>$Sep</code> (global)</td>
+<td><code>[System.IO.Path]::DirectorySeparatorChar</code> used for manual string concatenation of paths</td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-modules_1">Python Modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pathlib.Path.resolve()</code></td>
+<td>Canonical absolute path resolution (replaces <code>Resolve-Path</code> + <code>GetFullPath</code> fallback)</td>
+</tr>
+<tr>
+<td><code>pathlib.Path.parent</code></td>
+<td>Parent directory extraction (replaces <code>Split-Path</code> and <code>GetParentPath</code>)</td>
+</tr>
+<tr>
+<td><code>pathlib.Path.name</code> / <code>.stem</code> / <code>.suffix</code></td>
+<td>Filename, basename, and extension extraction (replaces all <code>[System.IO.Path]</code> calls)</td>
+</tr>
+<tr>
+<td><code>pathlib.PurePosixPath</code> / <code>PureWindowsPath</code></td>
+<td>Cross-platform path construction without touching the filesystem</td>
+</tr>
+</tbody>
+</table>
+<h3 id="improvement-notes_1">Improvement Notes</h3>
+<p>The original has three independent copies of the "resolve path" logic: <code>ResolvePath</code> in MakeIndex, <code>FileId-ResolvePath</code> in FileId, and <code>DirectoryId-ResolvePath</code> in DirectoryId. All three do the same thing. The Python port should have exactly one path resolution utility.</p>
+<p>The original constructs paths by string-concatenating components with <code>$Sep</code> as a manual separator character. This is brittle and unnecessary. <code>pathlib</code> operator overloading (<code>parent / filename</code>) handles path construction correctly across platforms with no separator management.</p>
+<p>The extension validation regex in the original rejects extensions longer than 14 characters or those containing non-alphanumeric characters (beyond hyphens). This is reasonable but should be made configurable rather than hardcoded, as some legitimate extensions (e.g., <code>.numbers</code>, <code>.download</code>) may be affected.</p>
+<hr />
+<h2 id="3-hashing-identity-generation">3. Hashing &amp; Identity Generation</h2>
+<h3 id="what-it-does_2">What It Does</h3>
+<p>Computes cryptographic hashes of file contents and name strings to produce deterministic unique identifiers. Files get content-based IDs (prefixed <code>y</code>); directories get name-based IDs computed from a two-layer scheme: <code>hash( hash(dirName) + hash(parentDirName) )</code> (prefixed <code>x</code>). Handles null/empty inputs with known null-hash constants. Handles symlinks by falling back to name hashing instead of content hashing.</p>
+<p>The original only computes MD5 and SHA256 at runtime, despite the output schema defining fields for SHA1 and SHA512 as well.</p>
+<h3 id="where-it-lives-original_2">Where It Lives (Original)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FileId</code> + 8 nested hash sub-functions</td>
+<td>File content hashing (MD5, SHA1, SHA256, SHA512) via <code>[System.Security.Cryptography.*]::Create()</code> + <code>[System.IO.File]::OpenRead()</code> stream hashing; name string hashing via same algorithms on UTF-8 byte encoding</td>
+</tr>
+<tr>
+<td><code>DirectoryId</code> + 8 nested hash sub-functions</td>
+<td>Directory name hashing using the two-layer <code>hash(hash(name) + hash(parentName))</code> scheme</td>
+</tr>
+<tr>
+<td><code>ReadMetaFile-GetNameHashMD5</code> / <code>ReadMetaFile-GetNameHashSHA256</code></td>
+<td>Yet more copies of string hashing logic, duplicated inside <code>ReadMetaFile</code></td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Sha256-File</code> / <code>MetaFileRead-Sha256-String</code></td>
+<td>Even more copies inside <code>MetaFileRead</code> itself</td>
+</tr>
+<tr>
+<td>Null-hash constants</td>
+<td>Hardcoded per-algorithm empty-string hash values for edge cases</td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-modules_2">Python Modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hashlib</code></td>
+<td>All hash computation: <code>hashlib.md5()</code>, <code>hashlib.sha1()</code>, <code>hashlib.sha256()</code>, <code>hashlib.sha512()</code> — supports both file stream hashing (via <code>.update()</code> in chunks) and string hashing (via <code>.update(s.encode('utf-8'))</code>)</td>
+</tr>
+<tr>
+<td><code>hashlib.file_digest()</code></td>
+<td>Python 3.11+ convenience function for hashing file contents directly from a file object; ideal for the file content hashing path</td>
+</tr>
+</tbody>
+</table>
+<h3 id="improvement-notes_2">Improvement Notes</h3>
+<p><strong>Critical code duplication problem.</strong> The original has no fewer than four separate locations where hashing logic is independently implemented: <code>FileId</code>, <code>DirectoryId</code>, <code>ReadMetaFile</code> sub-functions, and <code>MetaFileRead</code> sub-functions. Each reimplements the same <code>Create() → ComputeHash() → ToString() → replace('-','')</code> pattern. The Python port should provide exactly one hashing utility module exposing functions like <code>hash_file(path, algorithm) -&gt; str</code> and <code>hash_string(value, algorithm) -&gt; str</code>, called from everywhere.</p>
+<p><strong>Expand runtime hash coverage.</strong> The original only computes MD5 and SHA256 at runtime, but the output schema defines SHA1 and SHA512 fields. Since <code>hashlib</code> can compute all four algorithms in a single file read pass (feeding the same byte chunks to four hash objects simultaneously), the Python port should compute all four by default with near-zero marginal cost. This fills the previously-empty schema fields and enables downstream consumers to select their preferred algorithm.</p>
+<p><strong>Chunked file reading.</strong> The original opens the entire file stream and calls <code>ComputeHash()</code> on it in one pass. For very large files this is fine at the .NET level (it streams internally), but the Python port should be explicit about chunked reads (e.g., 8 KB or 64 KB chunks fed to <code>hashlib.update()</code>) to keep memory usage bounded and to enable multi-algorithm hashing in a single pass.</p>
+<p><strong>The <code>x</code>/<code>y</code> prefix convention</strong> for directory vs. file IDs is a design choice carried forward from the original. It should be preserved for backward compatibility with the output schema.</p>
+<p><strong>Null-hash constants</strong> should not be hardcoded. Instead, the Python port can compute them once at module load time: <code>hashlib.md5(b'').hexdigest().upper()</code>, etc. This is self-documenting and eliminates the risk of copy-paste errors in long hex strings.</p>
+<hr />
+<h2 id="4-symlink-detection">4. Symlink Detection</h2>
+<h3 id="what-it-does_3">What It Does</h3>
+<p>Determines whether a file or directory is a symbolic link (reparse point). When a file is a symlink, the identity system falls back to hashing the file's name string rather than its content (because the link target may not be accessible). The <code>IsLink</code> boolean is included in the output schema.</p>
+<h3 id="where-it-lives-original_3">Where It Lives (Original)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FileId</code></td>
+<td>Checks <code>(Get-Item).Attributes -band [System.IO.FileAttributes]::ReparsePoint</code></td>
+</tr>
+<tr>
+<td><code>DirectoryId</code></td>
+<td>Same reparse point check for directories</td>
+</tr>
+<tr>
+<td><code>ValidateIsLink</code></td>
+<td>Listed as a dependency but never directly called; <code>FileId</code> and <code>DirectoryId</code> perform the check inline</td>
+</tr>
+<tr>
+<td><code>MakeObject</code></td>
+<td>Reads <code>.IsLink</code> from the <code>FileId</code>/<code>DirectoryId</code> return object; skips encoding detection and exiftool for symlinks</td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-modules_3">Python Modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pathlib.Path.is_symlink()</code></td>
+<td>Single cross-platform call; returns <code>True</code> for both file and directory symlinks</td>
+</tr>
+<tr>
+<td><code>os.path.islink()</code></td>
+<td>Alternative for string-path interfaces</td>
+</tr>
+</tbody>
+</table>
+<h3 id="improvement-notes_3">Improvement Notes</h3>
+<p>The original checks for the <code>ReparsePoint</code> attribute, which is a Windows-specific concept that covers symlinks but also covers junction points and other reparse point types. <code>pathlib.Path.is_symlink()</code> is the correct cross-platform equivalent. On Windows it still detects reparse points; on Linux/macOS it detects POSIX symlinks. This is a strict improvement in portability.</p>
+<p>The <code>ValidateIsLink</code> function listed in the original docstring but never called is dead code. It should not be carried forward.</p>
+<hr />
+<h2 id="5-filesystem-timestamps-date-conversion">5. Filesystem Timestamps &amp; Date Conversion</h2>
+<h3 id="what-it-does_4">What It Does</h3>
+<p>Reads filesystem timestamps (created, modified, accessed) from file/directory stat data. Formats them as ISO 8601 strings with timezone offset (format: <code>yyyy-MM-ddTHH:mm:ss.fffffffzzz</code>). Converts those formatted strings to Unix timestamps (milliseconds since epoch) via the external <code>Date2UnixTime</code> function.</p>
+<h3 id="where-it-lives-original_4">Where It Lives (Original)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MakeObject</code></td>
+<td>Reads <code>.LastAccessTime</code>, <code>.CreationTime</code>, <code>.LastWriteTime</code> from <code>Get-Item</code>; formats via <code>.ToString($DateFormat)</code></td>
+</tr>
+<tr>
+<td><code>Date2UnixTime</code> (external pslib)</td>
+<td>Parses formatted date strings back into <code>[DateTimeOffset]</code> objects and calls <code>.ToUnixTimeMilliseconds()</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-modules_4">Python Modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>datetime.datetime</code></td>
+<td>Timestamp formatting via <code>.isoformat()</code> or <code>.strftime()</code></td>
+</tr>
+<tr>
+<td><code>datetime.datetime.timestamp()</code></td>
+<td>Direct conversion to Unix epoch seconds (multiply by 1000 for milliseconds)</td>
+</tr>
+<tr>
+<td><code>os.stat_result</code> / <code>pathlib.Path.stat()</code></td>
+<td>Reading <code>st_mtime</code>, <code>st_atime</code>, <code>st_ctime</code> (or <code>st_birthtime</code> on macOS)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="improvement-notes_4">Improvement Notes</h3>
+<p><strong>The original performs an unnecessary round-trip.</strong> It formats a datetime to a string, then passes that string to <code>Date2UnixTime</code> which parses it back into a datetime object just to call <code>.ToUnixTimeMilliseconds()</code>. The Python port should extract the Unix timestamp directly from the stat result's float value: <code>int(stat_result.st_mtime * 1000)</code>. The formatted ISO string can be produced separately from the same source datetime. No round-trip parsing needed.</p>
+<p><strong>Creation time portability.</strong> Windows provides a true creation time (<code>CreationTime</code>). Linux typically does not expose birth time in <code>os.stat()</code> unless the filesystem and kernel support <code>st_birthtime</code> (available on some systems via <code>os.stat_result.st_birthtime</code>). The port should attempt <code>st_birthtime</code> and fall back to <code>st_ctime</code> (metadata change time on Linux) with a documented caveat. This is a platform reality, not a bug.</p>
+<p><strong>The date format string</strong> <code>yyyy-MM-ddTHH:mm:ss.fffffffzzz</code> uses .NET formatting tokens. The Python equivalent is <code>%Y-%m-%dT%H:%M:%S.%f%z</code>, noting that Python's <code>%f</code> gives microseconds (6 digits) rather than .NET's 7-digit fractional seconds. For backward compatibility, the port should zero-pad to 7 digits if exact schema match is required, or accept the 6-digit microsecond precision as a minor, acceptable deviation.</p>
+<hr />
+<h2 id="6-exif-embedded-metadata-extraction">6. EXIF / Embedded Metadata Extraction</h2>
+<h3 id="what-it-does_5">What It Does</h3>
+<p>Invokes the <code>exiftool</code> binary against individual files to extract embedded EXIF/XMP/IPTC metadata. The exiftool arguments are Base64-encoded in the source and decoded at runtime, written to a temporary argument file, and passed to exiftool via its <code>-@</code> (argfile) switch. The raw JSON output from exiftool is piped through <code>jq</code> to compact it and strip unwanted system keys (ExifToolVersion, FileName, FilePath, Directory, FilePermissions, etc.). Certain file types (<code>.csv</code>, <code>.htm</code>, <code>.html</code>, <code>.json</code>, <code>.tsv</code>, <code>.xml</code>) are excluded because exiftool tends to dump their entire content into the metadata output.</p>
+<h3 id="where-it-lives-original_5">Where It Lives (Original)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GetFileExif</code></td>
+<td>Orchestrator: decodes args, manages temp file lifecycle, calls runner</td>
+</tr>
+<tr>
+<td><code>GetFileExifArgsWrite</code></td>
+<td>Decodes Base64 argument strings via <code>Base64DecodeString</code>, writes them to a temp file via <code>Add-Content</code></td>
+</tr>
+<tr>
+<td><code>GetFileExifRun</code></td>
+<td>Executes <code>exiftool -@ $ArgsFile</code> and pipes output through <code>jq -c '.[] \| .'</code> then a second <code>jq</code> pass to delete unwanted keys</td>
+</tr>
+<tr>
+<td><code>Base64DecodeString</code> (external pslib)</td>
+<td>URL-decodes and Base64-decodes the argument strings with UTF-8 encoding support</td>
+</tr>
+<tr>
+<td><code>TempOpen</code> / <code>TempClose</code> (external pslib)</td>
+<td>Creates and deletes the temporary argument file</td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-modules_5">Python Modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>subprocess.run()</code></td>
+<td>Invoking <code>exiftool</code> with arguments passed directly (no temp file needed)</td>
+</tr>
+<tr>
+<td><code>json</code></td>
+<td>Parsing exiftool's <code>-json</code> output directly (replaces <code>jq</code> entirely)</td>
+</tr>
+<tr>
+<td><code>PyExifTool</code> (third-party, optional)</td>
+<td>A Python wrapper around exiftool that manages a persistent exiftool process for batch operations; significantly faster for large directory trees</td>
+</tr>
+</tbody>
+</table>
+<h3 id="improvement-notes_5">Improvement Notes</h3>
+<p><strong>Eliminate jq dependency entirely.</strong> The original pipes exiftool output through <code>jq</code> for two purposes: JSON compaction and key deletion. Python's <code>json.loads()</code> handles the parsing natively, and unwanted keys can be removed with a simple dict comprehension: <code>{k: v for k, v in data.items() if k not in EXCLUDED_KEYS}</code>. This eliminates a binary dependency with zero functionality loss.</p>
+<p><strong>Eliminate the Base64 argument encoding scheme.</strong> The original stores exiftool arguments as Base64-encoded strings and decodes them at runtime via <code>Base64DecodeString</code> (which itself has a complex OpsCode-based branching pattern and calls <code>certutil</code> on Windows). This appears to have been a mechanism for safely embedding complex argument strings in the PowerShell source. In Python, we can simply define the arguments as a list of strings and pass them directly to <code>subprocess.run()</code>. This eliminates the entire <code>Base64DecodeString</code> → <code>TempOpen</code> → write-args → <code>TempClose</code> pipeline.</p>
+<p><strong>Eliminate the temporary argument file.</strong> The original writes decoded arguments to a temp <code>.txt</code> file and passes it to exiftool via <code>-@</code>. The Python port should pass arguments directly via <code>subprocess.run(['exiftool', ...args, filepath])</code>. If argument lists are very long, <code>subprocess</code> handles them correctly on all platforms.</p>
+<p><strong>Consider PyExifTool for batch mode.</strong> When indexing large directory trees, the original invokes <code>exiftool</code> once per file (a separate process spawn each time). <code>PyExifTool</code> keeps a single exiftool process alive and communicates with it via stdin/stdout, which is dramatically faster for batch operations. The port should support both modes: direct <code>subprocess</code> invocation for single-file use, and <code>PyExifTool</code> batch mode for directory traversal.</p>
+<p><strong>The extension exclusion list</strong> (<code>.csv</code>, <code>.htm</code>, <code>.html</code>, <code>.json</code>, <code>.tsv</code>, <code>.xml</code>) should be externalized into configuration (see Category 11) rather than hardcoded, so users can customize it.</p>
+<hr />
+<h2 id="7-sidecar-metadata-file-handling">7. Sidecar Metadata File Handling</h2>
+<h3 id="what-it-does_6">What It Does</h3>
+<p>Discovers, reads, parses, and optionally merges external metadata "sidecar" files that live alongside the files they describe. Sidecar files are identified by regex patterns matching known suffixes (defined in <code>$global:MetadataFileParser</code>). Each sidecar file undergoes type detection (matching against the <code>Identify</code> configuration), format-specific reading (JSON, plain text, binary/Base64, subtitles, hash files, URL/LNK shortcuts), and construction of a metadata entry object with source attribution, type, name, name hashes, and data payload. When <code>MetaMerge</code> is active, sidecar metadata is folded into the parent item's <code>Metadata</code> array. When <code>MetaMergeDelete</code> is active, merged sidecar files are queued for deletion after processing.</p>
+<h3 id="where-it-lives-original_6">Where It Lives (Original)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GetFileMetaSiblings</code></td>
+<td>Scans the parent directory for files matching the target basename + known metadata suffixes; uses regex with <code>[System.Text.RegularExpressions.Regex]::Escape()</code> for basename escaping</td>
+</tr>
+<tr>
+<td><code>ReadMetaFile</code></td>
+<td>Wrapper: calls <code>MetaFileRead</code>, adds name hashes, constructs standardized metadata entry objects</td>
+</tr>
+<tr>
+<td><code>MetaFileRead</code> (external pslib)</td>
+<td>The actual parser: type detection, format-specific readers (<code>ReadJson</code>, <code>ReadText</code>, <code>ReadBinary</code>, <code>ReadText-Hash</code>, <code>ReadText-Subtitles</code>, <code>ReadLink</code>), parent file resolution, SHA256 hashing</td>
+</tr>
+<tr>
+<td><code>ReadMetaFile-GetNameHashMD5</code> / <code>-SHA256</code></td>
+<td>Hash the sidecar filename for the <code>NameHashes</code> field</td>
+</tr>
+<tr>
+<td><code>$global:MetadataFileParser</code></td>
+<td>Configuration object defining suffix patterns, exclusion patterns, and type identification rules</td>
+</tr>
+<tr>
+<td><code>$global:DeleteQueue</code></td>
+<td>Runtime accumulator for sidecar file paths to delete when <code>MetaMergeDelete</code> is active</td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-modules_6">Python Modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>re</code></td>
+<td>Regex pattern matching for sidecar file identification and type detection</td>
+</tr>
+<tr>
+<td><code>json</code></td>
+<td>Reading JSON-format sidecar files (replaces <code>jq -c '.'</code> piped through <code>ConvertFrom-Json</code>)</td>
+</tr>
+<tr>
+<td><code>pathlib</code></td>
+<td>Directory scanning for sibling files, basename extraction, suffix matching</td>
+</tr>
+<tr>
+<td><code>hashlib</code></td>
+<td>Name hashing for sidecar files (shared with Category 3)</td>
+</tr>
+<tr>
+<td><code>base64</code></td>
+<td>Reading binary sidecar files as Base64-encoded data (replaces <code>certutil -encode</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="improvement-notes_6">Improvement Notes</h3>
+<p><strong>Eliminate certutil dependency.</strong> The original uses <code>certutil -encode</code> to convert binary sidecar file data to Base64 strings. Python's <code>base64.b64encode()</code> does this natively and portably.</p>
+<p><strong>Simplify type detection.</strong> The original iterates through all keys in <code>$MetadataFileParser.Identify</code> and matches each file against regex pattern arrays. This is fine algorithmically but the Python port should express this as a clean mapping structure (a dict of <code>{type_name: [compiled_regex_patterns]}</code>) rather than the deeply nested ordered hashtable structure of the original.</p>
+<p><strong>The DeleteQueue pattern</strong> (accumulate paths during traversal, delete after completion) is sound and should be preserved. In Python this is simply a <code>list[Path]</code> built up during traversal and iterated at the end with <code>Path.unlink()</code>.</p>
+<hr />
+<h2 id="8-output-object-construction-schema">8. Output Object Construction &amp; Schema</h2>
+<h3 id="what-it-does_7">What It Does</h3>
+<p>Assembles a structured data object (the "index entry") for every file and directory processed. Each entry contains identity fields (<code>_id</code>, <code>Ids</code>, <code>NameHashes</code>, <code>ContentHashes</code>), filesystem metadata (<code>Name</code>, <code>BaseName</code>, <code>Extension</code>, <code>StorageName</code>, <code>Size</code>, <code>IsDirectory</code>, <code>IsLink</code>), relationship fields (<code>ParentId</code>, <code>ParentIds</code>, <code>ParentName</code>, <code>ParentNameHashes</code>), timestamps (<code>TimeAccessed/Created/Modified</code>, <code>UnixTimeAccessed/Created/Modified</code>), child items (<code>Items</code> array for directories), and extracted metadata (<code>Metadata</code> array).</p>
+<p>The original output schema also includes an <code>Encoding</code> key (a complex object describing file encoding properties from BOM detection). <strong>This key is being intentionally dropped from the ported software.</strong></p>
+<h3 id="where-it-lives-original_7">Where It Lives (Original)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MakeObject</code></td>
+<td>The core builder. Contains a massive <code>switch</code> on <code>$ObjectType</code> (<code>makeobjectfile</code>, <code>makeobjectdirectory</code>, <code>makeobjectdirectoryrecursive</code>) that constructs <code>[PSCustomObject]@{...}</code> with all schema fields. Repeated near-identically across 5+ switch branches.</td>
+</tr>
+<tr>
+<td><code>VariableStringify</code></td>
+<td>Null-safe string conversion used before inserting values into the output object</td>
+</tr>
+<tr>
+<td><code>GetFileEncoding</code></td>
+<td>BOM byte inspection for the <code>Encoding</code> field (being dropped)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-modules_7">Python Modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dataclasses</code></td>
+<td>Define the output schema as <code>@dataclass</code> classes with type annotations; provides <code>asdict()</code> for JSON serialization. Strongly preferred for a project of this scope.</td>
+</tr>
+<tr>
+<td><code>pydantic</code> (third-party, optional)</td>
+<td>Alternative to dataclasses with built-in validation, JSON schema generation, and serialization. More powerful but heavier dependency. Worth considering if schema validation against legacy consumers is important.</td>
+</tr>
+<tr>
+<td><code>typing</code></td>
+<td>Type annotations for nullable fields, union types, and recursive structures (<code>Items</code> referencing the same schema)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="improvement-notes_7">Improvement Notes</h3>
+<p><strong>Eliminate the ObjectType switch duplication.</strong> The original <code>MakeObject</code> constructs the output object inside a <code>switch</code> statement with 5+ branches (<code>makeobjectfile</code>, <code>makeobjectdirectory</code>, <code>makeobjectdirectoryrecursive</code>, plus <code>default</code> branches). The actual fields are nearly identical across all branches — the only differences are: directories get <code>Items = @()</code> while files do not, and recursive directories get <code>Items = @()</code> for later population. The Python port should define one <code>IndexEntry</code> dataclass and conditionally populate <code>Items</code> and <code>Metadata</code> based on item type. One class, one construction path.</p>
+<p><strong>Drop the <code>Encoding</code> key.</strong> As specified. The <code>GetFileEncoding</code> sub-function (BOM byte inspection) and all <code>$IEncoding</code> variable assignments are omitted from the port. For backward compatibility, the output schema can include <code>"Encoding": null</code> for all items if legacy consumers expect the field to exist. Alternatively, omit it entirely and let legacy consumers handle the missing key. This is a project decision to be made when we address backward compatibility testing.</p>
+<p><strong>Typed schema definition.</strong> The original <code>[PSCustomObject]@{...}</code> has no compile-time type checking. Using Python <code>dataclasses</code> gives us type annotations, IDE support, and <code>dataclasses.asdict()</code> for clean JSON serialization. A rough sketch of the core structure:</p>
+<pre><code>IndexEntry:
+    _id: str
+    Ids: HashIds            # {MD5: str, SHA256: str, ...}
+    Name: str
+    NameHashes: HashIds | None
+    ContentHashes: HashIds | None
+    Extension: str | None
+    BaseName: str
+    StorageName: str
+    Size: int
+    IsDirectory: bool
+    IsLink: bool
+    ParentId: str | None
+    ParentIds: HashIds | None
+    ParentName: str | None
+    ParentNameHashes: HashIds | None
+    UnixTimeAccessed: int
+    UnixTimeCreated: int
+    UnixTimeModified: int
+    TimeAccessed: str
+    TimeCreated: str
+    TimeModified: str
+    Items: list[IndexEntry] | None   # Recursive reference; None for files
+    Metadata: list[MetadataEntry] | None
+</code></pre>
+<p>This sketch is illustrative. The actual implementation should be derived from the output schema JSON with adjustments for the dropped <code>Encoding</code> key and expanded hash fields.</p>
+<hr />
+<h2 id="9-json-serialization-output-routing">9. JSON Serialization &amp; Output Routing</h2>
+<h3 id="what-it-does_8">What It Does</h3>
+<p>Converts the assembled index tree into JSON format and routes it to one or more output destinations. The original supports 7 distinct output scenarios combining three flags: <code>StandardOutput</code> (write to stdout), <code>OutFile</code> (write to a single aggregate file), and <code>OutFileInPlace</code> (write individual <code>_meta.json</code> sidecar files alongside each processed item). The <code>ConvertTo-Json -Depth 100</code> cmdlet is used for serialization, with a documented known issue: extremely large output trees can cause out-of-memory errors.</p>
+<h3 id="where-it-lives-original_8">Where It Lives (Original)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MakeIndex</code> (top-level output logic)</td>
+<td>The 7-scenario routing switch at the end of the function; calls <code>ConvertTo-Json -Depth 100</code> and <code>Out-File -Encoding UTF8</code> or writes to stdout</td>
+</tr>
+<tr>
+<td><code>MakeDirectoryIndexLogic</code> / <code>MakeDirectoryIndexRecursiveLogic</code></td>
+<td>In-place sidecar writing via <code>ConvertTo-Json -Depth 100 \| Set-Content -LiteralPath $FileMetaPath</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-modules_8">Python Modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>json</code></td>
+<td>Standard library JSON serialization via <code>json.dumps()</code> with <code>indent</code> and <code>ensure_ascii=False</code> for UTF-8 output</td>
+</tr>
+<tr>
+<td><code>orjson</code> (third-party, optional)</td>
+<td>Significantly faster JSON serialization for large trees; outputs bytes directly; handles <code>dataclasses</code> natively</td>
+</tr>
+<tr>
+<td><code>sys.stdout</code></td>
+<td>Standard output routing</td>
+</tr>
+<tr>
+<td><code>pathlib.Path.write_text()</code></td>
+<td>Writing JSON to output files and in-place sidecar files</td>
+</tr>
+</tbody>
+</table>
+<h3 id="improvement-notes_8">Improvement Notes</h3>
+<p><strong>The ConvertTo-Json memory problem does not exist in Python.</strong> Python's <code>json.dumps()</code> handles arbitrarily large nested structures without the memory ceiling that plagues PowerShell's <code>ConvertTo-Json</code>. If performance is a concern for very large trees (hundreds of thousands of items), <code>orjson</code> is a drop-in replacement that serializes 5-10x faster and produces bytes directly. The note in the original docstring about "good luck, take it up with Microsoft" can be retired.</p>
+<p><strong>Simplify the output routing model.</strong> The original's 7-scenario matrix is confusing. The Python port should express this as three independent boolean flags that compose naturally: <code>--stdout</code>, <code>--outfile PATH</code>, <code>--inplace</code>. Any combination is valid. The routing logic becomes a simple loop over enabled destinations after the index tree is built (or during traversal for in-place writes).</p>
+<p><strong>Streaming in-place writes.</strong> For in-place mode, the original writes each sidecar file as it processes items within the traversal loop. This is correct and should be preserved — it means partial results are available even if the process is interrupted. The aggregate output file and stdout writes happen after traversal completes, which is also correct.</p>
+<hr />
+<h2 id="10-file-rename-in-place-write-operations">10. File Rename &amp; In-Place Write Operations</h2>
+<h3 id="what-it-does_9">What It Does</h3>
+<p>When the <code>Rename</code> flag is active, processed files are renamed from their original name to their hash-based <code>StorageName</code> (format: <code>&lt;_id&gt;.&lt;extension&gt;</code>). The original file is destroyed and replaced with the renamed version. A sidecar <code>_meta.json</code> file is written alongside each renamed file. Directory items get <code>_directorymeta.json</code> sidecar files. The <code>Rename</code> flag implies <code>OutFileInPlace</code>.</p>
+<h3 id="where-it-lives-original_9">Where It Lives (Original)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MakeDirectoryIndexLogic</code> / <code>MakeDirectoryIndexRecursiveLogic</code></td>
+<td>Contains the rename-or-not branching logic using <code>Move-Item -LiteralPath -Destination -Force</code> for renames and <code>Set-Content -LiteralPath -Force</code> for sidecar writes</td>
+</tr>
+<tr>
+<td><code>MakeIndex</code> (parameter validation)</td>
+<td>Forces <code>OutFileInPlace = $true</code> when <code>Rename = $true</code> (safety measure)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-modules_9">Python Modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pathlib.Path.rename()</code></td>
+<td>Atomic file rename (same filesystem)</td>
+</tr>
+<tr>
+<td><code>shutil.move()</code></td>
+<td>Cross-filesystem move if needed (fallback)</td>
+</tr>
+<tr>
+<td><code>pathlib.Path.write_text()</code></td>
+<td>Writing sidecar <code>_meta.json</code> files</td>
+</tr>
+</tbody>
+</table>
+<h3 id="improvement-notes_9">Improvement Notes</h3>
+<p><strong>The rename operation is destructive and irreversible</strong> in the original. The original docstring includes a "To-Do" note about adding a <code>Revert</code> parameter. The Python port should consider implementing revert capability from the start, since the in-place sidecar files contain the original filename in the <code>Name</code> field and can serve as the revert manifest.</p>
+<p><strong>Safety: MetaMergeDelete guard.</strong> The original has a <code>$MMDSafe</code> variable that prevents <code>MetaMergeDelete</code> from activating unless an output mechanism (<code>OutFile</code> or <code>OutFileInPlace</code>) is specified, protecting against accidental metadata file deletion when no output is being captured. This safety logic should be preserved.</p>
+<hr />
+<h2 id="11-configuration-management">11. Configuration Management</h2>
+<h3 id="what-it-does_10">What It Does</h3>
+<p>Loads and provides access to the parser configuration that governs metadata file behavior: which file suffixes are recognized as sidecar files, which types they map to, which file extensions are excluded from exiftool processing, and the regex patterns used for identification. The original stores this in a large <code>[ordered]@{}</code> hashtable (<code>$global:MetadataFileParser</code>) defined at the script level and promoted to global scope for access by deeply nested sub-functions.</p>
+<h3 id="where-it-lives-original_10">Where It Lives (Original)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$global:MetadataFileParser</code> (script-level variable, line ~16977)</td>
+<td>The master configuration object containing <code>.Exiftool.Exclude</code>, <code>.Indexer.Include/Exclude/IncludeString/ExcludeString</code>, <code>.Identify.&lt;Key&gt;</code> sub-objects</td>
+</tr>
+<tr>
+<td><code>MakeIndex</code> (parameter block)</td>
+<td>Copies sub-properties from <code>$MetadataFileParser</code> into global variables (<code>$global:ExiftoolRejectList</code>, <code>$global:MetaSuffixInclude</code>, etc.) at function start; cleans them up via <code>Remove-Variable</code> at function end</td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-modules_10">Python Modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dataclasses</code></td>
+<td>Define configuration as typed <code>@dataclass</code> objects that can be validated at load time</td>
+</tr>
+<tr>
+<td><code>tomllib</code> (Python 3.11+ stdlib)</td>
+<td>Load configuration from a TOML file; human-readable, well-suited for this kind of structured config</td>
+</tr>
+<tr>
+<td><code>pyyaml</code> (third-party, optional)</td>
+<td>Alternative config format if TOML is insufficient</td>
+</tr>
+<tr>
+<td><code>json</code></td>
+<td>Alternative config format; the least human-friendly but the most schema-compatible</td>
+</tr>
+</tbody>
+</table>
+<h3 id="improvement-notes_10">Improvement Notes</h3>
+<p><strong>Eliminate global variable promotion entirely.</strong> The original promotes configuration values to <code>$global:</code> scope because PowerShell's nested function scoping makes it difficult to pass data into deeply nested sub-functions cleanly. Python has no such limitation. The configuration object should be instantiated once and passed through the call chain via function parameters, or held on a class instance if using an OOP architecture. No global state needed.</p>
+<p><strong>Externalize the configuration to a file.</strong> The original hardcodes the configuration in the script source. The Python port should load it from an external file (TOML recommended) that ships alongside the tool as a default but can be overridden by the user. This makes the extension exclusion lists, sidecar suffix patterns, and type identification rules user-customizable without modifying source code.</p>
+<p><strong>Provide sensible defaults.</strong> The port should include a built-in default configuration that matches the original's behavior, so the tool works out of the box without requiring a config file. The external config file should only be needed for customization.</p>
+<hr />
+<h2 id="12-logging-verbosity">12. Logging &amp; Verbosity</h2>
+<h3 id="what-it-does_11">What It Does</h3>
+<p>Provides structured log output with severity levels (info, debug, warning, error, critical, success), caller identification via a colon-delimited call stack string, session IDs, colorized console output, and persistent log file writing. The <code>Vbs</code> function is the single most widely-called function in the entire pslib library — virtually every other function routes its output through it.</p>
+<h3 id="where-it-lives-original_11">Where It Lives (Original)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Vbs</code> (external pslib)</td>
+<td>The terminal logging endpoint. Accepts <code>Caller</code>, <code>Status</code>, <code>Message</code>, <code>Verbosity</code>, <code>LogDir</code>, <code>LibName</code>, <code>VbsSessionID</code>. Writes to log files and optionally to colorized console output.</td>
+</tr>
+<tr>
+<td><code>UpdateFunctionStack</code></td>
+<td>Maintains the colon-delimited call-stack string (e.g., <code>"MakeIndex:MakeObject:GetFileExif"</code>) for the <code>Caller</code> parameter</td>
+</tr>
+<tr>
+<td><code>VbsFormatter</code> (inside MetaFileRead)</td>
+<td>Wrapper that prepends a progress string to messages before passing them to <code>Vbs</code></td>
+</tr>
+<tr>
+<td><code>$LibSessionID</code> / <code>$D_PSLIB_LOGS</code> (global variables)</td>
+<td>Session identifier (GUID) and log directory path</td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-modules_11">Python Modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>logging</code></td>
+<td>Python's standard logging framework. Supports named loggers (replacing the manual call-stack string), severity levels, file handlers, console handlers with formatting, and session-scoped context via <code>LogRecord</code> attributes or <code>logging.LoggerAdapter</code>.</td>
+</tr>
+<tr>
+<td><code>rich</code> (third-party, optional)</td>
+<td>Colorized console output, progress bars, and structured logging. If the port wants to replicate the colorized console output of <code>Vbs</code>, <code>rich.logging.RichHandler</code> is an excellent drop-in handler.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="improvement-notes_11">Improvement Notes</h3>
+<p><strong>Eliminate <code>UpdateFunctionStack</code> entirely.</strong> The original manually builds a colon-delimited string (<code>"MakeIndex:MakeObject:GetFileExif"</code>) and passes it through every function call. Python's <code>logging</code> module automatically captures the call location via <code>%(funcName)s</code>, <code>%(module)s</code>, and <code>%(pathname)s</code> format tokens. For hierarchical logger names, the port should use Python's dotted-name logger convention (e.g., <code>logging.getLogger('indexer.make_object.get_file_exif')</code>). This gives the same traceability with zero manual bookkeeping.</p>
+<p><strong>Replace the <code>Verbosity</code> boolean with standard log levels.</strong> The original has a binary verbosity toggle (<code>$true</code> / <code>$false</code>) that gates console output. Python's <code>logging</code> already supports <code>DEBUG</code>, <code>INFO</code>, <code>WARNING</code>, <code>ERROR</code>, <code>CRITICAL</code> levels, controlled by configuring the handler's level. The CLI can expose <code>--verbose</code> / <code>--debug</code> / <code>--quiet</code> flags that map to log levels.</p>
+<p><strong>Session IDs</strong> are useful for correlating log entries across a single run. The Python port should generate one via <code>uuid.uuid4().hex</code> at startup and inject it into all log records using a <code>logging.Filter</code> or <code>LoggerAdapter</code>.</p>
+<hr />
+<h2 id="13-progress-reporting">13. Progress Reporting</h2>
+<h3 id="what-it-does_12">What It Does</h3>
+<p>Tracks and reports processing progress during directory traversal: counts total items, computes percentage complete, measures elapsed time, and formats progress strings for log messages.</p>
+<h3 id="where-it-lives-original_12">Where It Lives (Original)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MakeDirectoryIndexLogic</code> / <code>MakeDirectoryIndexRecursiveLogic</code></td>
+<td>Maintains counters (<code>$ChildrenCountProcessed</code>, <code>$ChildrenCountTotal</code>), computes <code>[math]::Round()</code> percentage, formats progress strings like <code>"[42/100 (42%)]"</code></td>
+</tr>
+<tr>
+<td><code>MakeIndex</code> (top-level)</td>
+<td>Captures <code>$TimeStart</code> at the beginning, computes elapsed time at end using <code>(Get-Date) - $TimeStart</code> formatted as <code>H:M:S.ms</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-modules_12">Python Modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tqdm</code> (third-party)</td>
+<td>Progress bars for iterables. Clean, minimal, widely used. Wrap the item iterator in <code>tqdm(items)</code> and progress reporting is automatic.</td>
+</tr>
+<tr>
+<td><code>rich.progress</code> (third-party, optional)</td>
+<td>More visually sophisticated progress bars with elapsed time, ETA, and transfer rate. Pairs naturally with <code>rich</code> logging (see Category 12).</td>
+</tr>
+<tr>
+<td><code>time.perf_counter()</code></td>
+<td>High-resolution elapsed time measurement (replaces <code>Get-Date</code> arithmetic)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="improvement-notes_12">Improvement Notes</h3>
+<p>The original manually formats progress strings and injects them into log messages, creating tight coupling between progress tracking and logging. The Python port should separate these concerns: use a progress bar library (<code>tqdm</code> or <code>rich</code>) for user-facing progress display, and use the logging system for structured log output. They can coexist cleanly — <code>tqdm</code> even has a <code>tqdm.write()</code> method for printing messages without disrupting the progress bar, and <code>rich</code> integrates both natively.</p>
+<hr />
+<h2 id="14-cli-argument-parsing-entry-point">14. CLI Argument Parsing &amp; Entry Point</h2>
+<h3 id="what-it-does_13">What It Does</h3>
+<p>Accepts user input specifying the target path, output mode, recursion behavior, metadata options, rename flag, ID type, and verbosity level. Validates input combinations (e.g., <code>File</code> and <code>Directory</code> are mutually exclusive; <code>Rename</code> implies <code>OutFileInPlace</code>). Routes execution to the appropriate traversal entry point based on the resolved target type (file, directory flat, directory recursive).</p>
+<h3 id="where-it-lives-original_13">Where It Lives (Original)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MakeIndex</code> (Param block)</td>
+<td>Declares 14 parameters with aliases, types, defaults, and switch behaviors</td>
+</tr>
+<tr>
+<td><code>MakeIndex</code> (validation and routing logic)</td>
+<td>~200 lines of input validation, mutual exclusion checks, output scenario determination, and <code>TargetTyp</code> (0/1/2) routing</td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-modules_13">Python Modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>click</code> (third-party)</td>
+<td>Decorator-based CLI framework. Clean syntax for defining commands, options, arguments, and mutual exclusions. Recommended for new Python CLI tools.</td>
+</tr>
+<tr>
+<td><code>argparse</code> (stdlib)</td>
+<td>Standard library alternative. More verbose but zero dependencies.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="improvement-notes_13">Improvement Notes</h3>
+<p>The original's parameter validation contains a significant amount of defensive logic to handle conflicting flags (e.g., <code>Recursive</code> with <code>File</code>, <code>StandardOutput</code> with <code>NoStandardOutput</code>). <code>click</code> handles mutual exclusions declaratively, reducing the validation boilerplate. The original's 7 output scenarios can be expressed as three independent <code>--stdout</code> / <code>--outfile</code> / <code>--inplace</code> boolean flags with natural composition rules.</p>
+<p>The <code>IdType</code> parameter (selecting MD5 vs. SHA256 as the <code>_id</code> field source) should be preserved for backward compatibility. However, since the port will compute all four hash algorithms (see Category 3), this becomes a presentation choice rather than a computation toggle.</p>
+<hr />
+<h2 id="15-temporary-file-management">15. Temporary File Management</h2>
+<h3 id="what-it-does_14">What It Does</h3>
+<p>Creates and deletes temporary files used as intermediaries during exiftool argument passing and Base64 encoding operations. Temp files use UUID-based naming in a dedicated temp directory.</p>
+<h3 id="where-it-lives-original_14">Where It Lives (Original)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TempOpen</code> (external pslib)</td>
+<td>Creates a temp file using UUID+timestamp naming in <code>$D_PSLIB_TEMP</code>; supports type suffixes</td>
+</tr>
+<tr>
+<td><code>TempClose</code> (external pslib)</td>
+<td>Deletes a temp file by path with error suppression</td>
+</tr>
+<tr>
+<td><code>MetaFileRead-Temp-Open</code> / <code>MetaFileRead-Temp-Close</code></td>
+<td>Duplicated temp file logic inside <code>MetaFileRead</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="python-modules_14">Python Modules</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tempfile</code></td>
+<td><code>tempfile.NamedTemporaryFile()</code> or <code>tempfile.mkstemp()</code> for creating temp files with automatic cleanup. Context manager support ensures cleanup even on exceptions.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="improvement-notes_14">Improvement Notes</h3>
+<p><strong>This category may be largely unnecessary in the Python port.</strong> The primary consumers of temp files in the original are (a) exiftool argument passing (eliminated by passing args directly to <code>subprocess</code>) and (b) <code>certutil</code> Base64 encoding (eliminated by using <code>base64.b64encode()</code>). If no operations remain that require temp files, this entire category can be dropped. If temp files are needed for any future operation, <code>tempfile.NamedTemporaryFile(delete=True)</code> with a context manager provides automatic cleanup that is strictly superior to the manual <code>TempOpen</code>/<code>TempClose</code> pattern.</p>
+<hr />
+<h2 id="eliminated-dependencies-summary">Eliminated Dependencies Summary</h2>
+<p>The following original dependencies are <strong>not carried forward</strong> into the Python port because their functionality is absorbed by Python's standard library or rendered unnecessary by architectural improvements:</p>
+<table>
+<thead>
+<tr>
+<th>Original Dependency</th>
+<th>Reason for Elimination</th>
+<th>Replaced By</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>jq</code> (binary)</td>
+<td>JSON parsing and filtering done natively</td>
+<td><code>json</code> stdlib</td>
+</tr>
+<tr>
+<td><code>certutil</code> (binary)</td>
+<td>Base64 encoding done natively</td>
+<td><code>base64</code> stdlib</td>
+</tr>
+<tr>
+<td><code>Base64DecodeString</code> (pslib function)</td>
+<td>Exiftool args passed directly; no encoding round-trip needed</td>
+<td>Direct argument lists</td>
+</tr>
+<tr>
+<td><code>TempOpen</code> / <code>TempClose</code> (pslib functions)</td>
+<td>No temp files needed for arg passing or Base64 ops</td>
+<td><code>tempfile</code> (if needed at all)</td>
+</tr>
+<tr>
+<td><code>Date2UnixTime</code> (pslib function)</td>
+<td>Timestamp conversion done directly from stat results</td>
+<td><code>datetime</code> stdlib</td>
+</tr>
+<tr>
+<td><code>Vbs</code> (pslib function)</td>
+<td>Replaced by Python's logging framework</td>
+<td><code>logging</code> stdlib</td>
+</tr>
+<tr>
+<td><code>ValidateIsLink</code> (pslib function)</td>
+<td>Never actually called in the original; dead code</td>
+<td>(removed)</td>
+</tr>
+<tr>
+<td><code>GetFileEncoding</code> (internal sub-function)</td>
+<td><code>Encoding</code> key dropped from output schema</td>
+<td>(removed)</td>
+</tr>
+<tr>
+<td><code>UpdateFunctionStack</code> (internal sub-function)</td>
+<td>Manual call-stack tracking replaced by logging's built-in caller info</td>
+<td><code>logging</code> stdlib</td>
+</tr>
+<tr>
+<td><code>VariableStringify</code> (internal sub-function)</td>
+<td>Python's native <code>str()</code> and <code>None</code> handling cover this</td>
+<td>Built-in <code>str()</code> / <code>repr()</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="cross-reference-output-schema-fields-operation-categories">Cross-Reference: Output Schema Fields → Operation Categories</h2>
+<p>This table maps every field in the output schema to the operation category that produces it, confirming full coverage.</p>
+<table>
+<thead>
+<tr>
+<th>Schema Field</th>
+<th>Category</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_id</code></td>
+<td>3 (Hashing)</td>
+<td>Selected from <code>Ids</code> based on <code>IdType</code> parameter</td>
+</tr>
+<tr>
+<td><code>Ids</code></td>
+<td>3 (Hashing)</td>
+<td><code>{MD5, SHA1, SHA256, SHA512}</code> — expanded from original's MD5+SHA256 only</td>
+</tr>
+<tr>
+<td><code>Name</code></td>
+<td>2 (Path Manipulation)</td>
+<td><code>Path.name</code></td>
+</tr>
+<tr>
+<td><code>NameHashes</code></td>
+<td>3 (Hashing)</td>
+<td>Hash of the <code>Name</code> string</td>
+</tr>
+<tr>
+<td><code>ContentHashes</code></td>
+<td>3 (Hashing)</td>
+<td>Hash of file contents; <code>null</code> for directories</td>
+</tr>
+<tr>
+<td><code>Extension</code></td>
+<td>2 (Path Manipulation)</td>
+<td><code>Path.suffix</code> with validation</td>
+</tr>
+<tr>
+<td><code>BaseName</code></td>
+<td>2 (Path Manipulation)</td>
+<td><code>Path.stem</code></td>
+</tr>
+<tr>
+<td><code>StorageName</code></td>
+<td>3 (Hashing) + 2 (Path)</td>
+<td><code>f"{_id}{extension}"</code> for files; <code>_id</code> for directories</td>
+</tr>
+<tr>
+<td>~~<code>Encoding</code>~~</td>
+<td>~~(Dropped)~~</td>
+<td><strong>Intentionally omitted from port</strong></td>
+</tr>
+<tr>
+<td><code>Size</code></td>
+<td>1 (Traversal)</td>
+<td><code>Path.stat().st_size</code> for files; sum of children for directories</td>
+</tr>
+<tr>
+<td><code>IsDirectory</code></td>
+<td>1 (Traversal)</td>
+<td><code>Path.is_dir()</code></td>
+</tr>
+<tr>
+<td><code>IsLink</code></td>
+<td>4 (Symlink)</td>
+<td><code>Path.is_symlink()</code></td>
+</tr>
+<tr>
+<td><code>ParentId</code></td>
+<td>3 (Hashing)</td>
+<td>Directory ID of parent</td>
+</tr>
+<tr>
+<td><code>ParentIds</code></td>
+<td>3 (Hashing)</td>
+<td>Hash IDs of parent directory</td>
+</tr>
+<tr>
+<td><code>ParentName</code></td>
+<td>2 (Path Manipulation)</td>
+<td><code>Path.parent.name</code></td>
+</tr>
+<tr>
+<td><code>ParentNameHashes</code></td>
+<td>3 (Hashing)</td>
+<td>Hash of parent directory name</td>
+</tr>
+<tr>
+<td><code>UnixTimeAccessed</code></td>
+<td>5 (Timestamps)</td>
+<td><code>int(stat.st_atime * 1000)</code></td>
+</tr>
+<tr>
+<td><code>UnixTimeCreated</code></td>
+<td>5 (Timestamps)</td>
+<td><code>int(stat.st_birthtime * 1000)</code> or <code>st_ctime</code> fallback</td>
+</tr>
+<tr>
+<td><code>UnixTimeModified</code></td>
+<td>5 (Timestamps)</td>
+<td><code>int(stat.st_mtime * 1000)</code></td>
+</tr>
+<tr>
+<td><code>TimeAccessed</code></td>
+<td>5 (Timestamps)</td>
+<td>ISO 8601 formatted string</td>
+</tr>
+<tr>
+<td><code>TimeCreated</code></td>
+<td>5 (Timestamps)</td>
+<td>ISO 8601 formatted string</td>
+</tr>
+<tr>
+<td><code>TimeModified</code></td>
+<td>5 (Timestamps)</td>
+<td>ISO 8601 formatted string</td>
+</tr>
+<tr>
+<td><code>Items</code></td>
+<td>1 (Traversal) + 8 (Object Construction)</td>
+<td>Recursive child entries for directories; <code>null</code> for files</td>
+</tr>
+<tr>
+<td><code>Metadata</code></td>
+<td>6 (EXIF) + 7 (Sidecar)</td>
+<td>Array of metadata entries from exiftool and sidecar files</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="minimum-viable-dependency-set">Minimum Viable Dependency Set</h2>
+<p>For a Python port that achieves full feature parity (minus the intentionally dropped <code>Encoding</code> key) with the original MakeIndex:</p>
+<h3 id="required-standard-library-only">Required (Standard Library Only)</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Categories Served</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pathlib</code></td>
+<td>1, 2, 4, 7, 9, 10</td>
+</tr>
+<tr>
+<td><code>hashlib</code></td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>datetime</code></td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>json</code></td>
+<td>6, 7, 8, 9</td>
+</tr>
+<tr>
+<td><code>subprocess</code></td>
+<td>6</td>
+</tr>
+<tr>
+<td><code>re</code></td>
+<td>7, 11</td>
+</tr>
+<tr>
+<td><code>logging</code></td>
+<td>12</td>
+</tr>
+<tr>
+<td><code>os</code></td>
+<td>1, 5</td>
+</tr>
+<tr>
+<td><code>sys</code></td>
+<td>9</td>
+</tr>
+<tr>
+<td><code>tempfile</code></td>
+<td>15 (if needed)</td>
+</tr>
+<tr>
+<td><code>base64</code></td>
+<td>7</td>
+</tr>
+<tr>
+<td><code>dataclasses</code></td>
+<td>8, 11</td>
+</tr>
+<tr>
+<td><code>typing</code></td>
+<td>8</td>
+</tr>
+<tr>
+<td><code>tomllib</code></td>
+<td>11 (Python 3.11+)</td>
+</tr>
+<tr>
+<td><code>uuid</code></td>
+<td>12</td>
+</tr>
+<tr>
+<td><code>time</code></td>
+<td>13</td>
+</tr>
+</tbody>
+</table>
+<h3 id="required-external">Required (External)</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Categories Served</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>exiftool</code> (binary)</td>
+<td>6</td>
+<td>Must be in system PATH; the only external binary dependency</td>
+</tr>
+</tbody>
+</table>
+<h3 id="recommended-third-party-optional">Recommended (Third-Party, Optional)</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Categories Served</th>
+<th>Justification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>click</code></td>
+<td>14</td>
+<td>Cleaner CLI definition than <code>argparse</code>; widely adopted</td>
+</tr>
+<tr>
+<td><code>tqdm</code></td>
+<td>13</td>
+<td>Progress bars with minimal code</td>
+</tr>
+<tr>
+<td><code>orjson</code></td>
+<td>9</td>
+<td>5-10x faster JSON serialization for large trees</td>
+</tr>
+<tr>
+<td><code>PyExifTool</code></td>
+<td>6</td>
+<td>Persistent exiftool process for batch performance</td>
+</tr>
+<tr>
+<td><code>rich</code></td>
+<td>12, 13</td>
+<td>Colorized logging + progress bars in one package; alternative to <code>tqdm</code> + custom log formatting</td>
+</tr>
+<tr>
+<td><code>pydantic</code></td>
+<td>8, 11</td>
+<td>Schema validation and JSON schema generation; heavier alternative to <code>dataclasses</code></td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.instant", "search.highlight", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,2061 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Filesystem indexer with hash-based identity, metadata extraction, and structured JSON output.">
+      
+      
+      
+        <link rel="canonical" href="https://shruggietech.github.io/shruggie-indexer/porting-reference/MakeIndex_DependencyCatalog/">
+      
+      
+        <link rel="prev" href="../MakeIndex_OperationsCatalog/">
+      
+      
+        <link rel="next" href="../Base64DecodeString_DependencyCatalog/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>MakeIndex - shruggie-indexer</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#makeindex-dependency-catalog" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="shruggie-indexer" class="md-header__button md-logo" aria-label="shruggie-indexer" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            shruggie-indexer
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              MakeIndex
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/shruggietech/shruggie-indexer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    shruggietech/shruggie-indexer
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../schema/" class="md-tabs__link">
+          
+  
+  
+  Schema Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  Porting Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../user/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="shruggie-indexer" class="md-nav__button md-logo" aria-label="shruggie-indexer" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    shruggie-indexer
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/shruggietech/shruggie-indexer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    shruggietech/shruggie-indexer
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Schema Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Porting Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Porting Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MakeIndex_OperationsCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Catalog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Catalogs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dependency Catalogs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MakeIndex
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MakeIndex
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-external-pslib-functions-called" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. External PsLib Functions Called
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. External PsLib Functions Called">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#listed-but-not-directly-called" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Listed but Not Directly Called
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-external-variables-loaded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. External Variables Loaded
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. External Variables Loaded">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#global-variables-createdmanaged-at-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global Variables Created/Managed at Runtime
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-external-binaries-executables-invoked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. External Binaries / Executables Invoked
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. External Binaries / Executables Invoked">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#note-on-binary-resolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Note on Binary Resolution
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-internal-sub-functions-defined-within-makeindex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Internal Sub-Functions (Defined Within MakeIndex)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Internal Sub-Functions (Defined Within MakeIndex)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#top-level-internal-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-Level Internal Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nested-internal-functions-defined-inside-other-internal-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nested Internal Functions (defined inside other internal functions)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-powershell-built-in-cmdlets-and-net-types-used" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. PowerShell Built-in Cmdlets and .NET Types Used
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. PowerShell Built-in Cmdlets and .NET Types Used">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cmdlets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cmdlets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#net-types-and-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        .NET Types and Methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-summary-call-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Summary Call Graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Base64DecodeString_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base64DecodeString
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Date2UnixTime_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Date2UnixTime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../DirectoryId_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectoryId
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FileId_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FileId
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MetaFileRead_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MetaFileRead
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TempOpen_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TempOpen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TempClose_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TempClose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Vbs_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-external-pslib-functions-called" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. External PsLib Functions Called
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. External PsLib Functions Called">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#listed-but-not-directly-called" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Listed but Not Directly Called
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-external-variables-loaded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. External Variables Loaded
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. External Variables Loaded">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#global-variables-createdmanaged-at-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global Variables Created/Managed at Runtime
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-external-binaries-executables-invoked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. External Binaries / Executables Invoked
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. External Binaries / Executables Invoked">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#note-on-binary-resolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Note on Binary Resolution
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-internal-sub-functions-defined-within-makeindex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Internal Sub-Functions (Defined Within MakeIndex)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Internal Sub-Functions (Defined Within MakeIndex)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#top-level-internal-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-Level Internal Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nested-internal-functions-defined-inside-other-internal-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nested Internal Functions (defined inside other internal functions)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-powershell-built-in-cmdlets-and-net-types-used" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. PowerShell Built-in Cmdlets and .NET Types Used
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. PowerShell Built-in Cmdlets and .NET Types Used">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cmdlets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cmdlets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#net-types-and-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        .NET Types and Methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-summary-call-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Summary Call Graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="makeindex-dependency-catalog">MakeIndex — Dependency Catalog</h1>
+<blockquote>
+<p><strong>Source:</strong> <code>main.ps1</code>, line 7531<br />
+<strong>Purpose:</strong> Generates JSON-formatted nested indexes of files and directories with metadata<br />
+<strong>Audience:</strong> AI-first, Human-second  </p>
+</blockquote>
+<hr />
+<h2 id="1-external-pslib-functions-called">1. External PsLib Functions Called</h2>
+<p>These functions are defined at the top level of <code>main.ps1</code> (outside of MakeIndex) and are called from within MakeIndex or its nested sub-functions.</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Defined At</th>
+<th>Called From (within MakeIndex)</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Base64DecodeString</code></td>
+<td>main.ps1:764</td>
+<td><code>GetFileExif</code> → <code>GetFileExifArgsWrite</code></td>
+<td>Decodes Base64-encoded exiftool argument strings (with URL-decode and UTF8 encoding support)</td>
+</tr>
+<tr>
+<td><code>Date2UnixTime</code></td>
+<td>main.ps1:2517</td>
+<td><code>MakeObject</code></td>
+<td>Converts formatted date strings to Unix timestamps</td>
+</tr>
+<tr>
+<td><code>DirectoryId</code></td>
+<td>main.ps1:2819</td>
+<td><code>MakeObject</code></td>
+<td>Generates unique identifiers (MD5, SHA256) for directories based on directory name hashing. Returns an object with <code>.IdMD5</code>, <code>.IdSHA256</code>, <code>.DirectoryName</code>, <code>.DirectoryNameMD5</code>, <code>.DirectoryNameSHA256</code>, <code>.IsLink</code> properties</td>
+</tr>
+<tr>
+<td><code>FileId</code></td>
+<td>main.ps1:4941</td>
+<td><code>MakeObject</code></td>
+<td>Generates unique identifiers (MD5, SHA256) for files based on content hashing. Returns an object with <code>.IdMD5</code>, <code>.IdSHA256</code>, <code>.ContentMD5</code>, <code>.ContentSHA256</code>, <code>.NameMD5</code>, <code>.NameSHA256</code>, <code>.IsLink</code> properties</td>
+</tr>
+<tr>
+<td><code>MetaFileRead</code></td>
+<td>main.ps1:10233</td>
+<td><code>ReadMetaFile</code></td>
+<td>Reads and parses external metadata files (sidecar files). Accepts <code>-InputFile</code>, <code>-Format "object"</code>, <code>-ProgressString</code>, <code>-Verbosity</code>. Returns an object with <code>.Type</code>, <code>.Data</code>, <code>.Name</code> properties</td>
+</tr>
+<tr>
+<td><code>TempOpen</code></td>
+<td>main.ps1:15119</td>
+<td><code>GetFileExif</code></td>
+<td>Creates a temporary file and returns its path. Called with <code>-Type 'txt'</code></td>
+</tr>
+<tr>
+<td><code>TempClose</code></td>
+<td>main.ps1:15044</td>
+<td><code>GetFileExif</code></td>
+<td>Deletes a temporary file. Called with <code>-Target &lt;path&gt;</code></td>
+</tr>
+<tr>
+<td><code>Vbs</code></td>
+<td>main.ps1:16412</td>
+<td>Throughout (all sub-functions)</td>
+<td>Verbose/logging output handler. Called with <code>-Caller</code>, <code>-Status</code> (i/d/w/e), <code>-Message</code>, <code>-Verbosity</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="listed-but-not-directly-called">Listed but Not Directly Called</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ValidateIsLink</code></td>
+<td>Listed in the MakeIndex docstring under "Function Dependencies" but <strong>never directly invoked</strong> within MakeIndex code. The <code>.IsLink</code> property is obtained indirectly via the return objects of <code>DirectoryId</code> and <code>FileId</code>, which likely call <code>ValidateIsLink</code> internally.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-external-variables-loaded">2. External Variables Loaded</h2>
+<p>These variables are defined at the script level of <code>main.ps1</code> (in the variable declarations section, lines ~17383–17441) and are accessed by MakeIndex through scope inheritance or the <code>$global:</code> prefix.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Defined At</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$global:MetadataFileParser</code></td>
+<td>main.ps1:16977</td>
+<td><code>[ordered]@{}</code> (Hashtable)</td>
+<td>Large configuration object governing metadata file parsing behavior. MakeIndex consumes the following sub-properties:<br><code>.Exiftool.Exclude</code> — Array of file extensions to skip for exiftool processing<br><code>.Indexer.Include</code> — Array of regex patterns identifying metadata sidecar file suffixes<br><code>.Indexer.IncludeString</code> — Joined regex string of the Include array<br><code>.Indexer.Exclude</code> — Array of regex patterns for metadata files to exclude<br><code>.Indexer.ExcludeString</code> — Joined regex string of the Exclude array<br><code>.Identify.&lt;Key&gt;</code> — Sub-objects mapping metadata file types to their regex patterns (used by <code>MetaFileRead</code> downstream)</td>
+</tr>
+<tr>
+<td><code>$Sep</code></td>
+<td>main.ps1:17383</td>
+<td><code>[System.Char]</code></td>
+<td>Directory separator character (<code>[System.IO.Path]::DirectorySeparatorChar</code>). Used when constructing renamed file paths in <code>MakeDirectoryIndexLogic</code>, <code>MakeDirectoryIndexRecursiveLogic</code>, and <code>MakeFileIndex</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="global-variables-createdmanaged-at-runtime">Global Variables Created/Managed at Runtime</h3>
+<p>MakeIndex promotes several local parameter values to global scope for access by deeply nested sub-functions, then cleans them up at the end of execution:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Lifecycle</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$global:ExiftoolRejectList</code></td>
+<td>Created at start, removed at end</td>
+<td>Copy of <code>$MetadataFileParser.Exiftool.Exclude</code></td>
+</tr>
+<tr>
+<td><code>$global:MetaSuffixInclude</code></td>
+<td>Created at start, removed at end</td>
+<td>Copy of <code>$MetadataFileParser.Indexer.Include</code></td>
+</tr>
+<tr>
+<td><code>$global:MetaSuffixIncludeString</code></td>
+<td>Created at start, removed at end</td>
+<td>Copy of <code>$MetadataFileParser.Indexer.IncludeString</code></td>
+</tr>
+<tr>
+<td><code>$global:MetaSuffixExclude</code></td>
+<td>Created at start, removed at end</td>
+<td>Copy of <code>$MetadataFileParser.Indexer.Exclude</code></td>
+</tr>
+<tr>
+<td><code>$global:MetaSuffixExcludeString</code></td>
+<td>Created at start, removed at end</td>
+<td>Copy of <code>$MetadataFileParser.Indexer.ExcludeString</code></td>
+</tr>
+<tr>
+<td><code>$global:DeleteQueue</code></td>
+<td>Created at start (<code>@()</code>), removed at end</td>
+<td>Accumulates file paths of metadata sidecar files to delete when <code>-MetaMergeDelete</code> is active</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-external-binaries-executables-invoked">3. External Binaries / Executables Invoked</h2>
+<table>
+<thead>
+<tr>
+<th>Binary</th>
+<th>Called From (within MakeIndex)</th>
+<th>How Invoked</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>exiftool</code></td>
+<td><code>GetFileExif</code> → <code>GetFileExifRun</code></td>
+<td><code>exiftool -@ "$ArgsFile" 2&gt; $null</code> — Invoked via bare command name (must be in system PATH). Receives arguments from a temporary file written by <code>GetFileExifArgsWrite</code>.</td>
+<td>Extracts EXIF/metadata from files. Arguments include: <code>-extractEmbedded3</code>, <code>-scanForXMP</code>, <code>-unknown2</code>, <code>-json</code>, <code>-G3:1</code>, <code>-struct</code>, <code>-ignoreMinorErrors</code>, <code>-charset filename=utf8</code>, <code>-api requestall=3</code>, <code>-api largefilesupport=1</code> (plus <code>-quiet</code> when verbosity is off)</td>
+</tr>
+<tr>
+<td><code>jq</code></td>
+<td><code>GetFileExif</code> → <code>GetFileExifRun</code></td>
+<td><code>$ExiftoolOutput \| jq -c '.[] \| .' 2&gt; $null</code> and a second pass with <code>jq -c 'del(…)'</code> to strip unwanted keys</td>
+<td>Parses and filters JSON output from exiftool. Removes system/exiftool metadata keys (ExifToolVersion, FileSequence, NewGUID, Directory, FileName, FilePath, BaseName, FilePermissions, etc.)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="note-on-binary-resolution">Note on Binary Resolution</h3>
+<p>Neither <code>exiftool</code> nor <code>jq</code> are referenced via absolute paths. Both must be available in the system <code>PATH</code> environment variable at runtime. The MakeIndex docstring explicitly states: <em>"exiftool must be installed and available in the system PATH. This function will not work without it."</em> The <code>jq</code> dependency is implicit (not mentioned in the docstring) but is equally required for metadata extraction to work.</p>
+<hr />
+<h2 id="4-internal-sub-functions-defined-within-makeindex">4. Internal Sub-Functions (Defined Within MakeIndex)</h2>
+<p>For completeness and call-chain tracing, these are the functions defined <em>inside</em> the MakeIndex function body. They are not accessible outside of MakeIndex.</p>
+<h3 id="top-level-internal-functions">Top-Level Internal Functions</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Purpose</th>
+<th>Calls (internal)</th>
+<th>Calls (external PsLib)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GetFileEncoding</code></td>
+<td>Detects file encoding via BOM byte inspection</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>GetFileExif</code></td>
+<td>Orchestrates exiftool execution for a single file</td>
+<td><code>GetFileExifArgsWrite</code>, <code>GetFileExifRun</code>, <code>UpdateFunctionStack</code></td>
+<td><code>Base64DecodeString</code>, <code>TempOpen</code>, <code>TempClose</code>, <code>Vbs</code></td>
+</tr>
+<tr>
+<td><code>GetFileMetaSiblings</code></td>
+<td>Finds sibling metadata files matching a given file's basename</td>
+<td><code>GetParentPath</code>, <code>UpdateFunctionStack</code></td>
+<td><code>Vbs</code></td>
+</tr>
+<tr>
+<td><code>GetParentPath</code></td>
+<td>Extracts parent directory path from a full path string</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>MakeDirectoryIndex</code></td>
+<td>Entry point for non-recursive directory indexing</td>
+<td><code>MakeDirectoryIndexLogic</code>, <code>UpdateFunctionStack</code></td>
+<td><code>Vbs</code></td>
+</tr>
+<tr>
+<td><code>MakeDirectoryIndexRecursive</code></td>
+<td>Entry point for recursive directory indexing</td>
+<td><code>MakeDirectoryIndexRecursiveLogic</code>, <code>UpdateFunctionStack</code></td>
+<td><code>Vbs</code></td>
+</tr>
+<tr>
+<td><code>MakeFileIndex</code></td>
+<td>Entry point for single-file indexing</td>
+<td><code>MakeObject</code>, <code>GetParentPath</code>, <code>UpdateFunctionStack</code></td>
+<td><code>Vbs</code></td>
+</tr>
+<tr>
+<td><code>MakeObject</code></td>
+<td>Core object builder — constructs the PSCustomObject for any file or directory</td>
+<td><code>GetFileEncoding</code>, <code>GetFileExif</code>, <code>GetFileMetaSiblings</code>, <code>GetParentPath</code>, <code>ReadMetaFile</code>, <code>VariableStringify</code>, <code>UpdateFunctionStack</code></td>
+<td><code>Date2UnixTime</code>, <code>DirectoryId</code>, <code>FileId</code>, <code>Vbs</code></td>
+</tr>
+<tr>
+<td><code>ReadMetaFile</code></td>
+<td>Reads a metadata sidecar file and wraps it in a standard object</td>
+<td><code>ReadMetaFile-GetNameHashMD5</code>, <code>ReadMetaFile-GetNameHashSHA256</code>, <code>UpdateFunctionStack</code></td>
+<td><code>MetaFileRead</code>, <code>Vbs</code></td>
+</tr>
+<tr>
+<td><code>ResolvePath</code></td>
+<td>Resolves real or hypothetical filesystem paths</td>
+<td><code>UpdateFunctionStack</code></td>
+<td><code>Vbs</code></td>
+</tr>
+<tr>
+<td><code>UpdateFunctionStack</code></td>
+<td>Maintains a colon-delimited call-stack string for logging</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>VariableStringify</code></td>
+<td>Converts variables to string representations (handles null/empty)</td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="nested-internal-functions-defined-inside-other-internal-functions">Nested Internal Functions (defined inside other internal functions)</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Parent Function</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GetFileExifArgsWrite</code></td>
+<td><code>GetFileExif</code></td>
+<td>Writes decoded exiftool argument strings to a temp file</td>
+</tr>
+<tr>
+<td><code>GetFileExifRun</code></td>
+<td><code>GetFileExif</code></td>
+<td>Executes <code>exiftool</code> and pipes output through <code>jq</code></td>
+</tr>
+<tr>
+<td><code>MakeDirectoryIndexLogic</code></td>
+<td><code>MakeDirectoryIndex</code></td>
+<td>Core non-recursive directory traversal and object assembly</td>
+</tr>
+<tr>
+<td><code>MakeDirectoryIndexRecursiveLogic</code></td>
+<td><code>MakeDirectoryIndexRecursive</code></td>
+<td>Core recursive directory traversal and object assembly (calls itself recursively for child directories)</td>
+</tr>
+<tr>
+<td><code>ReadMetaFile-GetNameHashMD5</code></td>
+<td><code>ReadMetaFile</code></td>
+<td>Computes MD5 hash of a filename string</td>
+</tr>
+<tr>
+<td><code>ReadMetaFile-GetNameHashSHA256</code></td>
+<td><code>ReadMetaFile</code></td>
+<td>Computes SHA256 hash of a filename string</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="5-powershell-built-in-cmdlets-and-net-types-used">5. PowerShell Built-in Cmdlets and .NET Types Used</h2>
+<p>For porting reference, MakeIndex relies on these PowerShell cmdlets and .NET framework types.</p>
+<h3 id="cmdlets">Cmdlets</h3>
+<table>
+<thead>
+<tr>
+<th>Cmdlet</th>
+<th>Usage Context</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Add-Content</code></td>
+<td>Appending filename to exiftool args file</td>
+</tr>
+<tr>
+<td><code>ConvertFrom-Json</code></td>
+<td>Parsing exiftool JSON output (<code>-AsHashtable</code>)</td>
+</tr>
+<tr>
+<td><code>ConvertTo-Json</code></td>
+<td>Serializing output objects (<code>-Depth 100</code>)</td>
+</tr>
+<tr>
+<td><code>Get-ChildItem</code></td>
+<td>Directory listing (with <code>-Force</code>, <code>-File</code>, <code>-Recurse</code>, <code>-LiteralPath</code>)</td>
+</tr>
+<tr>
+<td><code>Get-Help</code></td>
+<td>(not directly, but pattern exists in other functions)</td>
+</tr>
+<tr>
+<td><code>Get-Item</code></td>
+<td>File/directory info retrieval (<code>-Force</code>, <code>-LiteralPath</code>)</td>
+</tr>
+<tr>
+<td><code>Measure-Object</code></td>
+<td>Directory size calculation (<code>-Property Length -Sum</code>)</td>
+</tr>
+<tr>
+<td><code>Move-Item</code></td>
+<td>File renaming (<code>-LiteralPath</code>, <code>-Destination</code>, <code>-Force</code>)</td>
+</tr>
+<tr>
+<td><code>Out-File</code></td>
+<td>Writing final JSON output (<code>-Encoding UTF8</code>)</td>
+</tr>
+<tr>
+<td><code>Out-Null</code></td>
+<td>Suppressing output from <code>Remove-Item</code></td>
+</tr>
+<tr>
+<td><code>Remove-Item</code></td>
+<td>Deleting metadata files from DeleteQueue (<code>-LiteralPath</code>, <code>-Force</code>)</td>
+</tr>
+<tr>
+<td><code>Remove-Variable</code></td>
+<td>Cleaning up global variables at end of execution</td>
+</tr>
+<tr>
+<td><code>Resolve-Path</code></td>
+<td>Path resolution (<code>-LiteralPath</code>)</td>
+</tr>
+<tr>
+<td><code>Select-Object</code></td>
+<td>Property selection and exclusion</td>
+</tr>
+<tr>
+<td><code>Set-Content</code></td>
+<td>Writing in-place metadata JSON files (<code>-LiteralPath</code>, <code>-Force</code>)</td>
+</tr>
+<tr>
+<td><code>Set-Location</code></td>
+<td>Changing working directory for exiftool and directory traversal</td>
+</tr>
+<tr>
+<td><code>Split-Path</code></td>
+<td>Extracting parent path</td>
+</tr>
+<tr>
+<td><code>Test-Path</code></td>
+<td>Validating file/directory existence (<code>-LiteralPath</code>, <code>-PathType Leaf/Container</code>)</td>
+</tr>
+<tr>
+<td><code>Where-Object</code></td>
+<td>Filtering child items (excluding <code>$RECYCLE.BIN</code>, <code>System Volume Information</code>; separating files from directories)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="net-types-and-methods">.NET Types and Methods</h3>
+<table>
+<thead>
+<tr>
+<th>Type / Method</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[math]::Round()</code></td>
+<td>Progress percentage calculation</td>
+</tr>
+<tr>
+<td><code>[System.Collections.ArrayList]</code></td>
+<td>Combining file and directory child item arrays</td>
+</tr>
+<tr>
+<td><code>[System.IO.FileStream]</code></td>
+<td>BOM-based encoding detection</td>
+</tr>
+<tr>
+<td><code>[System.IO.Path]::GetFileName()</code></td>
+<td>Extracting filename from full path</td>
+</tr>
+<tr>
+<td><code>[System.IO.Path]::GetFileNameWithoutExtension()</code></td>
+<td>Extracting basename</td>
+</tr>
+<tr>
+<td><code>[System.IO.Path]::GetFullPath()</code></td>
+<td>Resolving hypothetical paths</td>
+</tr>
+<tr>
+<td><code>[System.IO.Path]::GetDirectoryName()</code></td>
+<td>Extracting directory from file path</td>
+</tr>
+<tr>
+<td><code>[System.Security.Cryptography.MD5]::Create()</code></td>
+<td>MD5 hashing (in ReadMetaFile sub-functions)</td>
+</tr>
+<tr>
+<td><code>[System.Security.Cryptography.SHA256]::Create()</code></td>
+<td>SHA256 hashing (in ReadMetaFile sub-functions)</td>
+</tr>
+<tr>
+<td><code>[System.Text.Encoding]::UTF8</code></td>
+<td>Encoding for hash computation</td>
+</tr>
+<tr>
+<td><code>[System.Text.RegularExpressions.Regex]::Escape()</code></td>
+<td>Escaping basename for regex matching</td>
+</tr>
+<tr>
+<td><code>[BitConverter]::ToString()</code></td>
+<td>Converting hash bytes to hex string</td>
+</tr>
+<tr>
+<td><code>[DateTimeOffset]::Now.ToUnixTimeMilliseconds()</code></td>
+<td>Session ID generation</td>
+</tr>
+<tr>
+<td><code>[PSCustomObject]@{}</code></td>
+<td>All output object construction</td>
+</tr>
+<tr>
+<td><code>[Text.Encoding]::ASCII/UTF7/Unicode/BigEndianUnicode/UTF32/UTF8</code></td>
+<td>Encoding type constants for BOM detection</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-summary-call-graph">6. Summary Call Graph</h2>
+<pre><code>MakeIndex
+├── [validates inputs, resolves paths, sets up globals]
+├── ResolvePath → Vbs
+├── GetParentPath
+│
+├── (TargetTyp=0) MakeDirectoryIndexRecursive → Vbs
+│   └── MakeDirectoryIndexRecursiveLogic (recursive)
+│       ├── MakeObject ──────────────────────────────┐
+│       │   ├── VariableStringify                    │
+│       │   ├── GetParentPath                        │
+│       │   ├── DirectoryId ◄────── external pslib   │
+│       │   ├── FileId ◄────────── external pslib    │
+│       │   ├── Date2UnixTime ◄──── external pslib   │
+│       │   ├── GetFileEncoding                      │
+│       │   ├── GetFileExif                          │
+│       │   │   ├── Base64DecodeString ◄── ext pslib │
+│       │   │   ├── TempOpen ◄──────────── ext pslib │
+│       │   │   ├── TempClose ◄─────────── ext pslib │
+│       │   │   ├── [exiftool] ◄────────── BINARY    │
+│       │   │   └── [jq] ◄─────────────── BINARY     │
+│       │   ├── GetFileMetaSiblings                  │
+│       │   ├── ReadMetaFile                         │
+│       │   │   ├── MetaFileRead ◄──── external pslib│
+│       │   │   ├── ReadMetaFile-GetNameHashMD5      │
+│       │   │   └── ReadMetaFile-GetNameHashSHA256   │
+│       │   └── Vbs ◄──────────── external pslib     │
+│       └── MakeDirectoryIndexRecursiveLogic (self)  │
+│                                                    │
+├── (TargetTyp=1) MakeFileIndex → Vbs                │
+│   └── MakeObject ──────────────────────────────────┘
+│
+├── (TargetTyp=2) MakeDirectoryIndex → Vbs
+│   └── MakeDirectoryIndexLogic
+│       └── MakeObject (same as above)
+│
+├── [DeleteQueue processing]
+├── [Global variable cleanup via Remove-Variable]
+├── [OutFile via ConvertTo-Json | Out-File]
+└── [StandardOutput via ConvertTo-Json]
+</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.instant", "search.highlight", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
