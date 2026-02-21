@@ -178,12 +178,14 @@ jobs:
 
       - name: Generate release notes from changelog
         shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
           python - <<'PY'
+          import os
           import pathlib
 
-          version = "${{ steps.version.outputs.version }}"
+          version = os.environ["VERSION"]
           changelog_path = pathlib.Path("CHANGELOG.md")
           output_path = pathlib.Path("release-artifacts/RELEASE_BODY.md")
 
