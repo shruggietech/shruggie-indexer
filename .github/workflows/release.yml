@@ -210,29 +210,22 @@ jobs:
                   "No formal changelog entry found for this version in `CHANGELOG.md`."
               )
 
-          body = f"""## shruggie-indexer v{version}
-
-### Changelog
-
-{changelog_section}
-
-### Downloads
-
-| Platform | CLI | GUI |
-|----------|-----|-----|
-| Windows x64 | `shruggie-indexer-{version}-windows-x64.exe` | `shruggie-indexer-gui-{version}-windows-x64.exe` |
-| Linux x64 | `shruggie-indexer-{version}-linux-x64` | `shruggie-indexer-gui-{version}-linux-x64` |
-| macOS x64 | `shruggie-indexer-{version}-macos-x64` | `shruggie-indexer-gui-{version}-macos-x64` |
-| macOS ARM64 | `shruggie-indexer-{version}-macos-arm64` | `shruggie-indexer-gui-{version}-macos-arm64` |
-
-### Installation
-
-Download the appropriate executable for your platform and run it directly. No installation required.
-
-Linux/macOS users: make the file executable with `chmod +x <filename>` before running.
-
-**Note:** Metadata extraction requires [ExifTool](https://exiftool.org/) installed separately and available on PATH.
-"""
+            body = (
+              f"## shruggie-indexer v{version}\n\n"
+              "### Changelog\n\n"
+              f"{changelog_section}\n\n"
+              "### Downloads\n\n"
+              "| Platform | CLI | GUI |\n"
+              "|----------|-----|-----|\n"
+              f"| Windows x64 | `shruggie-indexer-{version}-windows-x64.exe` | `shruggie-indexer-gui-{version}-windows-x64.exe` |\n"
+              f"| Linux x64 | `shruggie-indexer-{version}-linux-x64` | `shruggie-indexer-gui-{version}-linux-x64` |\n"
+              f"| macOS x64 | `shruggie-indexer-{version}-macos-x64` | `shruggie-indexer-gui-{version}-macos-x64` |\n"
+              f"| macOS ARM64 | `shruggie-indexer-{version}-macos-arm64` | `shruggie-indexer-gui-{version}-macos-arm64` |\n\n"
+              "### Installation\n\n"
+              "Download the appropriate executable for your platform and run it directly. No installation required.\n\n"
+              "Linux/macOS users: make the file executable with `chmod +x <filename>` before running.\n\n"
+              "**Note:** Metadata extraction requires [ExifTool](https://exiftool.org/) installed separately and available on PATH.\n"
+            )
 
           output_path.write_text(body, encoding="utf-8")
           PY
