@@ -2186,8 +2186,10 @@
 <h3 id="unicode-normalization">Unicode normalization</h3>
 <p>HFS+ normalizes filenames to Unicode NFD (decomposed form) on storage. A file created as <code>café.txt</code> (NFC) is stored as <code>café.txt</code> (NFD, <code>e</code> + combining accent).</p>
 <p>To ensure cross-platform hash determinism, the tool applies <code>unicodedata.normalize('NFC', value)</code> unconditionally on <strong>all platforms</strong> before encoding filenames to UTF-8 for hashing. This guarantees that a file named <code>café.txt</code> produces identical identity hashes regardless of the filesystem's normalization behavior.</p>
-<p>!!! info "NFC Normalization"
-    NFC normalization is applied on all platforms — not just macOS — because the goal is cross-platform determinism: the same logical filename produces the same hash everywhere.</p>
+<div class="admonition info">
+<p class="admonition-title">NFC Normalization</p>
+<p>NFC normalization is applied on all platforms — not just macOS — because the goal is cross-platform determinism: the same logical filename produces the same hash everywhere.</p>
+</div>
 <h3 id="system-exclusions">System exclusions</h3>
 <p>The following macOS system artifacts are excluded by default:</p>
 <p><code>.DS_Store</code>, <code>.Spotlight-V100</code>, <code>.Trashes</code>, <code>.fseventsd</code>, <code>.TemporaryItems</code>, <code>.DocumentRevisions-V100</code></p>
@@ -2228,12 +2230,12 @@
 </table>
 <h3 id="resolution-strategy">Resolution strategy</h3>
 <p>The implementation tries <code>st_birthtime</code> first and falls back to <code>st_ctime</code> without platform branching:</p>
-<pre><code class="language-python">def _get_creation_time(stat_result: os.stat_result) -&gt; float:
-    try:
-        return stat_result.st_birthtime
-    except AttributeError:
-        return stat_result.st_ctime
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_get_creation_time</span><span class="p">(</span><span class="n">stat_result</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">stat_result</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">stat_result</span><span class="o">.</span><span class="n">st_birthtime</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">stat_result</span><span class="o">.</span><span class="n">st_ctime</span>
+</code></pre></div>
 <p>A debug-level log message is emitted on the first fallback occurrence per invocation.</p>
 <h3 id="fallback-semantics">Fallback semantics</h3>
 <p>When <code>st_ctime</code> is used as the fallback, the meaning differs by platform:</p>
@@ -2311,8 +2313,10 @@
 </tr>
 </tbody>
 </table>
-<p>!!! warning
-    Do not rely on the <code>size</code> field for symlinks — it does not represent the target file's size.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Do not rely on the <code>size</code> field for symlinks — it does not represent the target file's size.</p>
+</div>
 <h3 id="dangling-symlinks">Dangling symlinks</h3>
 <p>If a symlink target does not exist, <code>Path.resolve(strict=False)</code> returns the normalized path without verifying existence. The entry is populated with degraded fields.</p>
 <h2 id="filesystem-behavior-summary">Filesystem Behavior Summary</h2>

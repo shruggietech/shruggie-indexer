@@ -1868,46 +1868,48 @@
 <p>shruggie-indexer exposes a public Python API for consumers who <code>import shruggie_indexer</code> as a library rather than invoking it from the command line. The CLI and GUI are both consumers of this API — they add no indexing logic of their own.</p>
 <h2 id="public-api-surface">Public API Surface</h2>
 <p>All public names are exported from the top-level <code>shruggie_indexer</code> namespace. Internal modules (<code>core/</code>, <code>config/</code>, <code>models/</code>) are implementation details — import from the top-level package, not from subpackages.</p>
-<pre><code class="language-python">from shruggie_indexer import (
-    # Version
-    __version__,
-    # Configuration
-    load_config,
-    IndexerConfig,
-    MetadataTypeAttributes,
-    # Core functions
-    index_path,
-    build_file_entry,
-    build_directory_entry,
-    serialize_entry,
-    # Progress and cancellation
-    ProgressEvent,
-    IndexerCancellationError,
-    # Data models
-    IndexEntry,
-    MetadataEntry,
-    HashSet,
-    NameObject,
-    SizeObject,
-    TimestampPair,
-    TimestampsObject,
-    ParentObject,
-)
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">shruggie_indexer</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="c1"># Version</span>
+    <span class="n">__version__</span><span class="p">,</span>
+    <span class="c1"># Configuration</span>
+    <span class="n">load_config</span><span class="p">,</span>
+    <span class="n">IndexerConfig</span><span class="p">,</span>
+    <span class="n">MetadataTypeAttributes</span><span class="p">,</span>
+    <span class="c1"># Core functions</span>
+    <span class="n">index_path</span><span class="p">,</span>
+    <span class="n">build_file_entry</span><span class="p">,</span>
+    <span class="n">build_directory_entry</span><span class="p">,</span>
+    <span class="n">serialize_entry</span><span class="p">,</span>
+    <span class="c1"># Progress and cancellation</span>
+    <span class="n">ProgressEvent</span><span class="p">,</span>
+    <span class="n">IndexerCancellationError</span><span class="p">,</span>
+    <span class="c1"># Data models</span>
+    <span class="n">IndexEntry</span><span class="p">,</span>
+    <span class="n">MetadataEntry</span><span class="p">,</span>
+    <span class="n">HashSet</span><span class="p">,</span>
+    <span class="n">NameObject</span><span class="p">,</span>
+    <span class="n">SizeObject</span><span class="p">,</span>
+    <span class="n">TimestampPair</span><span class="p">,</span>
+    <span class="n">TimestampsObject</span><span class="p">,</span>
+    <span class="n">ParentObject</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
 <p>Names not listed in <code>__all__</code> are internal and may change without notice between versions.</p>
-<p>!!! note "API Stability"
-    For the v0.1.0 release the public API is <strong>provisional</strong>. Breaking changes may occur in minor version bumps (0.2.0, 0.3.0) without a deprecation cycle. Once the project reaches 1.0.0, the public API becomes subject to semantic versioning.</p>
+<div class="admonition note">
+<p class="admonition-title">API Stability</p>
+<p>For the v0.1.0 release the public API is <strong>provisional</strong>. Breaking changes may occur in minor version bumps (0.2.0, 0.3.0) without a deprecation cycle. Once the project reaches 1.0.0, the public API becomes subject to semantic versioning.</p>
+</div>
 <h2 id="core-functions">Core Functions</h2>
 <h3 id="index_path"><code>index_path()</code></h3>
 <p>The top-level entry point. Given a filesystem path and a configuration, produces a complete <code>IndexEntry</code>.</p>
-<pre><code class="language-python">def index_path(
-    target: Path | str,
-    config: IndexerConfig | None = None,
-    *,
-    progress_callback: Callable[[ProgressEvent], None] | None = None,
-    cancel_event: threading.Event | None = None,
-) -&gt; IndexEntry: ...
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">index_path</span><span class="p">(</span>
+    <span class="n">target</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">IndexerConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">progress_callback</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">ProgressEvent</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cancel_event</span><span class="p">:</span> <span class="n">threading</span><span class="o">.</span><span class="n">Event</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IndexEntry</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
 <table>
 <thead>
 <tr>
@@ -1969,14 +1971,14 @@
 </table>
 <h3 id="build_file_entry"><code>build_file_entry()</code></h3>
 <p>Builds an <code>IndexEntry</code> for a single file. This is the lower-level function that <code>index_path()</code> dispatches to when the target is a file.</p>
-<pre><code class="language-python">def build_file_entry(
-    path: Path,
-    config: IndexerConfig,
-    *,
-    siblings: list[Path] | None = None,
-    delete_queue: list[Path] | None = None,
-) -&gt; IndexEntry: ...
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_file_entry</span><span class="p">(</span>
+    <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">IndexerConfig</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">siblings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">delete_queue</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IndexEntry</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
 <table>
 <thead>
 <tr>
@@ -2010,16 +2012,16 @@
 </table>
 <h3 id="build_directory_entry"><code>build_directory_entry()</code></h3>
 <p>Builds an <code>IndexEntry</code> for a directory, optionally recursing into subdirectories.</p>
-<pre><code class="language-python">def build_directory_entry(
-    path: Path,
-    config: IndexerConfig,
-    *,
-    recursive: bool = False,
-    delete_queue: list[Path] | None = None,
-    progress_callback: Callable[[ProgressEvent], None] | None = None,
-    cancel_event: threading.Event | None = None,
-) -&gt; IndexEntry: ...
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_directory_entry</span><span class="p">(</span>
+    <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">IndexerConfig</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">recursive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">delete_queue</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">progress_callback</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">ProgressEvent</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cancel_event</span><span class="p">:</span> <span class="n">threading</span><span class="o">.</span><span class="n">Event</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IndexEntry</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
 <table>
 <thead>
 <tr>
@@ -2063,13 +2065,13 @@
 </table>
 <h3 id="serialize_entry"><code>serialize_entry()</code></h3>
 <p>Converts an <code>IndexEntry</code> to a JSON string conforming to the v2 schema.</p>
-<pre><code class="language-python">def serialize_entry(
-    entry: IndexEntry,
-    *,
-    indent: int | None = 2,
-    sort_keys: bool = False,
-) -&gt; str: ...
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">serialize_entry</span><span class="p">(</span>
+    <span class="n">entry</span><span class="p">:</span> <span class="n">IndexEntry</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">indent</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">sort_keys</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
 <table>
 <thead>
 <tr>
@@ -2110,13 +2112,13 @@
 <h2 id="configuration-api">Configuration API</h2>
 <h3 id="load_config"><code>load_config()</code></h3>
 <p>The sole factory function for <code>IndexerConfig</code> objects. Implements the full four-layer resolution pipeline.</p>
-<pre><code class="language-python">def load_config(
-    *,
-    config_file: Path | str | None = None,
-    target_directory: Path | str | None = None,
-    overrides: dict[str, Any] | None = None,
-) -&gt; IndexerConfig: ...
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_config</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">config_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">target_directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">overrides</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IndexerConfig</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
 <table>
 <thead>
 <tr>
@@ -2144,50 +2146,53 @@
 </tbody>
 </table>
 <p>After merging all layers, <code>load_config()</code> applies <a href="../configuration/#parameter-implications">parameter implications</a>, validates the result, compiles regex patterns, and returns an immutable <code>IndexerConfig</code>.</p>
-<pre><code class="language-python"># Example: SHA-256 with metadata extraction
-config = load_config(overrides={
-    &quot;id_algorithm&quot;: &quot;sha256&quot;,
-    &quot;extract_exif&quot;: True,
-    &quot;recursive&quot;: True,
-})
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="c1"># Example: SHA-256 with metadata extraction</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">(</span><span class="n">overrides</span><span class="o">=</span><span class="p">{</span>
+    <span class="s2">&quot;id_algorithm&quot;</span><span class="p">:</span> <span class="s2">&quot;sha256&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;extract_exif&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s2">&quot;recursive&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">})</span>
+</code></pre></div>
 <h3 id="indexerconfig"><code>IndexerConfig</code></h3>
 <p>A frozen dataclass carrying all configuration for a single indexing invocation. Constructed via <code>load_config()</code> or directly for testing.</p>
-<pre><code class="language-python">@dataclass(frozen=True)
-class IndexerConfig:
-    &quot;&quot;&quot;Immutable configuration for a single indexing invocation.&quot;&quot;&quot;
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">IndexerConfig</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Immutable configuration for a single indexing invocation.&quot;&quot;&quot;</span>
+</code></pre></div>
 <p>The <code>frozen=True</code> guarantee means a single <code>IndexerConfig</code> can safely be shared across threads without synchronization. To create a modified copy:</p>
-<pre><code class="language-python">from dataclasses import replace
-new_config = replace(config, id_algorithm=&quot;sha256&quot;)
-</code></pre>
-<p>!!! warning "Direct Construction"
-    Direct <code>IndexerConfig()</code> construction bypasses parameter implications and validation. Callers who construct directly <strong>must</strong> ensure implications are satisfied:</p>
-<pre><code>- `rename=True` → `output_inplace=True`
-- `meta_merge_delete=True` → `meta_merge=True`
-- `meta_merge=True` → `extract_exif=True`
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">replace</span>
+<span class="n">new_config</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">id_algorithm</span><span class="o">=</span><span class="s2">&quot;sha256&quot;</span><span class="p">)</span>
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Direct Construction</p>
+<p>Direct <code>IndexerConfig()</code> construction bypasses parameter implications and validation. Callers who construct directly <strong>must</strong> ensure implications are satisfied:</p>
+<ul>
+<li><code>rename=True</code> → <code>output_inplace=True</code></li>
+<li><code>meta_merge_delete=True</code> → <code>meta_merge=True</code></li>
+<li><code>meta_merge=True</code> → <code>extract_exif=True</code></li>
+</ul>
+</div>
 <h2 id="data-models">Data Models</h2>
 <p>All data classes are defined in <code>models/schema.py</code> and map directly to the <a href="../../schema/">v2 JSON Schema</a> types.</p>
 <h3 id="indexentry"><code>IndexEntry</code></h3>
 <p>The root data class representing a single indexed file or directory.</p>
-<pre><code class="language-python">@dataclass
-class IndexEntry:
-    schema_version: int       # Always 2
-    id: str                   # Prefixed hash: y... (file), x... (directory)
-    id_algorithm: str         # &quot;md5&quot; or &quot;sha256&quot;
-    type: str                 # &quot;file&quot; or &quot;directory&quot;
-    name: NameObject
-    extension: str | None
-    size: SizeObject
-    hashes: HashSet | None    # Content hashes (file) or null (directory/symlink)
-    file_system: FileSystemObject
-    timestamps: TimestampsObject
-    attributes: AttributesObject
-    items: list[IndexEntry] | None = None
-    metadata: list[MetadataEntry] | None = None
-    mime_type: str | None = None
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">IndexEntry</span><span class="p">:</span>
+    <span class="n">schema_version</span><span class="p">:</span> <span class="nb">int</span>       <span class="c1"># Always 2</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span>                   <span class="c1"># Prefixed hash: y... (file), x... (directory)</span>
+    <span class="n">id_algorithm</span><span class="p">:</span> <span class="nb">str</span>         <span class="c1"># &quot;md5&quot; or &quot;sha256&quot;</span>
+    <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span>                 <span class="c1"># &quot;file&quot; or &quot;directory&quot;</span>
+    <span class="n">name</span><span class="p">:</span> <span class="n">NameObject</span>
+    <span class="n">extension</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">size</span><span class="p">:</span> <span class="n">SizeObject</span>
+    <span class="n">hashes</span><span class="p">:</span> <span class="n">HashSet</span> <span class="o">|</span> <span class="kc">None</span>    <span class="c1"># Content hashes (file) or null (directory/symlink)</span>
+    <span class="n">file_system</span><span class="p">:</span> <span class="n">FileSystemObject</span>
+    <span class="n">timestamps</span><span class="p">:</span> <span class="n">TimestampsObject</span>
+    <span class="n">attributes</span><span class="p">:</span> <span class="n">AttributesObject</span>
+    <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">IndexEntry</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">metadata</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">MetadataEntry</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">mime_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
 <h3 id="reusable-types">Reusable types</h3>
 <table>
 <thead>
@@ -2247,15 +2252,15 @@ class IndexEntry:
 </table>
 <h3 id="progressevent"><code>ProgressEvent</code></h3>
 <p>Lightweight event object emitted during directory indexing via the <code>progress_callback</code>.</p>
-<pre><code class="language-python">@dataclass
-class ProgressEvent:
-    phase: str               # &quot;discovery&quot;, &quot;processing&quot;, &quot;output&quot;, &quot;cleanup&quot;
-    items_total: int | None  # None during discovery phase
-    items_completed: int     # Items processed so far
-    current_path: Path | None
-    message: str | None
-    level: str               # &quot;info&quot;, &quot;warning&quot;, &quot;error&quot;, &quot;debug&quot;
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ProgressEvent</span><span class="p">:</span>
+    <span class="n">phase</span><span class="p">:</span> <span class="nb">str</span>               <span class="c1"># &quot;discovery&quot;, &quot;processing&quot;, &quot;output&quot;, &quot;cleanup&quot;</span>
+    <span class="n">items_total</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>  <span class="c1"># None during discovery phase</span>
+    <span class="n">items_completed</span><span class="p">:</span> <span class="nb">int</span>     <span class="c1"># Items processed so far</span>
+    <span class="n">current_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">message</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">level</span><span class="p">:</span> <span class="nb">str</span>               <span class="c1"># &quot;info&quot;, &quot;warning&quot;, &quot;error&quot;, &quot;debug&quot;</span>
+</code></pre></div>
 <table>
 <thead>
 <tr>
@@ -2292,28 +2297,30 @@ class ProgressEvent:
 </tr>
 </tbody>
 </table>
-<p>!!! tip "Callback threading"
-    The callback is invoked on the indexing thread. GUI consumers should enqueue events into a <code>queue.Queue</code> for main-thread processing. CLI consumers using <code>tqdm</code> or <code>rich</code> can update progress bars directly (both are thread-safe for single-bar updates). If the callback raises an exception, the engine logs a warning and continues.</p>
+<div class="admonition tip">
+<p class="admonition-title">Callback threading</p>
+<p>The callback is invoked on the indexing thread. GUI consumers should enqueue events into a <code>queue.Queue</code> for main-thread processing. CLI consumers using <code>tqdm</code> or <code>rich</code> can update progress bars directly (both are thread-safe for single-bar updates). If the callback raises an exception, the engine logs a warning and continues.</p>
+</div>
 <h2 id="exception-hierarchy">Exception Hierarchy</h2>
 <p>All exceptions inherit from <code>IndexerError</code> for catch-all handling:</p>
-<pre><code class="language-python">class IndexerError(Exception):
-    &quot;&quot;&quot;Base class for all shruggie-indexer exceptions.&quot;&quot;&quot;
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">IndexerError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for all shruggie-indexer exceptions.&quot;&quot;&quot;</span>
 
-class IndexerConfigError(IndexerError):
-    &quot;&quot;&quot;Configuration is invalid or cannot be loaded.&quot;&quot;&quot;
+<span class="k">class</span><span class="w"> </span><span class="nc">IndexerConfigError</span><span class="p">(</span><span class="n">IndexerError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Configuration is invalid or cannot be loaded.&quot;&quot;&quot;</span>
 
-class IndexerTargetError(IndexerError):
-    &quot;&quot;&quot;Target path is invalid, inaccessible, or unclassifiable.&quot;&quot;&quot;
+<span class="k">class</span><span class="w"> </span><span class="nc">IndexerTargetError</span><span class="p">(</span><span class="n">IndexerError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Target path is invalid, inaccessible, or unclassifiable.&quot;&quot;&quot;</span>
 
-class IndexerRuntimeError(IndexerError):
-    &quot;&quot;&quot;Unrecoverable error during indexing execution.&quot;&quot;&quot;
+<span class="k">class</span><span class="w"> </span><span class="nc">IndexerRuntimeError</span><span class="p">(</span><span class="n">IndexerError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Unrecoverable error during indexing execution.&quot;&quot;&quot;</span>
 
-class RenameError(IndexerError):
-    &quot;&quot;&quot;File rename failed (collision, permission, etc.).&quot;&quot;&quot;
+<span class="k">class</span><span class="w"> </span><span class="nc">RenameError</span><span class="p">(</span><span class="n">IndexerError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;File rename failed (collision, permission, etc.).&quot;&quot;&quot;</span>
 
-class IndexerCancellationError(IndexerError):
-    &quot;&quot;&quot;The indexing operation was cancelled by the caller.&quot;&quot;&quot;
-</code></pre>
+<span class="k">class</span><span class="w"> </span><span class="nc">IndexerCancellationError</span><span class="p">(</span><span class="n">IndexerError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The indexing operation was cancelled by the caller.&quot;&quot;&quot;</span>
+</code></pre></div>
 <p>Exception-to-exit-code mapping:</p>
 <table>
 <thead>
@@ -2343,105 +2350,105 @@ class IndexerCancellationError(IndexerError):
 </table>
 <h2 id="usage-examples">Usage Examples</h2>
 <h3 id="index-a-single-file-with-defaults">Index a single file with defaults</h3>
-<pre><code class="language-python">from pathlib import Path
-from shruggie_indexer import index_path, serialize_entry
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shruggie_indexer</span><span class="w"> </span><span class="kn">import</span> <span class="n">index_path</span><span class="p">,</span> <span class="n">serialize_entry</span>
 
-entry = index_path(Path(&quot;/path/to/photo.jpg&quot;))
-print(entry.id)         # &quot;yA8A8C089A6A8583B24C85F5A4A41F5AC&quot;
-print(entry.type)       # &quot;file&quot;
-print(entry.size.text)  # &quot;3.45 MB&quot;
+<span class="n">entry</span> <span class="o">=</span> <span class="n">index_path</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/path/to/photo.jpg&quot;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>         <span class="c1"># &quot;yA8A8C089A6A8583B24C85F5A4A41F5AC&quot;</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>       <span class="c1"># &quot;file&quot;</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">size</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>  <span class="c1"># &quot;3.45 MB&quot;</span>
 
-json_str = serialize_entry(entry)
-print(json_str)
-</code></pre>
+<span class="n">json_str</span> <span class="o">=</span> <span class="n">serialize_entry</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+</code></pre></div>
 <h3 id="custom-configuration-with-metadata">Custom configuration with metadata</h3>
-<pre><code class="language-python">from pathlib import Path
-from shruggie_indexer import index_path, load_config, serialize_entry
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shruggie_indexer</span><span class="w"> </span><span class="kn">import</span> <span class="n">index_path</span><span class="p">,</span> <span class="n">load_config</span><span class="p">,</span> <span class="n">serialize_entry</span>
 
-config = load_config(overrides={
-    &quot;id_algorithm&quot;: &quot;sha256&quot;,
-    &quot;extract_exif&quot;: True,
-    &quot;meta_merge&quot;: True,
-})
+<span class="n">config</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">(</span><span class="n">overrides</span><span class="o">=</span><span class="p">{</span>
+    <span class="s2">&quot;id_algorithm&quot;</span><span class="p">:</span> <span class="s2">&quot;sha256&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;extract_exif&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s2">&quot;meta_merge&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">})</span>
 
-entry = index_path(Path(&quot;/path/to/media/folder&quot;), config)
-for child in entry.items or []:
-    if child.metadata:
-        for meta in child.metadata:
-            print(f&quot;{meta.origin}: {meta.attributes.type}&quot;)
-</code></pre>
+<span class="n">entry</span> <span class="o">=</span> <span class="n">index_path</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/path/to/media/folder&quot;</span><span class="p">),</span> <span class="n">config</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">entry</span><span class="o">.</span><span class="n">items</span> <span class="ow">or</span> <span class="p">[]:</span>
+    <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">metadata</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">meta</span> <span class="ow">in</span> <span class="n">child</span><span class="o">.</span><span class="n">metadata</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">meta</span><span class="o">.</span><span class="n">origin</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">meta</span><span class="o">.</span><span class="n">attributes</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
 <h3 id="batch-indexing-with-shared-configuration">Batch indexing with shared configuration</h3>
-<pre><code class="language-python">from pathlib import Path
-from shruggie_indexer import index_path, load_config, serialize_entry
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shruggie_indexer</span><span class="w"> </span><span class="kn">import</span> <span class="n">index_path</span><span class="p">,</span> <span class="n">load_config</span><span class="p">,</span> <span class="n">serialize_entry</span>
 
-config = load_config(overrides={&quot;compute_sha512&quot;: True})
-targets = [Path(&quot;/data/set-a&quot;), Path(&quot;/data/set-b&quot;), Path(&quot;/data/set-c&quot;)]
+<span class="n">config</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">(</span><span class="n">overrides</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;compute_sha512&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+<span class="n">targets</span> <span class="o">=</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/data/set-a&quot;</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/data/set-b&quot;</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/data/set-c&quot;</span><span class="p">)]</span>
 
-for target in targets:
-    entry = index_path(target, config)
-    json_str = serialize_entry(entry, indent=None)  # compact JSON
-    (target / &quot;index.json&quot;).write_text(json_str, encoding=&quot;utf-8&quot;)
-</code></pre>
+<span class="k">for</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">targets</span><span class="p">:</span>
+    <span class="n">entry</span> <span class="o">=</span> <span class="n">index_path</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+    <span class="n">json_str</span> <span class="o">=</span> <span class="n">serialize_entry</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>  <span class="c1"># compact JSON</span>
+    <span class="p">(</span><span class="n">target</span> <span class="o">/</span> <span class="s2">&quot;index.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json_str</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+</code></pre></div>
 <h3 id="progress-reporting-and-cancellation">Progress reporting and cancellation</h3>
-<pre><code class="language-python">import threading
-from pathlib import Path
-from shruggie_indexer import (
-    index_path, load_config, ProgressEvent, IndexerCancellationError,
-)
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shruggie_indexer</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">index_path</span><span class="p">,</span> <span class="n">load_config</span><span class="p">,</span> <span class="n">ProgressEvent</span><span class="p">,</span> <span class="n">IndexerCancellationError</span><span class="p">,</span>
+<span class="p">)</span>
 
-config = load_config(overrides={&quot;extract_exif&quot;: True})
-cancel = threading.Event()
+<span class="n">config</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">(</span><span class="n">overrides</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;extract_exif&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+<span class="n">cancel</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Event</span><span class="p">()</span>
 
-def on_progress(event: ProgressEvent) -&gt; None:
-    if event.phase == &quot;processing&quot; and event.items_total:
-        pct = event.items_completed / event.items_total * 100
-        print(f&quot;\r{event.items_completed}/{event.items_total} ({pct:.0f}%)&quot;, end=&quot;&quot;)
+<span class="k">def</span><span class="w"> </span><span class="nf">on_progress</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">ProgressEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">phase</span> <span class="o">==</span> <span class="s2">&quot;processing&quot;</span> <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">items_total</span><span class="p">:</span>
+        <span class="n">pct</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">items_completed</span> <span class="o">/</span> <span class="n">event</span><span class="o">.</span><span class="n">items_total</span> <span class="o">*</span> <span class="mi">100</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\r</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">items_completed</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">items_total</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">pct</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">%)&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
 
-try:
-    entry = index_path(
-        Path(&quot;/path/to/large/archive&quot;),
-        config,
-        progress_callback=on_progress,
-        cancel_event=cancel,
-    )
-    print(f&quot;\nDone: {entry.id}&quot;)
-except IndexerCancellationError:
-    print(&quot;\nCancelled.&quot;)
-</code></pre>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">entry</span> <span class="o">=</span> <span class="n">index_path</span><span class="p">(</span>
+        <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/path/to/large/archive&quot;</span><span class="p">),</span>
+        <span class="n">config</span><span class="p">,</span>
+        <span class="n">progress_callback</span><span class="o">=</span><span class="n">on_progress</span><span class="p">,</span>
+        <span class="n">cancel_event</span><span class="o">=</span><span class="n">cancel</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Done: </span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">except</span> <span class="n">IndexerCancellationError</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Cancelled.&quot;</span><span class="p">)</span>
+</code></pre></div>
 <h3 id="error-handling">Error handling</h3>
-<pre><code class="language-python">from pathlib import Path
-from shruggie_indexer import index_path, load_config
-from shruggie_indexer.exceptions import (
-    IndexerConfigError, IndexerTargetError,
-)
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shruggie_indexer</span><span class="w"> </span><span class="kn">import</span> <span class="n">index_path</span><span class="p">,</span> <span class="n">load_config</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shruggie_indexer.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">IndexerConfigError</span><span class="p">,</span> <span class="n">IndexerTargetError</span><span class="p">,</span>
+<span class="p">)</span>
 
-try:
-    config = load_config(overrides={&quot;id_algorithm&quot;: &quot;blake2&quot;})
-except IndexerConfigError as e:
-    print(f&quot;Config error: {e}&quot;)
-    # &quot;id_algorithm must be 'md5' or 'sha256', got 'blake2'&quot;
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">(</span><span class="n">overrides</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;id_algorithm&quot;</span><span class="p">:</span> <span class="s2">&quot;blake2&quot;</span><span class="p">})</span>
+<span class="k">except</span> <span class="n">IndexerConfigError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Config error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># &quot;id_algorithm must be &#39;md5&#39; or &#39;sha256&#39;, got &#39;blake2&#39;&quot;</span>
 
-try:
-    entry = index_path(Path(&quot;/nonexistent/path&quot;))
-except IndexerTargetError as e:
-    print(f&quot;Target error: {e}&quot;)
-</code></pre>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">entry</span> <span class="o">=</span> <span class="n">index_path</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/nonexistent/path&quot;</span><span class="p">))</span>
+<span class="k">except</span> <span class="n">IndexerTargetError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Target error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
 <h3 id="inspecting-the-entry-tree">Inspecting the entry tree</h3>
-<pre><code class="language-python">from shruggie_indexer import IndexEntry, index_path
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">shruggie_indexer</span><span class="w"> </span><span class="kn">import</span> <span class="n">IndexEntry</span><span class="p">,</span> <span class="n">index_path</span>
 
-def find_large_files(entry: IndexEntry, threshold: int) -&gt; list[IndexEntry]:
-    &quot;&quot;&quot;Walk the entry tree and find files exceeding a byte threshold.&quot;&quot;&quot;
-    results = []
-    if entry.type == &quot;file&quot; and entry.size.bytes &gt; threshold:
-        results.append(entry)
-    for child in entry.items or []:
-        results.extend(find_large_files(child, threshold))
-    return results
+<span class="k">def</span><span class="w"> </span><span class="nf">find_large_files</span><span class="p">(</span><span class="n">entry</span><span class="p">:</span> <span class="n">IndexEntry</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">IndexEntry</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Walk the entry tree and find files exceeding a byte threshold.&quot;&quot;&quot;</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;file&quot;</span> <span class="ow">and</span> <span class="n">entry</span><span class="o">.</span><span class="n">size</span><span class="o">.</span><span class="n">bytes</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">:</span>
+        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">entry</span><span class="o">.</span><span class="n">items</span> <span class="ow">or</span> <span class="p">[]:</span>
+        <span class="n">results</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">find_large_files</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">threshold</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">results</span>
 
-entry = index_path(&quot;/path/to/archive&quot;)
-for f in find_large_files(entry, 100_000_000):  # &gt; 100 MB
-    print(f&quot;{f.name.text}: {f.size.text}&quot;)
-</code></pre>
+<span class="n">entry</span> <span class="o">=</span> <span class="n">index_path</span><span class="p">(</span><span class="s2">&quot;/path/to/archive&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">find_large_files</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="mi">100_000_000</span><span class="p">):</span>  <span class="c1"># &gt; 100 MB</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">f</span><span class="o">.</span><span class="n">size</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
 
 
 

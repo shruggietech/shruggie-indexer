@@ -3969,7 +3969,7 @@
 <p><strong>Eliminate the ObjectType switch duplication.</strong> The original <code>MakeObject</code> constructs the output object inside a <code>switch</code> statement with 5+ branches (<code>makeobjectfile</code>, <code>makeobjectdirectory</code>, <code>makeobjectdirectoryrecursive</code>, plus <code>default</code> branches). The actual fields are nearly identical across all branches — the only differences are: directories get <code>Items = @()</code> while files do not, and recursive directories get <code>Items = @()</code> for later population. The Python port should define one <code>IndexEntry</code> dataclass and conditionally populate <code>Items</code> and <code>Metadata</code> based on item type. One class, one construction path.</p>
 <p><strong>Drop the <code>Encoding</code> key.</strong> As specified. The <code>GetFileEncoding</code> sub-function (BOM byte inspection) and all <code>$IEncoding</code> variable assignments are omitted from the port. For backward compatibility, the output schema can include <code>"Encoding": null</code> for all items if legacy consumers expect the field to exist. Alternatively, omit it entirely and let legacy consumers handle the missing key. This is a project decision to be made when we address backward compatibility testing.</p>
 <p><strong>Typed schema definition.</strong> The original <code>[PSCustomObject]@{...}</code> has no compile-time type checking. Using Python <code>dataclasses</code> gives us type annotations, IDE support, and <code>dataclasses.asdict()</code> for clean JSON serialization. A rough sketch of the core structure:</p>
-<pre><code>IndexEntry:
+<div class="highlight"><pre><span></span><code>IndexEntry:
     _id: str
     Ids: HashIds            # {MD5: str, SHA256: str, ...}
     Name: str
@@ -3993,7 +3993,7 @@
     TimeModified: str
     Items: list[IndexEntry] | None   # Recursive reference; None for files
     Metadata: list[MetadataEntry] | None
-</code></pre>
+</code></pre></div>
 <p>This sketch is illustrative. The actual implementation should be derived from the output schema JSON with adjustments for the dropped <code>Encoding</code> key and expanded hash fields.</p>
 <hr />
 <h2 id="9-json-serialization-output-routing">9. JSON Serialization &amp; Output Routing</h2>

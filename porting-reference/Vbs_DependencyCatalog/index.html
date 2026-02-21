@@ -1956,22 +1956,22 @@
 <hr />
 <h2 id="10-log-file-format">10. Log File Format</h2>
 <p><strong>File naming:</strong> <code>YYYY_MM.log</code> (one file per month)</p>
-<p><strong>Entry format (machine-readable):</strong></p>
-<pre><code>{UnixMs}|{yyyy-MM-dd HH:mm:ss.fffzzz}|{SessionGUID}|{StatusTags}{LibName}({CompressedStack}): {Message}
-</code></pre>
-<p><strong>Entry format (console/verbose):</strong></p>
-<pre><code>{yyyy-MM-dd HH:mm:ss.fffzzz} {SessionGUID} {PaddedStatus} {LibName}({StackDepth}): {Message}
-</code></pre>
+<p><strong>Entry format (machine-readable):</strong>
+<div class="highlight"><pre><span></span><code>{UnixMs}|{yyyy-MM-dd HH:mm:ss.fffzzz}|{SessionGUID}|{StatusTags}{LibName}({CompressedStack}): {Message}
+</code></pre></div></p>
+<p><strong>Entry format (console/verbose):</strong>
+<div class="highlight"><pre><span></span><code>{yyyy-MM-dd HH:mm:ss.fffzzz} {SessionGUID} {PaddedStatus} {LibName}({StackDepth}): {Message}
+</code></pre></div></p>
 <hr />
 <h2 id="11-call-graph">11. Call Graph</h2>
-<pre><code>Vbs
+<div class="highlight"><pre><span></span><code>Vbs
 ├── [construct timestamp field]
 │   ├── [DateTimeOffset]::Now.ToUnixTimeMilliseconds()
 │   └── [System.TimeSpan]::FromMilliseconds()
 ├── [construct session ID field]
 ├── [normalize Status to tag and color]
 ├── [process Caller field]
-│   ├── [split on ':' to detect sub-function stacks]
+│   ├── [split on &#39;:&#39; to detect sub-function stacks]
 │   └── VbsUpdateFunctionStack (compress stack)
 │       └── VbsUpdateFunctionStackExtractNumber (extract numeric suffixes)
 ├── VbsFunctionStackTotalDepth (compute depth for verbose format)
@@ -1984,7 +1984,7 @@
 └── (Verbosity=$true) → VbsLogWrite + Write-Host
     ├── Add-Content (write to log file)
     └── Write-Host (colorized console output)
-</code></pre>
+</code></pre></div>
 
 
 

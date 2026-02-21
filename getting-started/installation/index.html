@@ -1568,42 +1568,42 @@
 </table>
 <h2 id="install-via-pip">Install via pip</h2>
 <p>The recommended way for Python developers to install shruggie-indexer:</p>
-<pre><code class="language-bash">pip install shruggie-indexer
-</code></pre>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>shruggie-indexer
+</code></pre></div>
 <p>This installs the core tool with its required dependencies: <code>click</code>, <code>orjson</code>, <code>pyexiftool</code>, and <code>tqdm</code>.</p>
 <h3 id="optional-dependency-groups">Optional dependency groups</h3>
 <p>Install additional features via extras:</p>
-<pre><code class="language-bash"># GUI application (CustomTkinter-based desktop interface)
-pip install shruggie-indexer[gui]
+<div class="highlight"><pre><span></span><code><span class="c1"># GUI application (CustomTkinter-based desktop interface)</span>
+pip<span class="w"> </span>install<span class="w"> </span>shruggie-indexer<span class="o">[</span>gui<span class="o">]</span>
 
-# Development tools (pytest, ruff, jsonschema, pydantic, rich)
-pip install shruggie-indexer[dev]
+<span class="c1"># Development tools (pytest, ruff, jsonschema, pydantic, rich)</span>
+pip<span class="w"> </span>install<span class="w"> </span>shruggie-indexer<span class="o">[</span>dev<span class="o">]</span>
 
-# Documentation tools (mkdocs, mkdocs-material)
-pip install shruggie-indexer[docs]
+<span class="c1"># Documentation tools (mkdocs, mkdocs-material)</span>
+pip<span class="w"> </span>install<span class="w"> </span>shruggie-indexer<span class="o">[</span>docs<span class="o">]</span>
 
-# Everything (GUI + all optional extras)
-pip install shruggie-indexer[all]
-</code></pre>
+<span class="c1"># Everything (GUI + all optional extras)</span>
+pip<span class="w"> </span>install<span class="w"> </span>shruggie-indexer<span class="o">[</span>all<span class="o">]</span>
+</code></pre></div>
 <h2 id="install-from-source">Install from Source</h2>
 <p>Clone the repository and install in editable mode:</p>
-<pre><code class="language-bash">git clone https://github.com/shruggietech/shruggie-indexer.git
-cd shruggie-indexer
-python -m venv .venv
-</code></pre>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/shruggietech/shruggie-indexer.git
+<span class="nb">cd</span><span class="w"> </span>shruggie-indexer
+python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
+</code></pre></div>
 <p>Activate the virtual environment:</p>
-<pre><code class="language-bash"># Windows
-.venv\Scripts\activate
+<div class="highlight"><pre><span></span><code><span class="c1"># Windows</span>
+.venv<span class="se">\S</span>cripts<span class="se">\a</span>ctivate
 
-# Linux / macOS
-source .venv/bin/activate
-</code></pre>
+<span class="c1"># Linux / macOS</span>
+<span class="nb">source</span><span class="w"> </span>.venv/bin/activate
+</code></pre></div>
 <p>Install with development dependencies:</p>
-<pre><code class="language-bash">pip install -e &quot;.[dev]&quot;
-</code></pre>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev]&quot;</span>
+</code></pre></div>
 <p>For the GUI application:</p>
-<pre><code class="language-bash">pip install -e &quot;.[dev,gui]&quot;
-</code></pre>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev,gui]&quot;</span>
+</code></pre></div>
 <h2 id="standalone-executables">Standalone Executables</h2>
 <p>Pre-built executables are available on the <a href="https://github.com/shruggietech/shruggie-indexer/releases">GitHub Releases</a> page. These require no Python installation.</p>
 <table>
@@ -1633,12 +1633,14 @@ source .venv/bin/activate
 </tbody>
 </table>
 <p>Download the appropriate binary, place it in a directory on your <code>PATH</code>, and run it directly.</p>
-<p>!!! tip "GUI executables"
-    Standalone GUI executables (<code>shruggie-indexer-gui</code>) are also available on the Releases page for each platform.</p>
+<div class="admonition tip">
+<p class="admonition-title">GUI executables</p>
+<p>Standalone GUI executables (<code>shruggie-indexer-gui</code>) are also available on the Releases page for each platform.</p>
+</div>
 <h2 id="verification">Verification</h2>
 <p>After installation, verify the tool is accessible:</p>
-<pre><code class="language-bash">shruggie-indexer --version
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>--version
+</code></pre></div>
 <p>This should print the installed version (e.g., <code>shruggie-indexer, version 0.1.0</code>).</p>
 <h2 id="exiftool-optional">ExifTool (Optional)</h2>
 <p>ExifTool is required only for embedded EXIF/XMP/IPTC metadata extraction (the <code>--meta</code> flag). All other functionality — hashing, timestamps, sidecar handling, renaming — works without it.</p>

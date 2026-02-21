@@ -2169,8 +2169,8 @@
 <h1 id="cli-reference">CLI Reference</h1>
 <p>shruggie-indexer is invoked as a single command with options and an optional target path.</p>
 <h2 id="command-structure">Command Structure</h2>
-<pre><code>shruggie-indexer [OPTIONS] [TARGET]
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer [OPTIONS] [TARGET]
+</code></pre></div>
 <p><code>TARGET</code> is an optional positional argument specifying the file or directory to index. When omitted, the current working directory is used.</p>
 <h2 id="target-options">Target Options</h2>
 <h3 id="target-positional-argument"><code>TARGET</code> (positional argument)</h3>
@@ -2181,21 +2181,21 @@
 </ul>
 <h3 id="-file-directory"><code>--file</code> / <code>--directory</code></h3>
 <p>Force the target to be treated as a file or directory, overriding auto-detection.</p>
-<pre><code class="language-bash"># Force file interpretation (useful for symlinks)
-shruggie-indexer --file path/to/ambiguous-item
+<div class="highlight"><pre><span></span><code><span class="c1"># Force file interpretation (useful for symlinks)</span>
+shruggie-indexer<span class="w"> </span>--file<span class="w"> </span>path/to/ambiguous-item
 
-# Force directory interpretation
-shruggie-indexer --directory path/to/target
-</code></pre>
+<span class="c1"># Force directory interpretation</span>
+shruggie-indexer<span class="w"> </span>--directory<span class="w"> </span>path/to/target
+</code></pre></div>
 <p>If the forced type does not match the actual filesystem type, a warning is logged but processing continues.</p>
 <h3 id="-recursive-no-recursive"><code>--recursive</code> / <code>--no-recursive</code></h3>
 <p>Control recursive directory traversal. Default: <code>--recursive</code>.</p>
-<pre><code class="language-bash"># Index a directory and all its subdirectories (default)
-shruggie-indexer path/to/dir --recursive
+<div class="highlight"><pre><span></span><code><span class="c1"># Index a directory and all its subdirectories (default)</span>
+shruggie-indexer<span class="w"> </span>path/to/dir<span class="w"> </span>--recursive
 
-# Index only the directory's immediate children
-shruggie-indexer path/to/dir --no-recursive
-</code></pre>
+<span class="c1"># Index only the directory&#39;s immediate children</span>
+shruggie-indexer<span class="w"> </span>path/to/dir<span class="w"> </span>--no-recursive
+</code></pre></div>
 <p>For single-file targets, this option has no effect.</p>
 <h2 id="output-options">Output Options</h2>
 <p>Three independent output flags control where JSON output is written. Multiple output destinations can be active simultaneously.</p>
@@ -2208,9 +2208,9 @@ shruggie-indexer path/to/dir --no-recursive
 </ul>
 <h3 id="-outfile-o"><code>--outfile</code>, <code>-o</code></h3>
 <p>Write the combined JSON output to the specified file path.</p>
-<pre><code class="language-bash">shruggie-indexer path/to/target --outfile index.json
-shruggie-indexer path/to/target -o index.json
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>--outfile<span class="w"> </span>index.json
+shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>-o<span class="w"> </span>index.json
+</code></pre></div>
 <ul>
 <li>The parent directory must exist.</li>
 <li>Existing files are overwritten without prompting.</li>
@@ -2218,8 +2218,8 @@ shruggie-indexer path/to/target -o index.json
 </ul>
 <h3 id="-inplace"><code>--inplace</code></h3>
 <p>Write individual sidecar JSON files alongside each indexed item.</p>
-<pre><code class="language-bash">shruggie-indexer path/to/directory/ --inplace
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--inplace
+</code></pre></div>
 <p>For files, the sidecar is named <code>&lt;filename&gt;_meta2.json</code>. For directories, the sidecar is named <code>_directorymeta2.json</code> and placed inside the directory.</p>
 <table>
 <thead>
@@ -2242,48 +2242,54 @@ shruggie-indexer path/to/target -o index.json
 <p>Disables stdout output by default (use <code>--stdout</code> to re-enable).</p>
 <h2 id="metadata-options">Metadata Options</h2>
 <p>These options control embedded metadata extraction and sidecar metadata processing.</p>
-<p>!!! warning "Implication chain"
-    The metadata flags form an implication chain:</p>
-<pre><code>- `--meta-merge-delete` implies `--meta-merge`
-- `--meta-merge` implies `--meta`
-
-You only need to specify the highest-level flag you want. The implied flags are activated automatically.
-</code></pre>
+<div class="admonition warning">
+<p class="admonition-title">Implication chain</p>
+<p>The metadata flags form an implication chain:</p>
+<ul>
+<li><code>--meta-merge-delete</code> implies <code>--meta-merge</code></li>
+<li><code>--meta-merge</code> implies <code>--meta</code></li>
+</ul>
+<p>You only need to specify the highest-level flag you want. The implied flags are activated automatically.</p>
+</div>
 <h3 id="-meta-m"><code>--meta</code>, <code>-m</code></h3>
 <p>Extract embedded EXIF/XMP/IPTC metadata from files via <a href="../../getting-started/exiftool/">ExifTool</a>.</p>
-<pre><code class="language-bash">shruggie-indexer path/to/file.jpg --meta
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/file.jpg<span class="w"> </span>--meta
+</code></pre></div>
 <p>When active, each file entry's <code>metadata</code> array includes an <code>exiftool.json_metadata</code> entry containing the extracted metadata as a JSON object. If ExifTool is not installed, a warning is logged and the entry is omitted — this is not a fatal error.</p>
 <h3 id="-meta-merge"><code>--meta-merge</code></h3>
 <p>Discover sidecar metadata files alongside each indexed item and merge their content into the parent entry's <code>metadata</code> array. Implies <code>--meta</code>.</p>
-<pre><code class="language-bash">shruggie-indexer path/to/directory/ --meta-merge
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--meta-merge
+</code></pre></div>
 <p>Sidecar files (<code>.info.json</code>, <code>.description</code>, thumbnails, subtitles, etc.) are identified by configurable filename patterns. The original sidecar files remain on disk.</p>
 <h3 id="-meta-merge-delete"><code>--meta-merge-delete</code></h3>
 <p>Merge sidecar metadata into parent entries and queue the original sidecar files for deletion after successful merging. Implies <code>--meta-merge</code> (and therefore <code>--meta</code>).</p>
-<pre><code class="language-bash">shruggie-indexer path/to/directory/ --meta-merge-delete --outfile index.json
-</code></pre>
-<p>!!! warning "Requires persistent output"
-    <code>--meta-merge-delete</code> requires at least one of <code>--outfile</code> or <code>--inplace</code> to be active. Without a persistent output destination, the merged metadata would be lost when the sidecar files are deleted. Violating this constraint produces a fatal error (exit code 2).</p>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--meta-merge-delete<span class="w"> </span>--outfile<span class="w"> </span>index.json
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Requires persistent output</p>
+<p><code>--meta-merge-delete</code> requires at least one of <code>--outfile</code> or <code>--inplace</code> to be active. Without a persistent output destination, the merged metadata would be lost when the sidecar files are deleted. Violating this constraint produces a fatal error (exit code 2).</p>
+</div>
 <p>Each merged sidecar entry carries full filesystem provenance — path, size, timestamps, and content hashes — sufficient to reverse the deletion if needed.</p>
 <h2 id="rename-options">Rename Options</h2>
 <h3 id="-rename"><code>--rename</code></h3>
 <p>Rename files to their deterministic, hash-based <code>storage_name</code> values.</p>
-<pre><code class="language-bash">shruggie-indexer path/to/directory/ --rename
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--rename
+</code></pre></div>
 <p>For a file with <code>id</code> of <code>yA8A8C089A6A8583B24C85F5A4A41F5AC</code> and extension <code>exe</code>, the storage name is <code>yA8A8C089A6A8583B24C85F5A4A41F5AC.exe</code>. Directories are renamed to their <code>id</code> (e.g., <code>x3B4F479E9F880E438882FC34B67D352C</code>).</p>
-<p>!!! note "Rename implies in-place"
-    <code>--rename</code> automatically enables <code>--inplace</code> so that sidecar files are written alongside each renamed item, preserving the original filename in the index entry.</p>
+<div class="admonition note">
+<p class="admonition-title">Rename implies in-place</p>
+<p><code>--rename</code> automatically enables <code>--inplace</code> so that sidecar files are written alongside each renamed item, preserving the original filename in the index entry.</p>
+</div>
 <h3 id="-dry-run"><code>--dry-run</code></h3>
 <p>Preview rename operations without modifying any files.</p>
-<pre><code class="language-bash">shruggie-indexer path/to/directory/ --rename --dry-run
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--rename<span class="w"> </span>--dry-run
+</code></pre></div>
 <p>Logs each proposed rename at <code>INFO</code> level. Only meaningful when used with <code>--rename</code>.</p>
 <h2 id="identity-options">Identity Options</h2>
 <h3 id="-id-type"><code>--id-type</code></h3>
 <p>Select which hash algorithm is used for the <code>id</code> field and <code>storage_name</code>. Choices: <code>md5</code> (default) or <code>sha256</code>.</p>
-<pre><code class="language-bash">shruggie-indexer path/to/file --id-type sha256
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/file<span class="w"> </span>--id-type<span class="w"> </span>sha256
+</code></pre></div>
 <table>
 <thead>
 <tr>
@@ -2308,14 +2314,14 @@ You only need to specify the highest-level flag you want. The implied flags are 
 <p>Both algorithms are always computed regardless of this setting. This option only controls which digest is promoted to the <code>id</code> field.</p>
 <h3 id="-compute-sha512"><code>--compute-sha512</code></h3>
 <p>Include SHA-512 in the computed <code>HashSet</code> objects. SHA-512 is excluded by default to reduce output size.</p>
-<pre><code class="language-bash">shruggie-indexer path/to/file --compute-sha512
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/file<span class="w"> </span>--compute-sha512
+</code></pre></div>
 <p>When enabled, every <code>hashes</code> and <code>name.hashes</code> object in the output includes a <code>sha512</code> field.</p>
 <h2 id="configuration">Configuration</h2>
 <h3 id="-config"><code>--config</code></h3>
 <p>Path to a TOML configuration file. Overrides the default config file resolution.</p>
-<pre><code class="language-bash">shruggie-indexer path/to/target --config my-config.toml
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>--config<span class="w"> </span>my-config.toml
+</code></pre></div>
 <p>See the <a href="../configuration/">Configuration</a> page for the file format and available settings.</p>
 <h2 id="logging-options">Logging Options</h2>
 <h3 id="-v-verbose"><code>-v</code>, <code>--verbose</code></h3>
@@ -2353,18 +2359,18 @@ You only need to specify the highest-level flag you want. The implied flags are 
 </table>
 <h3 id="-q-quiet"><code>-q</code>, <code>--quiet</code></h3>
 <p>Suppress all non-error output. Sets log level to <code>CRITICAL</code>. Overrides <code>--verbose</code> if both are specified.</p>
-<pre><code class="language-bash">shruggie-indexer path/to/target -q
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>-q
+</code></pre></div>
 <p>In quiet mode, the exit code is the primary success/failure signal.</p>
 <h2 id="general-options">General Options</h2>
 <h3 id="-version"><code>--version</code></h3>
 <p>Print the installed version and exit.</p>
-<pre><code class="language-bash">shruggie-indexer --version
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>--version
+</code></pre></div>
 <h3 id="-help"><code>--help</code></h3>
 <p>Print the help text and exit.</p>
-<pre><code class="language-bash">shruggie-indexer --help
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>--help
+</code></pre></div>
 <h2 id="mutual-exclusion-rules">Mutual Exclusion Rules</h2>
 <p>The following constraints are enforced at invocation time:</p>
 <table>
@@ -2521,8 +2527,8 @@ You only need to specify the highest-level flag you want. The implied flags are 
 <h2 id="signal-handling">Signal Handling</h2>
 <p>shruggie-indexer implements a two-phase interruption model for graceful cancellation:</p>
 <p><strong>First Ctrl+C (cooperative):</strong> Sets a cancellation flag. The engine finishes processing the current item and then stops cleanly. A message is printed to stderr:</p>
-<pre><code>Interrupt received — finishing current item. Press Ctrl+C again to force quit.
-</code></pre>
+<div class="highlight"><pre><span></span><code>Interrupt received — finishing current item. Press Ctrl+C again to force quit.
+</code></pre></div>
 <p><strong>Second Ctrl+C (forced):</strong> Restores the default signal handler and raises <code>KeyboardInterrupt</code> for immediate termination.</p>
 <h3 id="cancellation-and-output-state">Cancellation and output state</h3>
 <table>

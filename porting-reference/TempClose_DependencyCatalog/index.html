@@ -1757,14 +1757,14 @@ If <code>-ForceAll</code> is <code>$false</code> and <code>-Target</code> is <co
 <hr />
 <h2 id="10-companion-function-tempopen">10. Companion Function: TempOpen</h2>
 <p><code>TempClose</code> is designed to be used in conjunction with <code>TempOpen</code> (main.ps1:15119). The expected usage pattern is:</p>
-<pre><code class="language-powershell">$MyTempFile = (TempOpen -Type json -Name &quot;myProject&quot;)
-# ... use $MyTempFile ...
-TempClose -Target $MyTempFile
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="nv">$MyTempFile</span> <span class="p">=</span> <span class="p">(</span><span class="n">TempOpen</span> <span class="n">-Type</span> <span class="n">json</span> <span class="n">-Name</span> <span class="s2">&quot;myProject&quot;</span><span class="p">)</span>
+<span class="c"># ... use $MyTempFile ...</span>
+<span class="n">TempClose</span> <span class="n">-Target</span> <span class="nv">$MyTempFile</span>
+</code></pre></div>
 <p>The <code>TempOpen</code> docstring explicitly warns that failing to call <code>TempClose</code> will leave orphaned temp files in the pslib temp directory. The <code>-ForceAll</code> mode provides a way to clean up all orphaned files at once.</p>
 <hr />
 <h2 id="11-call-graph">11. Call Graph</h2>
-<pre><code>TempClose
+<div class="highlight"><pre><span></span><code>TempClose
 ├── (ForceAll=$true)
 │   ├── Get-ChildItem on $D_PSLIB_TEMP
 │   ├── Vbs ◄── external pslib (info: count or &quot;nothing to do&quot;)
@@ -1777,7 +1777,7 @@ TempClose -Target $MyTempFile
 └── (ForceAll=$false, Target exists)
     ├── Vbs ◄── external pslib (info: &quot;Closing referenced temp file&quot;)
     └── Remove-Item
-</code></pre>
+</code></pre></div>
 
 
 

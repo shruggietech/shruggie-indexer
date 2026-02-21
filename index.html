@@ -1447,36 +1447,36 @@
 <p><strong>Structured v2 JSON output</strong> — Output follows a well-defined schema with typed sub-objects (<code>HashSet</code>, <code>NameObject</code>, <code>SizeObject</code>, <code>TimestampPair</code>, <code>TimestampsObject</code>, <code>ParentObject</code>) and a <code>schema_version</code> discriminator for forward compatibility.</p>
 <h2 id="quick-example">Quick Example</h2>
 <p>Index a file and print the result to stdout:</p>
-<pre><code class="language-bash">shruggie-indexer path/to/file.exe
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/file.exe
+</code></pre></div>
 <p>Output (abbreviated):</p>
-<pre><code class="language-json">{
-  &quot;schema_version&quot;: 2,
-  &quot;id&quot;: &quot;yA8A8C089A6A8583B24C85F5A4A41F5AC&quot;,
-  &quot;id_algorithm&quot;: &quot;md5&quot;,
-  &quot;type&quot;: &quot;file&quot;,
-  &quot;name&quot;: {
-    &quot;text&quot;: &quot;file.exe&quot;,
-    &quot;hashes&quot;: { &quot;md5&quot;: &quot;...&quot;, &quot;sha256&quot;: &quot;...&quot; }
-  },
-  &quot;extension&quot;: &quot;exe&quot;,
-  &quot;size&quot;: { &quot;text&quot;: &quot;15.28 MB&quot;, &quot;bytes&quot;: 16027648 },
-  &quot;hashes&quot;: { &quot;md5&quot;: &quot;A8A8C089...&quot;, &quot;sha256&quot;: &quot;B6BA115C...&quot; },
-  &quot;file_system&quot;: {
-    &quot;relative&quot;: &quot;file.exe&quot;,
-    &quot;parent&quot;: { &quot;id&quot;: &quot;x3B4F479E...&quot;, &quot;name&quot;: { &quot;text&quot;: &quot;my-dir&quot;, &quot;hashes&quot;: { &quot;...&quot;: &quot;...&quot; } } }
-  },
-  &quot;timestamps&quot;: {
-    &quot;created&quot;:  { &quot;iso&quot;: &quot;2026-02-15T09:28:17.408462-05:00&quot;, &quot;unix&quot;: 1771165697408 },
-    &quot;modified&quot;: { &quot;iso&quot;: &quot;2023-08-03T19:47:44.000000-04:00&quot;, &quot;unix&quot;: 1691106464000 },
-    &quot;accessed&quot;: { &quot;iso&quot;: &quot;2026-02-15T09:28:18.109390-05:00&quot;, &quot;unix&quot;: 1771165698109 }
-  },
-  &quot;attributes&quot;: { &quot;is_link&quot;: false, &quot;storage_name&quot;: &quot;yA8A8C089A6A8583B24C85F5A4A41F5AC.exe&quot; },
-  &quot;items&quot;: null,
-  &quot;metadata&quot;: null,
-  &quot;mime_type&quot;: &quot;application/octet-stream&quot;
-}
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;yA8A8C089A6A8583B24C85F5A4A41F5AC&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;id_algorithm&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;md5&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file.exe&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;hashes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;md5&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;sha256&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;extension&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;exe&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;size&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;15.28 MB&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16027648</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;hashes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;md5&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;A8A8C089...&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;sha256&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;B6BA115C...&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;file_system&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;relative&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file.exe&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;parent&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;x3B4F479E...&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my-dir&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;hashes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;...&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;timestamps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;created&quot;</span><span class="p">:</span><span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;iso&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-02-15T09:28:17.408462-05:00&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;unix&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1771165697408</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;modified&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;iso&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2023-08-03T19:47:44.000000-04:00&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;unix&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1691106464000</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;accessed&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;iso&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-02-15T09:28:18.109390-05:00&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;unix&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1771165698109</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;attributes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;is_link&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;storage_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;yA8A8C089A6A8583B24C85F5A4A41F5AC.exe&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;items&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;mime_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;application/octet-stream&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
 <h2 id="documentation-sections">Documentation Sections</h2>
 <ul>
 <li><strong><a href="getting-started/installation/">Getting Started</a></strong> — Install shruggie-indexer, set up ExifTool, and index your first file in minutes.</li>

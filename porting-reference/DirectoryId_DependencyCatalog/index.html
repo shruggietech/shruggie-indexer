@@ -2003,7 +2003,7 @@
 <p>Returns <code>$null</code> if the input directory is missing or does not exist.</p>
 <hr />
 <h2 id="11-call-graph">11. Call Graph</h2>
-<pre><code>DirectoryId
+<div class="highlight"><pre><span></span><code>DirectoryId
 ├── [resolves -Here or -Directory input]
 │   └── Vbs ◄── external pslib (on missing/invalid directory)
 ├── DirectoryId-ResolvePath
@@ -2021,7 +2021,7 @@
 ├── [concatenate directory + parent hashes]
 ├── DirectoryId-HashString (×4 algorithms, concatenated parts → final IDs)
 └── [format output based on switches]
-</code></pre>
+</code></pre></div>
 
 
 

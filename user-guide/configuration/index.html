@@ -1966,86 +1966,86 @@
 </table>
 <p>Project-local config files (<code>.shruggie-indexer.toml</code>) are searched starting from the target directory and walking up to the filesystem root.</p>
 <p>To specify a config file explicitly from the command line:</p>
-<pre><code class="language-bash">shruggie-indexer path/to/target --config my-config.toml
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>--config<span class="w"> </span>my-config.toml
+</code></pre></div>
 <h2 id="configuration-file-format">Configuration File Format</h2>
 <p>Configuration files use <a href="https://toml.io/">TOML</a> format, parsed by Python's built-in <code>tomllib</code> module (Python 3.11+).</p>
 <h3 id="complete-example">Complete example</h3>
 <p>The following shows all available configuration options with their default values:</p>
-<pre><code class="language-toml"># ── Traversal and identity ──────────────────────────────────
+<div class="highlight"><pre><span></span><code><span class="c1"># ── Traversal and identity ──────────────────────────────────</span>
 
-[traversal]
-recursive = true
-id_algorithm = &quot;md5&quot;         # &quot;md5&quot; or &quot;sha256&quot;
-compute_sha512 = false
+<span class="k">[traversal]</span>
+<span class="n">recursive</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">id_algorithm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;md5&quot;</span><span class="w">         </span><span class="c1"># &quot;md5&quot; or &quot;sha256&quot;</span>
+<span class="n">compute_sha512</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 
-# ── Output routing ──────────────────────────────────────────
+<span class="c1"># ── Output routing ──────────────────────────────────────────</span>
 
-[output]
-stdout = true                # Conditional default (see docs)
-# file = &quot;index.json&quot;       # No default; set to enable file output
-inplace = false
+<span class="k">[output]</span>
+<span class="n">stdout</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w">                </span><span class="c1"># Conditional default (see docs)</span>
+<span class="c1"># file = &quot;index.json&quot;       # No default; set to enable file output</span>
+<span class="n">inplace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 
-# ── Metadata processing ────────────────────────────────────
+<span class="c1"># ── Metadata processing ────────────────────────────────────</span>
 
-[metadata]
-extract_exif = false
-meta_merge = false
-meta_merge_delete = false
+<span class="k">[metadata]</span>
+<span class="n">extract_exif</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+<span class="n">meta_merge</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+<span class="n">meta_merge_delete</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 
-# ── Rename ──────────────────────────────────────────────────
+<span class="c1"># ── Rename ──────────────────────────────────────────────────</span>
 
-[rename]
-enabled = false
-dry_run = false
+<span class="k">[rename]</span>
+<span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+<span class="n">dry_run</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 
-# ── Extension validation ───────────────────────────────────
+<span class="c1"># ── Extension validation ───────────────────────────────────</span>
 
-[extensions]
-validation_pattern = '^(([a-z0-9]){1,2}|([a-z0-9])([a-z0-9\-]){1,12}([a-z0-9]))$'
+<span class="k">[extensions]</span>
+<span class="n">validation_pattern</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;^(([a-z0-9]){1,2}|([a-z0-9])([a-z0-9\-]){1,12}([a-z0-9]))$&#39;</span>
 
-# ── Filesystem exclusion filters ───────────────────────────
+<span class="c1"># ── Filesystem exclusion filters ───────────────────────────</span>
 
-[filesystem_excludes]
-names = [
-    &quot;$recycle.bin&quot;,
-    &quot;system volume information&quot;,
-    &quot;desktop.ini&quot;,
-    &quot;thumbs.db&quot;,
-    &quot;.ds_store&quot;,
-    &quot;.spotlight-v100&quot;,
-    &quot;.trashes&quot;,
-    &quot;.fseventsd&quot;,
-    &quot;.temporaryitems&quot;,
-    &quot;.documentrevisions-v100&quot;,
-    &quot;.git&quot;,
-]
-globs = [&quot;.trash-*&quot;]
+<span class="k">[filesystem_excludes]</span>
+<span class="n">names</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;$recycle.bin&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;system volume information&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;desktop.ini&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;thumbs.db&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;.ds_store&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;.spotlight-v100&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;.trashes&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;.fseventsd&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;.temporaryitems&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;.documentrevisions-v100&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;.git&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+<span class="n">globs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;.trash-*&quot;</span><span class="p">]</span>
 
-# ── ExifTool configuration ─────────────────────────────────
+<span class="c1"># ── ExifTool configuration ─────────────────────────────────</span>
 
-[exiftool]
-exclude_extensions = [&quot;csv&quot;, &quot;htm&quot;, &quot;html&quot;, &quot;json&quot;, &quot;tsv&quot;, &quot;xml&quot;]
-base_args = [
-    &quot;-extractEmbedded3&quot;,
-    &quot;-scanForXMP&quot;,
-    &quot;-unknown2&quot;,
-    &quot;-json&quot;,
-    &quot;-G3:1&quot;,
-    &quot;-struct&quot;,
-    &quot;-ignoreMinorErrors&quot;,
-    &quot;-charset&quot;, &quot;filename=utf8&quot;,
-    &quot;-api&quot;, &quot;requestall=3&quot;,
-    &quot;-api&quot;, &quot;largefilesupport=1&quot;,
-    &quot;--&quot;,
-]
+<span class="k">[exiftool]</span>
+<span class="n">exclude_extensions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;csv&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;htm&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;html&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;json&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;tsv&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;xml&quot;</span><span class="p">]</span>
+<span class="n">base_args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;-extractEmbedded3&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;-scanForXMP&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;-unknown2&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;-json&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;-G3:1&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;-struct&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;-ignoreMinorErrors&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;-charset&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;filename=utf8&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;-api&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;requestall=3&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;-api&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;largefilesupport=1&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
+<span class="p">]</span>
 
-# ── Extension groups ────────────────────────────────────────
+<span class="c1"># ── Extension groups ────────────────────────────────────────</span>
 
-# Seven groups: archive, audio, font, image, link, subtitles, video
-# Each maps to a list of lowercase extensions (without leading dots).
-# See the technical specification §7.3 for the complete default lists.
-</code></pre>
+<span class="c1"># Seven groups: archive, audio, font, image, link, subtitles, video</span>
+<span class="c1"># Each maps to a list of lowercase extensions (without leading dots).</span>
+<span class="c1"># See the technical specification §7.3 for the complete default lists.</span>
+</code></pre></div>
 <h2 id="default-configuration-values">Default Configuration Values</h2>
 <h3 id="scalar-defaults">Scalar defaults</h3>
 <table>
@@ -2111,8 +2111,8 @@ base_args = [
 </table>
 <h3 id="extension-validation-pattern">Extension validation pattern</h3>
 <p>The default pattern accepts extensions of 1–2 alphanumeric characters, or 3–14 characters where the first and last are alphanumeric and interior characters may include hyphens:</p>
-<pre><code>^(([a-z0-9]){1,2}|([a-z0-9])([a-z0-9\-]){1,12}([a-z0-9]))$
-</code></pre>
+<div class="highlight"><pre><span></span><code>^(([a-z0-9]){1,2}|([a-z0-9])([a-z0-9\-]){1,12}([a-z0-9]))$
+</code></pre></div>
 <p>Extensions that fail validation are recorded in the output's <code>extension</code> field but are treated as unrecognized for ExifTool processing purposes.</p>
 <h3 id="filesystem-exclusion-defaults">Filesystem exclusion defaults</h3>
 <p>The default exclusion set covers system artifacts across all supported platforms:</p>

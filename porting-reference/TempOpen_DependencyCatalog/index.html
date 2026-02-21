@@ -1719,8 +1719,8 @@
 <h2 id="6-internal-logic-summary">6. Internal Logic Summary</h2>
 <p><strong>File Name Generation:</strong></p>
 <p>The temp file name is constructed using the following template:</p>
-<pre><code>.{UUID}-{Name}-{UnixTimeMs}.{Type}
-</code></pre>
+<div class="highlight"><pre><span></span><code>.{UUID}-{Name}-{UnixTimeMs}.{Type}
+</code></pre></div>
 <p>Where:
 - Leading dot (<code>.</code>) makes the file hidden on Unix-like systems
 - <code>{UUID}</code> is a GUID with hyphens removed (<code>[System.GUID]::NewGuid().ToString().Replace('-','')</code>)
@@ -1778,14 +1778,14 @@
 <hr />
 <h2 id="10-companion-function-tempclose">10. Companion Function: TempClose</h2>
 <p><code>TempOpen</code> is designed to be used in conjunction with <code>TempClose</code> (main.ps1:15044). The expected usage pattern is:</p>
-<pre><code class="language-powershell">$MyTempFile = (TempOpen -Type json -Name &quot;myProject&quot;)
-# ... use $MyTempFile ...
-TempClose -Target $MyTempFile
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="nv">$MyTempFile</span> <span class="p">=</span> <span class="p">(</span><span class="n">TempOpen</span> <span class="n">-Type</span> <span class="n">json</span> <span class="n">-Name</span> <span class="s2">&quot;myProject&quot;</span><span class="p">)</span>
+<span class="c"># ... use $MyTempFile ...</span>
+<span class="n">TempClose</span> <span class="n">-Target</span> <span class="nv">$MyTempFile</span>
+</code></pre></div>
 <p>The docstring explicitly warns that failing to call <code>TempClose</code> will leave orphaned temp files in the pslib temp directory.</p>
 <hr />
 <h2 id="11-call-graph">11. Call Graph</h2>
-<pre><code>TempOpen
+<div class="highlight"><pre><span></span><code>TempOpen
 ├── [validates and normalizes Type parameter]
 ├── [validates and normalizes Name parameter]
 ├── [generates UUID and timestamp]
@@ -1793,7 +1793,7 @@ TempClose -Target $MyTempFile
 ├── (PathOnly=$false) → New-Item (create file)
 │   └── Vbs ◄── external pslib (info: &quot;Creating new temp file&quot;)
 └── return file path string
-</code></pre>
+</code></pre></div>
 
 
 

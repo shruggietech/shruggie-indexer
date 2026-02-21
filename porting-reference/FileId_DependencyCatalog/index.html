@@ -2002,7 +2002,7 @@
 <p>Returns <code>$null</code> if the input file is missing, does not exist, or no valid hash types were processed.</p>
 <hr />
 <h2 id="11-call-graph">11. Call Graph</h2>
-<pre><code>FileId
+<div class="highlight"><pre><span></span><code>FileId
 ├── [validates FileIdPendingFile is non-empty and exists]
 │   └── Vbs ◄── external pslib (on error)
 ├── FileId-ResolvePath
@@ -2024,7 +2024,7 @@
 │       └── FileId-HashSha512 (file stream)
 │   └── prepend &quot;y&quot; to form final ID
 └── [format output based on switches]
-</code></pre>
+</code></pre></div>
 
 
 

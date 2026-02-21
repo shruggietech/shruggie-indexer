@@ -1783,7 +1783,7 @@
 <p>Returns a <code>[System.String]</code> containing the decoded plaintext. Returns nothing (implicit <code>$null</code>) if the input string is empty.</p>
 <hr />
 <h2 id="10-call-graph">10. Call Graph</h2>
-<pre><code>Base64DecodeString
+<div class="highlight"><pre><span></span><code>Base64DecodeString
 ├── [validates InputString is non-empty]
 │   └── Vbs ◄── external pslib (on error)
 ├── [validates Encoding parameter]
@@ -1794,7 +1794,7 @@
     ├── (OpsCode=1)  → ASCII decode
     ├── (OpsCode=10) → UTF8 decode + UrlDecode
     └── (OpsCode=11) → ASCII decode + UrlDecode
-</code></pre>
+</code></pre></div>
 
 
 

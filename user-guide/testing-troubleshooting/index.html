@@ -1366,12 +1366,12 @@
 <p><code>ruff check .</code> includes test and docs trees, which can produce a large number of findings in one run. That is unnecessary for release readiness, because release automation currently runs pytest and build steps (not Ruff) on tag push.</p>
 <h2 id="recommended-command-sequence-safe-baseline">Recommended command sequence (safe baseline)</h2>
 <p>Run these from a standalone terminal (PowerShell, CMD, or external bash), not from a busy VS Code integrated terminal:</p>
-<pre><code class="language-bash">python -m pytest tests/ -m &quot;not requires_exiftool&quot;
-ruff check src/
-</code></pre>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;not requires_exiftool&quot;</span>
+ruff<span class="w"> </span>check<span class="w"> </span>src/
+</code></pre></div>
 <p>Optional: if you need test linting too, run it separately:</p>
-<pre><code class="language-bash">ruff check tests/
-</code></pre>
+<div class="highlight"><pre><span></span><code>ruff<span class="w"> </span>check<span class="w"> </span>tests/
+</code></pre></div>
 <p>Splitting lint scope makes failures easier to read and avoids terminal flood in a single command.</p>
 <h2 id="if-vs-code-still-freezes">If VS Code still freezes</h2>
 <ol>
@@ -1379,8 +1379,8 @@ ruff check src/
 <li>Run lint with narrower scope (<code>ruff check src/</code> first).</li>
 <li>Redirect lint output to a file for inspection:</li>
 </ol>
-<p><code>bash
-   ruff check src/ &gt; ruff.log</code></p>
+<div class="highlight"><pre><span></span><code>ruff<span class="w"> </span>check<span class="w"> </span>src/<span class="w"> </span>&gt;<span class="w"> </span>ruff.log
+</code></pre></div>
 <ol>
 <li>Re-open VS Code with all extensions disabled once (<code>code --disable-extensions</code>) to isolate extension conflicts.</li>
 <li>Re-enable extensions one by one, starting with Python and Ruff.</li>

@@ -2275,7 +2275,7 @@
 <p>Returns an empty object (<code>'{}'</code> for JSON, <code>[PSCustomObject]@{}</code> for object, <code>'null'</code> for text) if type detection fails (zero or multiple type matches).</p>
 <hr />
 <h2 id="11-call-graph">11. Call Graph</h2>
-<pre><code>MetaFileRead
+<div class="highlight"><pre><span></span><code>MetaFileRead
 ├── [validates File parameter is non-empty]
 │   └── VbsFormatter → Vbs ◄── external pslib
 ├── ValidateIsFile ◄── external pslib
@@ -2304,7 +2304,7 @@
 ├── MetaFileRead-Sha256-String (hash file name → NameHash)
 ├── MetaFileRead-Sha256-File (hash file contents → _id)
 └── [format output based on -Format parameter]
-</code></pre>
+</code></pre></div>
 
 
 

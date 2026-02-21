@@ -1556,102 +1556,108 @@
 <p>This guide walks through the most common shruggie-indexer operations. For the full CLI reference, see the <a href="../../user-guide/cli-reference/">CLI Reference</a>.</p>
 <h2 id="index-a-single-file">Index a Single File</h2>
 <p>Point shruggie-indexer at any file to produce a JSON index entry on stdout:</p>
-<pre><code class="language-bash">shruggie-indexer path/to/file.jpg
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/file.jpg
+</code></pre></div>
 <p>The tool auto-detects whether the target is a file or directory. To force the interpretation, use <code>--file</code> or <code>--directory</code>.</p>
 <h2 id="index-a-directory">Index a Directory</h2>
 <p>Index a directory and all its contents recursively (the default):</p>
-<pre><code class="language-bash">shruggie-indexer path/to/directory/
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/directory/
+</code></pre></div>
 <p>Disable recursion to index only the directory's immediate children:</p>
-<pre><code class="language-bash">shruggie-indexer path/to/directory/ --no-recursive
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--no-recursive
+</code></pre></div>
 <h2 id="save-output-to-a-file">Save Output to a File</h2>
 <p>Write the combined JSON output to a file instead of stdout:</p>
-<pre><code class="language-bash">shruggie-indexer path/to/target --outfile index.json
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>--outfile<span class="w"> </span>index.json
+</code></pre></div>
 <p>The short form <code>-o</code> also works:</p>
-<pre><code class="language-bash">shruggie-indexer path/to/target -o index.json
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>-o<span class="w"> </span>index.json
+</code></pre></div>
 <h2 id="write-in-place-sidecar-files">Write In-Place Sidecar Files</h2>
 <p>Write individual <code>_meta2.json</code> sidecar files alongside each indexed item:</p>
-<pre><code class="language-bash">shruggie-indexer path/to/directory/ --inplace
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--inplace
+</code></pre></div>
 <p>This creates a <code>filename_meta2.json</code> next to each file and a <code>_directorymeta2.json</code> inside each directory.</p>
 <h2 id="enable-metadata-extraction">Enable Metadata Extraction</h2>
 <p>Extract embedded EXIF/XMP/IPTC metadata via ExifTool:</p>
-<pre><code class="language-bash">shruggie-indexer path/to/file.jpg --meta
-</code></pre>
-<p>!!! note "ExifTool required"
-    The <code>--meta</code> flag requires <a href="../exiftool/">ExifTool</a> to be installed and on your <code>PATH</code>. If ExifTool is not found, a warning is logged and the <code>metadata</code> array simply omits the exiftool entry.</p>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/file.jpg<span class="w"> </span>--meta
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">ExifTool required</p>
+<p>The <code>--meta</code> flag requires <a href="../exiftool/">ExifTool</a> to be installed and on your <code>PATH</code>. If ExifTool is not found, a warning is logged and the <code>metadata</code> array simply omits the exiftool entry.</p>
+</div>
 <p>Merge sidecar metadata files into the parent entry's metadata array:</p>
-<pre><code class="language-bash">shruggie-indexer path/to/directory/ --meta-merge
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--meta-merge
+</code></pre></div>
 <p>Merge sidecar metadata and delete the original sidecar files after merging:</p>
-<pre><code class="language-bash">shruggie-indexer path/to/directory/ --meta-merge-delete --outfile index.json
-</code></pre>
-<p>!!! warning "Implication chain"
-    <code>--meta-merge-delete</code> implies <code>--meta-merge</code>, which implies <code>--meta</code>. You do not need to specify all three. Additionally, <code>--meta-merge-delete</code> requires a persistent output destination (<code>--outfile</code> or <code>--inplace</code>).</p>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--meta-merge-delete<span class="w"> </span>--outfile<span class="w"> </span>index.json
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Implication chain</p>
+<p><code>--meta-merge-delete</code> implies <code>--meta-merge</code>, which implies <code>--meta</code>. You do not need to specify all three. Additionally, <code>--meta-merge-delete</code> requires a persistent output destination (<code>--outfile</code> or <code>--inplace</code>).</p>
+</div>
 <h2 id="rename-files-to-storage-names">Rename Files to Storage Names</h2>
 <p>Rename files to their deterministic, hash-based <code>storage_name</code> values:</p>
-<pre><code class="language-bash">shruggie-indexer path/to/directory/ --rename --dry-run
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--rename<span class="w"> </span>--dry-run
+</code></pre></div>
 <p>The <code>--dry-run</code> flag previews the rename operations without modifying any files. Remove <code>--dry-run</code> to execute the renames:</p>
-<pre><code class="language-bash">shruggie-indexer path/to/directory/ --rename
-</code></pre>
-<p>!!! tip "Rename implies in-place"
-    <code>--rename</code> automatically enables <code>--inplace</code> so that sidecar files are written alongside the renamed items, preserving the original filename in the index entry.</p>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--rename
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Rename implies in-place</p>
+<p><code>--rename</code> automatically enables <code>--inplace</code> so that sidecar files are written alongside the renamed items, preserving the original filename in the index entry.</p>
+</div>
 <h2 id="choose-an-id-algorithm">Choose an ID Algorithm</h2>
 <p>By default, the <code>id</code> field uses MD5. To use SHA-256 instead:</p>
-<pre><code class="language-bash">shruggie-indexer path/to/file --id-type sha256
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/file<span class="w"> </span>--id-type<span class="w"> </span>sha256
+</code></pre></div>
 <p>To include SHA-512 in the hash output (not used for <code>id</code>, but stored in the <code>hashes</code> object):</p>
-<pre><code class="language-bash">shruggie-indexer path/to/file --compute-sha512
-</code></pre>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/file<span class="w"> </span>--compute-sha512
+</code></pre></div>
 <h2 id="example-output">Example Output</h2>
 <p>Here is a representative JSON output for a single file (abbreviated):</p>
-<pre><code class="language-json">{
-  &quot;schema_version&quot;: 2,
-  &quot;id&quot;: &quot;yA8A8C089A6A8583B24C85F5A4A41F5AC&quot;,
-  &quot;id_algorithm&quot;: &quot;md5&quot;,
-  &quot;type&quot;: &quot;file&quot;,
-  &quot;name&quot;: {
-    &quot;text&quot;: &quot;flashplayer.exe&quot;,
-    &quot;hashes&quot;: {
-      &quot;md5&quot;: &quot;3470F718BA9457335A59CE06239A9250&quot;,
-      &quot;sha256&quot;: &quot;4DC834B31A1A5967F7A97AAD3D62EE91CCCC99B2034748135AFC193889B9A0EB&quot;
-    }
-  },
-  &quot;extension&quot;: &quot;exe&quot;,
-  &quot;mime_type&quot;: &quot;application/octet-stream&quot;,
-  &quot;size&quot;: { &quot;text&quot;: &quot;15.28 MB&quot;, &quot;bytes&quot;: 16027648 },
-  &quot;hashes&quot;: {
-    &quot;md5&quot;: &quot;A8A8C089A6A8583B24C85F5A4A41F5AC&quot;,
-    &quot;sha256&quot;: &quot;B6BA115C2B43D87AADDF0060C44726E7AF1A12C9501FC63DE652A9517D7367DB&quot;
-  },
-  &quot;file_system&quot;: {
-    &quot;relative&quot;: &quot;.test/flashplayer.exe&quot;,
-    &quot;parent&quot;: {
-      &quot;id&quot;: &quot;x3B4F479E9F880E438882FC34B67D352C&quot;,
-      &quot;name&quot;: {
-        &quot;text&quot;: &quot;.test&quot;,
-        &quot;hashes&quot;: { &quot;md5&quot;: &quot;5E7576E3CD79114D46850714E998A3B0&quot;, &quot;sha256&quot;: &quot;...&quot; }
-      }
-    }
-  },
-  &quot;timestamps&quot;: {
-    &quot;created&quot;:  { &quot;iso&quot;: &quot;2026-02-15T09:28:17.408462-05:00&quot;, &quot;unix&quot;: 1771165697408 },
-    &quot;modified&quot;: { &quot;iso&quot;: &quot;2023-08-03T19:47:44.000000-04:00&quot;, &quot;unix&quot;: 1691106464000 },
-    &quot;accessed&quot;: { &quot;iso&quot;: &quot;2026-02-15T09:28:18.109390-05:00&quot;, &quot;unix&quot;: 1771165698109 }
-  },
-  &quot;attributes&quot;: {
-    &quot;is_link&quot;: false,
-    &quot;storage_name&quot;: &quot;yA8A8C089A6A8583B24C85F5A4A41F5AC.exe&quot;
-  },
-  &quot;items&quot;: null,
-  &quot;metadata&quot;: null
-}
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;yA8A8C089A6A8583B24C85F5A4A41F5AC&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;id_algorithm&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;md5&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;flashplayer.exe&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;hashes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;md5&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;3470F718BA9457335A59CE06239A9250&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;sha256&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;4DC834B31A1A5967F7A97AAD3D62EE91CCCC99B2034748135AFC193889B9A0EB&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;extension&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;exe&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;mime_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;application/octet-stream&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;size&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;15.28 MB&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16027648</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;hashes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;md5&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;A8A8C089A6A8583B24C85F5A4A41F5AC&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;sha256&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;B6BA115C2B43D87AADDF0060C44726E7AF1A12C9501FC63DE652A9517D7367DB&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;file_system&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;relative&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;.test/flashplayer.exe&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;parent&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;x3B4F479E9F880E438882FC34B67D352C&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;.test&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;hashes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;md5&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;5E7576E3CD79114D46850714E998A3B0&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;sha256&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;timestamps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;created&quot;</span><span class="p">:</span><span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;iso&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-02-15T09:28:17.408462-05:00&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;unix&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1771165697408</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;modified&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;iso&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2023-08-03T19:47:44.000000-04:00&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;unix&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1691106464000</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;accessed&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;iso&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-02-15T09:28:18.109390-05:00&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;unix&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1771165698109</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;attributes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;is_link&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;storage_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;yA8A8C089A6A8583B24C85F5A4A41F5AC.exe&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;items&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="p">}</span>
+</code></pre></div>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><a href="../../user-guide/cli-reference/">CLI Reference</a> — Complete flag documentation, output scenarios, and exit codes.</li>
