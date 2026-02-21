@@ -8,9 +8,6 @@ from __future__ import annotations
 import hashlib
 import re
 from pathlib import Path
-from unittest.mock import mock_open, patch
-
-import pytest
 
 from shruggie_indexer.core.hashing import (
     NULL_HASHES,
@@ -96,8 +93,8 @@ class TestHashString:
     def test_hash_string(self) -> None:
         """hash_string('sunset.jpg') returns expected MD5 and SHA256."""
         result = hash_string("sunset.jpg")
-        expected_md5 = hashlib.md5("sunset.jpg".encode("utf-8")).hexdigest().upper()
-        expected_sha256 = hashlib.sha256("sunset.jpg".encode("utf-8")).hexdigest().upper()
+        expected_md5 = hashlib.md5(b"sunset.jpg").hexdigest().upper()
+        expected_sha256 = hashlib.sha256(b"sunset.jpg").hexdigest().upper()
         assert result.md5 == expected_md5
         assert result.sha256 == expected_sha256
 
@@ -126,14 +123,14 @@ class TestHashDirectoryId:
         result = hash_directory_id("vacation", "photos")
 
         # Step through manually.
-        name_md5 = hashlib.md5("vacation".encode("utf-8")).hexdigest().upper()
-        parent_md5 = hashlib.md5("photos".encode("utf-8")).hexdigest().upper()
+        name_md5 = hashlib.md5(b"vacation").hexdigest().upper()
+        parent_md5 = hashlib.md5(b"photos").hexdigest().upper()
         combined_md5 = (name_md5 + parent_md5).encode("utf-8")
         expected_md5 = hashlib.md5(combined_md5).hexdigest().upper()
         assert result.md5 == expected_md5
 
-        name_sha256 = hashlib.sha256("vacation".encode("utf-8")).hexdigest().upper()
-        parent_sha256 = hashlib.sha256("photos".encode("utf-8")).hexdigest().upper()
+        name_sha256 = hashlib.sha256(b"vacation").hexdigest().upper()
+        parent_sha256 = hashlib.sha256(b"photos").hexdigest().upper()
         combined_sha256 = (name_sha256 + parent_sha256).encode("utf-8")
         expected_sha256 = hashlib.sha256(combined_sha256).hexdigest().upper()
         assert result.sha256 == expected_sha256

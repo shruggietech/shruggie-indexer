@@ -6,16 +6,12 @@
 from __future__ import annotations
 
 import hashlib
-import re
 import time
 from pathlib import Path
-
-import pytest
 
 from shruggie_indexer.config.loader import load_config
 from shruggie_indexer.core.entry import index_path
 from shruggie_indexer.models.schema import IndexEntry
-
 
 # ---------------------------------------------------------------------------
 # Helpers

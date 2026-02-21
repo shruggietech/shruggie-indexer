@@ -10,8 +10,6 @@ from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 from shruggie_indexer.config.loader import load_config
 from shruggie_indexer.core.entry import index_path
 from shruggie_indexer.core.serializer import serialize_entry, write_inplace, write_output

@@ -7,7 +7,7 @@ platform-conditional execution.
 
 from __future__ import annotations
 
-import os
+import stat as statmod
 import sys
 from pathlib import Path
 
@@ -64,10 +64,12 @@ def test_symlink_detection(tmp_path: Path) -> None:
     assert link.is_symlink(), "Symlink not detected"
     assert link.is_file(), "Symlink should also report as file"
     # lstat should NOT follow the symlink.
-    lstat = link.lstat()
-    stat = link.stat()
+    lstat_result = link.lstat()
+    stat_result = link.stat()
     # On POSIX, lstat and stat may differ in inode; on Windows,
     # at minimum the reparse bit is set for the symlink.
+    assert statmod.S_ISLNK(lstat_result.st_mode)
+    assert not statmod.S_ISLNK(stat_result.st_mode)
     assert link.resolve() == target.resolve()
 
 

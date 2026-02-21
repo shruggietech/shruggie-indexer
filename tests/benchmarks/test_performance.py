@@ -12,7 +12,6 @@ See §14.7 for the full specification.
 
 from __future__ import annotations
 
-import os
 import time
 from pathlib import Path
 
@@ -20,7 +19,7 @@ import pytest
 
 from shruggie_indexer.config.loader import load_config
 from shruggie_indexer.config.types import IndexerConfig
-from shruggie_indexer.core.hashing import hash_file, hash_string
+from shruggie_indexer.core.hashing import hash_file
 from shruggie_indexer.core.serializer import serialize_entry
 
 
@@ -205,7 +204,7 @@ def test_bench_sidecar_discovery(tmp_path: Path, default_config: IndexerConfig) 
         discover_and_parse(p, p.name, siblings, default_config, index_root=root)
     elapsed = time.perf_counter() - start
 
-    print(f"\n  sidecar discovery (100 files × 3 sidecars): {elapsed:.3f} s")
+    print(f"\n  sidecar discovery (100 files x 3 sidecars): {elapsed:.3f} s")
 
 
 # ---------------------------------------------------------------------------

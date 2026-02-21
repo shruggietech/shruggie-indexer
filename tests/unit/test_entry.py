@@ -10,7 +10,6 @@ import sys
 import threading
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
 
 import pytest
 
@@ -19,11 +18,9 @@ from shruggie_indexer.config.types import IndexerConfig
 from shruggie_indexer.core.entry import (
     build_directory_entry,
     build_file_entry,
-    index_path,
 )
 from shruggie_indexer.exceptions import IndexerCancellationError
 from shruggie_indexer.models.schema import IndexEntry
-
 
 # ---------------------------------------------------------------------------
 # Helpers

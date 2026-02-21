@@ -11,8 +11,6 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-import pytest
-
 from shruggie_indexer.config.loader import load_config
 from shruggie_indexer.config.types import IndexerConfig
 from shruggie_indexer.core.serializer import (
@@ -30,7 +28,6 @@ from shruggie_indexer.models.schema import (
     TimestampPair,
     TimestampsObject,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

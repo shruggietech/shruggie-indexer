@@ -7,15 +7,10 @@ from __future__ import annotations
 
 import os
 import re
-import sys
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock
-
-import pytest
 
 from shruggie_indexer.core.timestamps import extract_timestamps
-from shruggie_indexer.models.schema import TimestampPair, TimestampsObject
 
 # ISO 8601 pattern: YYYY-MM-DDTHH:MM:SS with optional fractional seconds
 # and timezone offset.

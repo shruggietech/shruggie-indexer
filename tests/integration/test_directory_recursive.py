@@ -7,8 +7,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from shruggie_indexer.config.loader import load_config
 from shruggie_indexer.core.entry import build_directory_entry
 from shruggie_indexer.models.schema import IndexEntry

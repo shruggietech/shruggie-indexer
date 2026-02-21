@@ -11,8 +11,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from shruggie_indexer.cli.main import ExitCode, main
-
+from shruggie_indexer.cli.main import main
 
 # ---------------------------------------------------------------------------
 # Helpers

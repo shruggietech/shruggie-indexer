@@ -15,7 +15,6 @@ from shruggie_indexer.config.loader import load_config
 from shruggie_indexer.config.types import IndexerConfig
 from shruggie_indexer.core.traversal import list_children
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

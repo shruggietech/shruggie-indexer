@@ -12,7 +12,6 @@ import pytest
 
 from shruggie_indexer.config.loader import load_config
 from shruggie_indexer.core.paths import (
-    PathComponents,
     build_sidecar_path,
     build_storage_path,
     extract_components,

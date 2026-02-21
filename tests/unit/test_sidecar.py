@@ -7,15 +7,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
-
-import pytest
 
 from shruggie_indexer.config.loader import load_config
 from shruggie_indexer.config.types import IndexerConfig
 from shruggie_indexer.core.sidecar import discover_and_parse
-from shruggie_indexer.models.schema import MetadataEntry
-
 
 # ---------------------------------------------------------------------------
 # Helpers

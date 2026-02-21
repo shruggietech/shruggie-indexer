@@ -14,15 +14,11 @@ from shruggie_indexer.models.schema import (
     FileSystemObject,
     HashSet,
     IndexEntry,
-    MetadataAttributes,
-    MetadataEntry,
     NameObject,
-    ParentObject,
     SizeObject,
     TimestampPair,
     TimestampsObject,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
