@@ -177,6 +177,66 @@ jobs:
       - name: List downloaded artifacts
         run: find release-artifacts/ -type f | sort
 
+      - name: Generate release notes from changelog
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          python - <<'PY'
+          import pathlib
+
+          version = "${{ steps.version.outputs.version }}"
+          changelog_path = pathlib.Path("CHANGELOG.md")
+          output_path = pathlib.Path("release-artifacts/RELEASE_BODY.md")
+
+          changelog_section = ""
+          if changelog_path.exists():
+              lines = changelog_path.read_text(encoding="utf-8").splitlines()
+              start = None
+              for idx, line in enumerate(lines):
+                  if line.strip().startswith(f"## [{version}]"):
+                      start = idx
+                      break
+              if start is not None:
+                  end = len(lines)
+                  for idx in range(start + 1, len(lines)):
+                      if lines[idx].strip().startswith("## ["):
+                          end = idx
+                          break
+                  changelog_section = "\n".join(lines[start:end]).strip()
+
+          if not changelog_section:
+              changelog_section = (
+                  f"## [{version}]\n\n"
+                  "No formal changelog entry found for this version in `CHANGELOG.md`."
+              )
+
+          body = f"""## shruggie-indexer v{version}
+
+### Changelog
+
+{changelog_section}
+
+### Downloads
+
+| Platform | CLI | GUI |
+|----------|-----|-----|
+| Windows x64 | `shruggie-indexer-{version}-windows-x64.exe` | `shruggie-indexer-gui-{version}-windows-x64.exe` |
+| Linux x64 | `shruggie-indexer-{version}-linux-x64` | `shruggie-indexer-gui-{version}-linux-x64` |
+| macOS x64 | `shruggie-indexer-{version}-macos-x64` | `shruggie-indexer-gui-{version}-macos-x64` |
+| macOS ARM64 | `shruggie-indexer-{version}-macos-arm64` | `shruggie-indexer-gui-{version}-macos-arm64` |
+
+### Installation
+
+Download the appropriate executable for your platform and run it directly. No installation required.
+
+Linux/macOS users: make the file executable with `chmod +x <filename>` before running.
+
+**Note:** Metadata extraction requires [ExifTool](https://exiftool.org/) installed separately and available on PATH.
+"""
+
+          output_path.write_text(body, encoding="utf-8")
+          PY
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -185,22 +245,4 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, 'rc') }}
           files: release-artifacts/*
-          body: |
-            ## shruggie-indexer v${{ steps.version.outputs.version }}
-
-            ### Downloads
-
-            | Platform | CLI | GUI |
-            |----------|-----|-----|
-            | Windows x64 | `shruggie-indexer-${{ steps.version.outputs.version }}-windows-x64.exe` | `shruggie-indexer-gui-${{ steps.version.outputs.version }}-windows-x64.exe` |
-            | Linux x64 | `shruggie-indexer-${{ steps.version.outputs.version }}-linux-x64` | `shruggie-indexer-gui-${{ steps.version.outputs.version }}-linux-x64` |
-            | macOS x64 | `shruggie-indexer-${{ steps.version.outputs.version }}-macos-x64` | `shruggie-indexer-gui-${{ steps.version.outputs.version }}-macos-x64` |
-            | macOS ARM64 | `shruggie-indexer-${{ steps.version.outputs.version }}-macos-arm64` | `shruggie-indexer-gui-${{ steps.version.outputs.version }}-macos-arm64` |
-
-            ### Installation
-
-            Download the appropriate executable for your platform and run it directly. No installation required.
-
-            Linux/macOS users: make the file executable with `chmod +x <filename>` before running.
-
-            **Note:** Metadata extraction requires [ExifTool](https://exiftool.org/) installed separately and available on PATH.
+          body_path: release-artifacts/RELEASE_BODY.md
