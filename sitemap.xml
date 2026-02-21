@@ -2,78 +2,78 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/Base64DecodeString_DependencyCatalog/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/Date2UnixTime_DependencyCatalog/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/DirectoryId_DependencyCatalog/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/FileId_DependencyCatalog/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/MakeIndex_DependencyCatalog/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/MakeIndex_OperationsCatalog/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/MetaFileRead_DependencyCatalog/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/TempClose_DependencyCatalog/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/TempOpen_DependencyCatalog/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/Vbs_DependencyCatalog/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/schema/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/user/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/user/changelog/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/user/configuration/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/user/installation/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/user/quickstart/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/user/testing-troubleshooting/</loc>
-         <lastmod>2026-02-20</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
 </urlset>
