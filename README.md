@@ -12,7 +12,7 @@ Filesystem indexer with hash-based identity, metadata extraction, and structured
 
 ### Standalone Executables (Recommended)
 
-Download pre-built executables from [GitHub Releases](https://github.com/shruggietech/shruggie-indexer/releases). Available for Windows, Linux, and macOS (x64 + ARM64) — no Python installation required.
+Download pre-built executables from [GitHub Releases](https://github.com/shruggietech/shruggie-indexer/releases). Available for Windows, Linux, and macOS (ARM64) — no Python installation required.
 
 ### From Source (Contributors)
 
