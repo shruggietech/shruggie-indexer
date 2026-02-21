@@ -3,9 +3,9 @@
 # -------------------------------------------------------------------
 #
 # Triggers on version tag pushes (v*). Builds CLI and GUI standalone
-# executables on 4 platforms via PyInstaller, runs the test suite on
+# executables on 3 platforms via PyInstaller, runs the test suite on
 # each platform, renames artifacts with version and platform tags,
-# and creates a GitHub Release with all 8 artifacts attached.
+# and creates a GitHub Release with all 6 artifacts attached.
 #
 # See: shruggie-indexer-spec.md §13.5.1
 # -------------------------------------------------------------------
@@ -36,12 +36,6 @@ jobs:
             gui_ext: .exe
           - os: ubuntu-latest
             platform_suffix: linux-x64
-            cli_name: shruggie-indexer
-            gui_name: shruggie-indexer-gui
-            cli_ext: ""
-            gui_ext: ""
-          - os: macos-15-intel
-            platform_suffix: macos-x64
             cli_name: shruggie-indexer
             gui_name: shruggie-indexer-gui
             cli_ext: ""
@@ -219,7 +213,6 @@ jobs:
               "|----------|-----|-----|\n"
               f"| Windows x64 | `shruggie-indexer-{version}-windows-x64.exe` | `shruggie-indexer-gui-{version}-windows-x64.exe` |\n"
               f"| Linux x64 | `shruggie-indexer-{version}-linux-x64` | `shruggie-indexer-gui-{version}-linux-x64` |\n"
-              f"| macOS x64 | `shruggie-indexer-{version}-macos-x64` | `shruggie-indexer-gui-{version}-macos-x64` |\n"
               f"| macOS ARM64 | `shruggie-indexer-{version}-macos-arm64` | `shruggie-indexer-gui-{version}-macos-arm64` |\n\n"
               "### Installation\n\n"
               "Download the appropriate executable for your platform and run it directly. No installation required.\n\n"
