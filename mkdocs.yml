@@ -14,6 +14,7 @@ theme:
   name: material
   features:
     - navigation.tabs
+    - navigation.sections
     - navigation.instant
     - search.highlight
     - content.tabs.link
@@ -22,6 +23,16 @@ strict: true
 
 nav:
   - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+      - ExifTool Setup: getting-started/exiftool.md
+  - User Guide:
+      - Overview: user-guide/index.md
+      - CLI Reference: user-guide/cli-reference.md
+      - Configuration: user-guide/configuration.md
+      - Python API: user-guide/python-api.md
+      - Platform Notes: user-guide/platform-notes.md
   - Schema Reference:
       - Overview: schema/index.md
   - Porting Reference:
@@ -37,10 +48,4 @@ nav:
           - TempOpen: porting-reference/TempOpen_DependencyCatalog.md
           - TempClose: porting-reference/TempClose_DependencyCatalog.md
           - Vbs: porting-reference/Vbs_DependencyCatalog.md
-  - User Guide:
-      - Overview: user/index.md
-      - Installation: user/installation.md
-      - Quick Start: user/quickstart.md
-      - Configuration: user/configuration.md
-      - Testing Troubleshooting: user/testing-troubleshooting.md
-      - Changelog: user/changelog.md
+  - Changelog: changelog.md

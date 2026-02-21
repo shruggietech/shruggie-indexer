@@ -1,6 +1,7 @@
 # Porting Reference
 
-This section contains reference materials derived from the original PowerShell implementation of `MakeIndex`. These documents inform the Python port but are not part of the runtime codebase. They are read-only reference artifacts committed for traceability and to support AI implementation agents during sprint execution.
+!!! info "Historical Reference"
+    This section contains archival reference materials from the original PowerShell implementation. These documents were used during development and are preserved for traceability. They are not part of the runtime codebase and do not affect shruggie-indexer's behavior.
 
 ## Operations Catalog
 
