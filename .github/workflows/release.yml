@@ -211,7 +211,7 @@ jobs:
                   "No formal changelog entry found for this version in `CHANGELOG.md`."
               )
 
-            body = (
+          body = (
               f"## shruggie-indexer v{version}\n\n"
               "### Changelog\n\n"
               f"{changelog_section}\n\n"
@@ -225,7 +225,7 @@ jobs:
               "Download the appropriate executable for your platform and run it directly. No installation required.\n\n"
               "Linux/macOS users: make the file executable with `chmod +x <filename>` before running.\n\n"
               "**Note:** Metadata extraction requires [ExifTool](https://exiftool.org/) installed separately and available on PATH.\n"
-            )
+          )
 
           output_path.write_text(body, encoding="utf-8")
           PY
