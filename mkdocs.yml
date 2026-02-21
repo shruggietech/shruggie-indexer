@@ -21,6 +21,11 @@ theme:
 
 strict: true
 
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+
 nav:
   - Home: index.md
   - Getting Started:
