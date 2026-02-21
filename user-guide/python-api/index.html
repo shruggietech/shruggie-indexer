@@ -1,0 +1,2503 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Filesystem indexer with hash-based identity, metadata extraction, and structured JSON output.">
+      
+      
+      
+        <link rel="canonical" href="https://shruggietech.github.io/shruggie-indexer/user-guide/python-api/">
+      
+      
+        <link rel="prev" href="../configuration/">
+      
+      
+        <link rel="next" href="../platform-notes/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>Python API - shruggie-indexer</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#python-api" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="shruggie-indexer" class="md-header__button md-logo" aria-label="shruggie-indexer" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            shruggie-indexer
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Python API
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/shruggietech/shruggie-indexer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    shruggietech/shruggie-indexer
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../schema/" class="md-tabs__link">
+          
+  
+  
+  Schema Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../porting-reference/" class="md-tabs__link">
+          
+  
+  
+  Porting Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="shruggie-indexer" class="md-nav__button md-logo" aria-label="shruggie-indexer" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    shruggie-indexer
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/shruggietech/shruggie-indexer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    shruggietech/shruggie-indexer
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/exiftool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ExifTool Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python API
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#public-api-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public API Surface
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#index_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        index_path()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build_file_entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        build_file_entry()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build_directory_entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        build_directory_entry()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#serialize_entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        serialize_entry()
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#load_config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load_config()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#indexerconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IndexerConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#indexentry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IndexEntry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reusable-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reusable types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#progressevent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProgressEvent
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exception-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exception Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#index-a-single-file-with-defaults" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Index a single file with defaults
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-configuration-with-metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom configuration with metadata
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batch-indexing-with-shared-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch indexing with shared configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#progress-reporting-and-cancellation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Progress reporting and cancellation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error handling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inspecting-the-entry-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inspecting the entry tree
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../platform-notes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Platform Notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Schema Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Porting Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Porting Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/MakeIndex_OperationsCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Catalog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Catalogs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dependency Catalogs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/MakeIndex_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MakeIndex
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/Base64DecodeString_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base64DecodeString
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/Date2UnixTime_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Date2UnixTime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/DirectoryId_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectoryId
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/FileId_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FileId
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/MetaFileRead_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MetaFileRead
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/TempOpen_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TempOpen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/TempClose_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TempClose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/Vbs_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#public-api-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public API Surface
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#index_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        index_path()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build_file_entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        build_file_entry()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build_directory_entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        build_directory_entry()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#serialize_entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        serialize_entry()
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#load_config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load_config()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#indexerconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IndexerConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#indexentry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IndexEntry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reusable-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reusable types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#progressevent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProgressEvent
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exception-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exception Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#index-a-single-file-with-defaults" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Index a single file with defaults
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-configuration-with-metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom configuration with metadata
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batch-indexing-with-shared-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch indexing with shared configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#progress-reporting-and-cancellation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Progress reporting and cancellation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error handling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inspecting-the-entry-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inspecting the entry tree
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="python-api">Python API</h1>
+<p>shruggie-indexer exposes a public Python API for consumers who <code>import shruggie_indexer</code> as a library rather than invoking it from the command line. The CLI and GUI are both consumers of this API — they add no indexing logic of their own.</p>
+<h2 id="public-api-surface">Public API Surface</h2>
+<p>All public names are exported from the top-level <code>shruggie_indexer</code> namespace. Internal modules (<code>core/</code>, <code>config/</code>, <code>models/</code>) are implementation details — import from the top-level package, not from subpackages.</p>
+<pre><code class="language-python">from shruggie_indexer import (
+    # Version
+    __version__,
+    # Configuration
+    load_config,
+    IndexerConfig,
+    MetadataTypeAttributes,
+    # Core functions
+    index_path,
+    build_file_entry,
+    build_directory_entry,
+    serialize_entry,
+    # Progress and cancellation
+    ProgressEvent,
+    IndexerCancellationError,
+    # Data models
+    IndexEntry,
+    MetadataEntry,
+    HashSet,
+    NameObject,
+    SizeObject,
+    TimestampPair,
+    TimestampsObject,
+    ParentObject,
+)
+</code></pre>
+<p>Names not listed in <code>__all__</code> are internal and may change without notice between versions.</p>
+<p>!!! note "API Stability"
+    For the v0.1.0 release the public API is <strong>provisional</strong>. Breaking changes may occur in minor version bumps (0.2.0, 0.3.0) without a deprecation cycle. Once the project reaches 1.0.0, the public API becomes subject to semantic versioning.</p>
+<h2 id="core-functions">Core Functions</h2>
+<h3 id="index_path"><code>index_path()</code></h3>
+<p>The top-level entry point. Given a filesystem path and a configuration, produces a complete <code>IndexEntry</code>.</p>
+<pre><code class="language-python">def index_path(
+    target: Path | str,
+    config: IndexerConfig | None = None,
+    *,
+    progress_callback: Callable[[ProgressEvent], None] | None = None,
+    cancel_event: threading.Event | None = None,
+) -&gt; IndexEntry: ...
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>target</code></td>
+<td><code>Path \| str</code></td>
+<td>Path to index. Strings are converted to <code>Path</code> objects. Relative paths resolve against the current working directory.</td>
+</tr>
+<tr>
+<td><code>config</code></td>
+<td><code>IndexerConfig \| None</code></td>
+<td>Resolved configuration. When <code>None</code>, compiled defaults are used (equivalent to <code>load_config()</code> with no arguments).</td>
+</tr>
+<tr>
+<td><code>progress_callback</code></td>
+<td><code>Callable[[ProgressEvent], None] \| None</code></td>
+<td>Called after each item is processed during directory traversal. Must be non-blocking. Ignored for single-file targets.</td>
+</tr>
+<tr>
+<td><code>cancel_event</code></td>
+<td><code>threading.Event \| None</code></td>
+<td>Checked between items during directory traversal. When set, raises <code>IndexerCancellationError</code>. Ignored for single-file targets.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> A fully populated <code>IndexEntry</code> conforming to the v2 schema.</p>
+<p><strong>Raises:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Exception</th>
+<th>Condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IndexerTargetError</code></td>
+<td>Target path does not exist, is not accessible, or is neither a file nor a directory.</td>
+</tr>
+<tr>
+<td><code>IndexerConfigError</code></td>
+<td>Configuration is invalid (only when <code>config=None</code> triggers internal construction).</td>
+</tr>
+<tr>
+<td><code>IndexerRuntimeError</code></td>
+<td>Unrecoverable error during processing.</td>
+</tr>
+<tr>
+<td><code>IndexerCancellationError</code></td>
+<td>The <code>cancel_event</code> was set during processing.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="build_file_entry"><code>build_file_entry()</code></h3>
+<p>Builds an <code>IndexEntry</code> for a single file. This is the lower-level function that <code>index_path()</code> dispatches to when the target is a file.</p>
+<pre><code class="language-python">def build_file_entry(
+    path: Path,
+    config: IndexerConfig,
+    *,
+    siblings: list[Path] | None = None,
+    delete_queue: list[Path] | None = None,
+) -&gt; IndexEntry: ...
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>path</code></td>
+<td><code>Path</code></td>
+<td>Absolute path to the file.</td>
+</tr>
+<tr>
+<td><code>config</code></td>
+<td><code>IndexerConfig</code></td>
+<td>Resolved configuration.</td>
+</tr>
+<tr>
+<td><code>siblings</code></td>
+<td><code>list[Path] \| None</code></td>
+<td>Pre-enumerated sibling files for sidecar discovery. When <code>None</code>, the parent directory is enumerated on demand.</td>
+</tr>
+<tr>
+<td><code>delete_queue</code></td>
+<td><code>list[Path] \| None</code></td>
+<td>When MetaMergeDelete is active, sidecar paths are appended here for deferred deletion by the caller.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="build_directory_entry"><code>build_directory_entry()</code></h3>
+<p>Builds an <code>IndexEntry</code> for a directory, optionally recursing into subdirectories.</p>
+<pre><code class="language-python">def build_directory_entry(
+    path: Path,
+    config: IndexerConfig,
+    *,
+    recursive: bool = False,
+    delete_queue: list[Path] | None = None,
+    progress_callback: Callable[[ProgressEvent], None] | None = None,
+    cancel_event: threading.Event | None = None,
+) -&gt; IndexEntry: ...
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>path</code></td>
+<td><code>Path</code></td>
+<td>Absolute path to the directory.</td>
+</tr>
+<tr>
+<td><code>config</code></td>
+<td><code>IndexerConfig</code></td>
+<td>Resolved configuration.</td>
+</tr>
+<tr>
+<td><code>recursive</code></td>
+<td><code>bool</code></td>
+<td>Descend into subdirectories when <code>True</code>.</td>
+</tr>
+<tr>
+<td><code>delete_queue</code></td>
+<td><code>list[Path] \| None</code></td>
+<td>MetaMergeDelete accumulator.</td>
+</tr>
+<tr>
+<td><code>progress_callback</code></td>
+<td><code>Callable \| None</code></td>
+<td>Progress callback forwarded through recursive calls.</td>
+</tr>
+<tr>
+<td><code>cancel_event</code></td>
+<td><code>threading.Event \| None</code></td>
+<td>Cancellation event forwarded through recursive calls.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="serialize_entry"><code>serialize_entry()</code></h3>
+<p>Converts an <code>IndexEntry</code> to a JSON string conforming to the v2 schema.</p>
+<pre><code class="language-python">def serialize_entry(
+    entry: IndexEntry,
+    *,
+    indent: int | None = 2,
+    sort_keys: bool = False,
+) -&gt; str: ...
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>entry</code></td>
+<td><code>IndexEntry</code></td>
+<td>—</td>
+<td>The entry to serialize.</td>
+</tr>
+<tr>
+<td><code>indent</code></td>
+<td><code>int \| None</code></td>
+<td><code>2</code></td>
+<td>Indentation level. <code>None</code> produces compact single-line JSON.</td>
+</tr>
+<tr>
+<td><code>sort_keys</code></td>
+<td><code>bool</code></td>
+<td><code>False</code></td>
+<td>Sort keys alphabetically. Default preserves schema-defined field order.</td>
+</tr>
+</tbody>
+</table>
+<p>Serialization invariants enforced by this function:</p>
+<ul>
+<li><code>schema_version</code> appears first in the output (when <code>sort_keys=False</code>)</li>
+<li>Required fields are always present</li>
+<li><code>HashSet.sha512</code> is omitted when not computed (not emitted as <code>null</code>)</li>
+<li>All hash hex strings are uppercase</li>
+</ul>
+<h2 id="configuration-api">Configuration API</h2>
+<h3 id="load_config"><code>load_config()</code></h3>
+<p>The sole factory function for <code>IndexerConfig</code> objects. Implements the full four-layer resolution pipeline.</p>
+<pre><code class="language-python">def load_config(
+    *,
+    config_file: Path | str | None = None,
+    target_directory: Path | str | None = None,
+    overrides: dict[str, Any] | None = None,
+) -&gt; IndexerConfig: ...
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>config_file</code></td>
+<td><code>Path \| str \| None</code></td>
+<td>Explicit TOML config file. Replaces platform-standard user config resolution.</td>
+</tr>
+<tr>
+<td><code>target_directory</code></td>
+<td><code>Path \| str \| None</code></td>
+<td>Directory being indexed. Used to search for project-local <code>.shruggie-indexer.toml</code>.</td>
+</tr>
+<tr>
+<td><code>overrides</code></td>
+<td><code>dict[str, Any] \| None</code></td>
+<td>Highest-priority overrides. Keys are <code>IndexerConfig</code> field names; nested settings use dotted paths (e.g., <code>"exiftool.exclude_extensions"</code>).</td>
+</tr>
+</tbody>
+</table>
+<p>After merging all layers, <code>load_config()</code> applies <a href="../configuration/#parameter-implications">parameter implications</a>, validates the result, compiles regex patterns, and returns an immutable <code>IndexerConfig</code>.</p>
+<pre><code class="language-python"># Example: SHA-256 with metadata extraction
+config = load_config(overrides={
+    &quot;id_algorithm&quot;: &quot;sha256&quot;,
+    &quot;extract_exif&quot;: True,
+    &quot;recursive&quot;: True,
+})
+</code></pre>
+<h3 id="indexerconfig"><code>IndexerConfig</code></h3>
+<p>A frozen dataclass carrying all configuration for a single indexing invocation. Constructed via <code>load_config()</code> or directly for testing.</p>
+<pre><code class="language-python">@dataclass(frozen=True)
+class IndexerConfig:
+    &quot;&quot;&quot;Immutable configuration for a single indexing invocation.&quot;&quot;&quot;
+</code></pre>
+<p>The <code>frozen=True</code> guarantee means a single <code>IndexerConfig</code> can safely be shared across threads without synchronization. To create a modified copy:</p>
+<pre><code class="language-python">from dataclasses import replace
+new_config = replace(config, id_algorithm=&quot;sha256&quot;)
+</code></pre>
+<p>!!! warning "Direct Construction"
+    Direct <code>IndexerConfig()</code> construction bypasses parameter implications and validation. Callers who construct directly <strong>must</strong> ensure implications are satisfied:</p>
+<pre><code>- `rename=True` → `output_inplace=True`
+- `meta_merge_delete=True` → `meta_merge=True`
+- `meta_merge=True` → `extract_exif=True`
+</code></pre>
+<h2 id="data-models">Data Models</h2>
+<p>All data classes are defined in <code>models/schema.py</code> and map directly to the <a href="../../schema/">v2 JSON Schema</a> types.</p>
+<h3 id="indexentry"><code>IndexEntry</code></h3>
+<p>The root data class representing a single indexed file or directory.</p>
+<pre><code class="language-python">@dataclass
+class IndexEntry:
+    schema_version: int       # Always 2
+    id: str                   # Prefixed hash: y... (file), x... (directory)
+    id_algorithm: str         # &quot;md5&quot; or &quot;sha256&quot;
+    type: str                 # &quot;file&quot; or &quot;directory&quot;
+    name: NameObject
+    extension: str | None
+    size: SizeObject
+    hashes: HashSet | None    # Content hashes (file) or null (directory/symlink)
+    file_system: FileSystemObject
+    timestamps: TimestampsObject
+    attributes: AttributesObject
+    items: list[IndexEntry] | None = None
+    metadata: list[MetadataEntry] | None = None
+    mime_type: str | None = None
+</code></pre>
+<h3 id="reusable-types">Reusable types</h3>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Fields</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>HashSet</code></td>
+<td><code>md5</code>, <code>sha256</code>, <code>sha512</code> (optional)</td>
+<td>Cryptographic hash digests. All hex strings are uppercase.</td>
+</tr>
+<tr>
+<td><code>NameObject</code></td>
+<td><code>text</code>, <code>hashes</code></td>
+<td>Name with associated hash digests. <code>text</code> and <code>hashes</code> are co-nullable.</td>
+</tr>
+<tr>
+<td><code>SizeObject</code></td>
+<td><code>text</code>, <code>bytes</code></td>
+<td>Human-readable and machine-readable size.</td>
+</tr>
+<tr>
+<td><code>TimestampPair</code></td>
+<td><code>iso</code>, <code>unix</code></td>
+<td>ISO 8601 string and Unix milliseconds.</td>
+</tr>
+<tr>
+<td><code>TimestampsObject</code></td>
+<td><code>created</code>, <code>modified</code>, <code>accessed</code></td>
+<td>Three standard filesystem timestamps, each a <code>TimestampPair</code>.</td>
+</tr>
+<tr>
+<td><code>ParentObject</code></td>
+<td><code>id</code>, <code>name</code></td>
+<td>Parent directory identity and name.</td>
+</tr>
+<tr>
+<td><code>FileSystemObject</code></td>
+<td><code>relative</code>, <code>parent</code></td>
+<td>Filesystem location with forward-slash relative path.</td>
+</tr>
+<tr>
+<td><code>AttributesObject</code></td>
+<td><code>is_link</code>, <code>storage_name</code></td>
+<td>Item attributes including symlink status and deterministic rename target.</td>
+</tr>
+<tr>
+<td><code>MetadataEntry</code></td>
+<td><code>id</code>, <code>origin</code>, <code>name</code>, <code>hashes</code>, <code>attributes</code>, <code>data</code>, ...</td>
+<td>A single metadata record (sidecar or generated).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="progressevent"><code>ProgressEvent</code></h3>
+<p>Lightweight event object emitted during directory indexing via the <code>progress_callback</code>.</p>
+<pre><code class="language-python">@dataclass
+class ProgressEvent:
+    phase: str               # &quot;discovery&quot;, &quot;processing&quot;, &quot;output&quot;, &quot;cleanup&quot;
+    items_total: int | None  # None during discovery phase
+    items_completed: int     # Items processed so far
+    current_path: Path | None
+    message: str | None
+    level: str               # &quot;info&quot;, &quot;warning&quot;, &quot;error&quot;, &quot;debug&quot;
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Emitted when</th>
+<th><code>items_total</code></th>
+<th><code>items_completed</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>"discovery"</code></td>
+<td>After directory enumeration</td>
+<td><code>None</code> → count once complete</td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td><code>"processing"</code></td>
+<td>After each child entry is built</td>
+<td>Known count</td>
+<td>Incrementing</td>
+</tr>
+<tr>
+<td><code>"output"</code></td>
+<td>During serialization/output writing</td>
+<td>Final count</td>
+<td>Final count</td>
+</tr>
+<tr>
+<td><code>"cleanup"</code></td>
+<td>During MetaMergeDelete removal</td>
+<td>Final count</td>
+<td>Final count</td>
+</tr>
+</tbody>
+</table>
+<p>!!! tip "Callback threading"
+    The callback is invoked on the indexing thread. GUI consumers should enqueue events into a <code>queue.Queue</code> for main-thread processing. CLI consumers using <code>tqdm</code> or <code>rich</code> can update progress bars directly (both are thread-safe for single-bar updates). If the callback raises an exception, the engine logs a warning and continues.</p>
+<h2 id="exception-hierarchy">Exception Hierarchy</h2>
+<p>All exceptions inherit from <code>IndexerError</code> for catch-all handling:</p>
+<pre><code class="language-python">class IndexerError(Exception):
+    &quot;&quot;&quot;Base class for all shruggie-indexer exceptions.&quot;&quot;&quot;
+
+class IndexerConfigError(IndexerError):
+    &quot;&quot;&quot;Configuration is invalid or cannot be loaded.&quot;&quot;&quot;
+
+class IndexerTargetError(IndexerError):
+    &quot;&quot;&quot;Target path is invalid, inaccessible, or unclassifiable.&quot;&quot;&quot;
+
+class IndexerRuntimeError(IndexerError):
+    &quot;&quot;&quot;Unrecoverable error during indexing execution.&quot;&quot;&quot;
+
+class RenameError(IndexerError):
+    &quot;&quot;&quot;File rename failed (collision, permission, etc.).&quot;&quot;&quot;
+
+class IndexerCancellationError(IndexerError):
+    &quot;&quot;&quot;The indexing operation was cancelled by the caller.&quot;&quot;&quot;
+</code></pre>
+<p>Exception-to-exit-code mapping:</p>
+<table>
+<thead>
+<tr>
+<th>Exception</th>
+<th>CLI exit code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IndexerConfigError</code></td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>IndexerTargetError</code></td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>IndexerRuntimeError</code></td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>IndexerCancellationError</code></td>
+<td>5 (<code>INTERRUPTED</code>)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="usage-examples">Usage Examples</h2>
+<h3 id="index-a-single-file-with-defaults">Index a single file with defaults</h3>
+<pre><code class="language-python">from pathlib import Path
+from shruggie_indexer import index_path, serialize_entry
+
+entry = index_path(Path(&quot;/path/to/photo.jpg&quot;))
+print(entry.id)         # &quot;yA8A8C089A6A8583B24C85F5A4A41F5AC&quot;
+print(entry.type)       # &quot;file&quot;
+print(entry.size.text)  # &quot;3.45 MB&quot;
+
+json_str = serialize_entry(entry)
+print(json_str)
+</code></pre>
+<h3 id="custom-configuration-with-metadata">Custom configuration with metadata</h3>
+<pre><code class="language-python">from pathlib import Path
+from shruggie_indexer import index_path, load_config, serialize_entry
+
+config = load_config(overrides={
+    &quot;id_algorithm&quot;: &quot;sha256&quot;,
+    &quot;extract_exif&quot;: True,
+    &quot;meta_merge&quot;: True,
+})
+
+entry = index_path(Path(&quot;/path/to/media/folder&quot;), config)
+for child in entry.items or []:
+    if child.metadata:
+        for meta in child.metadata:
+            print(f&quot;{meta.origin}: {meta.attributes.type}&quot;)
+</code></pre>
+<h3 id="batch-indexing-with-shared-configuration">Batch indexing with shared configuration</h3>
+<pre><code class="language-python">from pathlib import Path
+from shruggie_indexer import index_path, load_config, serialize_entry
+
+config = load_config(overrides={&quot;compute_sha512&quot;: True})
+targets = [Path(&quot;/data/set-a&quot;), Path(&quot;/data/set-b&quot;), Path(&quot;/data/set-c&quot;)]
+
+for target in targets:
+    entry = index_path(target, config)
+    json_str = serialize_entry(entry, indent=None)  # compact JSON
+    (target / &quot;index.json&quot;).write_text(json_str, encoding=&quot;utf-8&quot;)
+</code></pre>
+<h3 id="progress-reporting-and-cancellation">Progress reporting and cancellation</h3>
+<pre><code class="language-python">import threading
+from pathlib import Path
+from shruggie_indexer import (
+    index_path, load_config, ProgressEvent, IndexerCancellationError,
+)
+
+config = load_config(overrides={&quot;extract_exif&quot;: True})
+cancel = threading.Event()
+
+def on_progress(event: ProgressEvent) -&gt; None:
+    if event.phase == &quot;processing&quot; and event.items_total:
+        pct = event.items_completed / event.items_total * 100
+        print(f&quot;\r{event.items_completed}/{event.items_total} ({pct:.0f}%)&quot;, end=&quot;&quot;)
+
+try:
+    entry = index_path(
+        Path(&quot;/path/to/large/archive&quot;),
+        config,
+        progress_callback=on_progress,
+        cancel_event=cancel,
+    )
+    print(f&quot;\nDone: {entry.id}&quot;)
+except IndexerCancellationError:
+    print(&quot;\nCancelled.&quot;)
+</code></pre>
+<h3 id="error-handling">Error handling</h3>
+<pre><code class="language-python">from pathlib import Path
+from shruggie_indexer import index_path, load_config
+from shruggie_indexer.exceptions import (
+    IndexerConfigError, IndexerTargetError,
+)
+
+try:
+    config = load_config(overrides={&quot;id_algorithm&quot;: &quot;blake2&quot;})
+except IndexerConfigError as e:
+    print(f&quot;Config error: {e}&quot;)
+    # &quot;id_algorithm must be 'md5' or 'sha256', got 'blake2'&quot;
+
+try:
+    entry = index_path(Path(&quot;/nonexistent/path&quot;))
+except IndexerTargetError as e:
+    print(f&quot;Target error: {e}&quot;)
+</code></pre>
+<h3 id="inspecting-the-entry-tree">Inspecting the entry tree</h3>
+<pre><code class="language-python">from shruggie_indexer import IndexEntry, index_path
+
+def find_large_files(entry: IndexEntry, threshold: int) -&gt; list[IndexEntry]:
+    &quot;&quot;&quot;Walk the entry tree and find files exceeding a byte threshold.&quot;&quot;&quot;
+    results = []
+    if entry.type == &quot;file&quot; and entry.size.bytes &gt; threshold:
+        results.append(entry)
+    for child in entry.items or []:
+        results.extend(find_large_files(child, threshold))
+    return results
+
+entry = index_path(&quot;/path/to/archive&quot;)
+for f in find_large_files(entry, 100_000_000):  # &gt; 100 MB
+    print(f&quot;{f.name.text}: {f.size.text}&quot;)
+</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.instant", "search.highlight", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

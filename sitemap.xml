@@ -5,6 +5,22 @@
          <lastmod>2026-02-21</lastmod>
     </url>
     <url>
+         <loc>https://shruggietech.github.io/shruggie-indexer/changelog/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://shruggietech.github.io/shruggie-indexer/getting-started/exiftool/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://shruggietech.github.io/shruggie-indexer/getting-started/installation/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://shruggietech.github.io/shruggie-indexer/getting-started/quickstart/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
          <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/</loc>
          <lastmod>2026-02-21</lastmod>
     </url>
@@ -53,27 +69,27 @@
          <lastmod>2026-02-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/user/</loc>
+         <loc>https://shruggietech.github.io/shruggie-indexer/user-guide/</loc>
          <lastmod>2026-02-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/user/changelog/</loc>
+         <loc>https://shruggietech.github.io/shruggie-indexer/user-guide/cli-reference/</loc>
          <lastmod>2026-02-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/user/configuration/</loc>
+         <loc>https://shruggietech.github.io/shruggie-indexer/user-guide/configuration/</loc>
          <lastmod>2026-02-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/user/installation/</loc>
+         <loc>https://shruggietech.github.io/shruggie-indexer/user-guide/platform-notes/</loc>
          <lastmod>2026-02-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/user/quickstart/</loc>
+         <loc>https://shruggietech.github.io/shruggie-indexer/user-guide/python-api/</loc>
          <lastmod>2026-02-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/user/testing-troubleshooting/</loc>
+         <loc>https://shruggietech.github.io/shruggie-indexer/user-guide/testing-troubleshooting/</loc>
          <lastmod>2026-02-21</lastmod>
     </url>
 </urlset>

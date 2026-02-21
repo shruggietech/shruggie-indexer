@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://shruggietech.github.io/shruggie-indexer/porting-reference/Vbs_DependencyCatalog/">
+        <link rel="canonical" href="https://shruggietech.github.io/shruggie-indexer/getting-started/exiftool/">
       
       
-        <link rel="prev" href="../TempClose_DependencyCatalog/">
+        <link rel="prev" href="../quickstart/">
       
       
-        <link rel="next" href="../../changelog/">
+        <link rel="next" href="../../user-guide/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Vbs - shruggie-indexer</title>
+        <title>ExifTool Setup - shruggie-indexer</title>
       
     
     
@@ -68,7 +68,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#vbs-dependency-catalog" class="md-skip">
+        <a href="#exiftool-setup" class="md-skip">
           Skip to content
         </a>
       
@@ -102,7 +102,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Vbs
+              ExifTool Setup
             
           </span>
         </div>
@@ -204,11 +204,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../getting-started/installation/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../installation/" class="md-tabs__link">
           
   
   
@@ -264,13 +266,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../porting-reference/" class="md-tabs__link">
           
   
   
@@ -377,26 +377,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
             
   
   
@@ -414,7 +419,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -432,7 +437,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/installation/" class="md-nav__link">
+      <a href="../installation/" class="md-nav__link">
         
   
   
@@ -460,7 +465,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/quickstart/" class="md-nav__link">
+      <a href="../quickstart/" class="md-nav__link">
         
   
   
@@ -485,10 +490,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../getting-started/exiftool/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ExifTool Setup
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -504,6 +536,170 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-exiftool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Is ExifTool?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#windows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#macos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        macOS
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#linux" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linux
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#behavior-when-exiftool-is-not-installed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behavior When ExifTool Is Not Installed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#invocation-backends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invocation Backends
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Invocation Backends">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#primary-pyexiftool-batch-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Primary: pyexiftool batch mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fallback-subprocess-per-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fallback: subprocess per file
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#file-extension-exclusion-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Extension Exclusion List
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -806,31 +1002,26 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
   
@@ -848,7 +1039,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -866,7 +1057,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../porting-reference/" class="md-nav__link">
         
   
   
@@ -894,7 +1085,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../MakeIndex_OperationsCatalog/" class="md-nav__link">
+      <a href="../../porting-reference/MakeIndex_OperationsCatalog/" class="md-nav__link">
         
   
   
@@ -919,31 +1110,26 @@
                 
   
   
-    
   
   
-  
     
     
     
     
       
       
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
         
           
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
             
   
   
@@ -961,7 +1147,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -979,7 +1165,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../MakeIndex_DependencyCatalog/" class="md-nav__link">
+      <a href="../../porting-reference/MakeIndex_DependencyCatalog/" class="md-nav__link">
         
   
   
@@ -1007,7 +1193,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../Base64DecodeString_DependencyCatalog/" class="md-nav__link">
+      <a href="../../porting-reference/Base64DecodeString_DependencyCatalog/" class="md-nav__link">
         
   
   
@@ -1035,7 +1221,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../Date2UnixTime_DependencyCatalog/" class="md-nav__link">
+      <a href="../../porting-reference/Date2UnixTime_DependencyCatalog/" class="md-nav__link">
         
   
   
@@ -1063,7 +1249,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../DirectoryId_DependencyCatalog/" class="md-nav__link">
+      <a href="../../porting-reference/DirectoryId_DependencyCatalog/" class="md-nav__link">
         
   
   
@@ -1091,7 +1277,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../FileId_DependencyCatalog/" class="md-nav__link">
+      <a href="../../porting-reference/FileId_DependencyCatalog/" class="md-nav__link">
         
   
   
@@ -1119,7 +1305,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../MetaFileRead_DependencyCatalog/" class="md-nav__link">
+      <a href="../../porting-reference/MetaFileRead_DependencyCatalog/" class="md-nav__link">
         
   
   
@@ -1147,7 +1333,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../TempOpen_DependencyCatalog/" class="md-nav__link">
+      <a href="../../porting-reference/TempOpen_DependencyCatalog/" class="md-nav__link">
         
   
   
@@ -1175,7 +1361,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../TempClose_DependencyCatalog/" class="md-nav__link">
+      <a href="../../porting-reference/TempClose_DependencyCatalog/" class="md-nav__link">
         
   
   
@@ -1200,37 +1386,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Vbs
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../porting-reference/Vbs_DependencyCatalog/" class="md-nav__link">
         
   
   
@@ -1246,164 +1405,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#1-external-pslib-functions-called" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. External PsLib Functions Called
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="1. External PsLib Functions Called">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#role-in-the-library" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Role in the Library
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#2-external-variables-loaded" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. External Variables Loaded
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3-external-binaries-executables-invoked" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. External Binaries / Executables Invoked
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Parameters
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#5-internal-sub-functions-defined-within-vbs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. Internal Sub-Functions (Defined Within Vbs)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#6-internal-logic-summary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        6. Internal Logic Summary
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#7-net-types-and-methods-used" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        7. .NET Types and Methods Used
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#8-powershell-built-in-cmdlets-used" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        8. PowerShell Built-in Cmdlets Used
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#9-return-value" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        9. Return Value
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#10-log-file-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        10. Log File Format
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#11-call-graph" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        11. Call Graph
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1478,22 +1479,55 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-external-pslib-functions-called" class="md-nav__link">
+  <a href="#what-is-exiftool" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. External PsLib Functions Called
+        What Is ExifTool?
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="1. External PsLib Functions Called">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installation">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#role-in-the-library" class="md-nav__link">
+  <a href="#windows" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Role in the Library
+        Windows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#macos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        macOS
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#linux" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linux
       
     </span>
   </a>
@@ -1506,10 +1540,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-external-variables-loaded" class="md-nav__link">
+  <a href="#verification" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. External Variables Loaded
+        Verification
       
     </span>
   </a>
@@ -1517,10 +1551,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-external-binaries-executables-invoked" class="md-nav__link">
+  <a href="#behavior-when-exiftool-is-not-installed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. External Binaries / Executables Invoked
+        Behavior When ExifTool Is Not Installed
       
     </span>
   </a>
@@ -1528,10 +1562,49 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-parameters" class="md-nav__link">
+  <a href="#invocation-backends" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Parameters
+        Invocation Backends
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Invocation Backends">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#primary-pyexiftool-batch-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Primary: pyexiftool batch mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fallback-subprocess-per-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fallback: subprocess per file
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#file-extension-exclusion-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Extension Exclusion List
       
     </span>
   </a>
@@ -1539,76 +1612,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-internal-sub-functions-defined-within-vbs" class="md-nav__link">
+  <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Internal Sub-Functions (Defined Within Vbs)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#6-internal-logic-summary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        6. Internal Logic Summary
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#7-net-types-and-methods-used" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        7. .NET Types and Methods Used
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#8-powershell-built-in-cmdlets-used" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        8. PowerShell Built-in Cmdlets Used
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#9-return-value" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        9. Return Value
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#10-log-file-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        10. Log File Format
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#11-call-graph" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        11. Call Graph
+        Next Steps
       
     </span>
   </a>
@@ -1635,356 +1642,103 @@
   
 
 
-<h1 id="vbs-dependency-catalog">Vbs — Dependency Catalog</h1>
-<blockquote>
-<p><strong>Source:</strong> <code>main.ps1</code>, line 16412<br />
-<strong>Purpose:</strong> Structured logging and colorized verbosity output handler used throughout the pslib library as the centralized logging facility<br />
-<strong>Audience:</strong> AI-first, Human-second  </p>
-</blockquote>
-<hr />
-<h2 id="1-external-pslib-functions-called">1. External PsLib Functions Called</h2>
-<table>
-<thead>
-<tr>
-<th>Function</th>
-<th>Defined At</th>
-<th>Called From</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><em>(none)</em></td>
-<td>—</td>
-<td>—</td>
-<td><code>Vbs</code> is a leaf-level function in the pslib dependency graph. It does not call any other pslib functions. It is the terminal logging endpoint that virtually every other pslib function routes its verbose and log output through.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="role-in-the-library">Role in the Library</h3>
-<p><code>Vbs</code> is the most widely-called function in the pslib library. It serves as the universal logging handler and is invoked by every function cataloged in this project (Base64DecodeString, Date2UnixTime, DirectoryId, FileId, MetaFileRead, TempOpen, TempClose) as well as by MakeIndex and its sub-functions. It has zero upstream pslib dependencies, making it the foundational infrastructure function of the library.</p>
-<hr />
-<h2 id="2-external-variables-loaded">2. External Variables Loaded</h2>
-<table>
-<thead>
-<tr>
-<th>Variable</th>
-<th>Defined At</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>$D_PSLIB_LOGS</code></td>
-<td>main.ps1:17399</td>
-<td><code>[System.String]</code></td>
-<td>The absolute path to the pslib log directory (<code>C:\bin\pslib\logs</code>). Used as the default value for the <code>-LogDir</code> parameter. Log files are written to this directory</td>
-</tr>
-<tr>
-<td><code>$LibSessionID</code></td>
-<td>main.ps1:17387</td>
-<td><code>[System.String]</code></td>
-<td>A GUID (hyphens removed) generated once at script load time. Used as the default value for the <code>-VbsSessionID</code> parameter. Embedded in every log entry to identify the session</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="3-external-binaries-executables-invoked">3. External Binaries / Executables Invoked</h2>
-<table>
-<thead>
-<tr>
-<th>Binary</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><em>(none)</em></td>
-<td>This function is entirely PowerShell/.NET-based and does not invoke any external executables.</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="4-parameters">4. Parameters</h2>
-<table>
-<thead>
-<tr>
-<th>Parameter</th>
-<th>Type</th>
-<th>Alias(es)</th>
-<th>Default</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>Message</code></td>
-<td><code>[System.String]</code></td>
-<td><em>(none)</em></td>
-<td><em>(none)</em></td>
-<td>The log message body. Defaults to <code>'...'</code> if empty</td>
-</tr>
-<tr>
-<td><code>Caller</code></td>
-<td><code>[System.String]</code></td>
-<td><em>(none)</em></td>
-<td><em>(none)</em></td>
-<td>The name of the calling function or colon-delimited call stack (e.g., <code>"MakeIndex:MakeObject:GetFileExif"</code>)</td>
-</tr>
-<tr>
-<td><code>Status</code></td>
-<td><code>[System.String]</code></td>
-<td><em>(none)</em></td>
-<td><em>(none)</em></td>
-<td>The severity level of the message. Accepted values (case-insensitive): <code>i</code>/<code>inf</code>/<code>info</code>, <code>e</code>/<code>err</code>/<code>error</code>, <code>c</code>/<code>crit</code>/<code>critical</code>, <code>w</code>/<code>warn</code>/<code>warning</code>, <code>d</code>/<code>deb</code>/<code>debug</code>, <code>s</code>/<code>success</code>/<code>ok</code>/<code>done</code>/<code>complete</code>/<code>g</code>/<code>good</code>, <code>x</code>/<code>u</code>/<code>unknown</code></td>
-</tr>
-<tr>
-<td><code>LogDir</code></td>
-<td><code>[System.String]</code></td>
-<td><code>LogDirectory</code></td>
-<td><code>$D_PSLIB_LOGS</code></td>
-<td>Directory where log files are written</td>
-</tr>
-<tr>
-<td><code>LibName</code></td>
-<td><code>[System.String]</code></td>
-<td><code>LibraryName</code></td>
-<td><code>"pslib"</code></td>
-<td>Library name prefix used in log entry formatting</td>
-</tr>
-<tr>
-<td><code>VbsSessionID</code></td>
-<td><code>[System.String]</code></td>
-<td><em>(none)</em></td>
-<td><code>$LibSessionID</code></td>
-<td>Session identifier embedded in each log entry</td>
-</tr>
-<tr>
-<td><code>Verbosity</code></td>
-<td><code>[System.Boolean]</code></td>
-<td><code>v</code></td>
-<td><em>(none)</em></td>
-<td>If <code>$true</code>, the message is both written to the log file AND printed to the console. If <code>$false</code>, the message is only written to the log file</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="5-internal-sub-functions-defined-within-vbs">5. Internal Sub-Functions (Defined Within Vbs)</h2>
-<table>
-<thead>
-<tr>
-<th>Function</th>
-<th>Line</th>
-<th>Purpose</th>
-<th>Nesting</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>VbsFunctionStackTotalDepth</code></td>
-<td>main.ps1:16491</td>
-<td>Calculates the total depth of the function call stack string. Each non-numbered function counts as 1; numbered functions (e.g., <code>MakeObject(3)</code>) count as the numeric suffix value. Returns an <code>[int]</code></td>
-<td>Top-level internal</td>
-</tr>
-<tr>
-<td><code>VbsLogPath</code></td>
-<td>main.ps1:16517</td>
-<td>Derives the path to the current monthly log file based on the current date. Format: <code>YYYY_MM.log</code> in the log directory</td>
-<td>Top-level internal</td>
-</tr>
-<tr>
-<td><code>VbsLogRealityCheck</code></td>
-<td>main.ps1:16529</td>
-<td>Ensures the log directory and log file exist, creating them if necessary via <code>New-Item</code></td>
-<td>Top-level internal</td>
-</tr>
-<tr>
-<td><code>VbsLogWrite</code></td>
-<td>main.ps1:16545</td>
-<td>Writes a string to the log file via <code>Add-Content</code></td>
-<td>Top-level internal</td>
-</tr>
-<tr>
-<td><code>VbsUpdateFunctionStack</code></td>
-<td>main.ps1:16558</td>
-<td>Compresses and updates a colon-delimited function call stack by collapsing consecutive duplicate function names into counted entries (e.g., <code>A:A:A</code> → <code>A(3)</code>). Used to produce readable stack traces in log entries</td>
-<td>Top-level internal</td>
-</tr>
-<tr>
-<td><code>VbsUpdateFunctionStackExtractNumber</code></td>
-<td>main.ps1:16567</td>
-<td>Extracts the numeric suffix from a function name string (e.g., <code>"MakeObject(3)"</code> → <code>2</code>). Returns <code>[int]0</code> if no suffix or suffix is less than 2</td>
-<td>Nested inside <code>VbsUpdateFunctionStack</code></td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="6-internal-logic-summary">6. Internal Logic Summary</h2>
-<p><strong>Log Entry Construction:</strong></p>
-<p>Each log entry is assembled from four fields:</p>
+<h1 id="exiftool-setup">ExifTool Setup</h1>
+<h2 id="what-is-exiftool">What Is ExifTool?</h2>
+<p><a href="https://exiftool.org/">ExifTool</a> by Phil Harvey is a platform-independent Perl library and command-line tool for reading, writing, and editing metadata in a wide variety of file formats — including EXIF, XMP, IPTC, GPS, and maker notes from camera manufacturers.</p>
+<p>shruggie-indexer uses ExifTool to extract embedded metadata from indexed files when the <code>--meta</code> flag is active. ExifTool is the sole external binary dependency and is required <strong>only</strong> for embedded metadata extraction. All other functionality — hashing, timestamp capture, sidecar file handling, renaming — works without it.</p>
+<h2 id="installation">Installation</h2>
+<h3 id="windows">Windows</h3>
+<p><strong>Option 1 — Direct download:</strong></p>
 <ol>
-<li>
-<p><strong>Timestamp (<code>$t</code>):</strong> Dual-format Unix milliseconds and human-readable ISO datetime with timezone offset. Format: <code>{UnixMs}|{yyyy-MM-dd HH:mm:ss.fffzzz}|</code></p>
-</li>
-<li>
-<p><strong>Session ID (<code>$x</code>):</strong> The <code>VbsSessionID</code> GUID followed by a pipe delimiter.</p>
-</li>
-<li>
-<p><strong>Status (<code>$s</code>):</strong> Normalized from shorthand input to a bracketed tag. The verbose version (<code>$sV</code>) uses a fixed-width padded format for console alignment. Each status level has an associated console color:</p>
-</li>
+<li>Download the standalone Windows executable from <a href="https://exiftool.org/">https://exiftool.org/</a>.</li>
+<li>Extract the downloaded archive.</li>
+<li>Rename <code>exiftool(-k).exe</code> to <code>exiftool.exe</code>.</li>
+<li>Place <code>exiftool.exe</code> in a directory on your system <code>PATH</code> (e.g., <code>C:\Windows\</code> or a custom directory you have added to <code>PATH</code>).</li>
 </ol>
+<p><strong>Option 2 — Chocolatey:</strong></p>
+<pre><code>choco install exiftool
+</code></pre>
+<p><strong>Option 3 — winget:</strong></p>
+<pre><code>winget install OliverBetz.ExifTool
+</code></pre>
+<h3 id="macos">macOS</h3>
+<p>Install via <a href="https://brew.sh/">Homebrew</a>:</p>
+<pre><code class="language-bash">brew install exiftool
+</code></pre>
+<h3 id="linux">Linux</h3>
+<p><strong>Debian / Ubuntu:</strong></p>
+<pre><code class="language-bash">sudo apt install libimage-exiftool-perl
+</code></pre>
+<p><strong>Fedora / RHEL:</strong></p>
+<pre><code class="language-bash">sudo dnf install perl-Image-ExifTool
+</code></pre>
+<p><strong>Arch Linux:</strong></p>
+<pre><code class="language-bash">sudo pacman -S perl-image-exiftool
+</code></pre>
+<h2 id="verification">Verification</h2>
+<p>After installing, verify that ExifTool is accessible on your <code>PATH</code> and meets the minimum version requirement (12.0+):</p>
+<pre><code class="language-bash">exiftool -ver
+</code></pre>
+<p>This should print a version number of <code>12.00</code> or higher (e.g., <code>12.87</code>).</p>
+<h2 id="behavior-when-exiftool-is-not-installed">Behavior When ExifTool Is Not Installed</h2>
+<p>When ExifTool is not found on <code>PATH</code>, shruggie-indexer logs a single warning at startup:</p>
+<pre><code>WARNING: exiftool not found on PATH; embedded metadata extraction disabled
+</code></pre>
+<p>The indexing operation continues normally. The <code>metadata</code> array in output entries simply omits the <code>exiftool.json_metadata</code> entry that would otherwise be present. This is a <strong>graceful degradation</strong>, not a fatal error — the tool is fully functional for hashing, timestamping, sidecar handling, and renaming without ExifTool.</p>
+<p>!!! tip "Check once, not per-file"
+    The ExifTool availability check happens once at startup and the result is cached. You will not see repeated warnings for each file.</p>
+<h2 id="invocation-backends">Invocation Backends</h2>
+<p>shruggie-indexer supports two ExifTool invocation backends, selected automatically based on package availability:</p>
+<h3 id="primary-pyexiftool-batch-mode">Primary: pyexiftool batch mode</h3>
+<p>When the <code>pyexiftool</code> Python package is installed (it is a required runtime dependency of shruggie-indexer), the tool uses ExifTool's <code>-stay_open</code> protocol to maintain a single persistent Perl process for the entire indexing run. File paths and arguments are communicated via stdin/stdout pipes.</p>
+<p>This approach reduces per-file overhead from 200–500 ms (process startup) to roughly 20–50 ms (metadata extraction only), making it significantly faster for large directory trees.</p>
+<h3 id="fallback-subprocess-per-file">Fallback: subprocess per file</h3>
+<p>If <code>pyexiftool</code> is unavailable or the persistent process cannot be maintained, the tool falls back to spawning a new ExifTool subprocess for each file. Arguments are passed via a temporary argfile using ExifTool's <code>-@</code> switch. This is slower but functionally equivalent.</p>
+<p>!!! note "Backend selection"
+    The backend is selected once at startup and logged at <code>DEBUG</code> level. Use <code>-vv</code> to see which backend is active.</p>
+<h2 id="file-extension-exclusion-list">File Extension Exclusion List</h2>
+<p>By default, shruggie-indexer skips ExifTool invocation for certain file types where ExifTool tends to dump the entire file content as metadata rather than extracting meaningful embedded metadata:</p>
 <table>
 <thead>
 <tr>
-<th>Input</th>
-<th>Log Tag</th>
-<th>Console Color</th>
+<th>Extension</th>
+<th>Reason</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>i</code>, <code>inf</code>, <code>info</code></td>
-<td><code>[INFO]</code></td>
-<td>Gray</td>
+<td><code>csv</code></td>
+<td>Text data — no embedded metadata</td>
 </tr>
 <tr>
-<td><code>e</code>, <code>err</code>, <code>error</code></td>
-<td><code>[ERROR]</code></td>
-<td>DarkRed</td>
+<td><code>htm</code></td>
+<td>HTML markup</td>
 </tr>
 <tr>
-<td><code>c</code>, <code>crit</code>, <code>critical</code></td>
-<td><code>[ERROR][CRITICAL]</code></td>
-<td>Magenta</td>
+<td><code>html</code></td>
+<td>HTML markup</td>
 </tr>
 <tr>
-<td><code>w</code>, <code>warn</code>, <code>warning</code></td>
-<td><code>[WARN]</code></td>
-<td>DarkYellow</td>
+<td><code>json</code></td>
+<td>JSON data</td>
 </tr>
 <tr>
-<td><code>d</code>, <code>deb</code>, <code>debug</code></td>
-<td><code>[DEBUG]</code></td>
-<td>DarkCyan</td>
+<td><code>tsv</code></td>
+<td>Tab-separated text data</td>
 </tr>
 <tr>
-<td><code>s</code>, <code>success</code>, <code>ok</code>, <code>done</code>, <code>g</code>, <code>good</code></td>
-<td><code>[INFO][SUCCESS]</code></td>
-<td>DarkGreen</td>
-</tr>
-<tr>
-<td><code>x</code>, <code>u</code>, <code>unknown</code> (or missing)</td>
-<td><code>[INFO][UNKNOWN]</code></td>
-<td>DarkGray</td>
+<td><code>xml</code></td>
+<td>XML markup</td>
 </tr>
 </tbody>
 </table>
-<ol>
-<li>
-<p><strong>Caller (<code>$c</code>):</strong> Processed through <code>VbsUpdateFunctionStack</code> to compress the call stack. The final log-format wraps the stack in <code>pslib(...):</code>; the verbose-format uses <code>pslib({depth}):</code> where <code>{depth}</code> is the total stack depth.</p>
-</li>
-<li>
-<p><strong>Message (<code>$m</code>):</strong> The raw message string. Defaults to <code>'...'</code> if empty.</p>
-</li>
-</ol>
-<p><strong>Output Channels:</strong></p>
-<p>Two output strings are produced: <code>$o</code> (machine-readable, written to log file) and <code>$oV</code> (human-readable, colorized, printed to console). When <code>$Verbosity</code> is <code>$false</code>, only the log file is written. When <code>$true</code>, both outputs are produced.</p>
-<p><strong>Log File Management:</strong></p>
-<p>Log files are named by month (<code>YYYY_MM.log</code>) and stored in <code>$D_PSLIB_LOGS</code>. The <code>VbsLogRealityCheck</code> sub-function ensures both the directory and file exist before writing, creating them via <code>New-Item</code> if missing.</p>
-<p><strong>Call Stack Compression:</strong></p>
-<p>The <code>VbsUpdateFunctionStack</code> function is a key feature that transforms raw colon-delimited call stacks into compact representations. For example: <code>MakeIndex:MakeObject:MakeObject:MakeObject</code> → <code>MakeIndex:MakeObject(3)</code>. This prevents log lines from becoming excessively long during deeply recursive operations like <code>MakeDirectoryIndexRecursiveLogic</code>.</p>
-<hr />
-<h2 id="7-net-types-and-methods-used">7. .NET Types and Methods Used</h2>
-<table>
-<thead>
-<tr>
-<th>Type / Method</th>
-<th>Usage</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>[DateTimeOffset]::Now.ToUnixTimeMilliseconds()</code></td>
-<td>Generating Unix epoch milliseconds for the timestamp field</td>
-</tr>
-<tr>
-<td><code>[System.TimeSpan]::FromMilliseconds()</code></td>
-<td>Converting Unix ms back to a TimeSpan for human-readable date formatting</td>
-</tr>
-<tr>
-<td><code>Get-Date 01.01.1970</code></td>
-<td>Establishing the Unix epoch base date for timestamp calculation</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="8-powershell-built-in-cmdlets-used">8. PowerShell Built-in Cmdlets Used</h2>
-<table>
-<thead>
-<tr>
-<th>Cmdlet</th>
-<th>Usage Context</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>Add-Content</code></td>
-<td>Writing log entries to the monthly log file (<code>-Path</code>, <code>-Value</code>)</td>
-</tr>
-<tr>
-<td><code>Get-Date</code></td>
-<td>Establishing the epoch base date; formatting the human-readable timestamp (<code>-UFormat "%Y_%m"</code> for log file naming)</td>
-</tr>
-<tr>
-<td><code>New-Item</code></td>
-<td>Creating log directory and log file if they don't exist (<code>-ItemType Directory/File</code>, <code>-Path</code>, <code>-Force</code>)</td>
-</tr>
-<tr>
-<td><code>Test-Path</code></td>
-<td>Checking existence of log directory and log file (<code>-LiteralPath</code>, <code>-PathType Container/Leaf</code>)</td>
-</tr>
-<tr>
-<td><code>Write-Host</code></td>
-<td>Printing colorized verbose output to the console (<code>-ForegroundColor</code>)</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="9-return-value">9. Return Value</h2>
-<p>This function does not return a value. All code paths terminate with <code>return</code> (no value). The function's purpose is side-effect-driven: writing to log files and optionally printing to the console.</p>
-<hr />
-<h2 id="10-log-file-format">10. Log File Format</h2>
-<p><strong>File naming:</strong> <code>YYYY_MM.log</code> (one file per month)</p>
-<p><strong>Entry format (machine-readable):</strong></p>
-<pre><code>{UnixMs}|{yyyy-MM-dd HH:mm:ss.fffzzz}|{SessionGUID}|{StatusTags}{LibName}({CompressedStack}): {Message}
-</code></pre>
-<p><strong>Entry format (console/verbose):</strong></p>
-<pre><code>{yyyy-MM-dd HH:mm:ss.fffzzz} {SessionGUID} {PaddedStatus} {LibName}({StackDepth}): {Message}
-</code></pre>
-<hr />
-<h2 id="11-call-graph">11. Call Graph</h2>
-<pre><code>Vbs
-├── [construct timestamp field]
-│   ├── [DateTimeOffset]::Now.ToUnixTimeMilliseconds()
-│   └── [System.TimeSpan]::FromMilliseconds()
-├── [construct session ID field]
-├── [normalize Status to tag and color]
-├── [process Caller field]
-│   ├── [split on ':' to detect sub-function stacks]
-│   └── VbsUpdateFunctionStack (compress stack)
-│       └── VbsUpdateFunctionStackExtractNumber (extract numeric suffixes)
-├── VbsFunctionStackTotalDepth (compute depth for verbose format)
-├── [construct message field]
-├── VbsLogPath (derive log file path from current date)
-├── VbsLogRealityCheck (ensure log dir and file exist)
-│   └── New-Item (create if missing)
-├── (Verbosity=$false) → VbsLogWrite only
-│   └── Add-Content (write to log file)
-└── (Verbosity=$true) → VbsLogWrite + Write-Host
-    ├── Add-Content (write to log file)
-    └── Write-Host (colorized console output)
-</code></pre>
+<p>This exclusion list is configurable. See the <a href="../../user-guide/configuration/">Configuration</a> page for details on modifying the <code>exiftool.exclude_extensions</code> setting.</p>
+<h2 id="next-steps">Next Steps</h2>
+<ul>
+<li><a href="../quickstart/">Quick Start</a> — Try <code>--meta</code> with a real file.</li>
+<li><a href="../../user-guide/cli-reference/">CLI Reference</a> — Full <code>--meta</code>, <code>--meta-merge</code>, and <code>--meta-merge-delete</code> documentation.</li>
+<li><a href="../../user-guide/configuration/">Configuration</a> — Customize ExifTool arguments and exclusion lists.</li>
+</ul>
 
 
 

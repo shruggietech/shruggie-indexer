@@ -1,0 +1,2610 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Filesystem indexer with hash-based identity, metadata extraction, and structured JSON output.">
+      
+      
+      
+        <link rel="canonical" href="https://shruggietech.github.io/shruggie-indexer/user-guide/cli-reference/">
+      
+      
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="../configuration/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>CLI Reference - shruggie-indexer</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#cli-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="shruggie-indexer" class="md-header__button md-logo" aria-label="shruggie-indexer" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            shruggie-indexer
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              CLI Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/shruggietech/shruggie-indexer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    shruggietech/shruggie-indexer
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../schema/" class="md-tabs__link">
+          
+  
+  
+  Schema Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../porting-reference/" class="md-tabs__link">
+          
+  
+  
+  Porting Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="shruggie-indexer" class="md-nav__button md-logo" aria-label="shruggie-indexer" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    shruggie-indexer
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/shruggietech/shruggie-indexer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    shruggietech/shruggie-indexer
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/exiftool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ExifTool Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#command-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#target-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Target Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Target Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#target-positional-argument" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TARGET (positional argument)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-file-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --file / --directory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-recursive-no-recursive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --recursive / --no-recursive
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Output Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-stdout-no-stdout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --stdout / --no-stdout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-outfile-o" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --outfile, -o
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-inplace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --inplace
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metadata Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Metadata Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-meta-m" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --meta, -m
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-meta-merge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --meta-merge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-meta-merge-delete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --meta-merge-delete
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rename-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rename Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rename Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-rename" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --rename
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-dry-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --dry-run
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#identity-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identity Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Identity Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-id-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --id-type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-compute-sha512" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --compute-sha512
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --config
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logging-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Logging Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-v-verbose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        -v, --verbose
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-q-quiet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        -q, --quiet
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#general-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        General Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="General Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --version
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --help
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mutual-exclusion-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mutual Exclusion Rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Scenarios
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exit-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exit Codes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#signal-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signal Handling
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Signal Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cancellation-and-output-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cancellation and output state
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../python-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../platform-notes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Platform Notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Schema Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Porting Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Porting Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/MakeIndex_OperationsCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Catalog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Catalogs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dependency Catalogs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/MakeIndex_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MakeIndex
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/Base64DecodeString_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base64DecodeString
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/Date2UnixTime_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Date2UnixTime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/DirectoryId_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectoryId
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/FileId_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FileId
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/MetaFileRead_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MetaFileRead
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/TempOpen_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TempOpen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/TempClose_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TempClose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../porting-reference/Vbs_DependencyCatalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#command-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#target-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Target Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Target Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#target-positional-argument" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TARGET (positional argument)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-file-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --file / --directory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-recursive-no-recursive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --recursive / --no-recursive
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Output Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-stdout-no-stdout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --stdout / --no-stdout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-outfile-o" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --outfile, -o
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-inplace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --inplace
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metadata Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Metadata Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-meta-m" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --meta, -m
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-meta-merge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --meta-merge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-meta-merge-delete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --meta-merge-delete
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rename-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rename Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rename Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-rename" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --rename
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-dry-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --dry-run
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#identity-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identity Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Identity Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-id-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --id-type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-compute-sha512" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --compute-sha512
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --config
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logging-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Logging Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-v-verbose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        -v, --verbose
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-q-quiet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        -q, --quiet
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#general-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        General Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="General Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --version
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --help
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mutual-exclusion-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mutual Exclusion Rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Scenarios
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exit-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exit Codes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#signal-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signal Handling
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Signal Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cancellation-and-output-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cancellation and output state
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="cli-reference">CLI Reference</h1>
+<p>shruggie-indexer is invoked as a single command with options and an optional target path.</p>
+<h2 id="command-structure">Command Structure</h2>
+<pre><code>shruggie-indexer [OPTIONS] [TARGET]
+</code></pre>
+<p><code>TARGET</code> is an optional positional argument specifying the file or directory to index. When omitted, the current working directory is used.</p>
+<h2 id="target-options">Target Options</h2>
+<h3 id="target-positional-argument"><code>TARGET</code> (positional argument)</h3>
+<p>The filesystem path to index. shruggie-indexer auto-detects whether the path is a file or directory and dispatches to the appropriate indexing logic.</p>
+<ul>
+<li>If omitted, defaults to the current working directory.</li>
+<li>Must point to an existing path (validated at invocation time).</li>
+</ul>
+<h3 id="-file-directory"><code>--file</code> / <code>--directory</code></h3>
+<p>Force the target to be treated as a file or directory, overriding auto-detection.</p>
+<pre><code class="language-bash"># Force file interpretation (useful for symlinks)
+shruggie-indexer --file path/to/ambiguous-item
+
+# Force directory interpretation
+shruggie-indexer --directory path/to/target
+</code></pre>
+<p>If the forced type does not match the actual filesystem type, a warning is logged but processing continues.</p>
+<h3 id="-recursive-no-recursive"><code>--recursive</code> / <code>--no-recursive</code></h3>
+<p>Control recursive directory traversal. Default: <code>--recursive</code>.</p>
+<pre><code class="language-bash"># Index a directory and all its subdirectories (default)
+shruggie-indexer path/to/dir --recursive
+
+# Index only the directory's immediate children
+shruggie-indexer path/to/dir --no-recursive
+</code></pre>
+<p>For single-file targets, this option has no effect.</p>
+<h2 id="output-options">Output Options</h2>
+<p>Three independent output flags control where JSON output is written. Multiple output destinations can be active simultaneously.</p>
+<h3 id="-stdout-no-stdout"><code>--stdout</code> / <code>--no-stdout</code></h3>
+<p>Write the complete JSON index to standard output.</p>
+<ul>
+<li><strong>Default behavior:</strong> Enabled when no other output destination (<code>--outfile</code>, <code>--inplace</code>) is specified. Disabled when another output destination is active.</li>
+<li><strong>Explicit <code>--stdout</code>:</strong> Forces stdout output alongside other destinations.</li>
+<li><strong>Explicit <code>--no-stdout</code>:</strong> Suppresses stdout output entirely.</li>
+</ul>
+<h3 id="-outfile-o"><code>--outfile</code>, <code>-o</code></h3>
+<p>Write the combined JSON output to the specified file path.</p>
+<pre><code class="language-bash">shruggie-indexer path/to/target --outfile index.json
+shruggie-indexer path/to/target -o index.json
+</code></pre>
+<ul>
+<li>The parent directory must exist.</li>
+<li>Existing files are overwritten without prompting.</li>
+<li>Disables stdout output by default (use <code>--stdout</code> to re-enable).</li>
+</ul>
+<h3 id="-inplace"><code>--inplace</code></h3>
+<p>Write individual sidecar JSON files alongside each indexed item.</p>
+<pre><code class="language-bash">shruggie-indexer path/to/directory/ --inplace
+</code></pre>
+<p>For files, the sidecar is named <code>&lt;filename&gt;_meta2.json</code>. For directories, the sidecar is named <code>_directorymeta2.json</code> and placed inside the directory.</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Sidecar path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>photos/sunset.jpg</code></td>
+<td><code>photos/sunset.jpg_meta2.json</code></td>
+</tr>
+<tr>
+<td><code>photos/vacation/</code></td>
+<td><code>photos/vacation/_directorymeta2.json</code></td>
+</tr>
+</tbody>
+</table>
+<p>Disables stdout output by default (use <code>--stdout</code> to re-enable).</p>
+<h2 id="metadata-options">Metadata Options</h2>
+<p>These options control embedded metadata extraction and sidecar metadata processing.</p>
+<p>!!! warning "Implication chain"
+    The metadata flags form an implication chain:</p>
+<pre><code>- `--meta-merge-delete` implies `--meta-merge`
+- `--meta-merge` implies `--meta`
+
+You only need to specify the highest-level flag you want. The implied flags are activated automatically.
+</code></pre>
+<h3 id="-meta-m"><code>--meta</code>, <code>-m</code></h3>
+<p>Extract embedded EXIF/XMP/IPTC metadata from files via <a href="../../getting-started/exiftool/">ExifTool</a>.</p>
+<pre><code class="language-bash">shruggie-indexer path/to/file.jpg --meta
+</code></pre>
+<p>When active, each file entry's <code>metadata</code> array includes an <code>exiftool.json_metadata</code> entry containing the extracted metadata as a JSON object. If ExifTool is not installed, a warning is logged and the entry is omitted — this is not a fatal error.</p>
+<h3 id="-meta-merge"><code>--meta-merge</code></h3>
+<p>Discover sidecar metadata files alongside each indexed item and merge their content into the parent entry's <code>metadata</code> array. Implies <code>--meta</code>.</p>
+<pre><code class="language-bash">shruggie-indexer path/to/directory/ --meta-merge
+</code></pre>
+<p>Sidecar files (<code>.info.json</code>, <code>.description</code>, thumbnails, subtitles, etc.) are identified by configurable filename patterns. The original sidecar files remain on disk.</p>
+<h3 id="-meta-merge-delete"><code>--meta-merge-delete</code></h3>
+<p>Merge sidecar metadata into parent entries and queue the original sidecar files for deletion after successful merging. Implies <code>--meta-merge</code> (and therefore <code>--meta</code>).</p>
+<pre><code class="language-bash">shruggie-indexer path/to/directory/ --meta-merge-delete --outfile index.json
+</code></pre>
+<p>!!! warning "Requires persistent output"
+    <code>--meta-merge-delete</code> requires at least one of <code>--outfile</code> or <code>--inplace</code> to be active. Without a persistent output destination, the merged metadata would be lost when the sidecar files are deleted. Violating this constraint produces a fatal error (exit code 2).</p>
+<p>Each merged sidecar entry carries full filesystem provenance — path, size, timestamps, and content hashes — sufficient to reverse the deletion if needed.</p>
+<h2 id="rename-options">Rename Options</h2>
+<h3 id="-rename"><code>--rename</code></h3>
+<p>Rename files to their deterministic, hash-based <code>storage_name</code> values.</p>
+<pre><code class="language-bash">shruggie-indexer path/to/directory/ --rename
+</code></pre>
+<p>For a file with <code>id</code> of <code>yA8A8C089A6A8583B24C85F5A4A41F5AC</code> and extension <code>exe</code>, the storage name is <code>yA8A8C089A6A8583B24C85F5A4A41F5AC.exe</code>. Directories are renamed to their <code>id</code> (e.g., <code>x3B4F479E9F880E438882FC34B67D352C</code>).</p>
+<p>!!! note "Rename implies in-place"
+    <code>--rename</code> automatically enables <code>--inplace</code> so that sidecar files are written alongside each renamed item, preserving the original filename in the index entry.</p>
+<h3 id="-dry-run"><code>--dry-run</code></h3>
+<p>Preview rename operations without modifying any files.</p>
+<pre><code class="language-bash">shruggie-indexer path/to/directory/ --rename --dry-run
+</code></pre>
+<p>Logs each proposed rename at <code>INFO</code> level. Only meaningful when used with <code>--rename</code>.</p>
+<h2 id="identity-options">Identity Options</h2>
+<h3 id="-id-type"><code>--id-type</code></h3>
+<p>Select which hash algorithm is used for the <code>id</code> field and <code>storage_name</code>. Choices: <code>md5</code> (default) or <code>sha256</code>.</p>
+<pre><code class="language-bash">shruggie-indexer path/to/file --id-type sha256
+</code></pre>
+<table>
+<thead>
+<tr>
+<th><code>--id-type</code></th>
+<th><code>id</code> example</th>
+<th><code>id</code> length</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>md5</code></td>
+<td><code>yA8A8C089A6A8583B24C85F5A4A41F5AC</code></td>
+<td>33 chars (1 prefix + 32 hex)</td>
+</tr>
+<tr>
+<td><code>sha256</code></td>
+<td><code>yB6BA115C2B43D87AADDF0060C44726E7AF1A12C9501FC63DE652A9517D7367DB</code></td>
+<td>65 chars (1 prefix + 64 hex)</td>
+</tr>
+</tbody>
+</table>
+<p>Both algorithms are always computed regardless of this setting. This option only controls which digest is promoted to the <code>id</code> field.</p>
+<h3 id="-compute-sha512"><code>--compute-sha512</code></h3>
+<p>Include SHA-512 in the computed <code>HashSet</code> objects. SHA-512 is excluded by default to reduce output size.</p>
+<pre><code class="language-bash">shruggie-indexer path/to/file --compute-sha512
+</code></pre>
+<p>When enabled, every <code>hashes</code> and <code>name.hashes</code> object in the output includes a <code>sha512</code> field.</p>
+<h2 id="configuration">Configuration</h2>
+<h3 id="-config"><code>--config</code></h3>
+<p>Path to a TOML configuration file. Overrides the default config file resolution.</p>
+<pre><code class="language-bash">shruggie-indexer path/to/target --config my-config.toml
+</code></pre>
+<p>See the <a href="../configuration/">Configuration</a> page for the file format and available settings.</p>
+<h2 id="logging-options">Logging Options</h2>
+<h3 id="-v-verbose"><code>-v</code>, <code>--verbose</code></h3>
+<p>Increase logging verbosity. Repeatable.</p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Log level</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>(none)</td>
+<td><code>WARNING</code></td>
+<td>Warnings and errors only</td>
+</tr>
+<tr>
+<td><code>-v</code></td>
+<td><code>INFO</code></td>
+<td>Informational messages (progress, implications)</td>
+</tr>
+<tr>
+<td><code>-vv</code></td>
+<td><code>DEBUG</code></td>
+<td>Detailed diagnostic output</td>
+</tr>
+<tr>
+<td><code>-vvv</code></td>
+<td><code>DEBUG</code> (all)</td>
+<td>Full trace-level logging including internal modules</td>
+</tr>
+</tbody>
+</table>
+<h3 id="-q-quiet"><code>-q</code>, <code>--quiet</code></h3>
+<p>Suppress all non-error output. Sets log level to <code>CRITICAL</code>. Overrides <code>--verbose</code> if both are specified.</p>
+<pre><code class="language-bash">shruggie-indexer path/to/target -q
+</code></pre>
+<p>In quiet mode, the exit code is the primary success/failure signal.</p>
+<h2 id="general-options">General Options</h2>
+<h3 id="-version"><code>--version</code></h3>
+<p>Print the installed version and exit.</p>
+<pre><code class="language-bash">shruggie-indexer --version
+</code></pre>
+<h3 id="-help"><code>--help</code></h3>
+<p>Print the help text and exit.</p>
+<pre><code class="language-bash">shruggie-indexer --help
+</code></pre>
+<h2 id="mutual-exclusion-rules">Mutual Exclusion Rules</h2>
+<p>The following constraints are enforced at invocation time:</p>
+<table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--file</code> and <code>--directory</code></td>
+<td>Mutually exclusive. Only one may be specified.</td>
+</tr>
+<tr>
+<td><code>--stdout</code> and <code>--no-stdout</code></td>
+<td>Mutually exclusive. Click handles this automatically.</td>
+</tr>
+<tr>
+<td><code>--recursive</code> and <code>--no-recursive</code></td>
+<td>Mutually exclusive. Click handles this automatically.</td>
+</tr>
+<tr>
+<td><code>--meta-merge-delete</code> without <code>--outfile</code> or <code>--inplace</code></td>
+<td>Fatal error (exit code 2).</td>
+</tr>
+<tr>
+<td><code>--dry-run</code> without <code>--rename</code></td>
+<td>Silently ignored.</td>
+</tr>
+<tr>
+<td><code>TARGET</code> does not exist</td>
+<td>Fatal error (exit code 3).</td>
+</tr>
+<tr>
+<td><code>--outfile</code> parent directory does not exist</td>
+<td>Fatal error (exit code 2).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="output-scenarios">Output Scenarios</h2>
+<p>The three output flags (<code>--stdout</code>, <code>--outfile</code>, <code>--inplace</code>) combine into the following scenarios:</p>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Flags</th>
+<th style="text-align: center;">Stdout</th>
+<th style="text-align: center;">Outfile</th>
+<th style="text-align: center;">In-place</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 — Default</td>
+<td>(none)</td>
+<td style="text-align: center;">✔</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>2 — File only</td>
+<td><code>--outfile index.json</code></td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">✔</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>3 — File + stdout</td>
+<td><code>--outfile index.json --stdout</code></td>
+<td style="text-align: center;">✔</td>
+<td style="text-align: center;">✔</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>4 — In-place only</td>
+<td><code>--inplace</code></td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">✔</td>
+</tr>
+<tr>
+<td>5 — File + in-place</td>
+<td><code>--outfile index.json --inplace</code></td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">✔</td>
+<td style="text-align: center;">✔</td>
+</tr>
+<tr>
+<td>6 — In-place + stdout</td>
+<td><code>--inplace --stdout</code></td>
+<td style="text-align: center;">✔</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">✔</td>
+</tr>
+<tr>
+<td>7 — All three</td>
+<td><code>--outfile index.json --inplace --stdout</code></td>
+<td style="text-align: center;">✔</td>
+<td style="text-align: center;">✔</td>
+<td style="text-align: center;">✔</td>
+</tr>
+<tr>
+<td>Silent</td>
+<td><code>--no-stdout</code></td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+</tr>
+</tbody>
+</table>
+<h2 id="exit-codes">Exit Codes</h2>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Name</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td><code>SUCCESS</code></td>
+<td>Completed successfully. All items processed.</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>PARTIAL_FAILURE</code></td>
+<td>Completed with one or more item-level errors (skipped items, failed extractions).</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>CONFIGURATION_ERROR</code></td>
+<td>Invalid configuration or flag combination. No processing began.</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>TARGET_ERROR</code></td>
+<td>Target path does not exist or is not accessible.</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td><code>RUNTIME_ERROR</code></td>
+<td>Unexpected error during processing.</td>
+</tr>
+<tr>
+<td><code>5</code></td>
+<td><code>INTERRUPTED</code></td>
+<td>Cancelled by user via Ctrl+C.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="signal-handling">Signal Handling</h2>
+<p>shruggie-indexer implements a two-phase interruption model for graceful cancellation:</p>
+<p><strong>First Ctrl+C (cooperative):</strong> Sets a cancellation flag. The engine finishes processing the current item and then stops cleanly. A message is printed to stderr:</p>
+<pre><code>Interrupt received — finishing current item. Press Ctrl+C again to force quit.
+</code></pre>
+<p><strong>Second Ctrl+C (forced):</strong> Restores the default signal handler and raises <code>KeyboardInterrupt</code> for immediate termination.</p>
+<h3 id="cancellation-and-output-state">Cancellation and output state</h3>
+<table>
+<thead>
+<tr>
+<th>Output mode</th>
+<th>State after interruption</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--stdout</code></td>
+<td>No output produced (the entry tree was incomplete).</td>
+</tr>
+<tr>
+<td><code>--outfile</code></td>
+<td>No output produced.</td>
+</tr>
+<tr>
+<td><code>--inplace</code></td>
+<td>Partial output — sidecar files for completed items are valid on disk.</td>
+</tr>
+</tbody>
+</table>
+<p>If <code>--meta-merge-delete</code> is active, the deletion queue is discarded on cancellation — no sidecar files are deleted.</p>
+<p>If <code>--rename</code> is active, files renamed before the interrupt retain their new names with valid sidecar manifests. Unreached files keep their original names. Re-running the same command is safe and idempotent.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.instant", "search.highlight", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
