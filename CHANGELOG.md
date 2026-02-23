@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **GUI: Copy button feedback** — Copy button briefly changes to "Copied ✓" with a green highlight for 1.5 seconds after clicking.
 - **GUI: Resizable output panel** — Output panel includes a drag handle for vertical resizing (100–600 px range). Panel height is persisted across sessions.
 - **GUI: Tooltips** — Descriptive hover tooltips added to all interactive controls, with a global enable/disable toggle in Settings.
+- **Documentation: GUI usage guide** — Added a dedicated desktop application guide (`docs/user-guide/gui.md`) covering launch, interface navigation, all operation types, output panel usage, keyboard shortcuts, session persistence, and troubleshooting. Includes Windows SmartScreen unblocking instructions. Placed prominently in the MkDocs navigation under User Guide.
 
 ## [0.1.0] - 2026-02-20
 

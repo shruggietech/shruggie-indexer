@@ -4,6 +4,10 @@ The User Guide provides comprehensive reference documentation for shruggie-index
 
 ## Sections
 
+### [Desktop Application](gui.md)
+
+Visual guide to the desktop (GUI) application. Covers launching the app, navigating the interface, choosing operation types, understanding the output panel, keyboard shortcuts, and troubleshooting — written for users who prefer a graphical interface over the command line.
+
 ### [CLI Reference](cli-reference.md)
 
 Complete documentation for every command-line option, flag, and argument. Includes the output scenarios table, exit codes, mutual exclusion rules, and signal handling behavior.

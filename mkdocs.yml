@@ -47,6 +47,7 @@ nav:
       - ExifTool Setup: getting-started/exiftool.md
   - User Guide:
       - Overview: user-guide/index.md
+      - Desktop Application: user-guide/gui.md
       - CLI Reference: user-guide/cli-reference.md
       - Configuration: user-guide/configuration.md
       - Python API: user-guide/python-api.md

@@ -60,7 +60,7 @@ Output (abbreviated):
 ## Documentation Sections
 
 - **[Getting Started](getting-started/installation.md)** — Install shruggie-indexer, set up ExifTool, and index your first file in minutes.
-- **[User Guide](user-guide/index.md)** — Complete CLI reference, configuration guide, Python API documentation, and platform-specific notes.
+- **[User Guide](user-guide/index.md)** — Desktop application guide, CLI reference, configuration guide, Python API documentation, and platform-specific notes.
 - **[Schema Reference](schema/index.md)** — Full v2 JSON Schema documentation with type definitions, field tables, and annotated examples.
 - **[Porting Reference](porting-reference/index.md)** — Historical reference materials from the original PowerShell implementation.
 - **[Changelog](changelog.md)** — Version history and release notes.
