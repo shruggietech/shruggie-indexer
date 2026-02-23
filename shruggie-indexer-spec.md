@@ -2678,22 +2678,58 @@ Exiftool's `-json` flag produces a JSON array containing one object per input fi
 
 > **Deviation from original (DEV-06):** The original pipes exiftool output through `jq` for two purposes: compacting the JSON (`jq -c '.[] | .'`) and deleting unwanted keys via a second `jq` pass (`jq -c 'del(.ExifToolVersion, .FileSequence, ...)'`). The port eliminates `jq` entirely. `json.loads()` handles parsing natively, and unwanted keys are removed with a dict comprehension.
 
-The unwanted key set, carried forward from the original's `jq` deletion list, includes:
+The unwanted key set includes exiftool operational metadata and OS-specific filesystem attributes that are either redundant with IndexEntry fields or not embedded metadata from the file. Because exiftool with `-G` flags emits group-prefixed keys (e.g. `System:FileName`), the filter matches by **base key name** — the portion after the last `:` separator. This handles both prefixed and unprefixed key forms.
 
-`ExifToolVersion`, `FileSequence`, `NewGUID`, `Directory`, `FileName`, `FilePath`, `BaseName`, `FilePermissions`
+The complete exclusion set:
 
-These keys are exiftool operational metadata (not embedded metadata from the file) and are removed to keep the output clean. The filtering is a single dict comprehension:
+| Base key name | Category | Reason |
+|---------------|----------|--------|
+| `ExifToolVersion` | Operational | ExifTool process version |
+| `FileSequence` | Operational | ExifTool internal counter |
+| `NewGUID` | Operational | ExifTool-generated GUID |
+| `Directory` | Filesystem | Parent directory path |
+| `FileName` | Filesystem | File name (redundant with IndexEntry) |
+| `FilePath` | Filesystem | Full path (redundant/exposes layout) |
+| `BaseName` | Filesystem | Stem without extension |
+| `FilePermissions` | Filesystem | OS-specific permissions string |
+| `SourceFile` | Filesystem | Absolute path as provided to exiftool |
+| `FileSize` | Redundant | Already in IndexEntry `size` object |
+| `FileModifyDate` | Redundant | Already in IndexEntry `timestamps` |
+| `FileAccessDate` | Redundant | Already in IndexEntry `timestamps` |
+| `FileCreateDate` | Redundant | Already in IndexEntry `timestamps` |
+| `FileAttributes` | OS-specific | Filesystem attributes (not embedded) |
+| `FileDeviceNumber` | OS-specific | Device identifier |
+| `FileInodeNumber` | OS-specific | Inode (always 0 on Windows) |
+| `FileHardLinks` | OS-specific | Hard link count |
+| `FileUserID` | OS-specific | UID (always 0 on Windows) |
+| `FileGroupID` | OS-specific | GID (always 0 on Windows) |
+| `FileDeviceID` | OS-specific | Device ID |
+| `FileBlockSize` | OS-specific | Block size (empty on Windows) |
+| `FileBlockCount` | OS-specific | Block count (empty on Windows) |
+| `Now` | Operational | ExifTool processing timestamp |
+| `ProcessingTime` | Operational | ExifTool processing duration |
+
+The filtering implementation:
 
 ```python
+def _base_key(key: str) -> str:
+    """Extract the base key name, stripping any group prefix."""
+    return key.rsplit(":", 1)[-1]
+
 EXIFTOOL_EXCLUDED_KEYS = frozenset({
     "ExifToolVersion", "FileSequence", "NewGUID", "Directory",
     "FileName", "FilePath", "BaseName", "FilePermissions",
+    "SourceFile", "FileSize", "FileModifyDate", "FileAccessDate",
+    "FileCreateDate", "FileAttributes", "FileDeviceNumber",
+    "FileInodeNumber", "FileHardLinks", "FileUserID", "FileGroupID",
+    "FileDeviceID", "FileBlockSize", "FileBlockCount",
+    "Now", "ProcessingTime",
 })
 
-filtered = {k: v for k, v in raw_data.items() if k not in EXIFTOOL_EXCLUDED_KEYS}
+filtered = {k: v for k, v in raw_data.items() if _base_key(k) not in EXIFTOOL_EXCLUDED_KEYS}
 ```
 
-The excluded key set is not currently configurable. Unlike the extension exclusion list (which users may legitimately need to modify), the key exclusion list is a fixed property of exiftool's output format. If future exiftool versions add new operational keys, the set can be extended in a maintenance update.
+The excluded key set is not currently configurable. Unlike the extension exclusion list (which users may legitimately need to modify), the key exclusion list is a fixed property of exiftool's output format. Keys are matched by base name to accommodate the `-G` flag's group prefixes. If future exiftool versions add new operational keys, the set can be extended in a maintenance update.
 
 <a id="error-handling-1"></a>
 #### Error handling

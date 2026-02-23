@@ -205,11 +205,38 @@ For types where multiple formats are expected, the reader attempts formats in or
 
 ### Key exclusions
 
-After ExifTool returns metadata, certain operational keys are filtered out before storage:
+After ExifTool returns metadata, certain operational and OS-specific keys are filtered out before storage. Because exiftool with `-G` flags emits group-prefixed keys (e.g. `System:FileName`), the filter matches by **base key name** (the portion after the last `:` separator).
 
-`ExifToolVersion`, `FileSequence`, `NewGUID`, `Directory`, `FileName`, `FilePath`, `BaseName`, `FilePermissions`
+The complete exclusion set:
 
-These are ExifTool process metadata, not embedded metadata from the file.
+| Base key | Category |
+|----------|----------|
+| `ExifToolVersion` | ExifTool operational |
+| `FileSequence` | ExifTool operational |
+| `NewGUID` | ExifTool operational |
+| `Now` | ExifTool operational |
+| `ProcessingTime` | ExifTool operational |
+| `Directory` | Filesystem path |
+| `FileName` | Filesystem path |
+| `FilePath` | Filesystem path |
+| `BaseName` | Filesystem path |
+| `SourceFile` | Filesystem path |
+| `FilePermissions` | OS-specific |
+| `FileSize` | Redundant (in `size` object) |
+| `FileModifyDate` | Redundant (in `timestamps`) |
+| `FileAccessDate` | Redundant (in `timestamps`) |
+| `FileCreateDate` | Redundant (in `timestamps`) |
+| `FileAttributes` | OS-specific |
+| `FileDeviceNumber` | OS-specific |
+| `FileInodeNumber` | OS-specific |
+| `FileHardLinks` | OS-specific |
+| `FileUserID` | OS-specific |
+| `FileGroupID` | OS-specific |
+| `FileDeviceID` | OS-specific |
+| `FileBlockSize` | OS-specific |
+| `FileBlockCount` | OS-specific |
+
+All embedded metadata keys (e.g. `File:FileType`, `File:MIMEType`, `QuickTime:*`, `Composite:*`) are preserved.
 
 ## Override and Merging Behavior
 

@@ -36,6 +36,8 @@ if TYPE_CHECKING:
 __all__ = [
     "EXIFTOOL_COMMON_ARGS",
     "EXIFTOOL_EXCLUDED_KEYS",
+    "_base_key",
+    "_filter_keys",
     "extract_exif",
 ]
 
@@ -69,6 +71,7 @@ when the config args are not sufficient.
 """
 
 EXIFTOOL_EXCLUDED_KEYS: frozenset[str] = frozenset({
+    # Original v1 jq deletion list
     "ExifToolVersion",
     "FileSequence",
     "NewGUID",
@@ -77,8 +80,33 @@ EXIFTOOL_EXCLUDED_KEYS: frozenset[str] = frozenset({
     "FilePath",
     "BaseName",
     "FilePermissions",
+    # Absolute path exposure
+    "SourceFile",
+    # Redundant — captured in IndexEntry size/timestamps objects
+    "FileSize",
+    "FileModifyDate",
+    "FileAccessDate",
+    "FileCreateDate",
+    # OS-specific filesystem attributes (not embedded metadata)
+    "FileAttributes",
+    "FileDeviceNumber",
+    "FileInodeNumber",
+    "FileHardLinks",
+    "FileUserID",
+    "FileGroupID",
+    "FileDeviceID",
+    "FileBlockSize",
+    "FileBlockCount",
+    # ExifTool operational metadata
+    "Now",
+    "ProcessingTime",
 })
-"""Keys filtered from exiftool output before returning."""
+"""Keys filtered from exiftool output before returning.
+
+Keys are matched by their base name (the portion after the last ``:``).
+This handles group-prefixed output from ``-G`` flags (e.g.
+``"System:FileName"`` matches ``"FileName"``).
+"""
 
 _EXIFTOOL_TIMEOUT: int = 30
 """Subprocess timeout in seconds."""
@@ -287,9 +315,26 @@ def _parse_json_output(stdout: str, path: Path) -> dict[str, Any] | None:
     return filtered
 
 
+def _base_key(key: str) -> str:
+    """Extract the base key name, stripping any group prefix.
+
+    ExifTool with ``-G`` flags emits keys like ``"System:FileName"``.
+    This returns ``"FileName"`` so filtering works regardless of
+    whether a group prefix is present.
+    """
+    return key.rsplit(":", 1)[-1]
+
+
 def _filter_keys(data: dict[str, Any]) -> dict[str, Any]:
-    """Remove excluded keys from exiftool output."""
-    return {k: v for k, v in data.items() if k not in EXIFTOOL_EXCLUDED_KEYS}
+    """Remove excluded keys from exiftool output.
+
+    Keys are matched by their base name (after the last ``:``) to
+    handle group-prefixed output from ``-G`` flags.
+    """
+    return {
+        k: v for k, v in data.items()
+        if _base_key(k) not in EXIFTOOL_EXCLUDED_KEYS
+    }
 
 
 # ---------------------------------------------------------------------------

@@ -17,6 +17,8 @@ from shruggie_indexer.config.loader import load_config
 from shruggie_indexer.config.types import IndexerConfig
 from shruggie_indexer.core.exif import (
     EXIFTOOL_EXCLUDED_KEYS,
+    _base_key,
+    _filter_keys,
     extract_exif,
 )
 
@@ -159,6 +161,135 @@ class TestKeyFiltering:
         assert "Directory" not in result
         assert "File:MIMEType" in result
         assert "Custom:Tag" in result
+
+    def test_group_prefixed_keys_removed(
+        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Group-prefixed keys (e.g. System:FileName) are matched by base name."""
+        import shruggie_indexer.core.exif as exif_mod
+
+        data = [{
+            "SourceFile": "C:/Users/test/file.txt",
+            "ExifTool:ExifToolVersion": 12.76,
+            "ExifTool:Now": "2026:02:23 12:00:00-05:00",
+            "ExifTool:ProcessingTime": "0.005 s",
+            "System:FileName": "file.txt",
+            "System:Directory": "C:/Users/test",
+            "System:FileSize": "1234 bytes",
+            "System:FileModifyDate": "2026:02:23 12:00:00-05:00",
+            "System:FileAccessDate": "2026:02:23 12:00:00-05:00",
+            "System:FileCreateDate": "2026:02:23 12:00:00-05:00",
+            "System:FilePermissions": "rw-r--r--",
+            "System:FileAttributes": "Regular; Archive",
+            "File:FileType": "TXT",
+            "File:FileTypeExtension": "txt",
+            "File:MIMEType": "text/plain",
+            "File:Encoding": "utf-8",
+            "QuickTime:SomeTag": "preserved",
+            "Composite:Duration": 120.5,
+        }]
+
+        monkeypatch.setattr(exif_mod, "_exiftool_path", "exiftool")
+        monkeypatch.setattr(exif_mod, "_pyexiftool_available", False)
+        monkeypatch.setattr(exif_mod, "_backend", "subprocess")
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = json.dumps(data)
+        mock_result.stderr = ""
+
+        with patch("subprocess.run", return_value=mock_result):
+            config = _cfg(extract_exif=True)
+            result = extract_exif(sample_file, config)
+
+        assert result is not None
+        # All excluded keys (prefixed and unprefixed) must be absent.
+        assert "SourceFile" not in result
+        assert "ExifTool:ExifToolVersion" not in result
+        assert "ExifTool:Now" not in result
+        assert "ExifTool:ProcessingTime" not in result
+        assert "System:FileName" not in result
+        assert "System:Directory" not in result
+        assert "System:FileSize" not in result
+        assert "System:FileModifyDate" not in result
+        assert "System:FileAccessDate" not in result
+        assert "System:FileCreateDate" not in result
+        assert "System:FilePermissions" not in result
+        assert "System:FileAttributes" not in result
+        # Embedded metadata keys must be preserved.
+        assert result["File:FileType"] == "TXT"
+        assert result["File:FileTypeExtension"] == "txt"
+        assert result["File:MIMEType"] == "text/plain"
+        assert result["File:Encoding"] == "utf-8"
+        assert result["QuickTime:SomeTag"] == "preserved"
+        assert result["Composite:Duration"] == 120.5
+
+    def test_expanded_exclusion_set_contains_required_keys(self) -> None:
+        """EXIFTOOL_EXCLUDED_KEYS includes all required base key names."""
+        required = {
+            # Original v1 jq deletion list
+            "ExifToolVersion", "FileSequence", "NewGUID", "Directory",
+            "FileName", "FilePath", "BaseName", "FilePermissions",
+            # Expanded set
+            "SourceFile", "FileSize", "FileModifyDate", "FileAccessDate",
+            "FileCreateDate", "FileAttributes", "FileDeviceNumber",
+            "FileInodeNumber", "FileHardLinks", "FileUserID",
+            "FileGroupID", "FileDeviceID", "FileBlockSize",
+            "FileBlockCount", "Now", "ProcessingTime",
+        }
+        assert required.issubset(EXIFTOOL_EXCLUDED_KEYS)
+
+
+class TestBaseKey:
+    """Test the _base_key helper used for prefix-aware key filtering."""
+
+    def test_unprefixed_key(self) -> None:
+        assert _base_key("FileName") == "FileName"
+
+    def test_single_prefixed_key(self) -> None:
+        assert _base_key("System:FileName") == "FileName"
+
+    def test_double_prefixed_key(self) -> None:
+        assert _base_key("Main:System:FileName") == "FileName"
+
+    def test_empty_string(self) -> None:
+        assert _base_key("") == ""
+
+
+class TestFilterKeysDirect:
+    """Direct unit tests for _filter_keys without extract_exif."""
+
+    def test_mixed_prefixed_and_unprefixed(self) -> None:
+        """Both prefixed and unprefixed excluded keys are removed."""
+        data = {
+            "ExifToolVersion": 12.76,
+            "System:FileName": "test.txt",
+            "System:FileSize": "100 bytes",
+            "File:MIMEType": "text/plain",
+            "SourceFile": "/tmp/test.txt",
+            "ExifTool:Now": "2026:01:01",
+        }
+        result = _filter_keys(data)
+        assert result == {"File:MIMEType": "text/plain"}
+
+    def test_no_excluded_keys(self) -> None:
+        """Data with no excluded keys passes through unchanged."""
+        data = {
+            "File:MIMEType": "text/plain",
+            "Composite:Duration": 42,
+        }
+        result = _filter_keys(data)
+        assert result == data
+
+    def test_all_excluded_returns_empty(self) -> None:
+        """Data containing only excluded keys results in empty dict."""
+        data = {
+            "System:FileName": "test.txt",
+            "ExifToolVersion": 12.76,
+            "SourceFile": "/tmp/test.txt",
+        }
+        result = _filter_keys(data)
+        assert result == {}
 
 
 class TestTimeoutHandling:
