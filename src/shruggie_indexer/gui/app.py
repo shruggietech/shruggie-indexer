@@ -70,6 +70,9 @@ _DISPLAY_LIMIT = 10_000_000  # 10 MB
 
 _MONOSPACE_FONTS = ("JetBrains Mono", "Consolas", "Courier New", "monospace")
 
+# Muted fill colour for checkboxes that are forced on and disabled.
+_FORCED_CHECK_FG = ("gray55", "gray45")
+
 # Sidebar tab identifiers
 _TAB_OPERATIONS = "operations"
 _TAB_SETTINGS = "settings"
@@ -856,21 +859,25 @@ class OperationsPage(ctk.CTkFrame):
                 "directory": "Treat target as a directory.",
             }[val])
 
+        # Recursive row (separate so hint aligns under the checkbox)
+        recursive_row = ctk.CTkFrame(c, fg_color="transparent")
+        recursive_row.pack(fill="x", pady=(2, 0))
+
         self._recursive_var = ctk.BooleanVar(value=True)
         self._recursive_cb = ctk.CTkCheckBox(
-            opts_frame, text="Recursive", variable=self._recursive_var,
+            recursive_row, text="Recursive", variable=self._recursive_var,
         )
-        self._recursive_cb.pack(side="left", padx=(20, 0))
+        self._recursive_cb.pack(anchor="w")
         _Tooltip(self._recursive_cb, "Include subdirectories when indexing a directory.")
 
-        # Recursive disabled explanation (fine-print)
+        # Recursive disabled explanation (fine-print, aligned under checkbox)
         self._recursive_info_label = ctk.CTkLabel(
-            c, text="",
+            recursive_row, text="",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
         )
-        self._recursive_info_label.pack(fill="x", padx=(46, 0), pady=(0, 2))
+        self._recursive_info_label.pack(anchor="w", padx=(26, 0))
 
         # Apply initial browse button state
         self._update_browse_buttons()
@@ -897,23 +904,27 @@ class OperationsPage(ctk.CTkFrame):
         self._algo_combo.pack(side="left", padx=(0, 20))
         _Tooltip(self._algo_combo, "Hash algorithm used for generating file identity.")
 
+        # Row 2: SHA-512 (own row for hint alignment)
+        sha512_row = ctk.CTkFrame(c, fg_color="transparent")
+        sha512_row.pack(fill="x", pady=(4, 0))
+
         self._sha512_var = ctk.BooleanVar(value=False)
         self._sha512_cb = ctk.CTkCheckBox(
-            row1, text="Compute SHA-512", variable=self._sha512_var,
+            sha512_row, text="Compute SHA-512", variable=self._sha512_var,
         )
-        self._sha512_cb.pack(side="left")
+        self._sha512_cb.pack(anchor="w")
         _Tooltip(self._sha512_cb, "Compute an additional SHA-512 hash for each file.")
 
-        # SHA-512 override info label (fine-print, shown when settings force it)
+        # SHA-512 override info label (fine-print, aligned under checkbox)
         self._sha512_override_label = ctk.CTkLabel(
-            c, text="",
+            sha512_row, text="",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
         )
-        self._sha512_override_label.pack(fill="x", padx=(4, 0), pady=(0, 2))
+        self._sha512_override_label.pack(anchor="w", padx=(26, 0))
 
-        # Row 2: Extract EXIF (always visible, disabled when implied)
+        # Row 3: Extract EXIF (always visible, user-controlled)
         exif_row = ctk.CTkFrame(c, fg_color="transparent")
         exif_row.pack(fill="x", pady=(4, 0))
         self._exif_var = ctk.BooleanVar(value=False)
@@ -921,18 +932,18 @@ class OperationsPage(ctk.CTkFrame):
             exif_row, text="Extract EXIF metadata",
             variable=self._exif_var,
         )
-        self._exif_cb.pack(side="left")
+        self._exif_cb.pack(anchor="w")
         _Tooltip(self._exif_cb, "Extract embedded metadata using ExifTool.")
 
         self._exif_info_label = ctk.CTkLabel(
-            c, text="",
+            exif_row, text="",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
         )
-        self._exif_info_label.pack(fill="x", padx=(26, 0), pady=(0, 2))
+        self._exif_info_label.pack(anchor="w", padx=(26, 0))
 
-        # Row 3: Rename toggle (feature, not operation)
+        # Row 4: Rename toggle (feature, not operation)
         rename_row = ctk.CTkFrame(c, fg_color="transparent")
         rename_row.pack(fill="x", pady=(4, 0))
         self._rename_var = ctk.BooleanVar(value=False)
@@ -941,18 +952,18 @@ class OperationsPage(ctk.CTkFrame):
             variable=self._rename_var,
             command=self._on_rename_changed,
         )
-        self._rename_cb.pack(side="left")
+        self._rename_cb.pack(anchor="w")
         _Tooltip(self._rename_cb, "Rename files to content-based storage names after indexing.")
 
         self._rename_info_label = ctk.CTkLabel(
-            c, text="",
+            rename_row, text="",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
         )
-        self._rename_info_label.pack(fill="x", padx=(26, 0), pady=(0, 2))
+        self._rename_info_label.pack(anchor="w", padx=(26, 0))
 
-        # Row 4: Dry run (enabled only when rename is active)
+        # Row 5: Dry run (enabled only when rename is active)
         dry_run_row = ctk.CTkFrame(c, fg_color="transparent")
         dry_run_row.pack(fill="x", pady=(4, 0))
         self._dry_run_var = ctk.BooleanVar(value=True)
@@ -961,18 +972,18 @@ class OperationsPage(ctk.CTkFrame):
             variable=self._dry_run_var,
             command=self._on_dry_run_changed,
         )
-        self._dry_run_cb.pack(side="left")
+        self._dry_run_cb.pack(anchor="w")
         _Tooltip(self._dry_run_cb, "Preview renames without modifying files on disk.")
 
         self._dry_run_info_label = ctk.CTkLabel(
-            c, text="",
+            dry_run_row, text="",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
         )
-        self._dry_run_info_label.pack(fill="x", padx=(26, 0), pady=(0, 2))
+        self._dry_run_info_label.pack(anchor="w", padx=(26, 0))
 
-        # Row 5: In-place sidecar (enabled only for Meta Merge Delete)
+        # Row 6: In-place sidecar (enabled only for Meta Merge Delete)
         inplace_row = ctk.CTkFrame(c, fg_color="transparent")
         inplace_row.pack(fill="x", pady=(4, 0))
         self._inplace_var = ctk.BooleanVar(value=True)
@@ -980,16 +991,16 @@ class OperationsPage(ctk.CTkFrame):
             inplace_row, text="Write in-place sidecar files",
             variable=self._inplace_var,
         )
-        self._inplace_cb.pack(side="left")
+        self._inplace_cb.pack(anchor="w")
         _Tooltip(self._inplace_cb, "Write individual sidecar JSON files next to each indexed file.")
 
         self._inplace_info_label = ctk.CTkLabel(
-            c, text="",
+            inplace_row, text="",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
         )
-        self._inplace_info_label.pack(fill="x", padx=(26, 0), pady=(0, 2))
+        self._inplace_info_label.pack(anchor="w", padx=(26, 0))
 
     def _build_output_group(self) -> None:
         self._output_group = _LabeledGroup(
@@ -1199,6 +1210,28 @@ class OperationsPage(ctk.CTkFrame):
         """Dry-run checkbox toggled — update destructive indicator."""
         self._update_destructive_indicator()
 
+    @staticmethod
+    def _disable_cb(cb: ctk.CTkCheckBox, *, select: bool = False) -> None:
+        """Disable a checkbox with a muted fill when checked.
+
+        If *select* is ``True`` the checkbox is force-checked first.
+        Checked-and-disabled checkboxes use a grey fill so they do not
+        appear interactive.
+        """
+        if select:
+            cb.select()
+        cb.configure(state="disabled")
+        if cb.get():
+            cb.configure(fg_color=_FORCED_CHECK_FG)
+
+    @staticmethod
+    def _enable_cb(cb: ctk.CTkCheckBox) -> None:
+        """Re-enable a checkbox and restore its theme accent colour."""
+        cb.configure(
+            state="normal",
+            fg_color=ctk.ThemeManager.theme["CTkCheckBox"]["fg_color"],
+        )
+
     def _update_controls(self) -> None:
         """Master control update — enable/disable all controls based on state.
 
@@ -1218,48 +1251,41 @@ class OperationsPage(ctk.CTkFrame):
         if selected_type == "file" or (
             selected_type != "directory" and target_kind == "file"
         ):
-            self._recursive_cb.configure(state="disabled")
+            self._disable_cb(self._recursive_cb)
             self._recursive_info_label.configure(
                 text="Recursive is not applicable when the target is a single file.",
             )
         else:
-            self._recursive_cb.configure(state="normal")
+            self._enable_cb(self._recursive_cb)
             self._recursive_info_label.configure(text="")
 
         # -- SHA-512 override from Settings --
         self._sync_sha512_from_settings()
 
-        # -- EXIF --
-        if op in (_OP_META_MERGE, _OP_META_MERGE_DELETE):
-            self._exif_cb.select()
-            self._exif_cb.configure(state="disabled")
-            self._exif_info_label.configure(
-                text="EXIF extraction is always enabled for Meta Merge operations.",
-            )
-        else:
-            self._exif_cb.configure(state="normal")
-            self._exif_info_label.configure(text="")
+        # -- EXIF -- (user-controlled for all operation types)
+        self._enable_cb(self._exif_cb)
+        self._exif_info_label.configure(text="")
 
         # -- Rename --
-        self._rename_cb.configure(state="normal")
+        self._enable_cb(self._rename_cb)
         self._rename_info_label.configure(text="")
 
         # -- Dry run --
         if rename_on:
-            self._dry_run_cb.configure(state="normal")
+            self._enable_cb(self._dry_run_cb)
             self._dry_run_info_label.configure(text="")
         else:
-            self._dry_run_cb.configure(state="disabled")
+            self._disable_cb(self._dry_run_cb)
             self._dry_run_info_label.configure(
                 text="Enable \"Rename files\" to configure dry-run mode.",
             )
 
         # -- In-place sidecar --
         if op == _OP_META_MERGE_DELETE:
-            self._inplace_cb.configure(state="normal")
+            self._enable_cb(self._inplace_cb)
             self._inplace_info_label.configure(text="")
         else:
-            self._inplace_cb.configure(state="disabled")
+            self._disable_cb(self._inplace_cb)
             self._inplace_info_label.configure(
                 text="In-place sidecar output is only available for Meta Merge Delete.",
             )
@@ -1281,12 +1307,12 @@ class OperationsPage(ctk.CTkFrame):
 
         if settings_sha512:
             self._sha512_var.set(True)
-            self._sha512_cb.configure(state="disabled")
+            self._disable_cb(self._sha512_cb, select=True)
             self._sha512_override_label.configure(
-                text="Forced on by Settings → \"Compute SHA-512 by default\".",
+                text="Forced on by Settings -> \"Compute SHA-512 by default\".",
             )
         else:
-            self._sha512_cb.configure(state="normal")
+            self._enable_cb(self._sha512_cb)
             self._sha512_override_label.configure(text="")
 
     def _update_output_controls(self) -> None:
@@ -1376,7 +1402,7 @@ class OperationsPage(ctk.CTkFrame):
                 overrides["output_file"] = None
 
         elif op == _OP_META_MERGE:
-            overrides["extract_exif"] = True
+            overrides["extract_exif"] = self._exif_var.get()
             overrides["meta_merge"] = True
             overrides["output_inplace"] = False
             mode = self._output_mode_var.get()
@@ -1387,7 +1413,7 @@ class OperationsPage(ctk.CTkFrame):
                 overrides["output_file"] = None
 
         elif op == _OP_META_MERGE_DELETE:
-            overrides["extract_exif"] = True
+            overrides["extract_exif"] = self._exif_var.get()
             overrides["meta_merge"] = True
             overrides["meta_merge_delete"] = True
             overrides["output_inplace"] = self._inplace_var.get()
@@ -1992,9 +2018,9 @@ class ShruggiIndexerApp(ctk.CTk):
             self._progress_panel.pack_forget()
         elif not self._job_running:
             self._progress_panel.pack_forget()
-            self._drag_handle.pack(fill="x", pady=(6, 2))
             self._output_panel.configure(height=self._output_height)
-            self._output_panel.pack(fill="both", pady=(0, 0))
+            self._output_panel.pack(side="bottom", fill="x")
+            self._drag_handle.pack(side="bottom", fill="x", pady=(2, 2))
 
     def _on_output_resize(self, delta: int) -> None:
         """Adjust output panel height by delta pixels (item 2.13)."""
@@ -2221,9 +2247,9 @@ class ShruggiIndexerApp(ctk.CTk):
 
         # Switch from progress to output
         self._progress_panel.pack_forget()
-        self._drag_handle.pack(fill="x", pady=(6, 2))
         self._output_panel.configure(height=self._output_height)
-        self._output_panel.pack(fill="both", pady=(0, 0))
+        self._output_panel.pack(side="bottom", fill="x")
+        self._drag_handle.pack(side="bottom", fill="x", pady=(2, 2))
 
         self._save_session()
 
