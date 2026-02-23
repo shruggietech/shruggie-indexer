@@ -62,16 +62,15 @@ The Operations tab is where you configure and run indexing jobs. It is organized
 
 ### Choosing an Operation Type
 
-At the top of the Operations tab, a dropdown lets you choose one of four operation types:
+At the top of the Operations tab, a dropdown lets you choose one of three operation types:
 
 | Operation | What it does | Destructive? |
 |-----------|-------------|:------------:|
 | **Index** | Scans files or folders and produces a structured JSON report containing hashes, timestamps, sizes, and (optionally) embedded metadata. Nothing on disk is changed. | No |
 | **Meta Merge** | Same as Index, but also discovers sidecar files (small companion files that sit alongside your media) and merges their contents into the report. Original files are untouched. | No |
 | **Meta Merge Delete** | Same as Meta Merge, but **deletes the sidecar files** from disk after merging them into the report. The merged data is preserved in the output file. | **Yes** |
-| **Rename** | Renames files to unique, content-based names (called "storage names"). Useful for deduplication and archival workflows. Has a preview mode that shows what *would* happen without actually renaming anything. | **Yes** (unless preview mode is on) |
 
-A small colored dot next to the dropdown indicates whether the current configuration is **destructive** (red) or **non-destructive** (green). This indicator updates in real time as you change settings.
+A small colored dot next to the dropdown indicates whether the current configuration is **destructive** (red) or **non-destructive** (green). This indicator updates in real time as you change settings — including when the rename feature is toggled (see Options Section below).
 
 ### Target Section
 
@@ -83,21 +82,25 @@ This is where you tell the application what to process.
     - **Auto** — The application figures out whether the path is a file or folder.
     - **File** — Treat the path as a single file.
     - **Directory** — Treat the path as a folder (processes all items inside).
-- **Recursive** — When checked (the default), subfolders are also processed. Uncheck this to process only the top-level contents of a folder.
+- **Recursive** — When checked (the default), subfolders are also processed. Uncheck this to process only the top-level contents of a folder. This option is automatically disabled when the target type is "File" (recursion has no meaning for single files).
+
+!!! tip "Target/Type Validation"
+    The application automatically detects whether the selected path is a file or directory. If the detected kind conflicts with the selected type (e.g., you select "File" type but point to a directory), a red error message appears below the type selector and the START button is disabled until the conflict is resolved.
 
 ### Options Section
 
-Available options change depending on the selected operation type.
+All option controls are always visible regardless of the selected operation type. Controls that do not apply to the current operation are disabled with a brief explanation.
 
 - **ID Algorithm** — Choose between `md5` (faster, shorter IDs) and `sha256` (stronger, longer IDs). This controls how file identifiers are generated.
-- **Compute SHA-512** — When checked, an additional high-strength hash is computed for each file. Useful for verification workflows; not needed for most users.
-- **Extract EXIF metadata** — When checked, embedded metadata (camera settings, GPS coordinates, creation dates, etc.) is extracted from media files using ExifTool. Requires ExifTool to be installed. This option is automatically enabled for Meta Merge operations.
-- **Dry run** (Rename only) — When checked, the application shows a preview of what files *would* be renamed without actually changing anything. This is on by default as a safety measure. Uncheck it to perform the actual rename.
-- **Write in-place** (Meta Merge Delete only) — When checked, writes output as sidecar JSON files alongside the originals instead of a single combined file.
+- **Compute SHA-512** — When checked, an additional high-strength hash is computed for each file. If the "Compute SHA-512 by default" setting is enabled on the Settings tab, this checkbox is forced on with an explanation ("Enabled in Settings") and cannot be unchecked from the Operations tab.
+- **Extract EXIF metadata** — When checked, embedded metadata (camera settings, GPS coordinates, creation dates, etc.) is extracted from media files using ExifTool. Requires ExifTool to be installed. Automatically forced on for Meta Merge and Meta Merge Delete operations.
+- **Rename files** — When checked, files are renamed to unique, content-based names ("storage names") after indexing. This feature can be combined with any operation type. Enabling rename makes the operation destructive (the indicator dot turns red) unless dry-run is also enabled.
+- **Dry run** — Only shown when "Rename files" is checked. When enabled, previews what files *would* be renamed without actually changing anything. This is on by default as a safety measure.
+- **Write in-place** — Writes output as sidecar JSON files alongside the originals. Automatically forced on when rename is active. Disabled with an explanation for Meta Merge Delete (which always writes in-place).
 
 ### Output Section
 
-Controls where the results go after the operation completes.
+Output controls are always visible. For Meta Merge Delete, the output mode is locked to "Save to file" with an explanatory note, and the file field is required.
 
 - **Output mode:**
     - **View only** — Results are displayed in the output panel at the bottom of the window. Nothing is written to disk.
@@ -107,12 +110,11 @@ Controls where the results go after the operation completes.
 
 ### Running an Operation
 
-Once everything is configured, click the action button at the bottom of the Operations area. The button label changes depending on the operation type:
+Once everything is configured, click the green **▶  START** button at the bottom of the Operations area. The button is centered and uses a distinct green color to differentiate it from other controls.
 
-- **▶ Run Index**
-- **▶ Run Meta Merge**
-- **▶ Run Meta Merge Delete**
-- **▶ Preview Renames** (dry run on) / **▶ Run Rename** (dry run off)
+!!! note "Validation Required"
+    The START button is disabled if the target path is empty or if a target/type conflict
+    exists. Resolve any red error messages before running.
 
 While the operation runs:
 
@@ -123,6 +125,7 @@ While the operation runs:
     - The file currently being processed
     - A scrolling log of activity
 - The action button changes to a red **■ Cancel** button. Click it (or press ++escape++) to stop the operation after the current file finishes.
+- All input controls on the Operations tab are disabled during execution.
 
 When the operation completes, the progress panel disappears and the output panel shows the results.
 

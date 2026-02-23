@@ -5426,7 +5426,7 @@ The exception hierarchy maps directly to the CLI exit codes ([§8.10](#810-exit-
 
 This section defines the standalone desktop GUI for `shruggie-indexer` — a visual frontend to the same library code consumed by the CLI ([§8](#8-cli-interface)) and the public API ([§9](#9-python-api)). The GUI is modeled after the `shruggie-feedtools` GUI ([§1.5](#15-reference-documents), External References) and shares its CustomTkinter foundation, dark theme, font stack, and two-panel layout pattern. Where this specification does not explicitly define a visual convention — such as padding values, border radii, or widget spacing — the `shruggie-feedtools` GUI serves as the normative reference.
 
-The GUI serves a fundamentally different user need than the CLI. The CLI is a power-user and automation tool — its flag-based interface composes naturally in scripts but requires the user to internalize the full option space, understand the implication chain (`--meta-merge-delete` → `--meta-merge` → `--meta`), and manage output routing mentally. The GUI eliminates this cognitive overhead by consolidating all four operations (Index, Meta Merge, Meta Merge Delete, Rename) into a single Operations page with an inline selector, exposing only the options relevant to the selected operation with safe defaults pre-applied. The GUI is the recommended entry point for users who are unfamiliar with the tool's option space or who want visual confirmation of their configuration before executing.
+The GUI serves a fundamentally different user need than the CLI. The CLI is a power-user and automation tool — its flag-based interface composes naturally in scripts but requires the user to internalize the full option space, understand the implication chain (`--meta-merge-delete` → `--meta-merge` → `--meta`), and manage output routing mentally. The GUI eliminates this cognitive overhead by consolidating the three operation types (Index, Meta Merge, Meta Merge Delete) into a single Operations page with an inline selector, presenting the rename feature as an optional toggle that can apply to any operation, and always displaying all controls with context-sensitive enable/disable logic and safe defaults pre-applied. The GUI is the recommended entry point for users who are unfamiliar with the tool's option space or who want visual confirmation of their configuration before executing.
 
 **Module location:** `gui/app.py` ([§3.2](#32-source-package-layout)). The GUI is a single-module implementation for the MVP. If the GUI grows in complexity (custom widgets, asset files, reusable components), additional modules and an `assets/` subdirectory can be added under `gui/` without restructuring ([§3.2](#32-source-package-layout)).
 
@@ -5504,6 +5504,7 @@ This uses the same platform directory resolution as the indexer's TOML configura
     "id_algorithm": "md5",
     "sha512": false,
     "extract_exif": false,
+    "rename": false,
     "dry_run": true,
     "inplace": true,
     "output_mode": "view",
@@ -5584,7 +5585,7 @@ The window uses a two-panel layout: a narrow left sidebar for page navigation an
 │             │  │  Mode: (●) View only  ( ) Save  ( ) Both    │  │
 │  v0.1.0    │  └────────────────────────────────────────────┘  │
 │             │  ┌──────────────────────────────────────────────┐  │
-│             │  │              ▶ Run Index                     │  │
+│             │  │              ▶  START                        │  │
 │             │  └──────────────────────────────────────────────┘  │
 │             │  ═══════════════ drag handle ═══════════════════   │
 │             │  [Output] [Log]              [Clear][Copy][Save]   │
@@ -5642,7 +5643,7 @@ The Settings page has its own layout ([§10.4](#104-configuration-panel)) and do
 <a id="page-frame-architecture"></a>
 #### Page frame architecture
 
-The Operations page is implemented as the `OperationsPage` class inheriting from `customtkinter.CTkFrame`. It contains all operation-specific controls, dynamically showing and hiding controls based on the selected operation type. The Settings and About pages are implemented as `SettingsTab` and `AboutTab` classes, respectively.
+The Operations page is implemented as the `OperationsPage` class inheriting from `customtkinter.CTkFrame`. It contains all operation controls, always visible, with context-sensitive enable/disable logic based on the selected operation type. The Settings and About pages are implemented as `SettingsTab` and `AboutTab` classes, respectively.
 
 The output panel is a single shared `OutputPanel` widget instance that is always visible below the Operations page input area. It displays the result of the most recent operation regardless of which operation type initiated it. The panel is cleared at the start of each new operation.
 
@@ -5666,24 +5667,27 @@ All controls are organized into four labeled groups, displayed in order from top
 |-------|-------|-------------|----------|
 | 1 | Operation | Select the indexing operation to perform. | Operation type dropdown and destructive operation indicator ([§10.8.1](#1081-destructive-operation-indicator)). |
 | 2 | Target | Choose the file or directory to index. | Path entry, browse buttons, type radio group, recursive checkbox. |
-| 3 | Options | Configure indexing parameters. | ID algorithm, SHA-512, and context-sensitive controls (EXIF, dry run, in-place). |
-| 4 | Output | Control where results are written. | Output mode radios and output file path field (when applicable). |
+| 3 | Options | Configure indexing parameters. | ID algorithm, SHA-512, EXIF, rename toggle, dry run, in-place — all always visible, disabled when not applicable with explanatory fine-print labels. |
+| 4 | Output | Control where results are written. | Output mode radios and output file path field — always visible, disabled with explanation when not applicable. |
 
-Each group uses consistent padding and alignment. Section headers are bold with an optional one-line description in a muted font beneath.
+Each group uses consistent padding and alignment. Section headers are bold with an optional one-line description in a muted font beneath. **All controls are always visible** — controls that do not apply to the current operation or target configuration are *disabled* (greyed-out) with small explanatory labels beneath them, never hidden.
 
 <a id="operation-type-selector"></a>
 #### Operation type selector
 
-The Operation group contains a `CTkOptionMenu` dropdown for selecting between the four operation types:
+> **Updated 2026-02-23:** Rename is no longer listed as an independent operation type. It is an optional feature toggle that can be combined with any of the three core operations. See [§10.3](#103-target-selection-and-input), context-sensitive options.
+
+The Operation group contains a `CTkOptionMenu` dropdown for selecting between the three core operation types:
 
 | Label | Internal key | Configuration overrides |
 |-------|-------------|------------------------|
 | Index | `index` | Base indexing; optional EXIF extraction. |
 | Meta Merge | `meta_merge` | `extract_exif=True`, `meta_merge=True`. |
 | Meta Merge Delete | `meta_merge_delete` | `extract_exif=True`, `meta_merge=True`, `meta_merge_delete=True`. |
-| Rename | `rename` | `rename=True`, `output_inplace=True`. |
 
-Changing the operation type immediately updates the visibility of context-sensitive controls, the destructive operation indicator, and the action button label. The selected operation type is persisted in the session file.
+The Rename feature is exposed as a separate "Rename files" checkbox in the Options group ([§10.3](#103-target-selection-and-input), context-sensitive options) that can be combined with any of the three core operations. When enabled, it adds `rename=True` and optionally `dry_run=True` to the configuration overrides.
+
+Changing the operation type immediately updates the enabled/disabled state of all controls, the destructive operation indicator, and the action button state. The selected operation type is persisted in the session file.
 
 <a id="target-path-widget-group"></a>
 #### Target path widget group
@@ -5706,45 +5710,71 @@ After selection, the path is populated into the Target entry field and the outpu
 
 **Type radio buttons.** Three options: Auto (default), File, Directory. These map directly to the CLI's target type disambiguation ([§8.2](#82-target-input-options)): Auto infers the type from the filesystem, File forces `--file`, Directory forces `--directory`. The Auto option is pre-selected by default.
 
-**Recursive checkbox.** A `CTkCheckBox` for enabling/disabling recursive traversal. Default: checked (matching `IndexerConfig.recursive` default, [§7.2](#72-default-configuration)). This checkbox is only meaningful when the target is a directory — when "File" is selected in the Type radio group, the Recursive checkbox is visually dimmed (disabled but visible) to indicate it has no effect.
+**Recursive checkbox.** A `CTkCheckBox` for enabling/disabling recursive traversal. Default: checked (matching `IndexerConfig.recursive` default, [§7.2](#72-default-configuration)). This checkbox is only meaningful when the target is a directory — when "File" is explicitly selected in the Type radio group, or when the target path resolves to a file while Type is "Auto", the Recursive checkbox is visually dimmed (disabled) with a fine-print label: *"Recursive is not applicable when the target is a single file."*
+
+<a id="target-type-validation"></a>
+#### Target / Type validation
+
+> **Added 2026-02-23:** Real-time validation of the target path against the selected Type radio to prevent user confusion and invalid operation execution.
+
+The GUI validates the combination of the Target path and the Type radio selection in real time (on key-release and focus-out of the path field, and on Type radio change). If the combination is invalid, a red fine-print error label appears below the path field, and the START button is disabled.
+
+| Conflict | Error message |
+|----------|---------------|
+| Target path points to a file, but Type is "Directory" | *"Target appears to be a file, but Type is set to \"Directory\". Change the target or select a different Type."* |
+| Target path points to a directory, but Type is "File" | *"Target appears to be a directory, but Type is set to \"File\". Change the target or select a different Type."* |
+
+**Target kind detection** uses the following heuristic:
+
+1. If the path exists on disk, use `Path.is_dir()` / `Path.is_file()`.
+2. If the path does not exist: trailing `/` or `\` → directory; has a file extension → file; otherwise indeterminate (no validation error).
+
+The START button remains disabled for the duration of the validation conflict. The user must either change the target path or select a compatible Type to proceed.
 
 <a id="context-sensitive-options"></a>
 #### Context-sensitive options
 
-The Options group contains controls that are always visible and controls that appear or hide based on the selected operation type. The implication chain ([§7.1](#71-configuration-architecture)) is handled transparently — the GUI does not show implied flags as separate controls because they are always active for the selected operation.
+> **Updated 2026-02-23:** All controls are always visible. Controls that do not apply to the current operation are *disabled* with explanatory fine-print labels — they are never hidden. Rename is now an optional feature toggle, not a standalone operation type.
 
-**Always visible:**
+The Options group contains all operation-related controls, always visible. Controls that are not applicable to the current operation/target combination are disabled (greyed-out) with a small explanatory label beneath them.
+
+**Always enabled:**
 
 | Control | Type | Default | Maps to |
 |---------|------|---------|---------|
 | ID Algorithm | `CTkComboBox` (`md5`, `sha256`) | `md5` | `IndexerConfig.id_algorithm` |
-| Compute SHA-512 | `CTkCheckBox` | Unchecked | `IndexerConfig.compute_sha512` |
 
-**Conditionally visible:**
+**Conditionally enabled/disabled (always visible):**
 
-| Control | Visible when | Type | Default | Maps to |
-|---------|-------------|------|---------|---------|
-| Extract EXIF metadata | Index, Rename | `CTkCheckBox` | Unchecked | `IndexerConfig.extract_exif` |
-| Dry run (preview only) | Rename | `CTkCheckBox` | **Checked** | `IndexerConfig.dry_run` |
-| Write in-place sidecar files | Meta Merge Delete | `CTkCheckBox` | Checked | `IndexerConfig.output_inplace` |
+| Control | Enabled when | Disabled info text | Type | Default | Maps to |
+|---------|-------------|-------------------|------|---------|---------|
+| Compute SHA-512 | Settings → SHA-512 default is *off* | *"Forced on by Settings → 'Compute SHA-512 by default'."* | `CTkCheckBox` | Unchecked | `IndexerConfig.compute_sha512` |
+| Extract EXIF metadata | Index (always for Meta Merge / Meta Merge Delete) | *"EXIF extraction is always enabled for Meta Merge operations."* | `CTkCheckBox` | Unchecked | `IndexerConfig.extract_exif` |
+| Rename files | Always | — | `CTkCheckBox` | Unchecked | `IndexerConfig.rename` |
+| Dry run (preview only) | Rename files is checked | *"Enable 'Rename files' to configure dry-run mode."* | `CTkCheckBox` | **Checked** | `IndexerConfig.dry_run` |
+| Write in-place sidecar files | Meta Merge Delete | *"In-place sidecar output is only available for Meta Merge Delete."* | `CTkCheckBox` | Checked | `IndexerConfig.output_inplace` |
 
-**Operation-specific behavior:**
+**SHA-512 settings synchronization:**
 
-- **Meta Merge** and **Meta Merge Delete**: EXIF extraction is always enabled (implied by the operation). The Extract EXIF checkbox is hidden because it is always active.
-- **Rename**: Dry run defaults to checked (inverse of the CLI default). When dry run is active, the action button reads "▶ Preview Renames"; when unchecked, it reads "▶ Run Rename". In-place output is always active for Rename and is not shown as a user toggle.
+When the Settings tab's "Compute SHA-512 by default" checkbox is checked, the Operations page "Compute SHA-512" checkbox is force-checked and disabled, with a fine-print label explaining: *"Forced on by Settings → 'Compute SHA-512 by default'."* This ensures the user understands the override source and cannot accidentally uncheck it without first changing the Settings preference.
+
+**Rename feature toggle:**
+
+Rename is an optional feature that can be combined with any of the three core operations (Index, Meta Merge, Meta Merge Delete). When the "Rename files" checkbox is enabled, the dry-run checkbox becomes active (defaults to checked). When rename is enabled *and* dry-run is disabled, the destructive indicator turns red.
 
 > **Deviation from CLI parity:** The CLI treats `--dry-run` as opt-in (default off). The GUI inverts this to default on. This is a deliberate UX decision: the GUI user is more likely to be exploring the tool's behavior and less likely to understand the implications of an irreversible rename.
 
 <a id="output-controls"></a>
 #### Output controls
 
-The Output group's contents vary by operation type:
+> **Updated 2026-02-23:** Output controls are always visible. Controls that do not apply are disabled with explanatory fine-print labels.
 
-| Operation | Controls shown |
-|-----------|---------------|
-| **Index**, **Meta Merge** | Output mode radio group (View only / Save to file / Both) plus conditional output file field. |
-| **Meta Merge Delete** | Output file field only (mandatory — no mode selector). The action button is disabled until a valid output path is entered. The safety requirement from [§7.1](#71-configuration-architecture) is enforced structurally. |
-| **Rename** | Informational label: "Results will be displayed in the output panel below." No output file field. |
+All output controls are always visible. Controls that are not applicable to the current operation are disabled with fine-print explanation labels:
+
+| Operation | Output mode radios | Output file field | Info text |
+|-----------|--------------------|-------------------|-----------|
+| **Index**, **Meta Merge** | Enabled (all three modes) | Enabled when mode is "Save to file" or "Both"; disabled otherwise with: *"Select 'Save to file' or 'Both' to specify an output file."* | — |
+| **Meta Merge Delete** | Disabled (locked to "Save to file") | Enabled (mandatory) | *"Meta Merge Delete always saves to a file (output file required)."* |
 
 <a id="output-file-auto-suggest"></a>
 #### Output file auto-suggest
@@ -5821,7 +5851,7 @@ The Settings page is accessed via the sidebar and provides a persistent configur
 | Section | Field | Type | Default | Behavior |
 |---------|-------|------|---------|----------|
 | Indexing Defaults | Default ID Algorithm | `CTkComboBox` | `md5` | Pre-populates the ID Algorithm selector on the Operations page. |
-| Indexing Defaults | Compute SHA-512 | `CTkCheckBox` | Unchecked | Pre-populates the SHA-512 checkbox on the Operations page. |
+| Indexing Defaults | Compute SHA-512 | `CTkCheckBox` | Unchecked | When checked, force-enables and disables the SHA-512 checkbox on the Operations page with info text: *"Forced on by Settings → 'Compute SHA-512 by default'."* The override is applied in real-time via a callback. |
 | Output Preferences | JSON Indentation | `CTkRadioButton` group (`2 spaces`, `4 spaces`, `Compact`) | `2 spaces` | Controls the `indent` parameter passed to `serialize_entry()`. Compact produces single-line JSON. Stored in session as `"2"`, `"4"`, or `"none"`. |
 | Logging | Verbosity | `CTkRadioButton` group (`Normal`, `Verbose`, `Debug`) | `Normal` | Maps to log level: Normal → WARNING, Verbose → INFO, Debug → DEBUG. Log output is directed to the progress display area ([§10.5](#105-indexing-execution-and-progress)), not to a separate console window. |
 | Interface | Show tooltips on hover | `CTkCheckBox` | Checked | Globally enables or disables hover tooltips (`_Tooltip.set_enabled()`). When disabled, no tooltip popups appear anywhere in the application. |
@@ -5849,16 +5879,15 @@ This subsection defines how the GUI executes indexing operations, displays progr
 <a id="action-button-behavior"></a>
 #### Action button behavior
 
-> **Updated 2026-02-23:** Rewritten to reflect the consolidated Operations page model. The previous version described per-tab action buttons; the current implementation has a single action button on the Operations page whose label changes based on the selected operation type.
+> **Updated 2026-02-23:** The action button now always displays "▶ START" (green, max 50% window width) regardless of the selected operation type. During execution, it changes to "■ Cancel" (red). The button label no longer reflects the operation type — the operation type is already visible in the Operation group's dropdown. This simplification reduces visual complexity and provides a clear, consistent call-to-action.
 
-The Operations page has a single action button at the bottom of its input section. The button label reflects the currently selected operation:
+The Operations page has a single action button at the bottom of its input section, centered, with a maximum width of 50% of the application window (or 350 px, whichever is smaller). The button uses a distinct green color (`#1b8a1b` / `#22882a` for light/dark themes) to visually differentiate it from all other buttons in the application.
 
-| Operation | Button label (idle) | Button label (dry run) |
-|-----------|-------------------|----------------------|
-| Index | ▶ Run Index | — |
-| Meta Merge | ▶ Run Meta Merge | — |
-| Meta Merge Delete | ▶ Run Meta Merge Delete | — |
-| Rename | ▶ Run Rename | ▶ Preview Renames |
+| State | Button label | Color |
+|-------|-------------|-------|
+| Idle | ▶ START | Green (`#1b8a1b` / `#22882a`) |
+| Running | ■ Cancel | Red (`#cc3333`) |
+| Validation error | ▶ START (disabled) | Grey (disabled state) |
 
 When clicked, the action button:
 
@@ -6094,7 +6123,7 @@ The output panel is a single widget instance on the Operations page. It displays
 | Save to file | A status message is displayed: _"Output saved to: {filename}"_. The JSON is not loaded into the viewer. Copy and Save buttons remain disabled. |
 | Both | JSON output is loaded into the output panel AND written to the output file. |
 | _(Meta Merge Delete)_ | Same as "Save to file" — mandatory output file, status message displayed. |
-| _(Rename)_ | JSON preview is loaded into the output panel (same as "View only"). |
+| _(Rename active)_ | JSON preview is loaded into the output panel (same as "View only"). The rename feature is a toggle that can be active with any operation type. |
 
 This distinction ensures that users who selected "Save to file" mode see confirmation of the save rather than a confusing blank panel or redundant JSON display.
 
@@ -6161,15 +6190,16 @@ The destructive operation indicator (`_DestructiveIndicator`) is a small inline 
 
 | State | Dot color | Label | Condition |
 |-------|-----------|-------|-----------|
-| Non-destructive | Green (`#228822` / `#44cc44`) | "Non-Destructive" | Index, Meta Merge, or Rename with dry run enabled. |
-| Destructive | Red (`#cc3333` / `#ff4444`) | "Destructive" | Meta Merge Delete, or Rename with dry run disabled. |
+| Non-destructive | Green (`#228822` / `#44cc44`) | "Non-Destructive" | Index or Meta Merge without rename, or any operation with rename + dry run enabled. |
+| Destructive | Red (`#cc3333` / `#ff4444`) | "Destructive" | Meta Merge Delete, or any operation with rename enabled and dry run disabled. |
 
 The indicator is a `CTkFrame` containing a colored dot (Unicode `●`, `CTkLabel`) and a colored text label. It updates immediately when the operation type selector changes or when the dry-run checkbox is toggled. The color values use a tuple for light/dark theme variants (CustomTkinter convention).
 
 **Update triggers:**
 
 - Changing the operation type selector updates the indicator via `_update_indicator()`.
-- Toggling the Rename dry-run checkbox updates the indicator.
+- Toggling the "Rename files" checkbox updates the indicator.
+- Toggling the dry-run checkbox (when rename is active) updates the indicator.
 - No other controls affect the indicator state.
 
 <a id="1082-about-tab"></a>

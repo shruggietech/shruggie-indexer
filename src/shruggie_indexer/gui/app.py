@@ -79,10 +79,9 @@ _TAB_ABOUT = "about"
 _OP_INDEX = "Index"
 _OP_META_MERGE = "Meta Merge"
 _OP_META_MERGE_DELETE = "Meta Merge Delete"
-_OP_RENAME = "Rename"
 
 _OPERATION_LABELS: list[str] = [
-    _OP_INDEX, _OP_META_MERGE, _OP_META_MERGE_DELETE, _OP_RENAME,
+    _OP_INDEX, _OP_META_MERGE, _OP_META_MERGE_DELETE,
 ]
 
 # Display label <-> internal key for session persistence
@@ -90,7 +89,6 @@ _OP_KEY_MAP: dict[str, str] = {
     _OP_INDEX: "index",
     _OP_META_MERGE: "meta_merge",
     _OP_META_MERGE_DELETE: "meta_merge_delete",
-    _OP_RENAME: "rename",
 }
 _OP_LABEL_MAP: dict[str, str] = {v: k for k, v in _OP_KEY_MAP.items()}
 
@@ -103,12 +101,7 @@ _TAB_LABELS: dict[str, str] = {
 _DOCS_URL = "https://shruggietech.github.io/shruggie-indexer/"
 _WEBSITE_URL = "https://shruggie.tech"
 
-_ACTION_LABELS: dict[str, str] = {
-    _OP_INDEX: "\u25b6  Run Index",
-    _OP_META_MERGE: "\u25b6  Run Meta Merge",
-    _OP_META_MERGE_DELETE: "\u25b6  Run Meta Merge Delete",
-    _OP_RENAME: "\u25b6  Preview Renames",
-}
+_ACTION_LABEL_START = "\u25b6  START"
 _ACTION_LABEL_RUNNING = "\u25a0  Cancel"
 
 
@@ -708,17 +701,23 @@ def _suggest_output_path(target_path: str, target_type: str) -> str:
 class OperationsPage(ctk.CTkFrame):
     """Consolidated operations view with inline operation type selector.
 
-    Replaces the four separate operation tabs (Index, Meta Merge,
-    Meta Merge Delete, Rename) with a single page.
+    All controls are always visible.  Controls that do not apply to the
+    current operation/target configuration are *disabled* (greyed-out)
+    with explanatory fine-print labels — they are never hidden.
+
+    Rename is an optional feature toggle that can be combined with any
+    of the three core operations (Index, Meta Merge, Meta Merge Delete),
+    not a standalone operation type.
     """
 
     def __init__(self, master: Any, app: ShruggiIndexerApp, **kwargs: Any) -> None:
         super().__init__(master, fg_color="transparent", **kwargs)
         self._app = app
         self._last_auto_suggested = ""
+        self._target_validation_error: str | None = None
         self._build_widgets()
-        # Apply initial control visibility
-        self._on_operation_changed(self._op_type_var.get())
+        # Apply initial control state
+        self._update_controls()
 
     # -- Widget construction ------------------------------------------------
 
@@ -734,15 +733,27 @@ class OperationsPage(ctk.CTkFrame):
         self._action_frame = ctk.CTkFrame(self, fg_color="transparent")
         self._action_frame.pack(fill="x", side="bottom", pady=(8, 0))
 
+        # Center the START button at ≤50 % window width
         self.action_btn = ctk.CTkButton(
-            self._action_frame, text=_ACTION_LABELS[_OP_INDEX], height=36,
-            font=ctk.CTkFont(size=14), command=self._on_action,
+            self._action_frame, text=_ACTION_LABEL_START, height=36,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color=("#1b8a1b", "#22882a"),
+            hover_color=("#167016", "#1d6e23"),
+            command=self._on_action,
         )
-        self.action_btn.pack(fill="x")
+        self.action_btn.pack(anchor="center")
+        # Constrain width to 50 % of parent on resize
+        self._action_frame.bind(
+            "<Configure>",
+            lambda e: self.action_btn.configure(
+                width=min(350, max(180, int(e.width * 0.45))),
+            ),
+        )
         _Tooltip(self.action_btn, "Start the selected operation on the target path.")
 
-        # Scrollable area for groups
-        self._scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        # Use a plain CTkFrame instead of CTkScrollableFrame so no
+        # permanent scrollbar appears when content fits the window.
+        self._scroll = ctk.CTkFrame(self, fg_color="transparent")
         self._scroll.pack(fill="both", expand=True)
 
         self._build_operation_group()
@@ -770,7 +781,7 @@ class OperationsPage(ctk.CTkFrame):
             width=180,
         )
         self._op_menu.pack(side="left", padx=(0, 16))
-        _Tooltip(self._op_menu, "Choose Index, Meta Merge, Meta Merge Delete, or Rename.")
+        _Tooltip(self._op_menu, "Choose Index, Meta Merge, or Meta Merge Delete.")
 
         self._indicator = _DestructiveIndicator(row)
         self._indicator.pack(side="left")
@@ -785,7 +796,7 @@ class OperationsPage(ctk.CTkFrame):
 
         # Path entry row
         path_frame = ctk.CTkFrame(c, fg_color="transparent")
-        path_frame.pack(fill="x", pady=(0, 6))
+        path_frame.pack(fill="x", pady=(0, 2))
 
         ctk.CTkLabel(path_frame, text="Path:", width=40, anchor="w").pack(
             side="left", padx=(0, 6),
@@ -796,8 +807,9 @@ class OperationsPage(ctk.CTkFrame):
         self._path_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
         _Tooltip(self._path_entry, "Enter the file or directory path to index.")
 
-        # Bind focus-out for auto-suggest
-        self._path_entry.bind("<FocusOut>", lambda _: self._try_auto_suggest())
+        # Bind focus-out and key-release for validation + auto-suggest
+        self._path_entry.bind("<FocusOut>", lambda _: self._on_target_or_type_change())
+        self._path_entry.bind("<KeyRelease>", lambda _: self._on_target_or_type_change())
 
         # Browse buttons -- single button for file/directory, dual for auto
         self._browse_single_btn = ctk.CTkButton(
@@ -813,20 +825,31 @@ class OperationsPage(ctk.CTkFrame):
         _Tooltip(self._browse_file_btn, "Open a file picker dialog.")
         _Tooltip(self._browse_dir_btn, "Open a directory picker dialog.")
 
+        # Target validation error label (red fine-print, always present)
+        self._target_error_label = ctk.CTkLabel(
+            c, text="",
+            font=ctk.CTkFont(size=10),
+            text_color=("#cc3333", "#ff4444"),
+            anchor="w",
+        )
+        self._target_error_label.pack(fill="x", padx=(46, 0), pady=(0, 2))
+
         # Type + recursive row
         opts_frame = ctk.CTkFrame(c, fg_color="transparent")
-        opts_frame.pack(fill="x", pady=(0, 4))
+        opts_frame.pack(fill="x", pady=(0, 2))
 
         ctk.CTkLabel(opts_frame, text="Type:", width=40, anchor="w").pack(
             side="left", padx=(0, 6),
         )
         self._type_var = ctk.StringVar(value="auto")
+        self._type_radios: dict[str, ctk.CTkRadioButton] = {}
         for label, val in [("Auto", "auto"), ("File", "file"), ("Directory", "directory")]:
             rb = ctk.CTkRadioButton(
                 opts_frame, text=label, variable=self._type_var, value=val,
                 command=self._on_type_changed,
             )
             rb.pack(side="left", padx=(0, 10))
+            self._type_radios[val] = rb
             _Tooltip(rb, {
                 "auto": "Detect target type automatically from the path.",
                 "file": "Treat target as a single file.",
@@ -834,11 +857,20 @@ class OperationsPage(ctk.CTkFrame):
             }[val])
 
         self._recursive_var = ctk.BooleanVar(value=True)
-        recursive_cb = ctk.CTkCheckBox(
+        self._recursive_cb = ctk.CTkCheckBox(
             opts_frame, text="Recursive", variable=self._recursive_var,
         )
-        recursive_cb.pack(side="left", padx=(20, 0))
-        _Tooltip(recursive_cb, "Include subdirectories when indexing a directory.")
+        self._recursive_cb.pack(side="left", padx=(20, 0))
+        _Tooltip(self._recursive_cb, "Include subdirectories when indexing a directory.")
+
+        # Recursive disabled explanation (fine-print)
+        self._recursive_info_label = ctk.CTkLabel(
+            c, text="",
+            font=ctk.CTkFont(size=10),
+            text_color=("gray40", "gray60"),
+            anchor="w",
+        )
+        self._recursive_info_label.pack(fill="x", padx=(46, 0), pady=(0, 2))
 
         # Apply initial browse button state
         self._update_browse_buttons()
@@ -859,49 +891,105 @@ class OperationsPage(ctk.CTkFrame):
             side="left", padx=(0, 6),
         )
         self._id_algo_var = ctk.StringVar(value="md5")
-        algo_combo = ctk.CTkComboBox(
+        self._algo_combo = ctk.CTkComboBox(
             row1, values=["md5", "sha256"], variable=self._id_algo_var, width=120,
         )
-        algo_combo.pack(side="left", padx=(0, 20))
-        _Tooltip(algo_combo, "Hash algorithm used for generating file identity.")
+        self._algo_combo.pack(side="left", padx=(0, 20))
+        _Tooltip(self._algo_combo, "Hash algorithm used for generating file identity.")
 
         self._sha512_var = ctk.BooleanVar(value=False)
-        sha512_cb = ctk.CTkCheckBox(
+        self._sha512_cb = ctk.CTkCheckBox(
             row1, text="Compute SHA-512", variable=self._sha512_var,
         )
-        sha512_cb.pack(side="left")
-        _Tooltip(sha512_cb, "Compute an additional SHA-512 hash for each file.")
+        self._sha512_cb.pack(side="left")
+        _Tooltip(self._sha512_cb, "Compute an additional SHA-512 hash for each file.")
 
-        # Row 2: Extract EXIF (visible for Index and Rename)
-        self._exif_frame = ctk.CTkFrame(c, fg_color="transparent")
+        # SHA-512 override info label (fine-print, shown when settings force it)
+        self._sha512_override_label = ctk.CTkLabel(
+            c, text="",
+            font=ctk.CTkFont(size=10),
+            text_color=("gray40", "gray60"),
+            anchor="w",
+        )
+        self._sha512_override_label.pack(fill="x", padx=(4, 0), pady=(0, 2))
+
+        # Row 2: Extract EXIF (always visible, disabled when implied)
+        exif_row = ctk.CTkFrame(c, fg_color="transparent")
+        exif_row.pack(fill="x", pady=(4, 0))
         self._exif_var = ctk.BooleanVar(value=False)
-        exif_cb = ctk.CTkCheckBox(
-            self._exif_frame, text="Extract EXIF metadata",
+        self._exif_cb = ctk.CTkCheckBox(
+            exif_row, text="Extract EXIF metadata",
             variable=self._exif_var,
         )
-        exif_cb.pack(side="left")
-        _Tooltip(exif_cb, "Extract embedded metadata using ExifTool.")
+        self._exif_cb.pack(side="left")
+        _Tooltip(self._exif_cb, "Extract embedded metadata using ExifTool.")
 
-        # Row 3: Dry run (visible for Rename only)
-        self._dry_run_frame = ctk.CTkFrame(c, fg_color="transparent")
+        self._exif_info_label = ctk.CTkLabel(
+            c, text="",
+            font=ctk.CTkFont(size=10),
+            text_color=("gray40", "gray60"),
+            anchor="w",
+        )
+        self._exif_info_label.pack(fill="x", padx=(26, 0), pady=(0, 2))
+
+        # Row 3: Rename toggle (feature, not operation)
+        rename_row = ctk.CTkFrame(c, fg_color="transparent")
+        rename_row.pack(fill="x", pady=(4, 0))
+        self._rename_var = ctk.BooleanVar(value=False)
+        self._rename_cb = ctk.CTkCheckBox(
+            rename_row, text="Rename files",
+            variable=self._rename_var,
+            command=self._on_rename_changed,
+        )
+        self._rename_cb.pack(side="left")
+        _Tooltip(self._rename_cb, "Rename files to content-based storage names after indexing.")
+
+        self._rename_info_label = ctk.CTkLabel(
+            c, text="",
+            font=ctk.CTkFont(size=10),
+            text_color=("gray40", "gray60"),
+            anchor="w",
+        )
+        self._rename_info_label.pack(fill="x", padx=(26, 0), pady=(0, 2))
+
+        # Row 4: Dry run (enabled only when rename is active)
+        dry_run_row = ctk.CTkFrame(c, fg_color="transparent")
+        dry_run_row.pack(fill="x", pady=(4, 0))
         self._dry_run_var = ctk.BooleanVar(value=True)
-        dry_run_cb = ctk.CTkCheckBox(
-            self._dry_run_frame, text="Dry run (preview only)",
+        self._dry_run_cb = ctk.CTkCheckBox(
+            dry_run_row, text="Dry run (preview only)",
             variable=self._dry_run_var,
             command=self._on_dry_run_changed,
         )
-        dry_run_cb.pack(side="left")
-        _Tooltip(dry_run_cb, "Preview renames without modifying files on disk.")
+        self._dry_run_cb.pack(side="left")
+        _Tooltip(self._dry_run_cb, "Preview renames without modifying files on disk.")
 
-        # Row 4: In-place sidecar (visible for Meta Merge Delete only)
-        self._inplace_frame = ctk.CTkFrame(c, fg_color="transparent")
+        self._dry_run_info_label = ctk.CTkLabel(
+            c, text="",
+            font=ctk.CTkFont(size=10),
+            text_color=("gray40", "gray60"),
+            anchor="w",
+        )
+        self._dry_run_info_label.pack(fill="x", padx=(26, 0), pady=(0, 2))
+
+        # Row 5: In-place sidecar (enabled only for Meta Merge Delete)
+        inplace_row = ctk.CTkFrame(c, fg_color="transparent")
+        inplace_row.pack(fill="x", pady=(4, 0))
         self._inplace_var = ctk.BooleanVar(value=True)
-        inplace_cb = ctk.CTkCheckBox(
-            self._inplace_frame, text="Write in-place sidecar files",
+        self._inplace_cb = ctk.CTkCheckBox(
+            inplace_row, text="Write in-place sidecar files",
             variable=self._inplace_var,
         )
-        inplace_cb.pack(side="left")
-        _Tooltip(inplace_cb, "Write individual sidecar JSON files next to each indexed file.")
+        self._inplace_cb.pack(side="left")
+        _Tooltip(self._inplace_cb, "Write individual sidecar JSON files next to each indexed file.")
+
+        self._inplace_info_label = ctk.CTkLabel(
+            c, text="",
+            font=ctk.CTkFont(size=10),
+            text_color=("gray40", "gray60"),
+            anchor="w",
+        )
+        self._inplace_info_label.pack(fill="x", padx=(26, 0), pady=(0, 2))
 
     def _build_output_group(self) -> None:
         self._output_group = _LabeledGroup(
@@ -911,13 +999,15 @@ class OperationsPage(ctk.CTkFrame):
         self._output_group.pack(fill="x", pady=(0, 8))
         c = self._output_group.content
 
-        # Output mode radios (hidden for Meta Merge Delete and Rename)
+        # Output mode radios (always visible, disabled when not applicable)
         self._output_mode_frame = ctk.CTkFrame(c, fg_color="transparent")
+        self._output_mode_frame.pack(fill="x", pady=(0, 4))
 
         ctk.CTkLabel(self._output_mode_frame, text="Mode:", anchor="w").pack(
             side="left", padx=(0, 6),
         )
         self._output_mode_var = ctk.StringVar(value="view")
+        self._output_mode_radios: dict[str, ctk.CTkRadioButton] = {}
         for label, val in [("View only", "view"), ("Save to file", "save"), ("Both", "both")]:
             rb = ctk.CTkRadioButton(
                 self._output_mode_frame, text=label,
@@ -925,14 +1015,25 @@ class OperationsPage(ctk.CTkFrame):
                 command=self._on_output_mode_changed,
             )
             rb.pack(side="left", padx=(0, 10))
+            self._output_mode_radios[val] = rb
             _Tooltip(rb, {
                 "view": "Display results in the output panel only.",
                 "save": "Write results to a file without displaying.",
                 "both": "Display results and save to a file.",
             }[val])
 
-        # Output file field (visible when needed)
+        # Output mode info label (fine-print, explains why disabled)
+        self._output_mode_info_label = ctk.CTkLabel(
+            c, text="",
+            font=ctk.CTkFont(size=10),
+            text_color=("gray40", "gray60"),
+            anchor="w",
+        )
+        self._output_mode_info_label.pack(fill="x", padx=(4, 0), pady=(0, 2))
+
+        # Output file field (always visible, disabled when not applicable)
         self._outfile_frame = ctk.CTkFrame(c, fg_color="transparent")
+        self._outfile_frame.pack(fill="x", pady=(4, 0))
 
         ctk.CTkLabel(self._outfile_frame, text="File:", anchor="w").pack(
             side="left", padx=(0, 6),
@@ -951,16 +1052,14 @@ class OperationsPage(ctk.CTkFrame):
         self._outfile_browse_btn.pack(side="right")
         _Tooltip(self._outfile_browse_btn, "Choose where to save the output file.")
 
-        # Rename info label (shown instead of mode/file for Rename)
-        self._rename_output_label = ctk.CTkLabel(
-            c, text="Results will be displayed in the output panel below.",
-            font=ctk.CTkFont(size=11),
+        # Output file info label
+        self._outfile_info_label = ctk.CTkLabel(
+            c, text="",
+            font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
         )
-
-    def _build_action_area(self) -> None:
-        """Already built in _build_widgets."""
+        self._outfile_info_label.pack(fill="x", padx=(4, 0), pady=(0, 2))
 
     # -- Browse helpers -----------------------------------------------------
 
@@ -998,7 +1097,7 @@ class OperationsPage(ctk.CTkFrame):
     def _set_target_path(self, path: str) -> None:
         self._path_entry.delete(0, "end")
         self._path_entry.insert(0, path)
-        self._try_auto_suggest()
+        self._on_target_or_type_change()
 
     def _browse_outfile(self) -> None:
         path = filedialog.asksaveasfilename(
@@ -1027,114 +1126,218 @@ class OperationsPage(ctk.CTkFrame):
             self._outfile_entry.insert(0, suggested)
             self._last_auto_suggested = suggested
 
-    # -- Control visibility updates -----------------------------------------
+    # -- Target / Type validation -------------------------------------------
+
+    def _detect_target_kind(self) -> str | None:
+        """Return 'file', 'directory', or None if indeterminate."""
+        target = self._path_entry.get().strip()
+        if not target:
+            return None
+        p = Path(target)
+        if p.exists():
+            return "directory" if p.is_dir() else "file"
+        # Heuristic: trailing separator → directory, has extension → file
+        if target.endswith(("/", "\\")):
+            return "directory"
+        if "." in p.name and not p.name.startswith("."):
+            return "file"
+        return None
+
+    def _validate_target_type(self) -> str | None:
+        """Return an error message string if the target conflicts with Type.
+
+        The error is stored in ``_target_validation_error`` and controls
+        whether the START button is enabled.
+        """
+        selected_type = self._type_var.get()
+        target = self._path_entry.get().strip()
+        if not target:
+            return None
+
+        kind = self._detect_target_kind()
+        if kind is None:
+            return None
+
+        if kind == "file" and selected_type == "directory":
+            return (
+                "Target appears to be a file, but Type is set to "
+                "\"Directory\". Change the target or select a different Type."
+            )
+        if kind == "directory" and selected_type == "file":
+            return (
+                "Target appears to be a directory, but Type is set to "
+                "\"File\". Change the target or select a different Type."
+            )
+        return None
+
+    # -- Control state updates (enable/disable, never hide) -----------------
 
     def _on_operation_changed(self, _choice: str) -> None:
-        """Update control visibility and state for the selected operation."""
+        """Update control state for the selected operation."""
         self._update_controls()
 
     def _on_type_changed(self) -> None:
         """Handle target type radio change."""
         self._update_browse_buttons()
+        self._on_target_or_type_change()
+
+    def _on_target_or_type_change(self) -> None:
+        """Re-validate target/type combo, update auto-suggest, refresh."""
         self._try_auto_suggest()
+        self._update_controls()
 
     def _on_output_mode_changed(self) -> None:
-        """Show/hide output file field based on mode."""
+        """Update output file field state based on mode."""
         self._update_output_controls()
         self._try_auto_suggest()
 
+    def _on_rename_changed(self) -> None:
+        """Rename checkbox toggled — refresh dependent controls."""
+        self._update_controls()
+
     def _on_dry_run_changed(self) -> None:
-        """Update destructive indicator and action label for Rename."""
-        op = self._op_type_var.get()
-        if op == _OP_RENAME:
-            if self._dry_run_var.get():
-                self.action_btn.configure(text="\u25b6  Preview Renames")
-            else:
-                self.action_btn.configure(text="\u25b6  Run Rename")
+        """Dry-run checkbox toggled — update destructive indicator."""
         self._update_destructive_indicator()
 
     def _update_controls(self) -> None:
-        """Master control update -- re-layout all conditional widgets."""
+        """Master control update — enable/disable all controls based on state.
+
+        No widgets are hidden; only ``state`` and info labels change.
+        """
         op = self._op_type_var.get()
+        rename_on = self._rename_var.get()
+        selected_type = self._type_var.get()
 
-        # Options group: hide/show conditional rows
-        self._exif_frame.pack_forget()
-        self._dry_run_frame.pack_forget()
-        self._inplace_frame.pack_forget()
+        # -- Target validation --
+        err = self._validate_target_type()
+        self._target_validation_error = err
+        self._target_error_label.configure(text=err or "")
 
-        if op in (_OP_INDEX, _OP_RENAME):
-            self._exif_frame.pack(
-                in_=self._opts_group.content, fill="x", pady=(4, 0),
-            )
-        if op == _OP_RENAME:
-            self._dry_run_frame.pack(
-                in_=self._opts_group.content, fill="x", pady=(4, 0),
-            )
-        if op == _OP_META_MERGE_DELETE:
-            self._inplace_frame.pack(
-                in_=self._opts_group.content, fill="x", pady=(4, 0),
-            )
-
-        # Output group
-        self._update_output_controls()
-
-        # Destructive indicator
-        self._update_destructive_indicator()
-
-        # Action button label
-        label = _ACTION_LABELS.get(op, "\u25b6  Run")
-        if op == _OP_RENAME and not self._dry_run_var.get():
-            label = "\u25b6  Run Rename"
-        self.action_btn.configure(text=label)
-
-    def _update_output_controls(self) -> None:
-        """Show/hide output mode and output file controls."""
-        op = self._op_type_var.get()
-
-        self._output_mode_frame.pack_forget()
-        self._outfile_frame.pack_forget()
-        self._rename_output_label.pack_forget()
-        self._output_group.pack_forget()
-
-        if op == _OP_RENAME:
-            # Show a simple label instead of controls
-            self._output_group.pack(
-                in_=self._scroll, fill="x", pady=(0, 8),
-            )
-            self._rename_output_label.pack(
-                in_=self._output_group.content, fill="x", pady=(0, 4),
-            )
-        elif op == _OP_META_MERGE_DELETE:
-            # Only show output file (mandatory), no mode selector
-            self._output_group.pack(
-                in_=self._scroll, fill="x", pady=(0, 8),
-            )
-            self._outfile_frame.pack(
-                in_=self._output_group.content, fill="x", pady=(0, 4),
+        # -- Recursive --
+        target_kind = self._detect_target_kind()
+        if selected_type == "file" or (
+            selected_type != "directory" and target_kind == "file"
+        ):
+            self._recursive_cb.configure(state="disabled")
+            self._recursive_info_label.configure(
+                text="Recursive is not applicable when the target is a single file.",
             )
         else:
-            # Index / Meta Merge: show mode selector and optionally file
-            self._output_group.pack(
-                in_=self._scroll, fill="x", pady=(0, 8),
+            self._recursive_cb.configure(state="normal")
+            self._recursive_info_label.configure(text="")
+
+        # -- SHA-512 override from Settings --
+        self._sync_sha512_from_settings()
+
+        # -- EXIF --
+        if op in (_OP_META_MERGE, _OP_META_MERGE_DELETE):
+            self._exif_cb.select()
+            self._exif_cb.configure(state="disabled")
+            self._exif_info_label.configure(
+                text="EXIF extraction is always enabled for Meta Merge operations.",
             )
-            self._output_mode_frame.pack(
-                in_=self._output_group.content, fill="x", pady=(0, 4),
+        else:
+            self._exif_cb.configure(state="normal")
+            self._exif_info_label.configure(text="")
+
+        # -- Rename --
+        self._rename_cb.configure(state="normal")
+        self._rename_info_label.configure(text="")
+
+        # -- Dry run --
+        if rename_on:
+            self._dry_run_cb.configure(state="normal")
+            self._dry_run_info_label.configure(text="")
+        else:
+            self._dry_run_cb.configure(state="disabled")
+            self._dry_run_info_label.configure(
+                text="Enable \"Rename files\" to configure dry-run mode.",
             )
-            mode = self._output_mode_var.get()
+
+        # -- In-place sidecar --
+        if op == _OP_META_MERGE_DELETE:
+            self._inplace_cb.configure(state="normal")
+            self._inplace_info_label.configure(text="")
+        else:
+            self._inplace_cb.configure(state="disabled")
+            self._inplace_info_label.configure(
+                text="In-place sidecar output is only available for Meta Merge Delete.",
+            )
+
+        # -- Output controls --
+        self._update_output_controls()
+
+        # -- Destructive indicator --
+        self._update_destructive_indicator()
+
+        # -- Action button enabled state --
+        self._update_action_button_state()
+
+    def _sync_sha512_from_settings(self) -> None:
+        """Force-enable SHA-512 checkbox if Settings says 'always compute'."""
+        settings_sha512 = False
+        if hasattr(self._app, "_settings_tab"):
+            settings_sha512 = self._app._settings_tab.sha512_var.get()
+
+        if settings_sha512:
+            self._sha512_var.set(True)
+            self._sha512_cb.configure(state="disabled")
+            self._sha512_override_label.configure(
+                text="Forced on by Settings → \"Compute SHA-512 by default\".",
+            )
+        else:
+            self._sha512_cb.configure(state="normal")
+            self._sha512_override_label.configure(text="")
+
+    def _update_output_controls(self) -> None:
+        """Enable/disable output mode and output file controls."""
+        op = self._op_type_var.get()
+        mode = self._output_mode_var.get()
+
+        if op == _OP_META_MERGE_DELETE:
+            # Mode locked to "save" — output file is mandatory
+            for rb in self._output_mode_radios.values():
+                rb.configure(state="disabled")
+            self._output_mode_var.set("save")
+            self._output_mode_info_label.configure(
+                text="Meta Merge Delete always saves to a file (output file required).",
+            )
+            self._outfile_entry.configure(state="normal")
+            self._outfile_browse_btn.configure(state="normal")
+            self._outfile_info_label.configure(text="")
+        else:
+            for rb in self._output_mode_radios.values():
+                rb.configure(state="normal")
+            self._output_mode_info_label.configure(text="")
+
             if mode in ("save", "both"):
-                self._outfile_frame.pack(
-                    in_=self._output_group.content, fill="x", pady=(4, 0),
+                self._outfile_entry.configure(state="normal")
+                self._outfile_browse_btn.configure(state="normal")
+                self._outfile_info_label.configure(text="")
+            else:
+                self._outfile_entry.configure(state="disabled")
+                self._outfile_browse_btn.configure(state="disabled")
+                self._outfile_info_label.configure(
+                    text="Select \"Save to file\" or \"Both\" to specify an output file.",
                 )
 
     def _update_destructive_indicator(self) -> None:
-        """Update the destructive/non-destructive indicator (item 2.2)."""
+        """Update the destructive/non-destructive indicator."""
         op = self._op_type_var.get()
+        rename_on = self._rename_var.get()
         destructive = False
         if op == _OP_META_MERGE_DELETE:
             destructive = True
-        elif op == _OP_RENAME and not self._dry_run_var.get():
+        elif rename_on and not self._dry_run_var.get():
             destructive = True
         self._indicator.set_destructive(destructive)
+
+    def _update_action_button_state(self) -> None:
+        """Enable/disable Start based on validation state."""
+        if self._target_validation_error:
+            self.action_btn.configure(state="disabled")
+        else:
+            self.action_btn.configure(state="normal")
 
     # -- Action button handler ----------------------------------------------
 
@@ -1149,12 +1352,18 @@ class OperationsPage(ctk.CTkFrame):
     def build_config(self, base: IndexerConfig) -> IndexerConfig:
         """Construct the final IndexerConfig for the current operation."""
         op = self._op_type_var.get()
+        rename_on = self._rename_var.get()
         overrides: dict[str, Any] = {
             "id_algorithm": self._id_algo_var.get(),
             "compute_sha512": self._sha512_var.get(),
             "recursive": self._recursive_var.get(),
             "output_stdout": False,
         }
+
+        # Rename feature (applies to any operation)
+        if rename_on:
+            overrides["rename"] = True
+            overrides["dry_run"] = self._dry_run_var.get()
 
         if op == _OP_INDEX:
             overrides["extract_exif"] = self._exif_var.get()
@@ -1185,13 +1394,6 @@ class OperationsPage(ctk.CTkFrame):
             outfile = self._outfile_entry.get().strip()
             overrides["output_file"] = Path(outfile) if outfile else None
 
-        elif op == _OP_RENAME:
-            overrides["extract_exif"] = self._exif_var.get()
-            overrides["rename"] = True
-            overrides["dry_run"] = self._dry_run_var.get()
-            overrides["output_inplace"] = True
-            overrides["output_file"] = None
-
         return replace(base, **overrides)
 
     def get_target_path(self) -> str:
@@ -1202,8 +1404,6 @@ class OperationsPage(ctk.CTkFrame):
         op = self._op_type_var.get()
         if op == _OP_META_MERGE_DELETE:
             return "save"
-        if op == _OP_RENAME:
-            return "view"
         return self._output_mode_var.get()
 
     def get_output_file(self) -> str:
@@ -1211,6 +1411,8 @@ class OperationsPage(ctk.CTkFrame):
 
     def validate(self) -> str | None:
         """Return error message if invalid, else ``None``."""
+        if self._target_validation_error:
+            return self._target_validation_error
         op = self._op_type_var.get()
         if op == _OP_META_MERGE_DELETE:
             if not self._outfile_entry.get().strip():
@@ -1232,10 +1434,8 @@ class OperationsPage(ctk.CTkFrame):
             )
         else:
             self.action_btn.configure(
-                text=_ACTION_LABELS.get(
-                    self._op_type_var.get(), "\u25b6  Run",
-                ),
-                fg_color=ctk.ThemeManager.theme["CTkButton"]["fg_color"],
+                text=_ACTION_LABEL_START,
+                fg_color=("#1b8a1b", "#22882a"),
             )
 
     # -- Session persistence ------------------------------------------------
@@ -1251,6 +1451,7 @@ class OperationsPage(ctk.CTkFrame):
             "id_algorithm": self._id_algo_var.get(),
             "sha512": self._sha512_var.get(),
             "extract_exif": self._exif_var.get(),
+            "rename": self._rename_var.get(),
             "dry_run": self._dry_run_var.get(),
             "inplace": self._inplace_var.get(),
             "output_mode": self._output_mode_var.get(),
@@ -1258,9 +1459,14 @@ class OperationsPage(ctk.CTkFrame):
         }
 
     def restore_state(self, state: dict[str, Any]) -> None:
-        if "operation_type" in state:
-            label = _OP_LABEL_MAP.get(state["operation_type"], _OP_INDEX)
-            self._op_type_var.set(label)
+        op_type = state.get("operation_type", "index")
+        # Backward compat: old "rename" operation → Index + rename feature
+        if op_type == "rename":
+            op_type = "index"
+            state.setdefault("rename", True)
+        label = _OP_LABEL_MAP.get(op_type, _OP_INDEX)
+        self._op_type_var.set(label)
+
         if "target_path" in state:
             self._path_entry.delete(0, "end")
             self._path_entry.insert(0, state["target_path"])
@@ -1274,6 +1480,8 @@ class OperationsPage(ctk.CTkFrame):
             self._sha512_var.set(state["sha512"])
         if "extract_exif" in state:
             self._exif_var.set(state["extract_exif"])
+        if "rename" in state:
+            self._rename_var.set(state["rename"])
         if "dry_run" in state:
             self._dry_run_var.set(state["dry_run"])
         if "inplace" in state:
@@ -1284,7 +1492,7 @@ class OperationsPage(ctk.CTkFrame):
             self._outfile_entry.delete(0, "end")
             self._outfile_entry.insert(0, state["output_file"])
             self._last_auto_suggested = state["output_file"]
-        # Update controls for the restored operation type
+        # Update controls for the restored state
         self._update_browse_buttons()
         self._update_controls()
 
@@ -1292,8 +1500,12 @@ class OperationsPage(ctk.CTkFrame):
         self, old_active_tab: str, tab_states: dict[str, Any],
     ) -> None:
         """Migrate from the old per-tab session format."""
-        label = _OP_LABEL_MAP.get(old_active_tab, _OP_INDEX)
-        self._op_type_var.set(label)
+        if old_active_tab == "rename":
+            self._op_type_var.set(_OP_INDEX)
+            self._rename_var.set(True)
+        else:
+            label = _OP_LABEL_MAP.get(old_active_tab, _OP_INDEX)
+            self._op_type_var.set(label)
 
         old_state = tab_states.get(old_active_tab, {})
         target = old_state.get("target", {})
@@ -1362,6 +1574,7 @@ class SettingsTab(ctk.CTkFrame):
         self.sha512_var = ctk.BooleanVar(value=False)
         sha512_cb = ctk.CTkCheckBox(
             scroll, text="Compute SHA-512 by default", variable=self.sha512_var,
+            command=self._on_sha512_changed,
         )
         sha512_cb.pack(fill="x", pady=(0, 8))
         _Tooltip(sha512_cb, "Enable SHA-512 computation by default for new operations.")
@@ -1460,6 +1673,11 @@ class SettingsTab(ctk.CTkFrame):
     def _on_tooltips_changed(self) -> None:
         _Tooltip.set_enabled(self.tooltips_var.get())
 
+    def _on_sha512_changed(self) -> None:
+        """Notify Operations page to sync SHA-512 override state."""
+        if hasattr(self._app, "_ops_page"):
+            self._app._ops_page._sync_sha512_from_settings()
+
     def _browse_config(self) -> None:
         path = filedialog.askopenfilename(
             title="Select Configuration File",
@@ -1481,6 +1699,7 @@ class SettingsTab(ctk.CTkFrame):
             self.tooltips_var.set(True)
             self.config_entry.delete(0, "end")
             _Tooltip.set_enabled(True)
+            self._on_sha512_changed()
 
     def _open_config_folder(self) -> None:
         session_path = SessionManager._resolve_path()
