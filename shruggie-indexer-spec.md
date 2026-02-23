@@ -922,35 +922,38 @@ The site is configured by `mkdocs.yml` at the repository root. Key configuration
 
 The `nav` key in `mkdocs.yml` defines the sidebar navigation structure explicitly rather than relying on directory auto-discovery. This ensures predictable ordering and human-readable section labels:
 
+> **Updated 2026-02-23:** Navigation structure updated to reflect the current `mkdocs.yml`. The "Getting Started" section was added to separate onboarding from the User Guide. The "Desktop Application" page was added to the User Guide. The Changelog was promoted to a top-level nav item. Paths were corrected to match the actual `docs/` directory structure.
+
 ```yaml
 nav:
   - Home: index.md
-  - Schema Reference:
-    - Overview: schema/index.md
-    - V2 JSON Schema: schema/shruggie-indexer-v2.schema.json
-    - Examples: schema/examples/
-  - Porting Reference:
-    - Overview: porting-reference/index.md
-    - Operations Catalog: porting-reference/MakeIndex_OperationsCatalog.md
-    - MetadataFileParser: porting-reference/MakeIndex(MetadataFileParser).ps1
-    - V1 Output Schema: porting-reference/MakeIndex_OutputSchema.json
-    - Dependency Catalogs:
-      - MakeIndex: porting-reference/MakeIndex_DependencyCatalog.md
-      - Base64DecodeString: porting-reference/Base64DecodeString_DependencyCatalog.md
-      - Date2UnixTime: porting-reference/Date2UnixTime_DependencyCatalog.md
-      - DirectoryId: porting-reference/DirectoryId_DependencyCatalog.md
-      - FileId: porting-reference/FileId_DependencyCatalog.md
-      - MetaFileRead: porting-reference/MetaFileRead_DependencyCatalog.md
-      - TempOpen: porting-reference/TempOpen_DependencyCatalog.md
-      - TempClose: porting-reference/TempClose_DependencyCatalog.md
-      - Vbs: porting-reference/Vbs_DependencyCatalog.md
-    - V1 Output Examples: porting-reference/v1-examples/
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+      - ExifTool Setup: getting-started/exiftool.md
   - User Guide:
-    - Overview: user/index.md
-    - Installation: user/installation.md
-    - Quick Start: user/quickstart.md
-    - Configuration: user/configuration.md
-    - Changelog: user/changelog.md
+      - Overview: user-guide/index.md
+      - Desktop Application: user-guide/gui.md
+      - CLI Reference: user-guide/cli-reference.md
+      - Configuration: user-guide/configuration.md
+      - Python API: user-guide/python-api.md
+      - Platform Notes: user-guide/platform-notes.md
+  - Schema Reference:
+      - Overview: schema/index.md
+  - Porting Reference:
+      - Overview: porting-reference/index.md
+      - Operations Catalog: porting-reference/MakeIndex_OperationsCatalog.md
+      - Dependency Catalogs:
+          - MakeIndex: porting-reference/MakeIndex_DependencyCatalog.md
+          - Base64DecodeString: porting-reference/Base64DecodeString_DependencyCatalog.md
+          - Date2UnixTime: porting-reference/Date2UnixTime_DependencyCatalog.md
+          - DirectoryId: porting-reference/DirectoryId_DependencyCatalog.md
+          - FileId: porting-reference/FileId_DependencyCatalog.md
+          - MetaFileRead: porting-reference/MetaFileRead_DependencyCatalog.md
+          - TempOpen: porting-reference/TempOpen_DependencyCatalog.md
+          - TempClose: porting-reference/TempClose_DependencyCatalog.md
+          - Vbs: porting-reference/Vbs_DependencyCatalog.md
+  - Changelog: changelog.md
 ```
 
 <a id="372-non-markdown-asset-handling"></a>
@@ -5423,13 +5426,15 @@ The exception hierarchy maps directly to the CLI exit codes ([§8.10](#810-exit-
 
 This section defines the standalone desktop GUI for `shruggie-indexer` — a visual frontend to the same library code consumed by the CLI ([§8](#8-cli-interface)) and the public API ([§9](#9-python-api)). The GUI is modeled after the `shruggie-feedtools` GUI ([§1.5](#15-reference-documents), External References) and shares its CustomTkinter foundation, dark theme, font stack, and two-panel layout pattern. Where this specification does not explicitly define a visual convention — such as padding values, border radii, or widget spacing — the `shruggie-feedtools` GUI serves as the normative reference.
 
-The GUI serves a fundamentally different user need than the CLI. The CLI is a power-user and automation tool — its flag-based interface composes naturally in scripts but requires the user to internalize the full option space, understand the implication chain (`--meta-merge-delete` → `--meta-merge` → `--meta`), and manage output routing mentally. The GUI eliminates this cognitive overhead by organizing the indexer's capabilities into dedicated operation tabs, each exposing only the options relevant to that operation with safe defaults pre-applied. The GUI is the recommended entry point for users who are unfamiliar with the tool's option space or who want visual confirmation of their configuration before executing.
+The GUI serves a fundamentally different user need than the CLI. The CLI is a power-user and automation tool — its flag-based interface composes naturally in scripts but requires the user to internalize the full option space, understand the implication chain (`--meta-merge-delete` → `--meta-merge` → `--meta`), and manage output routing mentally. The GUI eliminates this cognitive overhead by consolidating all four operations (Index, Meta Merge, Meta Merge Delete, Rename) into a single Operations page with an inline selector, exposing only the options relevant to the selected operation with safe defaults pre-applied. The GUI is the recommended entry point for users who are unfamiliar with the tool's option space or who want visual confirmation of their configuration before executing.
 
 **Module location:** `gui/app.py` ([§3.2](#32-source-package-layout)). The GUI is a single-module implementation for the MVP. If the GUI grows in complexity (custom widgets, asset files, reusable components), additional modules and an `assets/` subdirectory can be added under `gui/` without restructuring ([§3.2](#32-source-package-layout)).
 
 **Dependency isolation:** The `customtkinter` dependency is declared as an optional extra (`pip install shruggie-indexer[gui]`) and is imported only within the `gui/` subpackage. No module outside `gui/` imports from it. The core library, CLI, and public API function without any GUI dependency installed (design goal G5, [§2.3](#23-design-goals-and-non-goals)). If the user launches the GUI entry point without `customtkinter` installed, the application MUST fail with a clear error message directing the user to install the dependency (`pip install shruggie-indexer[gui]`).
 
-> **Deviation note on outline structure:** The outline ([§10.1](#101-gui-framework-and-architecture)–10.7) was drafted before the full GUI requirements were finalized. This section follows the outline's subsection headings but expands their content significantly to accommodate the tab-per-operation architecture, session persistence, job control with cancellation, and the progress display system. Sub-subsections are added where the original heading's scope is insufficient.
+> **Deviation note on outline structure:** The outline ([§10.1](#101-gui-framework-and-architecture)–10.7) was drafted before the full GUI requirements were finalized. This section follows the outline's subsection headings but expands their content significantly to accommodate the consolidated operations architecture, session persistence, job control with cancellation, the progress display system, and additional UX features (destructive operation indicator, tooltips, resizable output panel, About tab). Sub-subsections are added where the original heading's scope is insufficient.
+>
+> **Updated 2026-02-23:** Reflects tab consolidation (Operations/Settings/About model), destructive operation indicator, auto-suggest output paths, dual browse buttons for auto mode, output panel enhancements (auto-clear, Clear button, copy feedback, resizable panel), About tab, version label in sidebar, tooltips, and corrected post-job display behavior.
 
 <a id="101-gui-framework-and-architecture"></a>
 ### 10.1. GUI Framework and Architecture
@@ -5486,47 +5491,39 @@ This uses the same platform directory resolution as the indexer's TOML configura
 
 ```json
 {
-  "session_version": "1",
+  "session_version": "2",
   "window": {
     "geometry": "1100x750+200+100",
-    "active_tab": "index"
+    "active_tab": "operations"
   },
-  "tabs": {
-    "index": {
-      "target_path": "/path/to/last/target",
-      "target_type": "auto",
-      "recursive": true,
-      "extract_exif": false,
-      "id_algorithm": "md5"
-    },
-    "meta_merge": {
-      "target_path": "",
-      "recursive": true,
-      "id_algorithm": "md5"
-    },
-    "meta_merge_delete": {
-      "target_path": "",
-      "recursive": true,
-      "id_algorithm": "md5",
-      "output_file": ""
-    },
-    "rename": {
-      "target_path": "",
-      "recursive": true,
-      "id_algorithm": "md5",
-      "dry_run": true
-    }
+  "operations": {
+    "operation_type": "index",
+    "target_path": "/path/to/last/target",
+    "target_type": "auto",
+    "recursive": true,
+    "id_algorithm": "md5",
+    "sha512": false,
+    "extract_exif": false,
+    "dry_run": true,
+    "inplace": true,
+    "output_mode": "view",
+    "output_file": ""
   },
   "settings": {
-    "default_id_algorithm": "md5",
-    "compute_sha512": false,
-    "json_indent": 2,
-    "verbosity": 0
-  }
+    "id_algorithm": "md5",
+    "sha512": false,
+    "indent": "2",
+    "verbosity": "normal",
+    "tooltips": true,
+    "config_file": ""
+  },
+  "output_panel_height": 250
 }
 ```
 
-**Session state isolation:** Each operation tab maintains its own input state in the session file. Switching between tabs does NOT clear or reset input fields — the user can configure an Index operation, switch to the Rename tab, configure that, switch back, and find their Index inputs exactly as they left them. This isolation extends to the runtime — tab state is stored in per-tab state dictionaries in memory, and tab switches simply show/hide pre-populated frames without reconstruction.
+> **Updated 2026-02-23:** The session format was revised from `session_version: "1"` (per-tab state with separate `tabs` dictionary) to `session_version: "2"` (single `operations` state object) to reflect the tab consolidation. The application performs backward-compatible migration when encountering a version 1 session file. The `output_panel_height` field was added to persist the resizable output panel height.
+
+**Session state:** Unlike the previous per-tab design, the consolidated Operations page maintains a single set of input state. The selected operation type is stored in the `operations.operation_type` field. Switching operation types within the Operations page updates the visible controls but the shared fields (target path, type, recursive, ID algorithm, SHA-512) persist across operation type changes.
 
 > **Deviation from shruggie-feedtools:** The `shruggie-feedtools` GUI does not persist session state — it starts fresh every launch. The indexer's GUI adds persistence because the tool's input space is significantly more complex (target paths, multiple flag combinations, per-operation configurations) and users benefit from resuming where they left off, especially when iterating on large directory trees.
 
@@ -5559,41 +5556,41 @@ If the GUI outgrows a single file during implementation, the recommended decompo
 <a id="102-window-layout"></a>
 ### 10.2. Window Layout
 
+> **Updated 2026-02-23:** Reflects tab consolidation per Pending Updates document, Section 2, item 2.1. The four separate operation tabs (Index, Meta Merge, Meta Merge Delete, Rename) have been consolidated into a single Operations page with an inline operation type selector. The sidebar now contains three entries: Operations, Settings, and About.
+
 <a id="overall-structure"></a>
 #### Overall structure
 
-The window uses a two-panel layout: a narrow left sidebar for operation tab selection and a main working area on the right. This is the same structural pattern used by `shruggie-feedtools`, adapted for the indexer's multi-operation architecture.
+The window uses a two-panel layout: a narrow left sidebar for page navigation and a main working area on the right. This is the same structural pattern used by `shruggie-feedtools`, adapted for the indexer's consolidated operations architecture.
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │  Shruggie Indexer                                       [—][□][×]│
 ├─────────────┬────────────────────────────────────────────────────┤
-│             │  ┌────────────────────────────────────────────────┐│
-│  ┌────────┐ │  │  Target: [________________________] [Browse]  ││
-│  │ Index  │ │  │  Type: (•) Auto  ( ) File  ( ) Directory      ││
-│  └────────┘ │  │  [✔] Recursive                                ││
-│             │  ├────────────────────────────────────────────────┤│
-│  ┌────────┐ │  │  Options:                                     ││
-│  │ Meta   │ │  │  ID Algorithm: [md5 ▾]                        ││
-│  │ Merge  │ │  │  [ ] Extract EXIF metadata                    ││
-│  └────────┘ │  │  [ ] Compute SHA-512                          ││
-│             │  │                                                ││
-│  ┌────────┐ │  │  Output:                                      ││
-│  │ Meta   │ │  │  (•) View only  ( ) Save to file  ( ) Both    ││
-│  │ Merge  │ │  │                                               ││
-│  │ Delete │ │  │                    ┌──────────────────────┐   ││
-│  └────────┘ │  │                    │    ▶ Run Index       │   ││
-│             │  │                    └──────────────────────┘   ││
-│  ┌────────┐ │  ├────────────────────────────────────────────────┤│
-│  │Rename  │ │  │  Output                          [Copy] [Save]││
-│  └────────┘ │  │  ┌────────────────────────────────────────────┐││
-│             │  │  │{                                           │││
-│  ─────────  │  │  │  "schema_version": "2",                   │││
-│             │  │  │  "type": "directory",                      │││
-│  ┌────────┐ │  │  │  "id": "x3B4F479E9F880E438882...",        │││
-│  │Settings│ │  │  │  ...                                      │││
-│  └────────┘ │  │  └────────────────────────────────────────────┘││
-│             │  └────────────────────────────────────────────────┘│
+│             │  Operations                                        │
+│  ┌────────┐ │  ┌ Operation ──────────────────────────────────┐  │
+│  │  Oper- │ │  │  Type: [Index ▾]    ● Non-Destructive      │  │
+│  │  ations│ │  └────────────────────────────────────────────┘  │
+│  └────────┘ │  ┌ Target ─────────────────────────────────────┐  │
+│             │  │  Path: [_______________________] [File…][Folder…]│
+│  ┌────────┐ │  │  Type: (●) Auto  ( ) File  ( ) Directory   │  │
+│  │Settings│ │  │  [✔] Recursive                              │  │
+│  └────────┘ │  └────────────────────────────────────────────┘  │
+│             │  ┌ Options ────────────────────────────────────┐  │
+│  ┌────────┐ │  │  ID Algorithm: [md5 ▾]  [ ] Compute SHA-512│  │
+│  │ About  │ │  │  [ ] Extract EXIF metadata                  │  │
+│  └────────┘ │  └────────────────────────────────────────────┘  │
+│             │  ┌ Output ─────────────────────────────────────┐  │
+│             │  │  Mode: (●) View only  ( ) Save  ( ) Both    │  │
+│  v0.1.0    │  └────────────────────────────────────────────┘  │
+│             │  ┌──────────────────────────────────────────────┐  │
+│             │  │              ▶ Run Index                     │  │
+│             │  └──────────────────────────────────────────────┘  │
+│             │  ═══════════════ drag handle ═══════════════════   │
+│             │  [Output] [Log]              [Clear][Copy][Save]   │
+│             │  ┌──────────────────────────────────────────────┐  │
+│             │  │ { "schema_version": "2", ...               } │  │
+│             │  └──────────────────────────────────────────────┘  │
 └─────────────┴────────────────────────────────────────────────────┘
 ```
 
@@ -5602,8 +5599,8 @@ The window uses a two-panel layout: a narrow left sidebar for operation tab sele
 
 | Property | Value | Notes |
 |----------|-------|-------|
-| Window title | `"Shruggie Indexer"` | No version in the title bar — keeps it clean. Version is available in the Settings panel. |
-| Minimum size | `1000×700` | Slightly larger than `shruggie-feedtools` (900×600) to accommodate the additional input complexity of the operation tabs. |
+| Window title | `"Shruggie Indexer"` | No version in the title bar — keeps it clean. Version is visible in the sidebar and on the About page. |
+| Minimum size | `1000×700` | Slightly larger than `shruggie-feedtools` (900×600) to accommodate the additional input complexity. |
 | Default size | `1100×750` | Restored from session file if available. |
 | Resizable | Yes | The output panel expands to fill available vertical space. The sidebar width is fixed. |
 | Appearance mode | Dark | `customtkinter.set_appearance_mode("dark")`. Matches `shruggie-feedtools`. |
@@ -5612,157 +5609,177 @@ The window uses a two-panel layout: a narrow left sidebar for operation tab sele
 <a id="sidebar"></a>
 #### Sidebar
 
-The left sidebar is a fixed-width panel (140px) containing vertically stacked navigation buttons for each operation tab, a visual separator, and a Settings button at the bottom. The sidebar background uses the CustomTkinter frame default for the dark theme.
+The left sidebar is a fixed-width panel (160px) containing vertically stacked navigation buttons for the three application pages and a version label at the bottom. The sidebar background uses the CustomTkinter frame default for the dark theme.
 
-Each sidebar button is a `CTkButton` styled as a navigation element — the active tab's button is visually distinguished (highlighted background, bold text) from inactive tabs. Clicking a sidebar button switches the visible frame in the working area without destroying or recreating the frame — the frame is hidden/shown via `pack_forget()` / `pack()` (or equivalent grid management), preserving all widget state.
+Each sidebar button is a `CTkButton` styled as a navigation element — the active page's button is visually distinguished (highlighted background, bold text) from inactive pages. Clicking a sidebar button switches the visible frame in the working area without destroying or recreating the frame — the frame is hidden/shown via `pack_forget()` / `pack()` (or equivalent grid management), preserving all widget state.
 
 **Sidebar navigation order (top to bottom):**
 
-| Button label | Tab identifier | Description |
-|-------------|---------------|-------------|
-| Index | `index` | Basic indexing with optional EXIF extraction. |
-| Meta Merge | `meta_merge` | Index with sidecar metadata merging. |
-| Meta Merge Delete | `meta_merge_delete` | Index with sidecar merge and deletion. |
-| Rename | `rename` | Index with file renaming to storage names. |
-| _(separator)_ | — | A horizontal rule or spacing element visually separating the operation tabs from the utility navigation. |
+| Button label | Page identifier | Description |
+|-------------|----------------|-------------|
+| Operations | `operations` | Consolidated operations page with inline operation type selector, target input, configuration options, and output controls. |
 | Settings | `settings` | Application preferences and persistent configuration. |
+| About | `about` | Project information, version details, and links. |
+
+> **Updated 2026-02-23:** The previous sidebar layout contained five operation buttons (Index, Meta Merge, Meta Merge Delete, Rename, plus a separator, plus Settings). The consolidated layout replaces all four operation buttons with a single "Operations" button and adds an "About" button, reducing sidebar clutter and better reflecting the underlying architecture — the four operations are four preset configurations of the same `index_path()` pipeline, not four independent features.
+
+**Version label.** Below all sidebar buttons, a small, muted-font label displays the application version string (from `shruggie_indexer.__version__`). This provides at-a-glance version identification without consuming valuable UI space.
 
 <a id="working-area"></a>
 #### Working area
 
-The working area occupies the remaining space to the right of the sidebar. It contains a frame container that holds one frame per tab. Only the active tab's frame is visible at any time. Each tab frame is instantiated once at application startup and persists for the lifetime of the application — tab switches show and hide pre-built frames, they do not reconstruct them.
+The working area occupies the remaining space to the right of the sidebar. It contains a frame container that holds one frame per page. Only the active page's frame is visible at any time. Each page frame is instantiated once at application startup and persists for the lifetime of the application — page switches show and hide pre-built frames, they do not reconstruct them.
 
-Every operation tab (Index, Meta Merge, Meta Merge Delete, Rename) shares a common vertical layout structure:
+The Operations page uses a vertical layout structure:
 
-1. **Input section** (top) — Target path, operation-specific options, and output mode selection.
-2. **Action button** (middle) — A single prominently-styled button to execute the operation.
-3. **Output section** (bottom, expandable) — The JSON viewer and progress display area, shared via a common output panel component.
+1. **Input section** (top, scrollable) — Operation type selector, target path, operation-specific options, and output configuration, organized into labeled group frames ([§10.3](#103-target-selection-and-input)).
+2. **Action button** (pinned below input section) — A single prominently-styled button to execute the selected operation.
+3. **Drag handle** — A thin horizontal bar for resizing the output panel ([§10.6](#106-output-display-and-export)).
+4. **Output section** (bottom, resizable) — The JSON viewer, log stream, and toolbar (Clear, Copy, Save buttons).
 
-The Settings tab has its own layout ([§10.4](#104-configuration-panel)) and does not include an action button or output section.
+The Settings page has its own layout ([§10.4](#104-configuration-panel)) and does not include an action button or output section. The About page has a static informational layout ([§10.8](#108-about-tab)).
 
-<a id="tab-frame-architecture"></a>
-#### Tab frame architecture
+<a id="page-frame-architecture"></a>
+#### Page frame architecture
 
-Each operation tab is implemented as a class inheriting from `customtkinter.CTkFrame`. The tab classes share no state with each other — each tab owns its own input widgets, its own state dictionary, and its own reference to the shared output panel. The shared output panel is a single widget instance that is reparented or referenced by whichever tab is currently active.
+The Operations page is implemented as the `OperationsPage` class inheriting from `customtkinter.CTkFrame`. It contains all operation-specific controls, dynamically showing and hiding controls based on the selected operation type. The Settings and About pages are implemented as `SettingsTab` and `AboutTab` classes, respectively.
 
-> **Architectural decision: shared vs. per-tab output panels.** A per-tab output panel would allow users to run an Index operation, view the output, switch to the Rename tab, run that, and switch back to see the Index output still present. However, this introduces memory pressure for large outputs (index trees can produce megabytes of JSON), complicates the "one job at a time" invariant ([§10.5](#105-indexing-execution-and-progress)), and adds visual confusion about which output corresponds to which operation. The shared output panel is the simpler, more predictable design — it always shows the result of the most recent operation, regardless of which tab initiated it. The panel is cleared at the start of each new operation, matching `shruggie-feedtools` behavior.
+The output panel is a single shared `OutputPanel` widget instance that is always visible below the Operations page input area. It displays the result of the most recent operation regardless of which operation type initiated it. The panel is cleared at the start of each new operation.
+
+> **Architectural decision: shared output panel.** A per-operation output panel would allow users to run an Index operation, view the output, switch to Rename, run that, and switch back to see the Index output still present. However, this introduces memory pressure for large outputs (index trees can produce megabytes of JSON), complicates the "one job at a time" invariant ([§10.5](#105-indexing-execution-and-progress)), and adds visual confusion about which output corresponds to which operation. The shared output panel is the simpler, more predictable design — it always shows the result of the most recent operation. The panel is cleared at the start of each new operation, matching `shruggie-feedtools` behavior.
 
 ---
 
 <a id="103-target-selection-and-input"></a>
 ### 10.3. Target Selection and Input
 
-Every operation tab requires a target path — the file or directory to index. Rather than duplicating the target selection widgets across four tabs, each tab instantiates its own target selection widget group from a shared factory or base class. The widgets are visually identical across tabs but maintain independent state — the path entered on the Index tab is separate from the path entered on the Rename tab, and switching tabs does not transfer or synchronize paths.
+> **Updated 2026-02-23:** Rewritten to reflect the consolidated Operations page model. The previous version described per-tab input forms for four separate operation tabs. The current implementation uses a single Operations page with an inline operation type selector, shared target input, and context-sensitive option controls.
+
+The Operations page presents all input controls in a single scrollable area, organized into labeled group frames (`_LabeledGroup` — a `CTkFrame` with a bold header label, optional description, and content area). Controls that are not relevant to the currently selected operation type are hidden or disabled rather than shown in a flat list.
+
+<a id="visual-grouping"></a>
+#### Visual grouping
+
+All controls are organized into four labeled groups, displayed in order from top to bottom:
+
+| Group | Label | Description | Contents |
+|-------|-------|-------------|----------|
+| 1 | Operation | Select the indexing operation to perform. | Operation type dropdown and destructive operation indicator ([§10.8.1](#1081-destructive-operation-indicator)). |
+| 2 | Target | Choose the file or directory to index. | Path entry, browse buttons, type radio group, recursive checkbox. |
+| 3 | Options | Configure indexing parameters. | ID algorithm, SHA-512, and context-sensitive controls (EXIF, dry run, in-place). |
+| 4 | Output | Control where results are written. | Output mode radios and output file path field (when applicable). |
+
+Each group uses consistent padding and alignment. Section headers are bold with an optional one-line description in a muted font beneath.
+
+<a id="operation-type-selector"></a>
+#### Operation type selector
+
+The Operation group contains a `CTkOptionMenu` dropdown for selecting between the four operation types:
+
+| Label | Internal key | Configuration overrides |
+|-------|-------------|------------------------|
+| Index | `index` | Base indexing; optional EXIF extraction. |
+| Meta Merge | `meta_merge` | `extract_exif=True`, `meta_merge=True`. |
+| Meta Merge Delete | `meta_merge_delete` | `extract_exif=True`, `meta_merge=True`, `meta_merge_delete=True`. |
+| Rename | `rename` | `rename=True`, `output_inplace=True`. |
+
+Changing the operation type immediately updates the visibility of context-sensitive controls, the destructive operation indicator, and the action button label. The selected operation type is persisted in the session file.
 
 <a id="target-path-widget-group"></a>
 #### Target path widget group
 
-Each tab's input section begins with the same target selection layout:
+The Target group contains the following controls:
 
-```
-  Target: [__________________________________] [Browse]
-  Type:   (•) Auto  ( ) File  ( ) Directory
-  [✔] Recursive
-```
+**Target entry field.** A `CTkEntry` widget for the filesystem path. The user can type a path directly or use the Browse buttons to open a dialog. The field supports drag-and-drop of files and directories from the system file manager where the platform supports it. Drag-and-drop is a SHOULD requirement.
 
-**Target entry field.** A `CTkEntry` widget for the filesystem path. The user can type a path directly or use the Browse button to open a directory/file picker. The field supports drag-and-drop of files and directories from the system file manager where the platform supports it (Windows Explorer, macOS Finder, Linux file managers). Drag-and-drop is a SHOULD requirement — if the CustomTkinter/tkinter implementation does not support native DnD on a given platform, the Browse button is the primary input method.
+**Browse buttons.** The browse button behavior adapts to the Type radio selection:
 
-**Browse button.** Opens a platform-native file/directory picker dialog. The dialog type (file picker vs. directory picker) is determined by the Type radio selection: when "File" is selected, the Browse button opens a file picker; when "Directory" is selected, it opens a directory picker; when "Auto" is selected, it opens a directory picker (the more common target type) with a secondary "Select File" option if the underlying dialog supports it, or defaults to directory picker. After selection, the path is populated into the Target entry field.
+| Type value | Browse button(s) | Behavior |
+|------------|-----------------|----------|
+| Auto | Two buttons: "File…" and "Folder…" | The user can choose either a file picker or a directory picker. This replaces the previous single-button behavior that defaulted to file-only. |
+| File | Single "Browse" button | Opens a file picker (`askopenfilename`). |
+| Directory | Single "Browse" button | Opens a directory picker (`askdirectory`). |
 
-**Type radio buttons.** Three options: Auto (default), File, Directory. These map directly to the CLI's target type disambiguation ([§8.2](#82-target-input-options)): Auto infers the type from the filesystem, File forces `--file`, Directory forces `--directory`. The Auto option is pre-selected on all tabs.
+> **Updated 2026-02-23:** The previous implementation opened only a file picker when Type was set to "Auto", preventing users from browsing to directories. The dual-button approach provides explicit access to both picker types without requiring a custom dialog or platform-specific workarounds.
 
-**Recursive checkbox.** A `CTkCheckBox` for enabling/disabling recursive traversal. Default: checked (matching `IndexerConfig.recursive` default, [§7.2](#72-default-configuration)). This checkbox is only meaningful when the target is a directory — when "File" is selected in the Type radio group, the Recursive checkbox is visually dimmed (disabled but visible) to indicate it has no effect. It re-enables when the type selection changes back to Auto or Directory.
+After selection, the path is populated into the Target entry field and the output file auto-suggest is triggered ([§10.3](#103-target-selection-and-input), output file auto-suggest).
 
-<a id="per-tab-input-forms"></a>
-#### Per-tab input forms
+**Type radio buttons.** Three options: Auto (default), File, Directory. These map directly to the CLI's target type disambiguation ([§8.2](#82-target-input-options)): Auto infers the type from the filesystem, File forces `--file`, Directory forces `--directory`. The Auto option is pre-selected by default.
 
-Below the shared target selection group, each operation tab presents its own set of options relevant to that operation. These forms are designed to expose only the flags that are meaningful for the selected operation, with safe defaults pre-applied. The implication chain ([§7.1](#71-configuration-architecture)) is handled transparently — the GUI does not show the implied flags as separate controls because they are always active for that tab's operation.
+**Recursive checkbox.** A `CTkCheckBox` for enabling/disabling recursive traversal. Default: checked (matching `IndexerConfig.recursive` default, [§7.2](#72-default-configuration)). This checkbox is only meaningful when the target is a directory — when "File" is selected in the Type radio group, the Recursive checkbox is visually dimmed (disabled but visible) to indicate it has no effect.
 
-<a id="index-tab"></a>
-##### Index tab
+<a id="context-sensitive-options"></a>
+#### Context-sensitive options
 
-The Index tab provides the basic indexing operation with optional EXIF extraction. It is the simplest tab and the default active tab on first launch.
+The Options group contains controls that are always visible and controls that appear or hide based on the selected operation type. The implication chain ([§7.1](#71-configuration-architecture)) is handled transparently — the GUI does not show implied flags as separate controls because they are always active for the selected operation.
+
+**Always visible:**
 
 | Control | Type | Default | Maps to |
 |---------|------|---------|---------|
 | ID Algorithm | `CTkComboBox` (`md5`, `sha256`) | `md5` | `IndexerConfig.id_algorithm` |
-| Extract EXIF metadata | `CTkCheckBox` | Unchecked | `IndexerConfig.extract_exif` |
 | Compute SHA-512 | `CTkCheckBox` | Unchecked | `IndexerConfig.compute_sha512` |
-| Output mode | `CTkRadioButton` group: View only / Save to file / Both | View only | Controls `output_stdout` / `output_file` routing |
 
-When "Save to file" or "Both" is selected, an additional file path field and Browse button appear (slide-down reveal or visibility toggle) for the output file destination.
+**Conditionally visible:**
 
-The Index tab does NOT expose `--meta-merge`, `--meta-merge-delete`, `--rename`, or `--inplace` controls. These belong to their respective dedicated tabs. This is a deliberate simplification — the Index tab is for "show me the index output," not for "perform side effects on my filesystem."
+| Control | Visible when | Type | Default | Maps to |
+|---------|-------------|------|---------|---------|
+| Extract EXIF metadata | Index, Rename | `CTkCheckBox` | Unchecked | `IndexerConfig.extract_exif` |
+| Dry run (preview only) | Rename | `CTkCheckBox` | **Checked** | `IndexerConfig.dry_run` |
+| Write in-place sidecar files | Meta Merge Delete | `CTkCheckBox` | Checked | `IndexerConfig.output_inplace` |
 
-<a id="meta-merge-tab"></a>
-##### Meta Merge tab
+**Operation-specific behavior:**
 
-The Meta Merge tab performs indexing with sidecar metadata merged into parent entries. It automatically implies `--meta` (EXIF extraction) — the "Extract EXIF" checkbox is not shown because it is always active for this operation.
+- **Meta Merge** and **Meta Merge Delete**: EXIF extraction is always enabled (implied by the operation). The Extract EXIF checkbox is hidden because it is always active.
+- **Rename**: Dry run defaults to checked (inverse of the CLI default). When dry run is active, the action button reads "▶ Preview Renames"; when unchecked, it reads "▶ Run Rename". In-place output is always active for Rename and is not shown as a user toggle.
 
-| Control | Type | Default | Maps to |
-|---------|------|---------|---------|
-| ID Algorithm | `CTkComboBox` | `md5` | `IndexerConfig.id_algorithm` |
-| Compute SHA-512 | `CTkCheckBox` | Unchecked | `IndexerConfig.compute_sha512` |
-| Output mode | `CTkRadioButton` group: View only / Save to file / Both | View only | Output routing |
+> **Deviation from CLI parity:** The CLI treats `--dry-run` as opt-in (default off). The GUI inverts this to default on. This is a deliberate UX decision: the GUI user is more likely to be exploring the tool's behavior and less likely to understand the implications of an irreversible rename.
 
-This tab sets `extract_exif=True` and `meta_merge=True` in the configuration overrides. The user does not need to know about the implication chain — the tab's purpose is self-evident from its name.
+<a id="output-controls"></a>
+#### Output controls
 
-<a id="meta-merge-delete-tab"></a>
-##### Meta Merge Delete tab
+The Output group's contents vary by operation type:
 
-The Meta Merge Delete tab performs sidecar merging with post-indexing deletion of the original sidecar files. This is a destructive operation and the GUI reflects this with visual safety cues.
+| Operation | Controls shown |
+|-----------|---------------|
+| **Index**, **Meta Merge** | Output mode radio group (View only / Save to file / Both) plus conditional output file field. |
+| **Meta Merge Delete** | Output file field only (mandatory — no mode selector). The action button is disabled until a valid output path is entered. The safety requirement from [§7.1](#71-configuration-architecture) is enforced structurally. |
+| **Rename** | Informational label: "Results will be displayed in the output panel below." No output file field. |
 
-| Control | Type | Default | Maps to |
-|---------|------|---------|---------|
-| ID Algorithm | `CTkComboBox` | `md5` | `IndexerConfig.id_algorithm` |
-| Compute SHA-512 | `CTkCheckBox` | Unchecked | `IndexerConfig.compute_sha512` |
-| Output file | `CTkEntry` + Browse | _(required)_ | `IndexerConfig.output_file` |
-| Also write in-place sidecars | `CTkCheckBox` | Checked | `IndexerConfig.output_inplace` |
+<a id="output-file-auto-suggest"></a>
+#### Output file auto-suggest
 
-**Key differences from Meta Merge:**
+> **Added 2026-02-23:** Output file auto-suggestion based on the target path and the application's naming conventions.
 
-1. **Output file is mandatory.** The "View only" output mode is not available on this tab. The safety requirement from [§7.1](#71-configuration-architecture) — MetaMergeDelete requires at least one persistent output — is enforced structurally by the form design rather than by validation after the fact. The output file field is always visible and the action button is disabled until a valid output path is entered.
+When the output file field is visible. the GUI auto-populates it with a conventional output filename whenever the target path changes (on focus-out or after browse selection). The auto-suggested value is editable — it is a default, not a constraint.
 
-2. **In-place sidecar checkbox defaults to checked.** Because MetaMergeDelete removes the original sidecar files, writing in-place sidecar JSON files alongside each item provides a secondary recovery path. The checkbox defaults to checked as a safety measure but can be unchecked by users who only want the aggregate output file.
+**Naming convention rules** (from [§6.5](#65-filesystem-timestamps-and-date-conversion) and [§6.9](#69-json-serialization-and-output-routing)):
 
-3. **Visual warning.** A cautionary label is displayed below the action button: _"This operation will delete sidecar metadata files after merging their content. Ensure your output file path is correct before proceeding."_ The label uses a warning color (amber/yellow in dark theme) to draw attention without blocking execution.
+| Target type | Output file pattern | Example |
+|-------------|-------------------|---------|
+| File | `{parent_dir}/{filename}_meta2.json` | Target: `C:/my/cool/file.txt` → Output: `C:/my/cool/file.txt_meta2.json` |
+| Directory | `{directory_path}_directorymeta2.json` | Target: `C:/my/cool/dir` → Output: `C:/my/cool/dir_directorymeta2.json` |
 
-This tab sets `extract_exif=True`, `meta_merge=True`, and `meta_merge_delete=True` in the configuration overrides.
+**Edge case handling:**
 
-<a id="rename-tab"></a>
-##### Rename tab
+| Target path | Behavior |
+|-------------|----------|
+| `C:/` | Strip trailing separator, produce `C:/_directorymeta2.json`. |
+| `/` (Unix root) | Fall back to user's home directory: `~/root_directorymeta2.json`. |
 
-The Rename tab performs file renaming to `storage_name` values ([§6.10](#610-file-rename-and-in-place-write-operations)). This is the most destructive operation the tool offers and the GUI reflects this with the strongest safety defaults.
-
-| Control | Type | Default | Maps to |
-|---------|------|---------|---------|
-| ID Algorithm | `CTkComboBox` | `md5` | `IndexerConfig.id_algorithm` |
-| Compute SHA-512 | `CTkCheckBox` | Unchecked | `IndexerConfig.compute_sha512` |
-| Dry run (preview only) | `CTkCheckBox` | **Checked** | `IndexerConfig.dry_run` |
-
-**Key differences from other tabs:**
-
-1. **Dry run defaults to checked.** The user must explicitly uncheck the dry-run checkbox to perform actual renames. This is the inverse of the CLI default (where `--dry-run` must be explicitly specified) because the GUI audience is assumed to be less experienced and the consequences of an unintended rename are severe. When dry run is active, the action button label reads "▶ Preview Renames" instead of "▶ Run Rename."
-
-2. **In-place output is always active.** The Rename tab does not expose an in-place checkbox — `output_inplace=True` is always set because the rename operation implies it ([§7.1](#71-configuration-architecture)). The user is informed of this via a label: _"In-place sidecar files will be written alongside each renamed item."_
-
-3. **No output file option.** The Rename tab's primary output is the rename side effect, not a JSON file. The output panel shows the JSON result for inspection, and the user can save it via the output panel's Save button if needed. A dedicated output-file field would add clutter without adding value.
-
-4. **Visual warning (when dry run is unchecked).** When the user unchecks the dry-run checkbox, a warning label appears: _"Renaming is destructive — original filenames will be replaced. In-place sidecar files contain the original names for recovery."_ The label uses a warning color consistent with the Meta Merge Delete tab.
-
-This tab sets `rename=True` and `output_inplace=True` in the configuration overrides. When dry run is checked, `dry_run=True` is also set.
-
-> **Deviation from CLI parity:** The CLI treats `--dry-run` as opt-in (default off). The GUI inverts this to default on. This is a deliberate UX decision: the GUI user is more likely to be exploring the tool's behavior and less likely to understand the implications of an irreversible rename. The CLI user, by contrast, has already read the help text and constructed a command deliberately. The behavioral outcome of the indexing engine is identical — only the default is different.
+The auto-suggest respects manual edits. If the user has manually changed the output field to a value different from the last auto-generated path, subsequent target changes do not overwrite the manual edit.
 
 ---
 
 <a id="104-configuration-panel"></a>
 ### 10.4. Configuration Panel
 
-The Settings tab is accessed via the bottom sidebar button and provides a persistent configuration interface for preferences that apply across all operations and across sessions. Unlike the operation tabs, the Settings tab has no action button and no output panel — it is a pure configuration surface.
+The Settings page is accessed via the sidebar and provides a persistent configuration interface for preferences that apply across all operations and across sessions. Unlike the Operations page, the Settings page has no action button and no output panel — it is a pure configuration surface.
 
 <a id="settings-layout"></a>
 #### Settings layout
+
+> **Updated 2026-02-23:** The About section previously embedded at the bottom of the Settings panel has been promoted to its own sidebar tab ([§10.8](#108-about-tab)). The Interface section has been added to control tooltip visibility.
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -5775,25 +5792,21 @@ The Settings tab is accessed via the bottom sidebar button and provides a persis
 │                                                      │
 │  Output Preferences                                  │
 │  ─────────────────────────────────────────────       │
-│  JSON Indentation:        [2 ▾]  (spaces)            │
-│  Pretty-print by default: [✔]                        │
+│  JSON Indentation:  (•) 2 spaces  ( ) 4 spaces      │
+│                     ( ) Compact                      │
 │                                                      │
 │  Logging                                             │
 │  ─────────────────────────────────────────────       │
-│  Verbosity:               [Normal ▾]                 │
+│  Verbosity:  (•) Normal  ( ) Verbose  ( ) Debug      │
+│                                                      │
+│  Interface                                           │
+│  ─────────────────────────────────────────────       │
+│  [✔] Show tooltips on hover                          │
 │                                                      │
 │  Configuration                                       │
 │  ─────────────────────────────────────────────       │
 │  Config file:   [_________________________] [Browse] │
 │  (Optional. Overrides compiled defaults.)            │
-│                                                      │
-│  About                                               │
-│  ─────────────────────────────────────────────       │
-│  Version: 0.1.0                                      │
-│  Python:  3.12.x                                     │
-│  exiftool: /usr/bin/exiftool (v12.85)  ✔             │
-│            — or —                                    │
-│  exiftool: Not found on PATH  ⚠                     │
 │                                                      │
 │  ┌────────────────────┐  ┌──────────────────────┐   │
 │  │  Reset to Defaults │  │  Open Config Folder  │   │
@@ -5807,35 +5820,24 @@ The Settings tab is accessed via the bottom sidebar button and provides a persis
 
 | Section | Field | Type | Default | Behavior |
 |---------|-------|------|---------|----------|
-| Indexing Defaults | Default ID Algorithm | `CTkComboBox` | `md5` | Pre-populates the ID Algorithm selector on all operation tabs. Per-tab overrides take precedence. |
-| Indexing Defaults | Compute SHA-512 | `CTkCheckBox` | Unchecked | Pre-populates the SHA-512 checkbox on all operation tabs. |
-| Output Preferences | JSON Indentation | `CTkComboBox` (`2`, `4`, `None`) | `2` | Controls the `indent` parameter passed to `serialize_entry()`. `None` produces compact (single-line) JSON. |
-| Output Preferences | Pretty-print by default | `CTkCheckBox` | Checked | When unchecked, forces `indent=None` regardless of the indentation selector. |
-| Logging | Verbosity | `CTkComboBox` (`Normal`, `Verbose`, `Debug`) | `Normal` | Maps to log level: Normal → WARNING, Verbose → INFO, Debug → DEBUG. Log output is directed to the progress display area ([§10.5](#105-indexing-execution-and-progress)), not to a separate console window. |
+| Indexing Defaults | Default ID Algorithm | `CTkComboBox` | `md5` | Pre-populates the ID Algorithm selector on the Operations page. |
+| Indexing Defaults | Compute SHA-512 | `CTkCheckBox` | Unchecked | Pre-populates the SHA-512 checkbox on the Operations page. |
+| Output Preferences | JSON Indentation | `CTkRadioButton` group (`2 spaces`, `4 spaces`, `Compact`) | `2 spaces` | Controls the `indent` parameter passed to `serialize_entry()`. Compact produces single-line JSON. Stored in session as `"2"`, `"4"`, or `"none"`. |
+| Logging | Verbosity | `CTkRadioButton` group (`Normal`, `Verbose`, `Debug`) | `Normal` | Maps to log level: Normal → WARNING, Verbose → INFO, Debug → DEBUG. Log output is directed to the progress display area ([§10.5](#105-indexing-execution-and-progress)), not to a separate console window. |
+| Interface | Show tooltips on hover | `CTkCheckBox` | Checked | Globally enables or disables hover tooltips (`_Tooltip.set_enabled()`). When disabled, no tooltip popups appear anywhere in the application. |
 | Configuration | Config file | `CTkEntry` + Browse | _(empty)_ | Optional path to a TOML configuration file. When set, this path is passed to `load_config(config_file=...)` for all operations. When empty, the standard resolution chain ([§3.3](#33-configuration-file-locations)) applies. |
 
 <a id="settings-persistence"></a>
 #### Settings persistence
 
-Settings values are saved to the session file ([§10.1](#101-gui-framework-and-architecture), session persistence) when the user navigates away from the Settings tab or when the application exits. Settings changes take effect immediately — there is no "Apply" button. When a setting changes, the affected operation tabs are notified to update their default widget values if the user has not already overridden them on that tab.
-
-**Default propagation rule:** Settings provide defaults, not overrides. If the user has explicitly changed the ID Algorithm on the Index tab to `sha256`, and then changes the Settings default to `md5`, the Index tab retains `sha256`. Only tabs where the user has not touched the field inherit the new default. This is tracked via a "user-modified" flag on each per-tab widget.
+Settings values are saved to the session file ([§10.1](#101-gui-framework-and-architecture), session persistence) when the application exits. Settings changes take effect immediately — there is no "Apply" button.
 
 <a id="utility-buttons"></a>
 #### Utility buttons
 
-**Reset to Defaults.** Resets all Settings fields to their compiled default values. Does NOT reset per-tab input state — only the Settings panel's own fields. Presents a confirmation dialog before proceeding: _"Reset all settings to defaults? Per-tab inputs will not be affected."_
+**Reset to Defaults.** Resets all Settings fields to their compiled default values. Does NOT reset Operations page input state — only the Settings page's own fields. Presents a confirmation dialog before proceeding: _"Reset all settings to their default values?"_
 
 **Open Config Folder.** Opens the platform-specific application data directory (`%APPDATA%\shruggie-indexer\` on Windows, `~/.config/shruggie-indexer/` on Linux, `~/Library/Application Support/shruggie-indexer/` on macOS) in the system file manager. This is a convenience for users who want to edit the TOML configuration file directly. If the directory does not exist, it is created before opening.
-
-<a id="about-section"></a>
-#### About section
-
-The About section at the bottom of the Settings panel displays static environment information useful for debugging:
-
-- **Version:** Read from `shruggie_indexer.__version__` at startup.
-- **Python:** `sys.version` truncated to major.minor.patch.
-- **exiftool:** The result of a startup availability check ([§4.5](#45-error-handling-strategy)). Displays the resolved path and version if found (via `exiftool -ver`), or a warning icon with "Not found on PATH" if absent. This check is performed once at application startup, not on each operation invocation.
 
 ---
 
@@ -5847,10 +5849,12 @@ This subsection defines how the GUI executes indexing operations, displays progr
 <a id="action-button-behavior"></a>
 #### Action button behavior
 
-Each operation tab has a single action button at the bottom of its input section. The button label reflects the operation:
+> **Updated 2026-02-23:** Rewritten to reflect the consolidated Operations page model. The previous version described per-tab action buttons; the current implementation has a single action button on the Operations page whose label changes based on the selected operation type.
 
-| Tab | Button label (idle) | Button label (dry run) |
-|-----|-------------------|----------------------|
+The Operations page has a single action button at the bottom of its input section. The button label reflects the currently selected operation:
+
+| Operation | Button label (idle) | Button label (dry run) |
+|-----------|-------------------|----------------------|
 | Index | ▶ Run Index | — |
 | Meta Merge | ▶ Run Meta Merge | — |
 | Meta Merge Delete | ▶ Run Meta Merge Delete | — |
@@ -5858,14 +5862,14 @@ Each operation tab has a single action button at the bottom of its input section
 
 When clicked, the action button:
 
-1. Validates the current tab's input fields (target path exists, required fields are populated).
-2. Constructs an `IndexerConfig` via `load_config()` with the appropriate overrides.
+1. Validates the Operations page input fields (target path exists, required fields are populated).
+2. Constructs an `IndexerConfig` via `load_config()` with the appropriate overrides from `OperationsPage.build_config()`.
 3. Transitions the UI to the "running" state ([§10.5](#105-indexing-execution-and-progress), job exclusivity).
 4. Spawns a background thread that calls `index_path()`.
 5. Updates the progress display as the operation proceeds.
 6. On completion, populates the output panel and transitions the UI back to the "idle" state.
 
-If input validation fails, the action button does not spawn a thread. Instead, the first invalid field is highlighted (border color change to red/error color) and a brief validation message is displayed adjacent to the field or at the top of the input section. The validation message disappears when the user corrects the field.
+If input validation fails, the action button does not spawn a thread. Instead, a validation dialog (`messagebox.showwarning`) is displayed with the validation error message.
 
 <a id="job-exclusivity"></a>
 #### Job exclusivity
@@ -5876,12 +5880,12 @@ Only one indexing operation may execute at a time. The GUI enforces this by ente
 
 | UI element | Behavior during running state |
 |------------|------------------------------|
-| All sidebar operation tab buttons | Visually dimmed and non-clickable. The active tab remains highlighted but all other tab buttons are disabled. |
-| Settings sidebar button | Remains clickable — users can view settings while an operation runs, but cannot change settings that would affect the in-flight operation. Settings changes during a running operation are deferred until the operation completes. |
-| Action button on the active tab | Changes label to "■ Cancel" and changes color to a warning/stop color (red tint). Clicking it initiates cancellation (see below). |
-| Action buttons on inactive tabs | Disabled (non-interactive). Not visible since those tabs are hidden, but disabled in state to prevent race conditions if the user switches tabs immediately after an operation completes. |
-| Input fields on the active tab | Disabled (non-editable). The user cannot modify the configuration of a running operation. |
-| Output panel | Cleared at operation start. Displays incremental progress information during execution. Populated with final JSON output on completion. |
+| Operations sidebar button | Remains highlighted (active page) but the Operations page input controls are disabled. |
+| Settings sidebar button | Remains clickable — users can view settings while an operation runs. |
+| About sidebar button | Remains clickable. |
+| Action button | Changes label to "■ Cancel" and changes color to a warning/stop color (red tint). Clicking it initiates cancellation (see below). |
+| Input fields on Operations page | Disabled (non-editable). The user cannot modify the configuration of a running operation. |
+| Output panel | Cleared at operation start (auto-clear). Replaced by the progress panel during execution. Restored with final output on completion. |
 
 The running state is tracked by a single boolean flag (`_job_running: bool`) on the application instance. All UI transitions check this flag before allowing state changes.
 
@@ -6000,16 +6004,38 @@ For the success and partial-failure cases, the progress display is replaced by t
 <a id="106-output-display-and-export"></a>
 ### 10.6. Output Display and Export
 
+> **Updated 2026-02-23:** Updated to document the Clear button, copy visual feedback, resizable output panel, auto-clear on new job, and corrected post-job display behavior for save-to-file mode.
+
 <a id="output-panel"></a>
 #### Output panel
 
-The output panel occupies the lower portion of the working area on all operation tabs. It serves dual purpose: displaying progress/logs during execution ([§10.5](#105-indexing-execution-and-progress)) and displaying the JSON result after completion. A toggle at the top of the panel switches between the two views:
+The output panel occupies the lower portion of the working area on the Operations page. It serves dual purpose: displaying the JSON result after completion and displaying log messages. A toggle at the top of the panel switches between the two views:
 
 ```
-  [ Output ▾ ]  [ Log ▾ ]                    [Copy] [Save]
+  [Output]  [Log]                         [Save] [Copy] [Clear]
 ```
 
-The "Output" tab shows the JSON viewer. The "Log" tab shows the log stream from the most recent operation (preserved after completion so the user can review warnings and timing information). The toggle defaults to "Output" after a successful operation and to "Log" after an error or cancellation.
+The "Output" button shows the JSON viewer. The "Log" button shows the log stream from the most recent operation (preserved after completion so the user can review warnings and timing information). The toggle defaults to "Output" after a successful operation and to "Log" after an error or cancellation. All toolbar buttons have hover tooltips ([§10.8.3](#1083-tooltips)).
+
+<a id="output-auto-clear"></a>
+#### Auto-clear on new job
+
+When a new operation begins, the output panel is automatically cleared (both JSON and log content) before the progress panel replaces it. This ensures that stale output from a previous operation is never visible when the new operation completes. The auto-clear is unconditional — it occurs regardless of output mode or operation type.
+
+<a id="resizable-output-panel"></a>
+#### Resizable output panel
+
+The output panel's height is adjustable via a drag handle (`_DragHandle`) positioned between the input controls and the output panel. The drag handle is a thin horizontal bar (6px, `sb_v_double_arrow` cursor) that the user clicks and drags vertically to resize the output panel.
+
+**Constraints:**
+
+| Property | Value |
+|----------|-------|
+| Default height | 250 px (`_DEFAULT_OUTPUT_HEIGHT`) |
+| Minimum height | 100 px (`_MIN_OUTPUT_HEIGHT`) |
+| Maximum height | 600 px (`_MAX_OUTPUT_HEIGHT`) |
+
+The current output panel height is persisted to the session file (`output_panel_height` field, [§10.1](#101-gui-framework-and-architecture)) and restored on next launch. During a running operation, the drag handle and output panel are hidden and replaced by the progress panel; they are restored when the operation completes.
 
 <a id="json-viewer"></a>
 #### JSON viewer
@@ -6031,9 +6057,20 @@ These thresholds are approximate and SHOULD be tuned during implementation based
 <a id="copy-button"></a>
 #### Copy button
 
-Copies the full JSON output to the system clipboard via `widget.clipboard_clear()` / `widget.clipboard_append()`. For large outputs (>10 MB), the copy button displays a brief "Copying..." state and performs the clipboard operation in a short background task to avoid UI freeze. If the output exceeds the platform's clipboard size limit (rare but possible on some Linux configurations), a warning is displayed.
+Copies the full content of the current view (JSON output or log) to the system clipboard via `widget.clipboard_clear()` / `widget.clipboard_append()`.
 
-The Copy button is disabled when no output is present (before any operation has completed or after a cancellation).
+**Visual feedback:** After a successful copy, the button text changes from "Copy" to "Copied!" with a green background color for 1.5 seconds (`_COPY_FEEDBACK_MS`), then reverts to its original appearance. This provides immediate confirmation that the clipboard operation succeeded without requiring a separate toast notification.
+
+For large outputs (>10 MB), the copy button performs the clipboard operation synchronously — if the platform clipboard operation is slow, a brief UI freeze may occur. The Copy button is disabled when no output is present (before any operation has completed or after clearing).
+
+<a id="clear-button"></a>
+#### Clear button
+
+> **Added 2026-02-23.**
+
+Clears both JSON output and log content from the output panel. The Clear button calls `OutputPanel.clear()`, which empties the JSON text buffer, clears the log line list, and resets the textbox to an empty state. After clearing, the Copy and Save buttons are disabled (no content to act on).
+
+The Clear button is always enabled — clearing an already-empty panel is a no-op and does not produce an error.
 
 <a id="save-button"></a>
 #### Save button
@@ -6044,16 +6081,22 @@ The Save button writes the full JSON output (regardless of whether the output pa
 
 The Save button is disabled when no output is present.
 
-<a id="output-panel-interaction-with-tabs"></a>
-#### Output panel interaction with tabs
+<a id="output-panel-interaction"></a>
+#### Output panel interaction with operations
 
-The output panel is a shared widget instance — there is one output panel, and it displays the result of the most recent operation regardless of which tab initiated it. When the user switches tabs, the output panel retains its current content. This means:
+The output panel is a single widget instance on the Operations page. It displays the result of the most recent operation regardless of which operation type was selected. When the user changes the operation type selector, the output panel retains its current content. A new operation clears the panel via auto-clear ([§10.6](#106-output-display-and-export), auto-clear).
 
-- User runs an Index operation → output panel shows the Index result.
-- User switches to the Rename tab → output panel still shows the Index result.
-- User runs a Rename preview → output panel is cleared and then shows the Rename result.
+**Post-job display behavior by output mode:**
 
-This behavior is consistent with `shruggie-feedtools`, where the output panel always shows the most recent operation's result.
+| Output mode | Display behavior |
+|-------------|-----------------|
+| View only | JSON output is loaded into the output panel via `set_json()`. |
+| Save to file | A status message is displayed: _"Output saved to: {filename}"_. The JSON is not loaded into the viewer. Copy and Save buttons remain disabled. |
+| Both | JSON output is loaded into the output panel AND written to the output file. |
+| _(Meta Merge Delete)_ | Same as "Save to file" — mandatory output file, status message displayed. |
+| _(Rename)_ | JSON preview is loaded into the output panel (same as "View only"). |
+
+This distinction ensures that users who selected "Save to file" mode see confirmation of the save rather than a confusing blank panel or redundant JSON display.
 
 ---
 
@@ -6063,16 +6106,20 @@ This behavior is consistent with `shruggie-feedtools`, where the output panel al
 <a id="keyboard-shortcuts"></a>
 #### Keyboard shortcuts
 
+> **Updated 2026-02-23:** `Ctrl+1` through `Ctrl+3` now switch between sidebar pages (Operations, Settings, About) instead of the former four operation tabs. `Ctrl+Shift+C` added for copy-to-clipboard.
+
 The GUI defines a minimal set of keyboard shortcuts for common actions. Shortcuts use platform-standard modifier keys: `Ctrl` on Windows/Linux, `Cmd` on macOS.
 
 | Shortcut | Action | Notes |
 |----------|--------|-------|
-| `Ctrl+R` / `Cmd+R` | Execute the current tab's action | Equivalent to clicking the action button. Disabled during running state. |
-| `Ctrl+C` / `Cmd+C` | Copy output to clipboard | Only when the output panel has focus or content. Standard copy behavior in text fields takes precedence when an input field has focus. |
+| `Ctrl+R` / `Cmd+R` | Execute the current operation | Equivalent to clicking the action button. Disabled during running state. |
+| `Ctrl+Shift+C` | Copy output to clipboard | Copies the current view (Output or Log) to clipboard. Uses `Shift` to avoid conflicting with standard `Ctrl+C` text copy in input fields. |
 | `Ctrl+S` / `Cmd+S` | Save output to file | Opens the save-as dialog. |
 | `Ctrl+.` / `Cmd+.` | Cancel running operation | Equivalent to clicking the Cancel button. No-op when idle. |
-| `Ctrl+1` through `Ctrl+4` | Switch to operation tab 1–4 | `Ctrl+1` = Index, `Ctrl+2` = Meta Merge, `Ctrl+3` = Meta Merge Delete, `Ctrl+4` = Rename. Disabled during running state. |
-| `Ctrl+,` / `Cmd+,` | Open Settings | Standard "preferences" shortcut. Always available. |
+| `Ctrl+1` | Switch to Operations page | Navigates the sidebar to the Operations page. Disabled during running state. |
+| `Ctrl+2` | Switch to Settings page | Navigates the sidebar to the Settings page. |
+| `Ctrl+3` | Switch to About page | Navigates the sidebar to the About page. |
+| `Ctrl+,` / `Cmd+,` | Open Settings | Standard "preferences" shortcut. Equivalent to `Ctrl+2`. Always available. |
 | `Ctrl+Q` / `Cmd+Q` | Quit application | Prompts for confirmation if an operation is running. |
 | `Escape` | Cancel running operation | Secondary cancel shortcut. No-op when idle. |
 
@@ -6081,7 +6128,7 @@ Keyboard shortcuts MUST NOT conflict with standard text-editing shortcuts within
 <a id="tab-order"></a>
 #### Tab order
 
-All interactive widgets follow a logical tab order (keyboard `Tab` key navigation) within each operation tab. The tab order proceeds top-to-bottom, left-to-right: Target path → Browse button → Type radio group → Recursive checkbox → per-tab options → action button. The output panel is excluded from the tab order (it is read-only).
+All interactive widgets follow a logical tab order (keyboard `Tab` key navigation) within the Operations page. The tab order proceeds top-to-bottom, left-to-right: Operation selector → Target path → Browse button(s) → Type radio group → Recursive checkbox → per-operation options → output controls → action button. The output panel is excluded from the tab order (it is read-only).
 
 <a id="accessibility-notes"></a>
 #### Accessibility notes
@@ -6097,6 +6144,131 @@ The GUI makes reasonable accommodations for keyboard-only operation but does not
 - Focus indicators are visible on all interactive widgets (CustomTkinter provides this by default in dark theme).
 
 Formal accessibility improvements are a post-MVP consideration.
+
+---
+
+<a id="108-supplemental-gui-components"></a>
+### 10.8. Supplemental GUI Components
+
+> **Added 2026-02-23:** This subsection documents GUI components introduced during the 2026-02-23 update cycle that do not belong to any existing subsection.
+
+<a id="1081-destructive-operation-indicator"></a>
+#### 10.8.1. Destructive operation indicator
+
+The destructive operation indicator (`_DestructiveIndicator`) is a small inline widget displayed within the Operation group on the Operations page ([§10.3](#103-target-selection-and-input)). It provides immediate visual feedback about whether the currently configured operation will modify the filesystem.
+
+**Visual states:**
+
+| State | Dot color | Label | Condition |
+|-------|-----------|-------|-----------|
+| Non-destructive | Green (`#228822` / `#44cc44`) | "Non-Destructive" | Index, Meta Merge, or Rename with dry run enabled. |
+| Destructive | Red (`#cc3333` / `#ff4444`) | "Destructive" | Meta Merge Delete, or Rename with dry run disabled. |
+
+The indicator is a `CTkFrame` containing a colored dot (Unicode `●`, `CTkLabel`) and a colored text label. It updates immediately when the operation type selector changes or when the dry-run checkbox is toggled. The color values use a tuple for light/dark theme variants (CustomTkinter convention).
+
+**Update triggers:**
+
+- Changing the operation type selector updates the indicator via `_update_indicator()`.
+- Toggling the Rename dry-run checkbox updates the indicator.
+- No other controls affect the indicator state.
+
+<a id="1082-about-tab"></a>
+#### 10.8.2. About tab
+
+The About tab (`AboutTab`) is accessed via the third sidebar button and displays static project information, environment details, and navigation links. It has no interactive controls that affect indexing behavior.
+
+**Layout:**
+
+```
+┌──────────────────────────────────────────────────────┐
+│  About                                               │
+│                                                      │
+│                  ¯\_(ツ)_/¯                           │
+│              Shruggie Indexer                         │
+│                                                      │
+│  A filesystem indexer with hash-based identity,      │
+│  metadata extraction, and structured JSON output.    │
+│                                                      │
+│  Version:    0.1.0                                   │
+│  Python:     3.12.x                                  │
+│  ExifTool:   Available / Not found                   │
+│                                                      │
+│  ┌──────────────────┐  ┌──────────────────────┐     │
+│  │  Documentation   │  │  shruggie.tech       │     │
+│  └──────────────────┘  └──────────────────────┘     │
+│                                                      │
+│          Built by ShruggieTech LLC                    │
+│                                                      │
+└──────────────────────────────────────────────────────┘
+```
+
+**Information rows:**
+
+| Field | Source | Notes |
+|-------|--------|-------|
+| Version | `shruggie_indexer.__version__` | Read at import time. |
+| Python | `sys.version_info` | Formatted as `major.minor.micro`. |
+| ExifTool | `shutil.which("exiftool")` | Displays "Available" if found on PATH, "Not found" otherwise. Checked once at tab construction time. |
+
+**Link buttons:**
+
+| Button | URL | Action |
+|--------|-----|--------|
+| Documentation | `https://shruggietech.github.io/shruggie-indexer/` | Opens in default browser via `webbrowser.open()`. |
+| shruggie.tech | `https://shruggie.tech` | Opens in default browser via `webbrowser.open()`. |
+
+**Attribution line:** "Built by ShruggieTech LLC" is displayed at the bottom of the tab in a muted font.
+
+The About tab has no state to persist — `get_state()` returns an empty dict and `restore_state()` is a no-op.
+
+<a id="1083-tooltips"></a>
+#### 10.8.3. Tooltips
+
+Hover tooltips (`_Tooltip`) provide contextual explanations for controls throughout the application. Every interactive widget that benefits from clarification has an associated tooltip string.
+
+**Tooltip behavior:**
+
+| Property | Value |
+|----------|-------|
+| Delay | 600 ms (`_TOOLTIP_DELAY_MS`) before appearing. |
+| Dismissal | Hides immediately on mouse leave or click. |
+| Positioning | Below the widget, offset 20px right and 4px below the widget's bottom edge. |
+| Appearance | Dark background (`#333333`), white text, solid border, 6px horizontal / 4px vertical padding. |
+| Font | Segoe UI, 9pt. |
+| Implementation | Uses a `tk.Toplevel` with `wm_overrideredirect(True)` for a borderless popup. |
+
+**Global enable/disable:** Tooltips can be toggled globally via the "Show tooltips on hover" checkbox in Settings ([§10.4](#104-configuration-panel)). The `_Tooltip.set_enabled()` class method controls visibility for all tooltip instances. When disabled, the hover handlers remain bound but suppress the tooltip popup. The tooltip state is persisted in the session file.
+
+<a id="1084-labeled-group-frames"></a>
+#### 10.8.4. Labeled group frames
+
+The `_LabeledGroup` widget is a reusable container used throughout the Operations page ([§10.3](#103-target-selection-and-input)) to visually organize controls into named sections. Each group has a rounded border, a bold header label, an optional description in a muted font, and a content area.
+
+| Property | Value |
+|----------|-------|
+| Corner radius | 8 px |
+| Border width | 1 px |
+| Border color | `("gray75", "gray30")` (light/dark) |
+| Header font | 13pt bold |
+| Description font | 11pt, muted color (`("gray40", "gray60")`) |
+| Content padding | 12px horizontal, 4–10px vertical |
+
+The `content` attribute is a transparent `CTkFrame` inside the group where child widgets are packed.
+
+<a id="1085-debug-logging"></a>
+#### 10.8.5. Debug logging
+
+The GUI installs a queue-based logging handler (`_LogQueueHandler`) on the root `shruggie_indexer` logger during operation execution. This handler captures log records from the core engine and routes them to the output panel's log buffer.
+
+**Architecture:**
+
+1. A `queue.Queue[str]` is created at application startup.
+2. `_LogQueueHandler` extends `logging.Handler` and pushes formatted log messages to the queue via `put_nowait()`.
+3. Before each operation, the handler is attached to the `shruggie_indexer` logger with a level determined by the Settings verbosity selection (Normal → WARNING, Verbose → INFO, Debug → DEBUG).
+4. A 50ms polling timer (`_POLL_INTERVAL_MS`) on the main thread drains the queue and appends messages to `OutputPanel.append_log()`.
+5. After the operation completes, the handler is removed from the logger.
+
+This architecture ensures thread safety — the background indexing thread writes to the queue, and only the main thread reads from it and updates widgets.
 
 <a id="11-logging-and-diagnostics"></a>
 ## 11. Logging and Diagnostics
