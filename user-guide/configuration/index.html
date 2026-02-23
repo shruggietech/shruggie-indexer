@@ -2286,9 +2286,115 @@
 <h3 id="extension-exclusions">Extension exclusions</h3>
 <p><code>exiftool.exclude_extensions</code> controls which file types are skipped for ExifTool invocation. Default: <code>["csv", "htm", "html", "json", "tsv", "xml"]</code>.</p>
 <h3 id="key-exclusions">Key exclusions</h3>
-<p>After ExifTool returns metadata, certain operational keys are filtered out before storage:</p>
-<p><code>ExifToolVersion</code>, <code>FileSequence</code>, <code>NewGUID</code>, <code>Directory</code>, <code>FileName</code>, <code>FilePath</code>, <code>BaseName</code>, <code>FilePermissions</code></p>
-<p>These are ExifTool process metadata, not embedded metadata from the file.</p>
+<p>After ExifTool returns metadata, certain operational and OS-specific keys are filtered out before storage. Because exiftool with <code>-G</code> flags emits group-prefixed keys (e.g. <code>System:FileName</code>), the filter matches by <strong>base key name</strong> (the portion after the last <code>:</code> separator).</p>
+<p>The complete exclusion set:</p>
+<table>
+<thead>
+<tr>
+<th>Base key</th>
+<th>Category</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ExifToolVersion</code></td>
+<td>ExifTool operational</td>
+</tr>
+<tr>
+<td><code>FileSequence</code></td>
+<td>ExifTool operational</td>
+</tr>
+<tr>
+<td><code>NewGUID</code></td>
+<td>ExifTool operational</td>
+</tr>
+<tr>
+<td><code>Now</code></td>
+<td>ExifTool operational</td>
+</tr>
+<tr>
+<td><code>ProcessingTime</code></td>
+<td>ExifTool operational</td>
+</tr>
+<tr>
+<td><code>Directory</code></td>
+<td>Filesystem path</td>
+</tr>
+<tr>
+<td><code>FileName</code></td>
+<td>Filesystem path</td>
+</tr>
+<tr>
+<td><code>FilePath</code></td>
+<td>Filesystem path</td>
+</tr>
+<tr>
+<td><code>BaseName</code></td>
+<td>Filesystem path</td>
+</tr>
+<tr>
+<td><code>SourceFile</code></td>
+<td>Filesystem path</td>
+</tr>
+<tr>
+<td><code>FilePermissions</code></td>
+<td>OS-specific</td>
+</tr>
+<tr>
+<td><code>FileSize</code></td>
+<td>Redundant (in <code>size</code> object)</td>
+</tr>
+<tr>
+<td><code>FileModifyDate</code></td>
+<td>Redundant (in <code>timestamps</code>)</td>
+</tr>
+<tr>
+<td><code>FileAccessDate</code></td>
+<td>Redundant (in <code>timestamps</code>)</td>
+</tr>
+<tr>
+<td><code>FileCreateDate</code></td>
+<td>Redundant (in <code>timestamps</code>)</td>
+</tr>
+<tr>
+<td><code>FileAttributes</code></td>
+<td>OS-specific</td>
+</tr>
+<tr>
+<td><code>FileDeviceNumber</code></td>
+<td>OS-specific</td>
+</tr>
+<tr>
+<td><code>FileInodeNumber</code></td>
+<td>OS-specific</td>
+</tr>
+<tr>
+<td><code>FileHardLinks</code></td>
+<td>OS-specific</td>
+</tr>
+<tr>
+<td><code>FileUserID</code></td>
+<td>OS-specific</td>
+</tr>
+<tr>
+<td><code>FileGroupID</code></td>
+<td>OS-specific</td>
+</tr>
+<tr>
+<td><code>FileDeviceID</code></td>
+<td>OS-specific</td>
+</tr>
+<tr>
+<td><code>FileBlockSize</code></td>
+<td>OS-specific</td>
+</tr>
+<tr>
+<td><code>FileBlockCount</code></td>
+<td>OS-specific</td>
+</tr>
+</tbody>
+</table>
+<p>All embedded metadata keys (e.g. <code>File:FileType</code>, <code>File:MIMEType</code>, <code>QuickTime:*</code>, <code>Composite:*</code>) are preserved.</p>
 <h2 id="override-and-merging-behavior">Override and Merging Behavior</h2>
 <h3 id="scalar-fields-last-writer-wins">Scalar fields: last-writer-wins</h3>
 <p>The highest-priority layer that specifies a value wins. Omitted fields in a configuration file preserve the value from the layer below (ultimately the compiled default).</p>
