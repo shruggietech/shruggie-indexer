@@ -2119,7 +2119,7 @@ published on the GitHub release page.</p>
 <h2 id="operations-tab">Operations Tab</h2>
 <p>The Operations tab is where you configure and run indexing jobs. It is organized into labeled sections.</p>
 <h3 id="choosing-an-operation-type">Choosing an Operation Type</h3>
-<p>At the top of the Operations tab, a dropdown lets you choose one of four operation types:</p>
+<p>At the top of the Operations tab, a dropdown lets you choose one of three operation types:</p>
 <table>
 <thead>
 <tr>
@@ -2144,14 +2144,9 @@ published on the GitHub release page.</p>
 <td>Same as Meta Merge, but <strong>deletes the sidecar files</strong> from disk after merging them into the report. The merged data is preserved in the output file.</td>
 <td style="text-align: center;"><strong>Yes</strong></td>
 </tr>
-<tr>
-<td><strong>Rename</strong></td>
-<td>Renames files to unique, content-based names (called "storage names"). Useful for deduplication and archival workflows. Has a preview mode that shows what <em>would</em> happen without actually renaming anything.</td>
-<td style="text-align: center;"><strong>Yes</strong> (unless preview mode is on)</td>
-</tr>
 </tbody>
 </table>
-<p>A small colored dot next to the dropdown indicates whether the current configuration is <strong>destructive</strong> (red) or <strong>non-destructive</strong> (green). This indicator updates in real time as you change settings.</p>
+<p>A small colored dot next to the dropdown indicates whether the current configuration is <strong>destructive</strong> (red) or <strong>non-destructive</strong> (green). This indicator updates in real time as you change settings — including when the rename feature is toggled (see Options Section below).</p>
 <h3 id="target-section">Target Section</h3>
 <p>This is where you tell the application what to process.</p>
 <ul>
@@ -2163,19 +2158,24 @@ published on the GitHub release page.</p>
 <li><strong>Directory</strong> — Treat the path as a folder (processes all items inside).</li>
 </ul>
 </li>
-<li><strong>Recursive</strong> — When checked (the default), subfolders are also processed. Uncheck this to process only the top-level contents of a folder.</li>
+<li><strong>Recursive</strong> — When checked (the default), subfolders are also processed. Uncheck this to process only the top-level contents of a folder. This option is automatically disabled when the target type is "File" (recursion has no meaning for single files).</li>
 </ul>
+<div class="admonition tip">
+<p class="admonition-title">Target/Type Validation</p>
+<p>The application automatically detects whether the selected path is a file or directory. If the detected kind conflicts with the selected type (e.g., you select "File" type but point to a directory), a red error message appears below the type selector and the START button is disabled until the conflict is resolved.</p>
+</div>
 <h3 id="options-section">Options Section</h3>
-<p>Available options change depending on the selected operation type.</p>
+<p>All option controls are always visible regardless of the selected operation type. Controls that do not apply to the current operation are disabled with a brief explanation.</p>
 <ul>
 <li><strong>ID Algorithm</strong> — Choose between <code>md5</code> (faster, shorter IDs) and <code>sha256</code> (stronger, longer IDs). This controls how file identifiers are generated.</li>
-<li><strong>Compute SHA-512</strong> — When checked, an additional high-strength hash is computed for each file. Useful for verification workflows; not needed for most users.</li>
-<li><strong>Extract EXIF metadata</strong> — When checked, embedded metadata (camera settings, GPS coordinates, creation dates, etc.) is extracted from media files using ExifTool. Requires ExifTool to be installed. This option is automatically enabled for Meta Merge operations.</li>
-<li><strong>Dry run</strong> (Rename only) — When checked, the application shows a preview of what files <em>would</em> be renamed without actually changing anything. This is on by default as a safety measure. Uncheck it to perform the actual rename.</li>
-<li><strong>Write in-place</strong> (Meta Merge Delete only) — When checked, writes output as sidecar JSON files alongside the originals instead of a single combined file.</li>
+<li><strong>Compute SHA-512</strong> — When checked, an additional high-strength hash is computed for each file. If the "Compute SHA-512 by default" setting is enabled on the Settings tab, this checkbox is forced on with an explanation ("Enabled in Settings") and cannot be unchecked from the Operations tab.</li>
+<li><strong>Extract EXIF metadata</strong> — When checked, embedded metadata (camera settings, GPS coordinates, creation dates, etc.) is extracted from media files using ExifTool. Requires ExifTool to be installed. Automatically forced on for Meta Merge and Meta Merge Delete operations.</li>
+<li><strong>Rename files</strong> — When checked, files are renamed to unique, content-based names ("storage names") after indexing. This feature can be combined with any operation type. Enabling rename makes the operation destructive (the indicator dot turns red) unless dry-run is also enabled.</li>
+<li><strong>Dry run</strong> — Only shown when "Rename files" is checked. When enabled, previews what files <em>would</em> be renamed without actually changing anything. This is on by default as a safety measure.</li>
+<li><strong>Write in-place</strong> — Writes output as sidecar JSON files alongside the originals. Automatically forced on when rename is active. Disabled with an explanation for Meta Merge Delete (which always writes in-place).</li>
 </ul>
 <h3 id="output-section">Output Section</h3>
-<p>Controls where the results go after the operation completes.</p>
+<p>Output controls are always visible. For Meta Merge Delete, the output mode is locked to "Save to file" with an explanatory note, and the file field is required.</p>
 <ul>
 <li><strong>Output mode:</strong><ul>
 <li><strong>View only</strong> — Results are displayed in the output panel at the bottom of the window. Nothing is written to disk.</li>
@@ -2186,13 +2186,12 @@ published on the GitHub release page.</p>
 <li><strong>Output file</strong> — When saving to a file, this field shows the destination path. It is automatically filled in with a suggested name based on your target (e.g., <code>my-folder_directorymeta2.json</code>), but you can change it to anything you like.</li>
 </ul>
 <h3 id="running-an-operation">Running an Operation</h3>
-<p>Once everything is configured, click the action button at the bottom of the Operations area. The button label changes depending on the operation type:</p>
-<ul>
-<li><strong>▶ Run Index</strong></li>
-<li><strong>▶ Run Meta Merge</strong></li>
-<li><strong>▶ Run Meta Merge Delete</strong></li>
-<li><strong>▶ Preview Renames</strong> (dry run on) / <strong>▶ Run Rename</strong> (dry run off)</li>
-</ul>
+<p>Once everything is configured, click the green <strong>▶  START</strong> button at the bottom of the Operations area. The button is centered and uses a distinct green color to differentiate it from other controls.</p>
+<div class="admonition note">
+<p class="admonition-title">Validation Required</p>
+<p>The START button is disabled if the target path is empty or if a target/type conflict
+exists. Resolve any red error messages before running.</p>
+</div>
 <p>While the operation runs:</p>
 <ul>
 <li>A <strong>progress panel</strong> replaces the output area, showing:<ul>
@@ -2204,6 +2203,7 @@ published on the GitHub release page.</p>
 </ul>
 </li>
 <li>The action button changes to a red <strong>■ Cancel</strong> button. Click it (or press ++escape++) to stop the operation after the current file finishes.</li>
+<li>All input controls on the Operations tab are disabled during execution.</li>
 </ul>
 <p>When the operation completes, the progress panel disappears and the output panel shows the results.</p>
 <hr />
