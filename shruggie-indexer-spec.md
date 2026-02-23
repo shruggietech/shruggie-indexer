@@ -302,7 +302,7 @@ The following documents inform this specification. All repository paths are rela
 
 | Document | Path | Description |
 |----------|------|-------------|
-| Implementation Plan | [`./shruggie-indexer-plan.md`](./shruggie-indexer-plan.md) | Sprint-based implementation plan for building the tool from an empty repository to a release-ready codebase. |
+| Implementation Plan | [`.archive/shruggie-indexer-plan.md`](.archive/shruggie-indexer-plan.md) | Sprint-based implementation plan that guided initial construction through Sprints 1.1–3.3 and the v0.1.0 release. All sprints complete. Archived — retained for historical reference only. |
 
 <a id="output-schema"></a>
 #### Output Schema
@@ -596,43 +596,57 @@ All paths in this section are relative to the repository root unless otherwise n
 
 ```
 shruggie-indexer/
+├── .archive/
 ├── .github/
+│   ├── copilot-instructions.md
 │   └── workflows/
 │       ├── docs.yml
 │       └── release.yml
 ├── docs/
+│   ├── getting-started/
 │   ├── porting-reference/
 │   ├── schema/
-│   └── user/
+│   └── user-guide/
 ├── scripts/
 ├── src/
 │   └── shruggie_indexer/
 ├── tests/
 ├── .gitignore
 ├── .python-version
+├── CHANGELOG.md
 ├── LICENSE
-├── README.md
 ├── mkdocs.yml
 ├── pyproject.toml
-├── shruggie-indexer-plan.md
-└── shruggie-indexer-spec.md
+├── README.md
+├── shruggie-indexer-cli.spec
+├── shruggie-indexer-gui.spec
+├── shruggie-indexer-spec.html
+├── shruggie-indexer-spec.md
+├── shruggie-indexer-spec.pdf
+└── shruggie-indexer.code-workspace
 ```
 
 | Path | Type | Description |
 |------|------|-------------|
-| `.github/workflows/` | Directory | GitHub Actions CI/CD pipeline definitions. Contains `release.yml` for the release build pipeline (see [§13](#13-packaging-and-distribution)) and `docs.yml` for automated documentation site deployment to GitHub Pages (see [§3.7](#37-documentation-site)). |
-| `docs/` | Directory | All project documentation beyond the top-level planning and specification files. Subdivided into `schema/` (canonical v2 JSON Schema and validation examples), `porting-reference/` (original implementation reference materials), and `user/` (end-user documentation). See [§3.6](#36-documentation-artifacts) and [§3.7](#37-documentation-site). |
+| `.archive/` | Directory | Human-only workspace for project notes, prompt files, and historical planning artifacts (including the archived implementation plan). AI agents should not parse or modify contents of this directory unless explicitly instructed. Not tracked in source control. |
+| `.github/` | Directory | GitHub-specific repository configuration. Contains `copilot-instructions.md` (project-level AI coding guidelines) and `workflows/` with CI/CD pipeline definitions: `release.yml` for the release build pipeline (see [§13](#13-packaging-and-distribution)) and `docs.yml` for automated documentation site deployment to GitHub Pages (see [§3.7](#37-documentation-site)). |
+| `docs/` | Directory | All project documentation beyond the top-level specification files. Subdivided into `getting-started/` (installation and quick-start guides), `schema/` (canonical v2 JSON Schema and validation examples), `porting-reference/` (original implementation reference materials), and `user-guide/` (end-user documentation including CLI, GUI, configuration, and API reference). See [§3.6](#36-documentation-artifacts) and [§3.7](#37-documentation-site). |
 | `scripts/` | Directory | Platform-paired shell scripts for development environment setup, build automation, and test execution. See [§3.5](#35-scripts-and-build-tooling). |
 | `src/shruggie_indexer/` | Directory | The Python source package. All importable code lives here. See [§3.2](#32-source-package-layout). |
 | `tests/` | Directory | All test code. Mirrors the source package structure. See [§3.4](#34-test-directory-layout). |
 | `.gitignore` | File | Standard Python `.gitignore` covering `__pycache__/`, `*.pyc`, `.venv/`, `dist/`, `build/`, `*.egg-info/`, `site/`, IDE/editor files, OS artifacts, and PyInstaller working directories. |
 | `.python-version` | File | Contains the string `3.12` (no minor patch). Used by `pyenv` and similar version managers to auto-select the correct interpreter. |
+| `CHANGELOG.md` | File | Project changelog following [Keep a Changelog](https://keepachangelog.com/) format. Documents all notable changes organized by release version. |
 | `LICENSE` | File | Full Apache 2.0 license text, obtained from [https://www.apache.org/licenses/LICENSE-2.0.txt](https://www.apache.org/licenses/LICENSE-2.0.txt). |
 | `mkdocs.yml` | File | MkDocs configuration for the documentation site. Defines navigation structure, Material for MkDocs theme settings, and plugin configuration. See [§3.7](#37-documentation-site). |
-| `README.md` | File | Project overview, installation instructions, quick-start usage examples, and links to full documentation. |
 | `pyproject.toml` | File | Centralized project metadata, build system configuration, dependency declarations, entry points, and tool settings (`ruff`, `pytest`, `pyinstaller`). See [§13.2](#132-pyprojecttoml-configuration). |
-| `shruggie-indexer-plan.md` | File | Sprint-based implementation plan. Lives at the repository root for top-level visibility, consistent with `shruggie-feedtools`. |
-| `shruggie-indexer-spec.md` | File | This technical specification (or a consolidated single-file version of it). Lives at the repository root for top-level visibility. |
+| `README.md` | File | Project overview, installation instructions, quick-start usage examples, and links to full documentation. |
+| `shruggie-indexer-cli.spec` | File | PyInstaller build specification for the CLI executable. Defines packaging configuration, runtime hooks, and binary bundling rules for producing the standalone `shruggie-indexer` command-line binary. See [§13](#13-packaging-and-distribution). |
+| `shruggie-indexer-gui.spec` | File | PyInstaller build specification for the GUI executable. Defines packaging configuration, runtime hooks, and binary bundling rules for producing the standalone desktop application binary. See [§13](#13-packaging-and-distribution). |
+| `shruggie-indexer-spec.html` | File | HTML rendering of this technical specification, generated via VS Code plugin (Markdown Preview Enhanced or similar). Generated artifact — not manually edited. |
+| `shruggie-indexer-spec.md` | File | This technical specification. Lives at the repository root for top-level visibility. |
+| `shruggie-indexer-spec.pdf` | File | PDF rendering of this technical specification, generated via VS Code plugin. Generated artifact — not manually edited. |
+| `shruggie-indexer.code-workspace` | File | VS Code multi-root workspace configuration. Defines workspace-level editor settings, recommended extensions, and folder mappings for development. |
 
 The `src`-layout (source code under `src/shruggie_indexer/` rather than a bare `shruggie_indexer/` at the root) is a deliberate choice inherited from `shruggie-feedtools`. It prevents accidental imports of the development source tree during testing — `import shruggie_indexer` in tests always resolves to the installed package, not the working directory. This is the layout recommended by the Python Packaging Authority and enforced by `hatchling` by default.
 

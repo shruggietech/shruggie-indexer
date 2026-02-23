@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **GUI: Resizable output panel** — Output panel includes a drag handle for vertical resizing (100–600 px range). Panel height is persisted across sessions.
 - **GUI: Tooltips** — Descriptive hover tooltips added to all interactive controls, with a global enable/disable toggle in Settings.
 - **Documentation: GUI usage guide** — Added a dedicated desktop application guide (`docs/user-guide/gui.md`) covering launch, interface navigation, all operation types, output panel usage, keyboard shortcuts, session persistence, and troubleshooting. Includes Windows SmartScreen unblocking instructions. Placed prominently in the MkDocs navigation under User Guide.
+- **Spec SS3.1: Repository layout sync** — Updated the top-level layout tree diagram and table to reflect the current repository state. Added entries for `.archive/`, `CHANGELOG.md`, PyInstaller spec files, generated spec renderings (`.html`/`.pdf`), and VS Code workspace file. Corrected `docs/` subdirectory names (`user/` → `user-guide/`, added `getting-started/`). Broadened `.github/` entry to cover `copilot-instructions.md`.
+- **Spec SS1.5: Archived implementation plan** — Updated the reference documents table to point to the archived location (`.archive/shruggie-indexer-plan.md`) and note that all sprints are complete.
+- **Deprecated `shruggie-indexer-plan.md`** — Moved the completed implementation plan from the repository root to `.archive/`. Added `.archive/`, `shruggie-indexer-spec.html`, and `shruggie-indexer-spec.pdf` to `.gitignore`.
 
 ## [0.1.0] - 2026-02-20
 
