@@ -25,6 +25,7 @@ import time
 import tkinter as tk
 import webbrowser
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
 from tkinter import filedialog, messagebox
 from typing import Any
@@ -63,6 +64,11 @@ _TOOLTIP_DELAY_MS = 600
 _DEFAULT_OUTPUT_HEIGHT = 250
 _MIN_OUTPUT_HEIGHT = 100
 _MAX_OUTPUT_HEIGHT = 600
+
+# Compact control sizing — controls modestly larger than adjacent label text
+_CTRL_HEIGHT = 26
+_CB_SIZE = 16
+_RB_SIZE = 16
 
 # Output size thresholds (bytes)
 _HIGHLIGHT_LIMIT = 1_000_000  # 1 MB
@@ -106,6 +112,17 @@ _WEBSITE_URL = "https://shruggie.tech"
 
 _ACTION_LABEL_START = "\u25b6  START"
 _ACTION_LABEL_RUNNING = "\u25a0  Cancel"
+
+# Compact widget constructors — controls sized modestly larger than labels.
+# Explicit ``height``/size kwargs on individual widgets override these defaults.
+_CtkCheckBox = partial(ctk.CTkCheckBox, checkbox_width=_CB_SIZE, checkbox_height=_CB_SIZE)
+_CtkRadioButton = partial(
+    ctk.CTkRadioButton, radiobutton_width=_RB_SIZE, radiobutton_height=_RB_SIZE,
+)
+_CtkButton = partial(ctk.CTkButton, height=_CTRL_HEIGHT)
+_CtkEntry = partial(ctk.CTkEntry, height=_CTRL_HEIGHT)
+_CtkComboBox = partial(ctk.CTkComboBox, height=_CTRL_HEIGHT)
+_CtkOptionMenu = partial(ctk.CTkOptionMenu, height=_CTRL_HEIGHT)
 
 
 # ---------------------------------------------------------------------------
@@ -290,7 +307,7 @@ class _LabeledGroup(ctk.CTkFrame):
             self, text=label,
             font=ctk.CTkFont(size=13, weight="bold"),
             anchor="w",
-        ).pack(fill="x", padx=12, pady=(8, 0))
+        ).pack(fill="x", padx=12, pady=(6, 0))
 
         if description:
             ctk.CTkLabel(
@@ -298,10 +315,10 @@ class _LabeledGroup(ctk.CTkFrame):
                 font=ctk.CTkFont(size=11),
                 text_color=("gray40", "gray60"),
                 anchor="w",
-            ).pack(fill="x", padx=12, pady=(0, 2))
+            ).pack(fill="x", padx=12, pady=(0, 1))
 
         self.content = ctk.CTkFrame(self, fg_color="transparent")
-        self.content.pack(fill="x", padx=12, pady=(4, 10))
+        self.content.pack(fill="x", padx=12, pady=(2, 6))
 
 
 # ---------------------------------------------------------------------------
@@ -374,6 +391,83 @@ class _DragHandle(ctk.CTkFrame):
 
 
 # ---------------------------------------------------------------------------
+# Auto-scroll frame (conditional scrollbar + scroll isolation)
+# ---------------------------------------------------------------------------
+
+
+class _AutoScrollFrame(ctk.CTkFrame):
+    """Scrollable frame that shows a scrollbar only when content overflows.
+
+    Pack child widgets into the ``.content`` frame.  Mousewheel events are
+    isolated — scrolling inside this frame does not propagate to any
+    surrounding scrollable panel.
+    """
+
+    def __init__(self, master: Any, **kwargs: Any) -> None:
+        super().__init__(master, **kwargs)
+
+        # Resolve background colour for the raw tk Canvas
+        mode_idx = 1 if ctk.get_appearance_mode() == "Dark" else 0
+        canvas_bg = ctk.ThemeManager.theme["CTk"]["fg_color"][mode_idx]
+
+        self._canvas = tk.Canvas(
+            self, highlightthickness=0, borderwidth=0,
+            background=canvas_bg, yscrollincrement=1,
+        )
+        self._scrollbar = ctk.CTkScrollbar(self, command=self._canvas.yview)
+        self._canvas.configure(yscrollcommand=self._scrollbar.set)
+
+        self.content = ctk.CTkFrame(self._canvas, fg_color="transparent")
+        self._window_id = self._canvas.create_window(
+            (0, 0), window=self.content, anchor="nw",
+        )
+
+        self._canvas.pack(side="left", fill="both", expand=True)
+        # Scrollbar is NOT packed initially; shown only when needed.
+
+        self.content.bind("<Configure>", self._on_content_configure)
+        self._canvas.bind("<Configure>", self._on_canvas_configure)
+
+        # Scroll isolation: capture mousewheel only while pointer is inside.
+        self._canvas.bind("<Enter>", self._on_enter)
+        self._canvas.bind("<Leave>", self._on_leave)
+
+    # -- geometry callbacks -------------------------------------------------
+
+    def _on_content_configure(self, _event: tk.Event) -> None:  # type: ignore[type-arg]
+        self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+        self._refresh_scrollbar()
+
+    def _on_canvas_configure(self, event: tk.Event) -> None:  # type: ignore[type-arg]
+        self._canvas.itemconfigure(self._window_id, width=event.width)
+        self._refresh_scrollbar()
+
+    def _refresh_scrollbar(self) -> None:
+        """Show scrollbar only when content is taller than the viewport."""
+        self.update_idletasks()
+        if self.content.winfo_reqheight() > self._canvas.winfo_height():
+            if not self._scrollbar.winfo_ismapped():
+                self._scrollbar.pack(side="right", fill="y")
+        else:
+            if self._scrollbar.winfo_ismapped():
+                self._scrollbar.pack_forget()
+            self._canvas.yview_moveto(0)
+
+    # -- scroll isolation ---------------------------------------------------
+
+    def _on_enter(self, _event: tk.Event) -> None:  # type: ignore[type-arg]
+        self._canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
+    def _on_leave(self, _event: tk.Event) -> None:  # type: ignore[type-arg]
+        self._canvas.unbind_all("<MouseWheel>")
+
+    def _on_mousewheel(self, event: tk.Event) -> str:  # type: ignore[type-arg]
+        if self.content.winfo_reqheight() > self._canvas.winfo_height():
+            self._canvas.yview_scroll(int(-event.delta / 4), "units")
+        return "break"
+
+
+# ---------------------------------------------------------------------------
 # Queue-based logging handler for GUI
 # ---------------------------------------------------------------------------
 
@@ -413,30 +507,30 @@ class OutputPanel(ctk.CTkFrame):
         toolbar = ctk.CTkFrame(self, fg_color="transparent", height=32)
         toolbar.pack(fill="x", pady=(0, 4))
 
-        self.output_btn = ctk.CTkButton(
+        self.output_btn = _CtkButton(
             toolbar, text="Output", width=80, command=self._show_json,
         )
         self.output_btn.pack(side="left", padx=(0, 4))
-        self.log_btn = ctk.CTkButton(
+        self.log_btn = _CtkButton(
             toolbar, text="Log", width=60, command=self._show_log,
             fg_color="transparent", text_color=("gray50", "gray70"),
         )
         self.log_btn.pack(side="left", padx=(0, 16))
 
         # Clear button (item 2.7)
-        self.clear_btn = ctk.CTkButton(
+        self.clear_btn = _CtkButton(
             toolbar, text="Clear", width=60, command=self.clear,
         )
         self.clear_btn.pack(side="right", padx=(4, 0))
         _Tooltip(self.clear_btn, "Clear both output and log content.")
 
-        self.copy_btn = ctk.CTkButton(
+        self.copy_btn = _CtkButton(
             toolbar, text="Copy", width=60, command=self._copy, state="disabled",
         )
         self.copy_btn.pack(side="right", padx=(4, 0))
         _Tooltip(self.copy_btn, "Copy current view to clipboard.")
 
-        self.save_btn = ctk.CTkButton(
+        self.save_btn = _CtkButton(
             toolbar, text="Save", width=60, command=self._save, state="disabled",
         )
         self.save_btn.pack(side="right", padx=(4, 0))
@@ -737,7 +831,7 @@ class OperationsPage(ctk.CTkFrame):
         self._action_frame.pack(fill="x", side="bottom", pady=(8, 0))
 
         # Center the START button at ≤50 % window width
-        self.action_btn = ctk.CTkButton(
+        self.action_btn = _CtkButton(
             self._action_frame, text=_ACTION_LABEL_START, height=36,
             font=ctk.CTkFont(size=14, weight="bold"),
             fg_color=("#1b8a1b", "#22882a"),
@@ -754,9 +848,9 @@ class OperationsPage(ctk.CTkFrame):
         )
         _Tooltip(self.action_btn, "Start the selected operation on the target path.")
 
-        # Use a plain CTkFrame instead of CTkScrollableFrame so no
-        # permanent scrollbar appears when content fits the window.
-        self._scroll = ctk.CTkFrame(self, fg_color="transparent")
+        # Auto-scrollable frame — scrollbar only appears when content
+        # overflows; mousewheel events do not propagate to the output panel.
+        self._scroll = _AutoScrollFrame(self, fg_color="transparent")
         self._scroll.pack(fill="both", expand=True)
 
         self._build_operation_group()
@@ -766,10 +860,10 @@ class OperationsPage(ctk.CTkFrame):
 
     def _build_operation_group(self) -> None:
         group = _LabeledGroup(
-            self._scroll, "Operation",
+            self._scroll.content, "Operation",
             "Select the indexing operation to perform.",
         )
-        group.pack(fill="x", pady=(0, 8))
+        group.pack(fill="x", pady=(0, 6))
         c = group.content
 
         row = ctk.CTkFrame(c, fg_color="transparent")
@@ -777,7 +871,7 @@ class OperationsPage(ctk.CTkFrame):
 
         ctk.CTkLabel(row, text="Type:", anchor="w").pack(side="left", padx=(0, 8))
         self._op_type_var = ctk.StringVar(value=_OP_INDEX)
-        self._op_menu = ctk.CTkOptionMenu(
+        self._op_menu = _CtkOptionMenu(
             row, variable=self._op_type_var,
             values=_OPERATION_LABELS,
             command=self._on_operation_changed,
@@ -791,10 +885,10 @@ class OperationsPage(ctk.CTkFrame):
 
     def _build_target_group(self) -> None:
         group = _LabeledGroup(
-            self._scroll, "Target",
+            self._scroll.content, "Target",
             "Choose the file or directory to index.",
         )
-        group.pack(fill="x", pady=(0, 8))
+        group.pack(fill="x", pady=(0, 6))
         c = group.content
 
         # Path entry row
@@ -804,7 +898,7 @@ class OperationsPage(ctk.CTkFrame):
         ctk.CTkLabel(path_frame, text="Path:", width=40, anchor="w").pack(
             side="left", padx=(0, 6),
         )
-        self._path_entry = ctk.CTkEntry(
+        self._path_entry = _CtkEntry(
             path_frame, placeholder_text="Select a file or folder...",
         )
         self._path_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
@@ -815,13 +909,13 @@ class OperationsPage(ctk.CTkFrame):
         self._path_entry.bind("<KeyRelease>", lambda _: self._on_target_or_type_change())
 
         # Browse buttons -- single button for file/directory, dual for auto
-        self._browse_single_btn = ctk.CTkButton(
+        self._browse_single_btn = _CtkButton(
             path_frame, text="Browse", width=80, command=self._browse_by_type,
         )
-        self._browse_file_btn = ctk.CTkButton(
+        self._browse_file_btn = _CtkButton(
             path_frame, text="File\u2026", width=60, command=self._browse_file,
         )
-        self._browse_dir_btn = ctk.CTkButton(
+        self._browse_dir_btn = _CtkButton(
             path_frame, text="Folder\u2026", width=70, command=self._browse_dir,
         )
         _Tooltip(self._browse_single_btn, "Open a file or directory picker.")
@@ -847,7 +941,7 @@ class OperationsPage(ctk.CTkFrame):
         self._type_var = ctk.StringVar(value="auto")
         self._type_radios: dict[str, ctk.CTkRadioButton] = {}
         for label, val in [("Auto", "auto"), ("File", "file"), ("Directory", "directory")]:
-            rb = ctk.CTkRadioButton(
+            rb = _CtkRadioButton(
                 opts_frame, text=label, variable=self._type_var, value=val,
                 command=self._on_type_changed,
             )
@@ -864,7 +958,7 @@ class OperationsPage(ctk.CTkFrame):
         recursive_row.pack(fill="x", pady=(2, 0))
 
         self._recursive_var = ctk.BooleanVar(value=True)
-        self._recursive_cb = ctk.CTkCheckBox(
+        self._recursive_cb = _CtkCheckBox(
             recursive_row, text="Recursive", variable=self._recursive_var,
         )
         self._recursive_cb.pack(anchor="w")
@@ -884,21 +978,21 @@ class OperationsPage(ctk.CTkFrame):
 
     def _build_options_group(self) -> None:
         self._opts_group = _LabeledGroup(
-            self._scroll, "Options",
+            self._scroll.content, "Options",
             "Configure indexing parameters.",
         )
-        self._opts_group.pack(fill="x", pady=(0, 8))
+        self._opts_group.pack(fill="x", pady=(0, 6))
         c = self._opts_group.content
 
         # Row 1: ID Algorithm + SHA-512 (always visible)
         row1 = ctk.CTkFrame(c, fg_color="transparent")
-        row1.pack(fill="x", pady=(0, 4))
+        row1.pack(fill="x", pady=(0, 2))
 
         ctk.CTkLabel(row1, text="ID Algorithm:", anchor="w").pack(
             side="left", padx=(0, 6),
         )
         self._id_algo_var = ctk.StringVar(value="md5")
-        self._algo_combo = ctk.CTkComboBox(
+        self._algo_combo = _CtkComboBox(
             row1, values=["md5", "sha256"], variable=self._id_algo_var, width=120,
         )
         self._algo_combo.pack(side="left", padx=(0, 20))
@@ -906,10 +1000,10 @@ class OperationsPage(ctk.CTkFrame):
 
         # Row 2: SHA-512 (own row for hint alignment)
         sha512_row = ctk.CTkFrame(c, fg_color="transparent")
-        sha512_row.pack(fill="x", pady=(4, 0))
+        sha512_row.pack(fill="x", pady=(2, 0))
 
         self._sha512_var = ctk.BooleanVar(value=False)
-        self._sha512_cb = ctk.CTkCheckBox(
+        self._sha512_cb = _CtkCheckBox(
             sha512_row, text="Compute SHA-512", variable=self._sha512_var,
         )
         self._sha512_cb.pack(anchor="w")
@@ -926,9 +1020,9 @@ class OperationsPage(ctk.CTkFrame):
 
         # Row 3: Extract EXIF (always visible, user-controlled)
         exif_row = ctk.CTkFrame(c, fg_color="transparent")
-        exif_row.pack(fill="x", pady=(4, 0))
+        exif_row.pack(fill="x", pady=(2, 0))
         self._exif_var = ctk.BooleanVar(value=False)
-        self._exif_cb = ctk.CTkCheckBox(
+        self._exif_cb = _CtkCheckBox(
             exif_row, text="Extract EXIF metadata",
             variable=self._exif_var,
         )
@@ -945,9 +1039,9 @@ class OperationsPage(ctk.CTkFrame):
 
         # Row 4: Rename toggle (feature, not operation)
         rename_row = ctk.CTkFrame(c, fg_color="transparent")
-        rename_row.pack(fill="x", pady=(4, 0))
+        rename_row.pack(fill="x", pady=(2, 0))
         self._rename_var = ctk.BooleanVar(value=False)
-        self._rename_cb = ctk.CTkCheckBox(
+        self._rename_cb = _CtkCheckBox(
             rename_row, text="Rename files",
             variable=self._rename_var,
             command=self._on_rename_changed,
@@ -965,9 +1059,9 @@ class OperationsPage(ctk.CTkFrame):
 
         # Row 5: Dry run (enabled only when rename is active)
         dry_run_row = ctk.CTkFrame(c, fg_color="transparent")
-        dry_run_row.pack(fill="x", pady=(4, 0))
+        dry_run_row.pack(fill="x", pady=(2, 0))
         self._dry_run_var = ctk.BooleanVar(value=True)
-        self._dry_run_cb = ctk.CTkCheckBox(
+        self._dry_run_cb = _CtkCheckBox(
             dry_run_row, text="Dry run (preview only)",
             variable=self._dry_run_var,
             command=self._on_dry_run_changed,
@@ -985,9 +1079,9 @@ class OperationsPage(ctk.CTkFrame):
 
         # Row 6: In-place sidecar (enabled only for Meta Merge Delete)
         inplace_row = ctk.CTkFrame(c, fg_color="transparent")
-        inplace_row.pack(fill="x", pady=(4, 0))
+        inplace_row.pack(fill="x", pady=(2, 0))
         self._inplace_var = ctk.BooleanVar(value=True)
-        self._inplace_cb = ctk.CTkCheckBox(
+        self._inplace_cb = _CtkCheckBox(
             inplace_row, text="Write in-place sidecar files",
             variable=self._inplace_var,
         )
@@ -1004,10 +1098,10 @@ class OperationsPage(ctk.CTkFrame):
 
     def _build_output_group(self) -> None:
         self._output_group = _LabeledGroup(
-            self._scroll, "Output",
+            self._scroll.content, "Output",
             "Control where results are written.",
         )
-        self._output_group.pack(fill="x", pady=(0, 8))
+        self._output_group.pack(fill="x", pady=(0, 6))
         c = self._output_group.content
 
         # Output mode radios (always visible, disabled when not applicable)
@@ -1020,7 +1114,7 @@ class OperationsPage(ctk.CTkFrame):
         self._output_mode_var = ctk.StringVar(value="view")
         self._output_mode_radios: dict[str, ctk.CTkRadioButton] = {}
         for label, val in [("View only", "view"), ("Save to file", "save"), ("Both", "both")]:
-            rb = ctk.CTkRadioButton(
+            rb = _CtkRadioButton(
                 self._output_mode_frame, text=label,
                 variable=self._output_mode_var, value=val,
                 command=self._on_output_mode_changed,
@@ -1049,14 +1143,14 @@ class OperationsPage(ctk.CTkFrame):
         ctk.CTkLabel(self._outfile_frame, text="File:", anchor="w").pack(
             side="left", padx=(0, 6),
         )
-        self._outfile_entry = ctk.CTkEntry(
+        self._outfile_entry = _CtkEntry(
             self._outfile_frame,
             placeholder_text="Output file path (auto-suggested)",
         )
         self._outfile_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
         _Tooltip(self._outfile_entry, "File path where output will be saved.")
 
-        self._outfile_browse_btn = ctk.CTkButton(
+        self._outfile_browse_btn = _CtkButton(
             self._outfile_frame, text="Browse", width=80,
             command=self._browse_outfile,
         )
@@ -1581,8 +1675,9 @@ class SettingsTab(ctk.CTkFrame):
             font=ctk.CTkFont(size=18, weight="bold"), anchor="w",
         ).pack(fill="x", pady=(0, 16))
 
-        scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
-        scroll.pack(fill="both", expand=True)
+        self._scroll = _AutoScrollFrame(self, fg_color="transparent")
+        self._scroll.pack(fill="both", expand=True)
+        scroll = self._scroll.content
 
         # -- Indexing Defaults ---
         self._section_header(scroll, "Indexing Defaults")
@@ -1591,14 +1686,14 @@ class SettingsTab(ctk.CTkFrame):
         row.pack(fill="x", pady=(0, 8))
         ctk.CTkLabel(row, text="Default ID Algorithm:").pack(side="left", padx=(0, 6))
         self.id_algo_var = ctk.StringVar(value="md5")
-        algo_combo = ctk.CTkComboBox(
+        algo_combo = _CtkComboBox(
             row, values=["md5", "sha256"], variable=self.id_algo_var, width=120,
         )
         algo_combo.pack(side="left")
         _Tooltip(algo_combo, "Default hash algorithm for new operations.")
 
         self.sha512_var = ctk.BooleanVar(value=False)
-        sha512_cb = ctk.CTkCheckBox(
+        sha512_cb = _CtkCheckBox(
             scroll, text="Compute SHA-512 by default", variable=self.sha512_var,
             command=self._on_sha512_changed,
         )
@@ -1613,7 +1708,7 @@ class SettingsTab(ctk.CTkFrame):
         ctk.CTkLabel(row2, text="JSON Indentation:").pack(side="left", padx=(0, 6))
         self.indent_var = ctk.StringVar(value="2")
         for label, val in [("2 spaces", "2"), ("4 spaces", "4"), ("Compact", "none")]:
-            rb = ctk.CTkRadioButton(
+            rb = _CtkRadioButton(
                 row2, text=label, variable=self.indent_var, value=val,
             )
             rb.pack(side="left", padx=(0, 10))
@@ -1631,7 +1726,7 @@ class SettingsTab(ctk.CTkFrame):
         ctk.CTkLabel(row3, text="Verbosity:").pack(side="left", padx=(0, 6))
         self.verbosity_var = ctk.StringVar(value="normal")
         for label, val in [("Normal", "normal"), ("Verbose", "verbose"), ("Debug", "debug")]:
-            rb = ctk.CTkRadioButton(
+            rb = _CtkRadioButton(
                 row3, text=label, variable=self.verbosity_var, value=val,
             )
             rb.pack(side="left", padx=(0, 10))
@@ -1645,7 +1740,7 @@ class SettingsTab(ctk.CTkFrame):
         self._section_header(scroll, "Interface")
 
         self.tooltips_var = ctk.BooleanVar(value=True)
-        tooltips_cb = ctk.CTkCheckBox(
+        tooltips_cb = _CtkCheckBox(
             scroll, text="Show tooltips on hover",
             variable=self.tooltips_var,
             command=self._on_tooltips_changed,
@@ -1659,13 +1754,13 @@ class SettingsTab(ctk.CTkFrame):
         row4 = ctk.CTkFrame(scroll, fg_color="transparent")
         row4.pack(fill="x", pady=(0, 8))
         ctk.CTkLabel(row4, text="Config File:").pack(side="left", padx=(0, 6))
-        self.config_entry = ctk.CTkEntry(
+        self.config_entry = _CtkEntry(
             row4, placeholder_text="Optional TOML config path",
         )
         self.config_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
         _Tooltip(self.config_entry, "Path to a TOML configuration file for custom defaults.")
 
-        config_browse = ctk.CTkButton(
+        config_browse = _CtkButton(
             row4, text="Browse", width=80, command=self._browse_config,
         )
         config_browse.pack(side="right")
@@ -1673,14 +1768,14 @@ class SettingsTab(ctk.CTkFrame):
 
         btn_frame = ctk.CTkFrame(scroll, fg_color="transparent")
         btn_frame.pack(fill="x", pady=(8, 8))
-        reset_btn = ctk.CTkButton(
+        reset_btn = _CtkButton(
             btn_frame, text="Reset to Defaults", width=140,
             command=self._reset_defaults,
         )
         reset_btn.pack(side="left", padx=(0, 10))
         _Tooltip(reset_btn, "Reset all settings to factory defaults.")
 
-        open_btn = ctk.CTkButton(
+        open_btn = _CtkButton(
             btn_frame, text="Open Config Folder", width=140,
             command=self._open_config_folder,
         )
@@ -1689,7 +1784,7 @@ class SettingsTab(ctk.CTkFrame):
 
     @staticmethod
     def _section_header(
-        parent: ctk.CTkFrame | ctk.CTkScrollableFrame, text: str,
+        parent: ctk.CTkFrame, text: str,
     ) -> None:
         ctk.CTkLabel(
             parent, text=text,
@@ -1824,14 +1919,14 @@ class AboutTab(ctk.CTkFrame):
         links_frame = ctk.CTkFrame(content, fg_color="transparent")
         links_frame.pack(pady=(0, 20))
 
-        docs_btn = ctk.CTkButton(
+        docs_btn = _CtkButton(
             links_frame, text="Documentation",
             width=160, command=lambda: webbrowser.open(_DOCS_URL),
         )
         docs_btn.pack(side="left", padx=(0, 10))
         _Tooltip(docs_btn, "Open the project documentation in your browser.")
 
-        website_btn = ctk.CTkButton(
+        website_btn = _CtkButton(
             links_frame, text="shruggie.tech",
             width=160, command=lambda: webbrowser.open(_WEBSITE_URL),
         )
@@ -1930,7 +2025,7 @@ class ShruggiIndexerApp(ctk.CTk):
 
         # Tab buttons
         for tab_id in (_TAB_OPERATIONS, _TAB_SETTINGS, _TAB_ABOUT):
-            btn = ctk.CTkButton(
+            btn = _CtkButton(
                 self._sidebar,
                 text=_TAB_LABELS[tab_id],
                 width=_SIDEBAR_WIDTH - 16,
