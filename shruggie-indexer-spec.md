@@ -6,8 +6,8 @@
 - **License:** Apache 2.0 ([full text](https://www.apache.org/licenses/LICENSE-2.0))
 - **Version:** 0.1.0 (MVP)
 - **Author:** William Thompson (ShruggieTech LLC)
-- **Date:** 2026-02-18
-- **Status:** DRAFT
+- **Date:** 2026-02-23
+- **Status:** AMENDED
 - **Audience:** AI-first, Human-second
 
 ---
