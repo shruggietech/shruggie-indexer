@@ -2118,6 +2118,8 @@
 
 <span class="k">[exiftool]</span>
 <span class="n">exclude_extensions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;csv&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;htm&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;html&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;json&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;tsv&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;xml&quot;</span><span class="p">]</span>
+<span class="c1"># exclude_keys = [...]          # Replace the entire key exclusion set (advanced)</span>
+<span class="c1"># exclude_keys_append = [...]   # Append additional keys to the default exclusion set</span>
 <span class="n">base_args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="s2">&quot;-extractEmbedded3&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="s2">&quot;-scanForXMP&quot;</span><span class="p">,</span>
@@ -2393,7 +2395,34 @@
 <p><code>exiftool.exclude_extensions</code> controls which file types are skipped for ExifTool invocation. Default: <code>["csv", "htm", "html", "json", "tsv", "xml"]</code>.</p>
 <h3 id="key-exclusions">Key exclusions</h3>
 <p>After ExifTool returns metadata, certain operational and OS-specific keys are filtered out before storage. Because exiftool with <code>-G</code> flags emits group-prefixed keys (e.g. <code>System:FileName</code>), the filter matches by <strong>base key name</strong> (the portion after the last <code>:</code> separator).</p>
-<p>The complete exclusion set:</p>
+<p>The key exclusion set is configurable via two TOML keys:</p>
+<table>
+<thead>
+<tr>
+<th>Config key</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>exiftool.exclude_keys = [...]</code></td>
+<td><strong>Replace</strong> — the specified list becomes the complete exclusion set.</td>
+</tr>
+<tr>
+<td><code>exiftool.exclude_keys_append = [...]</code></td>
+<td><strong>Append</strong> — entries are added to the compiled default set below.</td>
+</tr>
+</tbody>
+</table>
+<p>Example — append additional keys:</p>
+<div class="highlight"><pre><span></span><code><span class="k">[exiftool]</span>
+<span class="n">exclude_keys_append</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Copyright&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Artist&quot;</span><span class="p">]</span>
+</code></pre></div>
+<p>Example — replace the entire set (advanced):</p>
+<div class="highlight"><pre><span></span><code><span class="k">[exiftool]</span>
+<span class="n">exclude_keys</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;SourceFile&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Directory&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FileName&quot;</span><span class="p">]</span>
+</code></pre></div>
+<p>The compiled default exclusion set:</p>
 <table>
 <thead>
 <tr>
@@ -2524,7 +2553,7 @@
 </tr>
 </tbody>
 </table>
-<p>This convention applies to all collection fields: <code>filesystem_excludes.names</code>, <code>filesystem_excludes.globs</code>, <code>exiftool.exclude_extensions</code>, <code>exiftool.base_args</code>, <code>metadata_exclude.patterns</code>, and <code>extension_groups.*</code>.</p>
+<p>This convention applies to all collection fields: <code>filesystem_excludes.names</code>, <code>filesystem_excludes.globs</code>, <code>exiftool.exclude_extensions</code>, <code>exiftool.exclude_keys</code>, <code>exiftool.base_args</code>, <code>metadata_exclude.patterns</code>, and <code>extension_groups.*</code>.</p>
 <h3 id="unknown-fields">Unknown fields</h3>
 <p>Unrecognized keys in configuration files are logged as a warning and ignored. They are not fatal errors, which allows forward compatibility when older tool versions encounter config files written for newer versions.</p>
 <h2 id="parameter-implications">Parameter Implications</h2>
