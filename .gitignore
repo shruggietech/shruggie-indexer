@@ -199,8 +199,8 @@ cython_debug/
 
 # Project-specific: archive and generated spec renderings
 #.archive/
-shruggie-indexer-spec.html
-shruggie-indexer-spec.pdf
+#shruggie-indexer-spec.html
+#shruggie-indexer-spec.pdf
 
 # Cursor
 #  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
