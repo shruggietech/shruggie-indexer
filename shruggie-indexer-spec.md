@@ -102,6 +102,8 @@
   - [10.5. Indexing Execution and Progress](#105-indexing-execution-and-progress)
   - [10.6. Output Display and Export](#106-output-display-and-export)
   - [10.7. Keyboard Shortcuts and Accessibility](#107-keyboard-shortcuts-and-accessibility)
+  - [10.8. Supplemental GUI Components](#108-supplemental-gui-components)
+  - [10.9. GUI Design Standards](#109-gui-design-standards)
 - [11. Logging and Diagnostics](#11-logging-and-diagnostics)
   - [11.1. Logging Architecture](#111-logging-architecture)
   - [11.2. Logger Naming Hierarchy](#112-logger-naming-hierarchy)
@@ -6299,6 +6301,109 @@ The GUI installs a queue-based logging handler (`_LogQueueHandler`) on the root 
 5. After the operation completes, the handler is removed from the logger.
 
 This architecture ensures thread safety — the background indexing thread writes to the queue, and only the main thread reads from it and updates widgets.
+
+<a id="109-gui-design-standards"></a>
+### 10.9. GUI Design Standards
+
+> **Added 2026-02-23:** This subsection codifies GUI design governance for `shruggie-indexer`. All GUI implementation work must comply with the standards defined in this subsection. AI coding agents should review §10.9 before beginning any GUI-related task.
+
+Repeated GUI implementation cycles have demonstrated that UI coherence degrades when changes are made without a codified set of design principles. This subsection establishes two layers of governance:
+
+1. **General usability heuristics** adopted by reference from an industry-standard source.
+2. **Project-specific UI standards** tailored to the CustomTkinter desktop application.
+
+<a id="1091-adopted-usability-heuristics"></a>
+#### 10.9.1. Adopted usability heuristics
+
+The project adopts **Jakob Nielsen's 10 Usability Heuristics for User Interface Design** (Nielsen Norman Group, 1994; revised 2020) as the baseline design evaluation framework.
+
+> Nielsen, J. (1994). *10 Usability Heuristics for User Interface Design.* Nielsen Norman Group.
+> URL: [https://www.nngroup.com/articles/ten-usability-heuristics/](https://www.nngroup.com/articles/ten-usability-heuristics/)
+
+The following table summarizes each heuristic and its application to `shruggie-indexer`:
+
+| # | Heuristic | Application to shruggie-indexer |
+|---|-----------|--------------------------------|
+| 1 | **Visibility of system status** | Progress bars, elapsed timers, log streams, and status labels MUST keep the user informed at all times during indexing operations ([§10.5](#105-indexing-execution-and-progress)). |
+| 2 | **Match between system and real world** | Use terminology familiar to the target audience (file indexing, metadata, sidecars). Avoid exposing internal implementation details (queue polling, dataclass names). |
+| 3 | **User control and freedom** | Provide cancel/stop for long operations ([§10.5](#105-indexing-execution-and-progress)). Allow undo where feasible (dry-run mode). Never trap the user in an irreversible flow without confirmation. |
+| 4 | **Consistency and standards** | Widget behavior, label terminology, color semantics, and layout patterns MUST be uniform across all pages (Operations, Settings, About). |
+| 5 | **Error prevention** | Validate inputs before execution. Disable destructive controls when preconditions are not met ([§10.8.1](#1081-destructive-operation-indicator)). Use confirmation dialogs for destructive operations. |
+| 6 | **Recognition rather than recall** | Tooltips ([§10.8.3](#1083-tooltips)), inline descriptions, and labeled groups ([§10.8.4](#1084-labeled-group-frames)) MUST eliminate the need to consult external documentation for basic operation. Persist session state so users do not need to re-enter settings. |
+| 7 | **Flexibility and efficiency of use** | Keyboard shortcuts for power users ([§10.7](#107-keyboard-shortcuts-and-accessibility)). Sensible defaults that minimize configuration for common workflows. |
+| 8 | **Aesthetic and minimalist design** | Show only controls relevant to the current operation type. Hide or disable irrelevant options (see [§10.9.3](#1093-state-driven-control-visibility)). Do not clutter the interface with rarely used settings. |
+| 9 | **Help users recognize, diagnose, and recover from errors** | Error messages MUST be human-readable, identify the problem, and suggest corrective action. No raw tracebacks in the GUI. |
+| 10 | **Help and documentation** | In-app help via tooltips ([§10.8.3](#1083-tooltips)) and a link to the documentation site's GUI guide ([§10.8.2](#1082-about-tab)). |
+
+<a id="1092-layout-stability"></a>
+#### 10.9.2. Layout stability
+
+**Standard:** The interface MUST NOT visually shift, resize, or "glitch" when transitioning between states (idle, running, complete, error). All layout regions MUST be pre-allocated at their maximum required size during initial window construction. Transitions between states (e.g., showing a progress bar where a START button was) MUST occur within pre-allocated regions.
+
+**Enforcement:** Use fixed-height frames or `grid` geometry with explicit row/column weights. Never use `pack()` with dynamically created widgets that alter the geometry of sibling widgets. If a widget is hidden during certain states, reserve its space with a placeholder or use `grid_remove()` / `grid()` (which preserves geometry) rather than `pack_forget()` / `pack()` (which does not).
+
+See also [§10.9.7](#1097-progress-and-feedback-area-allocation) for the specific application of this standard to the progress/feedback region.
+
+<a id="1093-state-driven-control-visibility"></a>
+#### 10.9.3. State-driven control visibility
+
+**Standard:** Controls that are irrelevant to the currently selected operation type or target type MUST be either visually disabled (grayed out with a brief tooltip explaining why) or hidden. The decision between disabling and hiding follows this rule:
+
+| Situation | Behavior |
+|-----------|----------|
+| Control exists for this operation type but a precondition is unmet | **Disable** with explanatory tooltip |
+| Control does not exist for this operation type at all | **Hide** (remove from layout, but reserve space if hiding causes layout shift per [§10.9.2](#1092-layout-stability)) |
+
+**Rationale:** Disabled controls communicate the existence of a feature and guide the user toward satisfying its preconditions. Hidden controls reduce clutter when a feature is categorically inapplicable.
+
+<a id="1094-control-interdependency-transparency"></a>
+#### 10.9.4. Control interdependency transparency
+
+**Standard:** When one control's state depends on another control's value, the dependency MUST be immediately visible and understandable. Specifically:
+
+1. Changing a parent control MUST instantly update all dependent child controls (enable, disable, show, hide, change default value).
+2. The UI MUST NOT enter a state where an enabled control has no effect due to an invisible dependency.
+3. If a control is auto-set by a parent (e.g., "Recursive" toggling ON when "Type" changes to "Directory"), the user MUST be able to see the change happen and MUST be able to override it unless the override is logically invalid.
+
+**Enforcement:** Implement a centralized state reconciliation function (e.g., `_reconcile_controls()`) that is called whenever any control value changes. This function evaluates the full state of all inputs and sets the enabled/disabled/visible state of all dependent controls in one pass. Do not scatter dependency logic across individual widget callbacks.
+
+<a id="1095-output-handling-clarity"></a>
+#### 10.9.5. Output handling clarity
+
+**Standard:** The user MUST always understand where output will go before pressing START. Output destination MUST be communicated through explicit labeling, not implied by control combinations. The following rules apply:
+
+1. **Default output behavior** MUST be displayed in the UI as descriptive text (e.g., "Output: `<filename>_meta2.json` alongside input file").
+2. **Optional output override** (the Output path selector) MUST be clearly labeled as optional, with placeholder text explaining the default.
+3. **No-output mode** (view in output panel only, decide later) MUST be an explicit, selectable option.
+
+See [§10.6](#106-output-display-and-export) for output panel behavior and [§10.3](#103-target-selection-and-input) for target/output path conventions.
+
+<a id="1096-destructive-operation-safeguards"></a>
+#### 10.9.6. Destructive operation safeguards
+
+**Standard:** Any operation that modifies or deletes files on disk MUST:
+
+1. Display the persistent destructive/non-destructive indicator ([§10.8.1](#1081-destructive-operation-indicator)).
+2. List the specific destructive actions that will occur (e.g., "Will delete 3 sidecar files after merging").
+3. Require a confirmation dialog before execution unless dry-run is active.
+
+<a id="1097-progress-and-feedback-area-allocation"></a>
+#### 10.9.7. Progress and feedback area allocation
+
+**Standard:** The area occupied by the START button, progress bar, STOP button, and associated status information MUST be a single, fixed-height region in the layout. The region's height MUST accommodate the tallest state (progress bar + status text + current-file label) at all times, even when displaying only the START button in idle state. This prevents layout shifts during state transitions.
+
+This is a specific application of the layout stability standard ([§10.9.2](#1092-layout-stability)) to the progress/feedback region defined in [§10.5](#105-indexing-execution-and-progress).
+
+<a id="1098-log-and-output-panel-behavior"></a>
+#### 10.9.8. Log and output panel behavior
+
+**Standard:** The log/output panel is the user's primary feedback channel ([§10.6](#106-output-display-and-export)). It MUST:
+
+1. Auto-scroll to the bottom when new content arrives, unless the user has manually scrolled up.
+2. Resume auto-scrolling when the user scrolls back to the bottom.
+3. Display timestamped entries in the format `HH:MM:SS  LEVEL  message`.
+4. Accept content from both the logging system ([§10.8.5](#1085-debug-logging)) and the progress event system (status messages about currently processing files, [§10.5](#105-indexing-execution-and-progress)).
+5. Have Save and Copy buttons enabled at all times when the panel contains content.
 
 <a id="11-logging-and-diagnostics"></a>
 ## 11. Logging and Diagnostics
