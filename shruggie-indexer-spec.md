@@ -622,6 +622,9 @@ shruggie-indexer/
 │       ├── docs.yml
 │       └── release.yml
 ├── docs/
+│   ├── assets/
+│   │   └── images/
+│   │       └── gui/
 │   ├── getting-started/
 │   ├── porting-reference/
 │   ├── schema/
@@ -677,6 +680,7 @@ src/shruggie_indexer/
 ├── __init__.py
 ├── __main__.py
 ├── _version.py
+├── exceptions.py
 ├── core/
 │   ├── __init__.py
 │   ├── traversal.py
@@ -712,6 +716,7 @@ src/shruggie_indexer/
 | `__init__.py` | Public API surface. Exports the primary programmatic entry points (e.g., `index_path()`, `index_file()`, `index_directory()`) and the configuration constructor. Consumers who `import shruggie_indexer` interact through this module. See [§9.1](#91-public-api-surface). |
 | `__main__.py` | Enables `python -m shruggie_indexer` invocation. Contains only an import and call to `cli.main.main()`. No logic beyond the entry-point dispatch. |
 | `_version.py` | Single source of truth for the package version string: `__version__ = "0.1.0"`. Read by `pyproject.toml` (via `hatchling`'s version plugin), by `__init__.py` for the public `__version__` attribute, and by the CLI `--version` flag. This is the same version management pattern used by `shruggie-feedtools`. |
+| `exceptions.py` | Defines the exception hierarchy used throughout the package: `IndexerError` (base), `IndexerConfigError`, `IndexerTargetError`, `IndexerRuntimeError`, `RenameError`, and `IndexerCancellationError`. See [§9.4](#94-data-classes-and-type-definitions), Exception hierarchy. |
 
 <a id="core-indexing-engine"></a>
 #### `core/` — Indexing Engine
@@ -2707,7 +2712,13 @@ with exiftool.ExifToolHelper(common_args=EXIFTOOL_COMMON_ARGS) as et:
     metadata_list = et.get_metadata(str(path))
 ```
 
-Error isolation in batch mode is handled by wrapping each per-file `get_metadata()` call in a try/except. If the persistent process dies, the `ExifToolHelper` context manager is re-entered to spawn a fresh process, and the failed file is logged as a field-level error. The `-quiet` flag is appended to `common_args` when the logging level is above DEBUG.
+Error isolation in batch mode is handled by wrapping each per-file `get_metadata()` call in a try/except. When `ExifToolHelper` raises `ExifToolExecuteError` for a non-zero exit code, the handler attempts metadata recovery before discarding the result: if the exception's stdout contains valid JSON with metadata keys beyond `SourceFile`, the module parses and filters the output normally ([§17.5](#175-exiftool-invocation-strategy)). ExifTool returns exit code 1 for informational conditions such as "unknown file type" but still produces usable system-level metadata (file size, timestamps, attributes) — discarding this output would be a behavioral regression against the original MakeIndex.
+
+The persistent exiftool process is **not** reset on a per-file non-zero exit. A non-zero exit code indicates a per-file condition (e.g., unrecognized format), not a process health failure. Only actual process death (broken pipe, timeout, context manager failure) triggers a process reset and re-entry of the `ExifToolHelper` context. This distinction avoids the performance penalty of unnecessary process restarts.
+
+When recovered metadata contains an `ExifTool:Error` field with value `"Unknown file type"`, the event is logged at `INFO` level (not WARNING): `"ExifTool: unknown file type for <filename>; system metadata preserved"`. Other `ExifTool:Error` values are similarly logged at `INFO` with the error text.
+
+The `-quiet` flag is appended to `common_args` when the logging level is above DEBUG.
 
 **Fallback backend: `subprocess.run()` with argfile.** If `pyexiftool` is unavailable or if the persistent process cannot be maintained (e.g., in constrained environments), the module falls back to a per-file `subprocess.run()` invocation. Arguments are written to a temporary file via `tempfile.NamedTemporaryFile` and passed to exiftool via its `-@` argfile switch, with `-charset filename=utf8` ensuring Unicode filename safety:
 
@@ -2789,7 +2800,14 @@ EXIFTOOL_EXCLUDED_KEYS = frozenset({
 filtered = {k: v for k, v in raw_data.items() if _base_key(k) not in EXIFTOOL_EXCLUDED_KEYS}
 ```
 
-The excluded key set is not currently configurable. Unlike the extension exclusion list (which users may legitimately need to modify), the key exclusion list is a fixed property of exiftool's output format. Keys are matched by base name to accommodate the `-G` flag's group prefixes. If future exiftool versions add new operational keys, the set can be extended in a maintenance update.
+The excluded key set is configurable via TOML configuration following the standard collection field conventions ([§7.7](#77-configuration-override-and-merging-behavior)):
+
+| Config key | Type | Behavior |
+|------------|------|----------|
+| `exiftool.exclude_keys` | list of strings | **Replace** — the specified list becomes the complete exclusion set, overriding all compiled defaults. |
+| `exiftool.exclude_keys_append` | list of strings | **Append** — entries are added to the compiled default set. |
+
+If neither key is present, the compiled default set (the table above) applies unchanged. Keys are matched by base name to accommodate the `-G` flag's group prefixes regardless of whether the exclusion set is the default or a user-provided override. See [§7.4](#74-exiftool-exclusion-lists) for the extension exclusion list, which follows the same replace/append pattern.
 
 <a id="error-handling-1"></a>
 #### Error handling
@@ -2799,7 +2817,7 @@ The excluded key set is not currently configurable. Unlike the extension exclusi
 | Exiftool not on PATH | Return `None`. Single warning on first probe. | Field-level |
 | Extension in exclusion list | Return `None`. Debug log. | Diagnostic |
 | Item is a symlink | Return `None`. Debug log. | Diagnostic |
-| Exiftool returns non-zero | Return `None`. Warning with stderr content. | Field-level |
+| Exiftool returns non-zero | Attempt metadata recovery: if the exception or process stdout contains valid JSON with keys beyond `SourceFile`, parse, filter, and return the metadata normally. If `ExifTool:Error` is present, log at INFO. Only return `None` (with WARNING) when no valid metadata can be recovered. Do **not** reset the persistent process. | Field-level |
 | Exiftool output is not valid JSON | Return `None`. Warning with parse error. | Field-level |
 | Exiftool times out | Return `None`. Warning. | Field-level |
 | Exiftool returns empty metadata | Return `None`. Debug log. | Diagnostic |
@@ -3828,6 +3846,27 @@ exclude_extensions_append = ["log", "txt"]
 
 The `_append` suffix triggers additive merge behavior ([§7.7](#77-configuration-override-and-merging-behavior)) rather than replacement.
 
+<a id="key-exclusion-configuration"></a>
+#### Key exclusion configuration
+
+The metadata key exclusion set ([§6.6](#66-exif-and-embedded-metadata-extraction), "Output parsing and key filtering") is configurable via two TOML keys under the `[exiftool]` table, following the same replace/append convention as extension exclusions:
+
+| Config key | Type | Behavior |
+|------------|------|----------|
+| `exclude_keys` | list of strings | **Replace** — the specified list becomes the complete key exclusion set, overriding all compiled defaults. |
+| `exclude_keys_append` | list of strings | **Append** — entries are added to the compiled default exclusion set (24 keys). |
+
+Values are base key names (e.g., `"Copyright"`, `"Artist"`), matched after stripping any group prefix. When no key exclusion configuration is present, the compiled default set applies unchanged.
+
+```toml
+[exiftool]
+# Add extra keys to exclude (keeps all defaults)
+exclude_keys_append = ["Copyright", "Artist"]
+
+# Or replace the entire exclusion set (advanced):
+# exclude_keys = ["SourceFile", "Directory", "FileName"]
+```
+
 ---
 
 <a id="75-sidecar-suffix-patterns-and-type-identification"></a>
@@ -3933,6 +3972,10 @@ globs = [".trash-*"]
 [exiftool]
 exclude_extensions = ["csv", "htm", "html", "json", "tsv", "xml"]
 
+# Key exclusion (base key names, matching with or without group prefix)
+# exclude_keys = ["SourceFile", "Directory"]        # Replace mode (advanced)
+# exclude_keys_append = ["Copyright", "Artist"]      # Append to defaults
+
 base_args = [
     "-extractEmbedded3",
     "-scanForXMP",
@@ -4019,6 +4062,7 @@ This pattern applies to all collection fields:
 | `filesystem_excludes.names` | `filesystem_excludes.names_append` |
 | `filesystem_excludes.globs` | `filesystem_excludes.globs_append` |
 | `exiftool.exclude_extensions` | `exiftool.exclude_extensions_append` |
+| `exiftool.exclude_keys` | `exiftool.exclude_keys_append` |
 | `exiftool.base_args` | `exiftool.base_args_append` |
 | `metadata_exclude.patterns` | `metadata_exclude.patterns_append` |
 | `metadata_identify.<type>` | `metadata_identify.<type>_append` |
@@ -4238,7 +4282,7 @@ If the file already exists, it is overwritten without prompting, matching the or
 @click.option("--inplace", is_flag=True, default=False)
 ```
 
-Enables writing individual sidecar JSON files alongside each processed item during traversal ([§6.9](#69-json-serialization-and-output-routing), timing of writes). File entries receive sidecar files named `<id>.<extension>_meta2.json`. Directory entries receive sidecar files named `<id>_directorymeta2.json`. The `2` suffix in the sidecar filenames distinguishes v2 sidecar output from any pre-existing v1 sidecar files (`_meta.json`, `_directorymeta.json`), preventing filename collisions during a transition period where both v1 and v2 indexes may coexist in the same directory tree.
+Enables writing individual sidecar JSON files alongside each processed item during traversal ([§6.9](#69-json-serialization-and-output-routing), timing of writes). File entries receive sidecar files named `<filename>_meta2.json`. Directory entries receive sidecar files named `<dirname>_directorymeta2.json`. The `2` suffix in the sidecar filenames distinguishes v2 sidecar output from any pre-existing v1 sidecar files (`_meta.json`, `_directorymeta.json`), preventing filename collisions during a transition period where both v1 and v2 indexes may coexist in the same directory tree.
 
 <a id="84-metadata-processing-options"></a>
 ### 8.4. Metadata Processing Options
@@ -4373,6 +4417,24 @@ Any count ≥ 2 maps to `DEBUG`. The distinction between `-vv` and `-vvv` is han
 Suppresses all logging output except fatal errors. Equivalent to setting the log level to `CRITICAL`. When `--quiet` is active, only errors that prevent the tool from producing output are emitted to `stderr`.
 
 If both `--verbose` and `--quiet` are specified, `--quiet` wins. This follows the principle that silence is an explicit request and should not be overridden by another flag.
+
+<a id="log-file"></a>
+#### `--log-file`
+
+> **Added 2026-02-23:** Persistent log file support. See [§11.1](#111-logging-architecture), Principle 3 and [§11.5](#115-log-output-destinations), File destinations.
+
+```python
+@click.option("--log-file", default=None, is_flag=False, flag_value="")
+```
+
+Enables persistent log file output alongside the default stderr handler. The flag has two forms:
+
+| Usage | Behavior |
+|-------|----------|
+| `--log-file` (no argument) | Write to the platform-specific default app data directory ([§11.1](#111-logging-architecture), Principle 3) |
+| `--log-file /path/to/file.log` | Write to the specified path |
+
+The log file uses the CLI's full format including session ID. The log level written to the file matches the currently configured verbosity (controlled by `-v`/`-q`). The log file is also expressible in the TOML configuration file via `[logging] file_enabled = true` ([§11.5](#115-log-output-destinations), File destinations).
 
 <a id="88-mutual-exclusion-rules-and-validation"></a>
 ### 8.8. Mutual Exclusion Rules and Validation
@@ -5478,7 +5540,7 @@ class IndexerCancellationError(IndexerError):
     """The indexing operation was cancelled by the caller."""
 ```
 
-These exceptions are defined in `core/entry.py` (for target, runtime, and cancellation errors), `config/loader.py` (for config errors), and `core/rename.py` (for rename errors). The base `IndexerError` is defined in the top-level `__init__.py` and re-exported by each module that defines a subclass. `IndexerCancellationError` is also re-exported from the top-level namespace for convenience.
+These exceptions are defined in `exceptions.py` within the `shruggie_indexer` package. The top-level `__init__.py` re-exports the full hierarchy so that consumers can import directly from `shruggie_indexer` or from `shruggie_indexer.exceptions`. `IndexerCancellationError` is also available from the top-level namespace for convenience.
 
 The exception hierarchy maps directly to the CLI exit codes ([§8.10](#810-exit-codes)): `IndexerConfigError` → exit code 2, `IndexerTargetError` → exit code 3, `IndexerRuntimeError` → exit code 4, `IndexerCancellationError` → exit code 5 (`INTERRUPTED`). `RenameError` is a subclass of `IndexerRuntimeError` for exit code purposes but is distinct for programmatic callers who want to handle rename failures specifically. `IndexerCancellationError` is raised when the `cancel_event` parameter (available on `index_path()` and `build_directory_entry()`) is set by a caller. In the GUI, the cancel event is set by the Cancel button ([§10.5](#105-indexing-execution-and-progress)). In the CLI, it is set by the `SIGINT` handler when the user presses `Ctrl+C` ([§8.11](#811-signal-handling-and-graceful-interruption)).
 
@@ -5487,7 +5549,7 @@ The exception hierarchy maps directly to the CLI exit codes ([§8.10](#810-exit-
 <a id="10-gui-application"></a>
 ## 10. GUI Application
 
-This section defines the standalone desktop GUI for `shruggie-indexer` — a visual frontend to the same library code consumed by the CLI ([§8](#8-cli-interface)) and the public API ([§9](#9-python-api)). The GUI is modeled after the `shruggie-feedtools` GUI ([§1.5](#15-reference-documents), External References) and shares its CustomTkinter foundation, dark theme, font stack, and two-panel layout pattern. Where this specification does not explicitly define a visual convention — such as padding values, border radii, or widget spacing — the `shruggie-feedtools` GUI serves as the normative reference.
+This section defines the standalone desktop GUI for `shruggie-indexer` — a visual frontend to the same library code consumed by the CLI ([§8](#8-cli-interface)) and the public API ([§9](#9-python-api)). The GUI uses a CustomTkinter foundation, dark theme, consistent font stack, and two-panel layout pattern. Where this specification does not explicitly define a visual convention — such as padding values, border radii, or widget spacing — the `shruggie-feedtools` GUI ([§1.5](#15-reference-documents), External References) serves as the normative reference for project-family consistency.
 
 The GUI serves a fundamentally different user need than the CLI. The CLI is a power-user and automation tool — its flag-based interface composes naturally in scripts but requires the user to internalize the full option space, understand the implication chain (`--meta-merge-delete` → `--meta-merge` → `--meta`), and manage output routing mentally. The GUI eliminates this cognitive overhead by consolidating the three operation types (Index, Meta Merge, Meta Merge Delete) into a single Operations page with an inline selector, presenting the rename feature as an optional toggle that can apply to any operation, and always displaying all controls with context-sensitive enable/disable logic and safe defaults pre-applied. The GUI is the recommended entry point for users who are unfamiliar with the tool's option space or who want visual confirmation of their configuration before executing.
 
@@ -5495,8 +5557,6 @@ The GUI serves a fundamentally different user need than the CLI. The CLI is a po
 
 **Dependency isolation:** The `customtkinter` dependency is declared as an optional extra (`pip install shruggie-indexer[gui]`) and is imported only within the `gui/` subpackage. No module outside `gui/` imports from it. The core library, CLI, and public API function without any GUI dependency installed (design goal G5, [§2.3](#23-design-goals-and-non-goals)). If the user launches the GUI entry point without `customtkinter` installed, the application MUST fail with a clear error message directing the user to install the dependency (`pip install shruggie-indexer[gui]`).
 
-> **Deviation note on outline structure:** The outline ([§10.1](#101-gui-framework-and-architecture)–10.7) was drafted before the full GUI requirements were finalized. This section follows the outline's subsection headings but expands their content significantly to accommodate the consolidated operations architecture, session persistence, job control with cancellation, the progress display system, and additional UX features (destructive operation indicator, tooltips, resizable output panel, About tab). Sub-subsections are added where the original heading's scope is insufficient.
->
 > **Updated 2026-02-23:** Reflects tab consolidation (Operations/Settings/About model), destructive operation indicator, auto-suggest output paths, dual browse buttons for auto mode, output panel enhancements (auto-clear, Clear button, copy feedback, resizable panel), About tab, version label in sidebar, tooltips, and corrected post-job display behavior.
 
 <a id="101-gui-framework-and-architecture"></a>
@@ -5533,7 +5593,7 @@ The threading contract:
 3. Background threads MUST NOT touch any widget directly. Widget updates — progress messages, output population, button re-enabling — are always dispatched to the main thread via `widget.after(0, callback)` or an equivalent event-loop-safe mechanism.
 4. Only one background indexing thread may be active at any time (see [§10.5](#105-indexing-execution-and-progress), job exclusivity). The GUI enforces this by disabling all operation tabs and action buttons when a job is in flight.
 
-> **Improvement over shruggie-feedtools:** The `shruggie-feedtools` GUI uses a simple fire-and-forget `threading.Thread` with a boolean "running" flag. The `shruggie-indexer` GUI requires a more sophisticated model because indexing operations can be long-running (minutes for large directory trees), cancellable, and produce incremental progress data. The threading model described here adds a cancellation mechanism and a structured progress callback channel that `shruggie-feedtools` did not need.
+> **Historical note:** The `shruggie-feedtools` GUI uses a simpler fire-and-forget `threading.Thread` model sufficient for its shorter-lived operations. The `shruggie-indexer` GUI requires the more sophisticated model described above because indexing operations can be long-running (minutes for large directory trees), cancellable, and produce incremental progress data.
 
 <a id="session-persistence"></a>
 #### Session persistence
@@ -5589,7 +5649,7 @@ This uses the same platform directory resolution as the indexer's TOML configura
 
 **Session state:** Unlike the previous per-tab design, the consolidated Operations page maintains a single set of input state. The selected operation type is stored in the `operations.operation_type` field. Switching operation types within the Operations page updates the visible controls but the shared fields (target path, type, recursive, ID algorithm, SHA-512) persist across operation type changes.
 
-> **Deviation from shruggie-feedtools:** The `shruggie-feedtools` GUI does not persist session state — it starts fresh every launch. The indexer's GUI adds persistence because the tool's input space is significantly more complex (target paths, multiple flag combinations, per-operation configurations) and users benefit from resuming where they left off, especially when iterating on large directory trees.
+> **Historical note:** Session persistence is a `shruggie-indexer`-specific addition. The `shruggie-feedtools` GUI starts fresh every launch, which is acceptable for its simpler input space. The indexer's more complex configuration surface (target paths, multiple flag combinations, per-operation preferences) makes persistence substantially more valuable.
 
 <a id="module-structure"></a>
 #### Module structure
@@ -5701,7 +5761,7 @@ The Operations page uses a vertical layout structure:
 3. **Drag handle** — A thin horizontal bar for resizing the output panel ([§10.6](#106-output-display-and-export)).
 4. **Output section** (bottom, resizable) — The JSON viewer, log stream, and toolbar (Clear, Copy, Save buttons).
 
-The Settings page has its own layout ([§10.4](#104-configuration-panel)) and does not include an action button or output section. The About page has a static informational layout ([§10.8](#108-about-tab)).
+The Settings page has its own layout ([§10.4](#104-configuration-panel)) and does not include an action button or output section. The About page has a static informational layout ([§10.8.2](#1082-about-tab)).
 
 <a id="page-frame-architecture"></a>
 #### Page frame architecture
@@ -5815,7 +5875,7 @@ The Options group contains all operation-related controls, always visible. Contr
 | Extract EXIF metadata | Index (always for Meta Merge / Meta Merge Delete) | *"EXIF extraction is always enabled for Meta Merge operations."* | `CTkCheckBox` | Unchecked | `IndexerConfig.extract_exif` |
 | Rename files | Always | — | `CTkCheckBox` | Unchecked | `IndexerConfig.rename` |
 | Dry run (preview only) | Rename files is checked | *"Enable 'Rename files' to configure dry-run mode."* | `CTkCheckBox` | **Checked** | `IndexerConfig.dry_run` |
-| Write in-place sidecar files | Meta Merge Delete | *"In-place sidecar output is only available for Meta Merge Delete."* | `CTkCheckBox` | Checked | `IndexerConfig.output_inplace` |
+| Write in-place sidecar files | Index, Meta Merge (user-controlled); Meta Merge Delete (forced ON, disabled) | *"In-place output is required for Meta Merge Delete because original sidecar files are deleted after merging."* | `CTkCheckBox` | Checked | `IndexerConfig.output_inplace` |
 
 **SHA-512 settings synchronization:**
 
@@ -5825,7 +5885,7 @@ When the Settings tab's "Compute SHA-512 by default" checkbox is checked, the Op
 
 Rename is an optional feature that can be combined with any of the three core operations (Index, Meta Merge, Meta Merge Delete). When the "Rename files" checkbox is enabled, the dry-run checkbox becomes active (defaults to checked). When rename is enabled *and* dry-run is disabled, the destructive indicator turns red.
 
-> **Deviation from CLI parity:** The CLI treats `--dry-run` as opt-in (default off). The GUI inverts this to default on. This is a deliberate UX decision: the GUI user is more likely to be exploring the tool's behavior and less likely to understand the implications of an irreversible rename.
+> **Design note:** The CLI treats `--dry-run` as opt-in (default off). The GUI inverts this to default on when rename is enabled. This is a deliberate UX decision: the GUI user is more likely to be exploring the tool's behavior and less likely to understand the implications of an irreversible rename.
 
 <a id="output-controls"></a>
 #### Output controls
@@ -5862,6 +5922,27 @@ When the output file field is visible. the GUI auto-populates it with a conventi
 
 The auto-suggest respects manual edits. If the user has manually changed the output field to a value different from the last auto-generated path, subsequent target changes do not overwrite the manual edit.
 
+<a id="centralized-state-reconciliation"></a>
+#### Centralized state reconciliation
+
+> **Added 2026-02-23:** Implements [§10.9.4](#1094-control-interdependency-transparency) (Control Interdependency Transparency).
+
+All control dependency logic is centralized in a single method, `_reconcile_controls()`, on the `OperationsPage` class. This method:
+
+1. Reads the current values of all controls (operation type, target type, target path, recursive, output mode, dry-run, rename, in-place).
+2. Evaluates the dependency rules defined in the context-sensitive options, recursive toggle, and output controls subsections above.
+3. Sets the enabled/disabled/visible state, default value, and info-label text of every dependent control.
+4. Updates the destructive operation indicator ([§10.8.1](#1081-destructive-operation-indicator)).
+5. Updates the output file placeholder text based on the current target and operation configuration.
+
+`_reconcile_controls()` is called:
+
+- On initial page construction.
+- Whenever any input control value changes (via `trace` callbacks on control variables and event bindings on entry widgets).
+- After restoring session state at application startup.
+
+All existing per-widget callback logic that formerly evaluated dependencies independently has been replaced with calls to `_reconcile_controls()`. This ensures the UI never enters an inconsistent state where one control's appearance contradicts another's value.
+
 ---
 
 <a id="104-configuration-panel"></a>
@@ -5872,7 +5953,7 @@ The Settings page is accessed via the sidebar and provides a persistent configur
 <a id="settings-layout"></a>
 #### Settings layout
 
-> **Updated 2026-02-23:** The About section previously embedded at the bottom of the Settings panel has been promoted to its own sidebar tab ([§10.8](#108-about-tab)). The Interface section has been added to control tooltip visibility.
+> **Updated 2026-02-23:** The About section previously embedded at the bottom of the Settings panel has been promoted to its own sidebar tab ([§10.8.2](#1082-about-tab)). The Interface section has been added to control tooltip visibility.
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -5983,6 +6064,8 @@ The running state is tracked by a single boolean flag (`_job_running: bool`) on 
 
 <a id="progress-display"></a>
 #### Progress display
+
+> **Updated 2026-02-23:** The progress display area is allocated as a fixed-height frame at initial window construction, per the layout stability standard ([§10.9.7](#1097-progress-and-feedback-area-allocation)). The frame height accommodates the tallest state (progress bar + status text + current-file label + log stream) and does not change between idle, running, and completed states. In the idle state, the START button is centered within this pre-allocated region; the remaining space is empty but reserved. Additionally, all progress event messages (per-file "processing..." status) are forwarded to the log stream textbox in addition to updating the status and current-file labels. This ensures the log stream provides a complete sequential record of the operation.
 
 The progress display area occupies the output panel during operation execution. It provides real-time feedback about the indexing operation's progress, replacing the blank or previous-output state of the output panel.
 
@@ -6153,7 +6236,7 @@ Copies the full content of the current view (JSON output or log) to the system c
 
 **Visual feedback:** After a successful copy, the button text changes from "Copy" to "Copied!" with a green background color for 1.5 seconds (`_COPY_FEEDBACK_MS`), then reverts to its original appearance. This provides immediate confirmation that the clipboard operation succeeded without requiring a separate toast notification.
 
-For large outputs (>10 MB), the copy button performs the clipboard operation synchronously — if the platform clipboard operation is slow, a brief UI freeze may occur. The Copy button is disabled when no output is present (before any operation has completed or after clearing).
+The Copy button is disabled when the active view (Output or Log) is empty. When viewing the Log tab, Copy is enabled if the log contains any entries, even if no JSON output exists. When viewing the Output tab, Copy is enabled if JSON output is present.
 
 <a id="clear-button"></a>
 #### Clear button
@@ -6171,7 +6254,7 @@ Opens a platform-native save-as dialog defaulting to `.json` extension and a fil
 
 The Save button writes the full JSON output (regardless of whether the output panel is displaying a truncated preview) to the selected file using UTF-8 encoding. After a successful save, a brief toast/notification message appears near the Save button: _"Saved to {filename}"_ (auto-dismisses after 3 seconds).
 
-The Save button is disabled when no output is present.
+The Save button is disabled when the active view is empty. Like Copy, enablement is per-view: the Save button is active when viewing the Log tab if the log has content, and when viewing the Output tab if JSON output is present.
 
 <a id="output-panel-interaction"></a>
 #### Output panel interaction with operations
@@ -6183,7 +6266,7 @@ The output panel is a single widget instance on the Operations page. It displays
 | Output mode | Display behavior |
 |-------------|-----------------|
 | View only | JSON output is loaded into the output panel via `set_json()`. |
-| Save to file | A status message is displayed: _"Output saved to: {filename}"_. The JSON is not loaded into the viewer. Copy and Save buttons remain disabled. |
+| Save to file | A status message is displayed: _"Output saved to: {filename}"_. The JSON is not loaded into the viewer. Copy and Save buttons act on the active view — they are enabled for the Log tab if log content exists. |
 | Both | JSON output is loaded into the output panel AND written to the output file. |
 | _(Meta Merge Delete)_ | Same as "Save to file" — mandatory output file, status message displayed. |
 | _(Rename active)_ | JSON preview is loaded into the output panel (same as "View only"). The rename feature is a toggle that can be active with any operation type. |
@@ -6469,13 +6552,13 @@ This is a specific application of the layout stability standard ([§10.9.2](#109
 <a id="11-logging-and-diagnostics"></a>
 ## 11. Logging and Diagnostics
 
-This section defines the logging and diagnostics system that replaces the original's `Vbs` function — the single most widely-called function in the pslib library. It specifies the logger naming hierarchy, log level mapping to CLI flags, session identifiers, output destinations, log message formatting, and the progress reporting system that feeds the CLI and GUI progress displays.
+This section defines the logging and diagnostics system for `shruggie-indexer`. It specifies the logger naming hierarchy, log level mapping to CLI flags, session identifiers, output destinations, log message formatting, and the progress reporting system that feeds the CLI and GUI progress displays.
 
 The logging system is the implementation of two concerns that earlier sections defined in contract form: [§4.5](#45-error-handling-strategy) (Error Handling Strategy) established the four error severity tiers (fatal, item-level, field-level, diagnostic) and their behavioral consequences. [§8.7](#87-verbosity-and-logging-options) defined the CLI flags (`-v`, `--quiet`) that control logging verbosity. This section provides the concrete `logging`-framework wiring that connects those contracts to runtime behavior.
 
 **Module location:** There is no dedicated logging module in the source package layout ([§3.2](#32-source-package-layout)). Logging configuration is performed in the CLI entry point (`cli/main.py`), the GUI entry point (`gui/app.py`), and optionally by API consumers. Individual modules obtain their loggers at import time via `logging.getLogger(__name__)` — no centralized logging module is needed beyond Python's built-in `logging` package. The one logging-specific artifact is the `SessionFilter` class ([§11.4](#114-session-identifiers)), which is defined in the CLI module where it is used and does not require its own file.
 
-> **Deviation from original:** The original `Vbs` function is a 130-line PowerShell function with six internal sub-functions (`VbsFunctionStackTotalDepth`, `VbsLogPath`, `VbsLogRealityCheck`, `VbsLogWrite`, `VbsUpdateFunctionStack`, `VbsUpdateFunctionStackExtractNumber`) that manually constructs log entries, manages log file creation, compresses call stacks, and formats colorized console output. It is called explicitly by every function in the pslib library, requiring each caller to pass a `Caller` string, a `Status` shorthand, and a `Verbosity` flag through the call chain. The port replaces all of this with Python's standard `logging` framework — which provides named loggers, hierarchical level filtering, pluggable formatters and handlers, and automatic caller identification — eliminating 100% of the `Vbs` implementation and 100% of the manual call-stack bookkeeping that pervaded every function in the original.
+> **Historical note (DEV-08):** The original `Vbs` function is a 130-line PowerShell function with six internal sub-functions (`VbsFunctionStackTotalDepth`, `VbsLogPath`, `VbsLogRealityCheck`, `VbsLogWrite`, `VbsUpdateFunctionStack`, `VbsUpdateFunctionStackExtractNumber`) that manually constructs log entries, manages log file creation, compresses call stacks, and formats colorized console output. It is called explicitly by every function in the pslib library, requiring each caller to pass a `Caller` string, a `Status` shorthand, and a `Verbosity` flag through the call chain. The implementation replaces all of this with Python's standard `logging` framework — which provides named loggers, hierarchical level filtering, pluggable formatters and handlers, and automatic caller identification — eliminating 100% of the `Vbs` implementation and 100% of the manual call-stack bookkeeping that pervaded every function in the original.
 
 <a id="111-logging-architecture"></a>
 ### 11.1. Logging Architecture
@@ -6487,11 +6570,31 @@ The logging system follows four principles that govern all implementation decisi
 
 **Principle 1 — Standard library only.** The core logging system uses Python's `logging` module exclusively. No third-party logging libraries (e.g., `structlog`, `loguru`) are required. Optional enhancements like `rich.logging.RichHandler` for colorized console output are welcome as extras but MUST NOT be assumed. A bare `pip install shruggie-indexer` provides full logging functionality.
 
-**Principle 2 — stderr for logs, stdout for data.** All log output is directed to `sys.stderr`. The `sys.stdout` stream is reserved exclusively for JSON output ([§6.9](#69-json-serialization-and-output-routing), [§8.3](#83-output-mode-options)). This separation is critical: it allows `shruggie-indexer /path | jq .` to work correctly even at maximum verbosity — the JSON stream on stdout is never contaminated by log messages. The original's `Vbs` function conflates log output and console output through `Write-Host`, which writes to the PowerShell host stream rather than stdout or stderr — a distinction that only matters in specific piping scenarios. The port's explicit stderr routing is cleaner and follows Unix convention.
+**Principle 2 — stderr for logs, stdout for data.** All log output is directed to `sys.stderr`. The `sys.stdout` stream is reserved exclusively for JSON output ([§6.9](#69-json-serialization-and-output-routing), [§8.3](#83-output-mode-options)). This separation is critical: it allows `shruggie-indexer /path | jq .` to work correctly even at maximum verbosity — the JSON stream on stdout is never contaminated by log messages.
 
-**Principle 3 — No mandatory file logging.** The original writes to monthly log files (`YYYY_MM.log`) in a hardcoded directory (`C:\bin\pslib\logs`) on every invocation, regardless of verbosity settings. The port does not write log files by default. Console (stderr) output is the sole default destination. File logging is available if a consumer configures it programmatically via the standard `logging.FileHandler`, but the tool does not create log files, log directories, or manage log rotation as part of its normal operation. This is a deliberate simplification: a CLI tool that silently writes to the filesystem on every invocation is surprising behavior, and the original's log directory path was a Windows-specific hardcoded constant that would not port cleanly to cross-platform use.
+> **Historical note:** The original’s `Vbs` function conflated log output and console output through `Write-Host`, which writes to the PowerShell host stream rather than stdout or stderr. The explicit stderr routing follows Unix convention and avoids this conflation.
 
-**Principle 4 — Logging and progress are separate systems.** The original's `Vbs` function handles both diagnostic logging and user-facing progress reporting (e.g., `"[42/100 (42%)] Processing photo.jpg"`), interleaving them into the same output channel. The port separates these concerns entirely: the `logging` framework handles diagnostic messages (warnings, errors, debug trace), while the `ProgressEvent` callback system ([§9.4](#94-data-classes-and-type-definitions), [§11.6](#116-progress-reporting)) handles user-facing progress reporting. They share an output destination in the CLI (both appear on stderr), but they are architecturally independent — the progress system can drive a GUI progress bar, a `tqdm` progress bar, or be disabled entirely, without affecting diagnostic logging.
+**Principle 3 — No mandatory file logging.** The tool does not write log files by default. Console (stderr) output is the sole default destination. Optional persistent log file output is available through three enablement mechanisms:
+
+1. **CLI flag:** `--log-file` (no argument) writes to the platform-specific default directory; `--log-file <path>` writes to the specified path.
+2. **TOML configuration:** `[logging] file_enabled = true` enables file logging to the default directory; `file_path` overrides the location.
+3. **GUI toggle:** A "Write log files" checkbox on the Settings page enables per-operation log file output.
+
+When enabled, log files are written to the platform-appropriate application data directory:
+
+| Platform | Directory |
+|----------|-----------|
+| Windows | `%LOCALAPPDATA%\ShruggieTech\shruggie-indexer\logs\` |
+| macOS | `~/Library/Application Support/ShruggieTech/shruggie-indexer/logs/` |
+| Linux | `~/.local/share/shruggie-indexer/logs/` |
+
+Log files are named by date and session: `YYYY-MM-DD_HHMMSS.log`. The log file uses the CLI's full format including session ID ([§11.5](#115-log-output-destinations)). The directory is created on first use via `platformdirs`. The tool does not manage log rotation — each invocation creates a new file. This is a deliberate design choice: a CLI tool that silently writes to the filesystem on every invocation is surprising behavior, so file logging is always opt-in.
+
+> **Historical note:** The original wrote to monthly log files (`YYYY_MM.log`) in a hardcoded directory (`C:\bin\pslib\logs`) on every invocation, regardless of verbosity settings. That path was a Windows-specific constant that would not translate to cross-platform use.
+
+**Principle 4 — Logging and progress are separate systems.** The `logging` framework handles diagnostic messages (warnings, errors, debug traces), while the `ProgressEvent` callback system ([§9.4](#94-data-classes-and-type-definitions), [§11.6](#116-progress-reporting)) handles user-facing progress reporting. They share an output destination in the CLI (both appear on stderr), but they are architecturally independent — the progress system can drive a GUI progress bar, a `tqdm` progress bar, or be disabled entirely, without affecting diagnostic logging.
+
+> **Historical note:** The original’s `Vbs` function handled both diagnostic logging and user-facing progress reporting (e.g., `"[42/100 (42%)] Processing photo.jpg"`), interleaving them into the same output channel. The separation here eliminates that coupling.
 
 <a id="how-logging-is-configured"></a>
 #### How logging is configured
@@ -6555,9 +6658,11 @@ shruggie_indexer.cli.main           # CLI entry point
 shruggie_indexer.gui.app            # GUI entry point
 ```
 
-**Why `__name__` and not manual names:** The original's `Vbs` function requires every caller to pass a `Caller` string containing a manually-maintained colon-delimited call stack (e.g., `"MakeIndex:MakeObject:GetFileExif"`). This approach has three problems: it is error-prone (callers can pass incorrect or stale stack strings), it couples every function to the logging interface (every function must accept and forward the `Caller` parameter), and it requires the `VbsUpdateFunctionStack` compression function to keep log lines from becoming unwieldy during deep recursion.
+#### Logger naming via `__name__`
 
-Python's `logging.getLogger(__name__)` solves all three problems: logger names are derived automatically from the module's fully-qualified import path, no parameter passing is needed, and the hierarchy is structurally correct by construction. The `%(name)s` format token in the handler's formatter produces the logger name in every log record, providing equivalent traceability to the original's `Caller` field without any manual bookkeeping.
+Every module obtains its logger via `logging.getLogger(__name__)`. This produces a dotted-name logger hierarchy that mirrors the package structure. Logger names are derived automatically from the module’s fully-qualified import path, requiring no parameter passing. The `%(name)s` format token in the handler’s formatter produces the logger name in every log record, providing module-level traceability without manual bookkeeping.
+
+> **Historical note:** The original’s `Vbs` function required every caller to pass a `Caller` string containing a manually-maintained colon-delimited call stack (e.g., `"MakeIndex:MakeObject:GetFileExif"`). This approach was error-prone (callers could pass incorrect or stale stack strings), coupled every function to the logging interface, and required the `VbsUpdateFunctionStack` compression function to keep log lines manageable during deep recursion. Python’s `logging.getLogger(__name__)` solves all three problems by construction.
 
 **Per-module logger pattern:** Every `core/` module follows this pattern:
 
@@ -6624,7 +6729,7 @@ def build_file_entry(path: Path, config: IndexerConfig) -> IndexEntry:
     trace_logger.debug("Entry construction for %s took %.3fs", path.name, elapsed)
 ```
 
-> **Improvement over original:** The original's binary `$Verbosity` boolean provides only two states: all output or file-only output. The port's graduated three-level model (`WARNING` → `INFO` → `DEBUG` → `DEBUG+trace`) gives users practical control over log volume without requiring them to filter log files after the fact.
+> **Historical note:** The graduated three-level model (`WARNING` → `INFO` → `DEBUG` → `DEBUG+trace`) provides substantially more diagnostic control than the original’s binary `$Verbosity` boolean, which offered only two states: all output or file-only output.
 
 <a id="113-log-levels-and-cli-flag-mapping"></a>
 ### 11.3. Log Levels and CLI Flag Mapping
@@ -6632,7 +6737,7 @@ def build_file_entry(path: Path, config: IndexerConfig) -> IndexEntry:
 <a id="standard-level-usage"></a>
 #### Standard level usage
 
-The port uses Python's five standard log levels with consistent semantic meanings across all modules. No custom log levels are defined.
+The implementation uses Python's five standard log levels with consistent semantic meanings across all modules. No custom log levels are defined.
 
 | Level | Numeric | Usage | Example messages |
 |-------|---------|-------|-----------------|
@@ -6709,7 +6814,7 @@ class SessionFilter(logging.Filter):
 
 The filter is attached to the handler (not to individual loggers), so it applies to every log record that reaches the handler regardless of which module emitted it. The `session_id` attribute is then available in the formatter via `%(session_id)s`.
 
-> **Deviation from original:** The original's `$LibSessionID` is a global variable that each `Vbs` call receives as the `$VbsSessionID` parameter (defaulting to the global). This means the session ID flows through the parameter chain — every function that calls `Vbs` either passes it explicitly or relies on the global default. The port eliminates this parameter entirely. No `core/` module function accepts or passes a session ID — the `SessionFilter` injects it transparently at the handler level. This is a structural improvement that removes one parameter from every function signature in the call chain.
+> **Historical note:** The original’s `$LibSessionID` was a global variable passed through every function’s parameter chain to `Vbs`. The Python implementation eliminates this parameter entirely — no `core/` module function accepts or passes a session ID. The `SessionFilter` injects it transparently at the handler level, removing one parameter from every function signature in the call chain.
 
 <a id="lifecycle"></a>
 #### Lifecycle
@@ -6747,13 +6852,15 @@ datefmt = "%Y-%m-%d %H:%M:%S"
 
 | Field | Token | Description |
 |-------|-------|-------------|
-| Timestamp | `%(asctime)s` | Local wall-clock time in `YYYY-MM-DD HH:MM:SS` format. Seconds-level precision is sufficient for CLI diagnostics. The original's dual-format timestamp (Unix milliseconds + ISO datetime) is not replicated — the Unix millisecond timestamp added no diagnostic value for console output and was a relic of the machine-readable log file format. |
+| Timestamp | `%(asctime)s` | Local wall-clock time in `YYYY-MM-DD HH:MM:SS` format. Seconds-level precision is sufficient for CLI diagnostics. |
 | Session ID | `%(session_id)s` | First 8 characters of the 32-character session ID. The abbreviated form balances identifiability with line length — 8 hex characters provide ~4 billion unique values, which is sufficient to distinguish concurrent invocations. The full 32-character ID is available in the `LogRecord` attribute for any consumer that configures a custom formatter. |
 | Level | `%(levelname)-8s` | Left-aligned, padded to 8 characters for visual column alignment. |
 | Logger name | `%(name)s` | The fully-qualified dotted logger name. Provides equivalent traceability to the original's `Caller` field without manual call-stack management. |
 | Message | `%(message)s` | The log message body, formatted via `%`-style string interpolation (Python's `logging` default). |
 
-**Deliberate omission: the original's `pslib({CompressedStack}):` prefix.** The original wraps every log message in a prefix like `pslib(MakeIndex:MakeObject(3)):` that identifies both the library name and the compressed call stack. The port replaces this with the logger name (`%(name)s`), which provides the module path but not the function name or recursion depth. The function name is available via `%(funcName)s` if needed, but it is excluded from the default format because it adds visual noise without improving most debugging scenarios — the module name is almost always sufficient to locate the relevant code. Consumers who need function-level detail can reconfigure the formatter.
+**Deliberate omission: detailed call-stack prefix.** The log format uses the logger name (`%(name)s`) to identify the source module. The function name is available via `%(funcName)s` if needed, but it is excluded from the default format because it adds visual noise without improving most debugging scenarios — the module name is almost always sufficient to locate the relevant code. Consumers who need function-level detail can reconfigure the formatter.
+
+> **Historical note:** The original wrapped every log message in a prefix like `pslib(MakeIndex:MakeObject(3)):` that identified the library name and the compressed call stack. The Python logger name provides equivalent module-path traceability without manual stack management.
 
 <a id="gui-destinations"></a>
 #### GUI destinations
@@ -6799,7 +6906,31 @@ except ImportError:
 
 This is strictly optional. The core logging system works identically with or without `rich`. The `SessionFilter` is attached to whichever handler is constructed.
 
-> **Deviation from original:** The original's `Vbs` function hardcodes console colors per severity level (Gray for INFO, DarkRed for ERROR, Magenta for CRITICAL, DarkYellow for WARNING, DarkCyan for DEBUG, DarkGreen for SUCCESS, DarkGray for UNKNOWN) via `Write-Host -ForegroundColor`. The port delegates colorization to `rich` when available, which uses its own color scheme appropriate to the terminal's color capabilities (256-color, truecolor, or no-color fallback). The original's `SUCCESS` and `UNKNOWN` status levels do not have direct Python `logging` equivalents — success messages are logged at `INFO` level, and the "unknown" status (which the original used as a fallback for unrecognized status strings) has no counterpart because the port does not accept freeform status strings.
+> **Historical note:** The original’s `Vbs` function hardcoded console colors per severity level (`Gray`, `DarkRed`, `Magenta`, `DarkYellow`, `DarkCyan`, `DarkGreen`, `DarkGray`) via `Write-Host -ForegroundColor`. The `rich`-based approach adapts to the terminal’s color capabilities (256-color, truecolor, or no-color fallback). The original’s `SUCCESS` and `UNKNOWN` status levels have no direct Python `logging` equivalents — success messages are logged at `INFO` level, and the “unknown” status (a fallback for unrecognized status strings) is unnecessary since the Python framework does not accept freeform status strings.
+
+
+<a id="file-destinations"></a>
+#### File destinations
+
+> **Added 2026-02-23:** Persistent log file support was introduced as an optional feature. See Principle 3 ([§11.1](#111-logging-architecture)) for enablement mechanisms.
+
+When persistent log file output is enabled, a `logging.FileHandler` is attached to the `shruggie_indexer` package logger alongside the existing CLI or GUI handler. The file handler uses the CLI's full log format including session ID:
+
+```
+2026-02-23 14:30:02  a1b2c3d4  INFO      shruggie_indexer.core.hashing  Hashing file: photo.jpg
+```
+
+Format string:
+
+```python
+fmt = "%(asctime)s  %(session_id)s  %(levelname)-8s  %(name)s  %(message)s"
+datefmt = "%Y-%m-%d %H:%M:%S"
+```
+
+The log level written to the file matches the currently configured verbosity. The file handler is added in the CLI's `configure_logging()` function (when `--log-file` is specified) or in the GUI application initialization (when the "Write log files" toggle is enabled in Settings). In the CLI, the handler persists for the process lifetime. In the GUI, a new log file is created per indexing operation, and the handler is removed after each job finishes.
+
+The `[logging]` TOML section is recognized by the configuration loader ([§7.1](#71-configuration-architecture)) but is handled by the CLI/GUI entry points rather than `IndexerConfig`, because logging configuration is an entry-point concern that varies by invocation context.
+
 
 <a id="116-progress-reporting"></a>
 ### 11.6. Progress Reporting
@@ -6906,7 +7037,7 @@ finally:
     logger.info("Elapsed time: %.1fs", elapsed)
 ```
 
-The original computes elapsed time using `(Get-Date) - $TimeStart` and formats it as `H:M:S.ms`. The port uses `time.perf_counter()` for sub-millisecond precision and formats the result as seconds with one decimal place for typical invocations, or `MM:SS` for invocations exceeding 60 seconds. The formatting is a presentation detail — the `perf_counter()` value is the authoritative measurement.
+The original computes elapsed time using `(Get-Date) - $TimeStart` and formats it as `H:M:S.ms`. The implementation uses `time.perf_counter()` for sub-millisecond precision and formats the result as seconds with one decimal place for typical invocations, or `MM:SS` for invocations exceeding 60 seconds. The formatting is a presentation detail — the `perf_counter()` value is the authoritative measurement.
 
 <a id="item-failure-summary"></a>
 #### Item failure summary
@@ -6922,11 +7053,13 @@ The per-item errors were already logged individually as `ERROR` or `WARNING` mes
 <a id="12-external-dependencies"></a>
 ## 12. External Dependencies
 
-This section catalogs every dependency — binary, standard library, and third-party — that `shruggie-indexer` consumes at runtime, during testing, or during build/packaging. It defines which dependencies are required, which are optional, how optional dependencies are declared and gated, and which original dependencies are eliminated by the port. The section serves both as a dependency manifest for implementers and as the normative reference for the `[project.dependencies]` and `[project.optional-dependencies]` tables in `pyproject.toml` ([§13.2](#132-pyprojecttoml-configuration)).
+This section catalogs every dependency — binary, standard library, and third-party — that `shruggie-indexer` consumes at runtime, during testing, or during build/packaging. It defines which dependencies are required, which are optional, how optional dependencies are declared and gated, and which original dependencies have been eliminated. The section serves both as a dependency manifest for implementers and as the normative reference for the `[project.dependencies]` and `[project.optional-dependencies]` tables in `pyproject.toml` ([§13.2](#132-pyprojecttoml-configuration)).
 
-The dependency architecture implements design goal G5 ([§2.3](#23-design-goals-and-non-goals)): the port declares four required runtime Python dependencies — `click`, `orjson`, `pyexiftool`, and `tqdm` — plus `exiftool` as an external binary. A bare `pip install shruggie-indexer` installs all four packages. The GUI package (`customtkinter`) is declared as an optional extra. Development and testing tools are declared in the `dev` extra. See [§12.3](#123-third-party-python-packages) for the per-package rationale.
+The dependency architecture implements design goal G5 ([§2.3](#23-design-goals-and-non-goals)): the tool declares four required runtime Python dependencies — `click`, `orjson`, `pyexiftool`, and `tqdm` — plus `exiftool` as an external binary. A bare `pip install shruggie-indexer` installs all four packages. The GUI package (`customtkinter`) is declared as an optional extra. Development and testing tools are declared in the `dev` extra. See [§12.3](#123-third-party-python-packages) for the per-package rationale.
 
-> **Dependency philosophy:** The original `MakeIndex` has an implicit dependency set — it calls functions, invokes binaries, and reads global variables without any declaration mechanism. An implementer must trace every code path to discover what is required. The port makes every dependency explicit: external binaries are probed at runtime ([§12.5](#125-dependency-verification-at-runtime)), standard library modules are imported at the top of each file, and third-party packages are declared in `pyproject.toml` with version constraints. Nothing is silently assumed to exist.
+Every dependency is explicitly declared: external binaries are probed at runtime ([§12.5](#125-dependency-verification-at-runtime)), standard library modules are imported at the top of each file, and third-party packages are declared in `pyproject.toml` with version constraints. Nothing is silently assumed to exist.
+
+> **Historical note:** The original `MakeIndex` had an implicit dependency set — it called functions, invoked binaries, and read global variables without any declaration mechanism. An implementer had to trace every code path to discover what was required.
 
 <a id="121-required-external-binaries"></a>
 ### 12.1. Required External Binaries
@@ -6946,9 +7079,9 @@ The dependency architecture implements design goal G5 ([§2.3](#23-design-goals-
 | Cross-platform availability | Available on Windows, Linux, and macOS. See [https://exiftool.org/](https://exiftool.org/) for platform-specific installation. |
 | Failure behavior | Graceful degradation — if `exiftool` is absent, the `metadata` array in all `IndexEntry` output omits the `exiftool.json_metadata` entry; all other indexing operations (hashing, timestamps, sidecar metadata, identity generation) continue normally ([§4.5](#45-error-handling-strategy)). |
 
-The minimum version requirement of ≥ 12.0 is driven by the use of the `-api requestall=3` and `-api largefilesupport=1` arguments ([§6.6](#66-exif-and-embedded-metadata-extraction)), which were stabilized in exiftool 12.x. The port does not enforce version checking at runtime — an older exiftool will likely work for most files but may produce incomplete or incorrect metadata for some edge cases. Version checking is a potential post-MVP enhancement.
+The minimum version requirement of ≥ 12.0 is driven by the use of the `-api requestall=3` and `-api largefilesupport=1` arguments ([§6.6](#66-exif-and-embedded-metadata-extraction)), which were stabilized in exiftool 12.x. Version checking is not enforced at runtime — an older exiftool will likely work for most files but may produce incomplete or incorrect metadata for some edge cases. Version checking is a potential post-MVP enhancement.
 
-> **Deviation from original:** The original depends on two external binaries: `exiftool` and `jq`. The `jq` dependency is eliminated entirely (DEV-06, [§2.6](#26-intentional-deviations-from-the-original)) — JSON parsing is handled natively by `json.loads()` and unwanted keys are removed with a dict comprehension. Additionally, `MetaFileRead` in the original depends on `certutil` (a Windows-only system utility) for Base64 encoding of binary sidecar file contents. The port replaces `certutil` with Python's `base64.b64encode()`, which is cross-platform, requires no subprocess invocation, and is part of the standard library. See [§12.4](#124-eliminated-original-dependencies) for the complete elimination catalog.
+> **Historical note (DEV-05, DEV-06):** The original depended on two external binaries: `exiftool` and `jq`. The `jq` dependency is eliminated — JSON parsing uses `json.loads()` and unwanted keys are removed with a dict comprehension. Additionally, `MetaFileRead` in the original depended on `certutil` (a Windows-only system utility) for Base64 encoding of binary sidecar file contents. Python’s `base64.b64encode()` replaces this with a cross-platform, subprocess-free standard library call. See [§12.4](#124-eliminated-original-dependencies) for the complete elimination catalog.
 
 <a id="122-python-standard-library-modules"></a>
 ### 12.2. Python Standard Library Modules
@@ -6977,7 +7110,7 @@ The core indexing engine (`core/`, `config/`, `models/`) uses only standard libr
 | `typing` | All modules | Type annotations: `Optional`, `Callable`, `Sequence`, `Literal`, etc. Used for function signatures, dataclass field types, and `TYPE_CHECKING` import guards. |
 | `uuid` | `cli/main.py`, `gui/app.py` | Session ID generation via `uuid.uuid4()` ([§11.4](#114-session-identifiers)). |
 
-**Note on `tempfile`:** The original uses `TempOpen`/`TempClose` for temporary file management during exiftool argument passing. The port's primary exiftool backend (`pyexiftool` batch mode, DEV-16) communicates via stdin/stdout pipes and requires no temporary files at all. The fallback backend (`subprocess.run()` + argfile) uses `tempfile.NamedTemporaryFile` with automatic cleanup for writing exiftool argument files — this is a cross-platform replacement for the original's `TempOpen`/`TempClose` pattern. The `TempOpen`/`TempClose` functions themselves are not carried forward (DEV-05, [§2.6](#26-intentional-deviations-from-the-original)).
+**Note on `tempfile`:** The primary exiftool backend (`pyexiftool` batch mode, DEV-16) communicates via stdin/stdout pipes and requires no temporary files. The fallback backend (`subprocess.run()` + argfile) uses `tempfile.NamedTemporaryFile` with automatic cleanup for writing exiftool argument files — a cross-platform approach that supersedes the original’s `TempOpen`/`TempClose` pattern. The `TempOpen`/`TempClose` functions themselves are not carried forward (DEV-05, [§2.6](#26-intentional-deviations-from-the-original)).
 
 <a id="additional-stdlib-modules-used-by-entry-points-and-packaging"></a>
 #### Additional stdlib modules used by entry points and packaging
@@ -6994,7 +7127,7 @@ The core indexing engine (`core/`, `config/`, `models/`) uses only standard libr
 <a id="123-third-party-python-packages"></a>
 ### 12.3. Third-Party Python Packages
 
-The port declares four required runtime dependencies in `[project.dependencies]` — a bare `pip install shruggie-indexer` installs all four. Each was promoted from optional to required because it replaces functionality that would otherwise require significant reimplementation, degrade correctness (Unicode safety), or sacrifice order-of-magnitude performance gains that affect the tool's primary value proposition:
+The tool declares four required runtime dependencies in `[project.dependencies]` — a bare `pip install shruggie-indexer` installs all four. Each was promoted from optional to required because it provides functionality that would otherwise require significant reimplementation, degrade correctness (Unicode safety), or sacrifice order-of-magnitude performance gains that affect the tool’s primary value proposition:
 
 | Package | Version | Justification for required status |
 |---------|---------|-----------------------------------|
@@ -7121,7 +7254,7 @@ These are development-only tools that are not imported by any runtime module. Th
 <a id="124-eliminated-original-dependencies"></a>
 ### 12.4. Eliminated Original Dependencies
 
-The original `MakeIndex` and its dependency tree consume two external binaries, eight top-level pslib functions, six global variables, and approximately 60 nested sub-functions. The port eliminates the majority of these dependencies through Python's standard library, architectural consolidation, or deliberate scope reduction. This subsection provides the complete elimination manifest — every original dependency, its purpose, and what replaces it (or why it is dropped).
+The original `MakeIndex` and its dependency tree consumed two external binaries, eight top-level pslib functions, six global variables, and approximately 60 nested sub-functions. The Python implementation eliminates the majority of these through the standard library, architectural consolidation, or deliberate scope reduction. This subsection provides the complete elimination manifest — every original dependency, its purpose, and what replaces it (or why it is dropped).
 
 <a id="eliminated-external-binaries"></a>
 #### Eliminated external binaries
@@ -7138,10 +7271,10 @@ The original `MakeIndex` and its dependency tree consume two external binaries, 
 |-------------------|-----------------|-------------|-----------|
 | `Base64DecodeString` | Decodes Base64-encoded exiftool argument strings at runtime. Uses an OpsCode dispatch pattern across four encoding/URL-decode combinations. | Eliminated entirely. Exiftool arguments are defined as plain Python string lists — no encoding, no decoding, no dispatch. | DEV-05 |
 | `Date2UnixTime` | Converts formatted date strings to Unix timestamps via a three-stage pipeline: format-code resolution (calling `Date2FormatCode` externally, then falling back to an internal digit-counting heuristic via `Date2UnixTimeSquash` → `Date2UnixTimeCountDigits` → `Date2UnixTimeFormatCode`), then `[DateTimeOffset]::ParseExact().ToUnixTimeMilliseconds()`. | `int(os.stat_result.st_mtime * 1000)` for Unix milliseconds. `datetime.fromtimestamp().isoformat()` for ISO 8601 strings. Both derived directly from `os.stat()` float values — no string formatting, no reparsing, no format-code guessing. | DEV-07 |
-| `Date2FormatCode` | Analyzes date string structure and returns a .NET format code. Called by `Date2UnixTime` as its primary format-detection strategy. | Eliminated along with `Date2UnixTime`. The port never converts date strings — it works with numeric timestamps from the filesystem directly. | DEV-07 |
+| `Date2FormatCode` | Analyzes date string structure and returns a .NET format code. Called by `Date2UnixTime` as its primary format-detection strategy. | Eliminated along with `Date2UnixTime`. The tool never converts date strings — it works with numeric timestamps from the filesystem directly. | DEV-07 |
 | `DirectoryId` (as a standalone function) | Generates directory identifiers by hashing directory name + parent name with four algorithms. Defines 7 internal sub-functions: `DirectoryId-GetName`, `DirectoryId-HashString`, `DirectoryId-HashString-Md5`, `-Sha1`, `-Sha256`, `-Sha512`, `DirectoryId-ParentName`, `DirectoryId-ResolvePath`. | `core/hashing.hash_string()` for all string hashing. `core/paths.extract_components()` for name/parent extraction. `core/hashing.compute_directory_id()` for the two-layer hash+concatenate+hash identity algorithm. The identity algorithm is preserved; the seven sub-functions are replaced by two shared utility functions. | DEV-01 |
 | `FileId` (as a standalone function) | Generates file identifiers by hashing file content (or name for symlinks) with up to four algorithms. Defines 10 internal sub-functions: `FileId-GetName`, `FileId-HashMd5`, `-HashMd5-String`, `-HashSha1`, `-HashSha1-String`, `-HashSha256`, `-HashSha256-String`, `-HashSha512`, `-HashSha512-String`, `FileId-ResolvePath`. | `core/hashing.hash_file()` for content hashing with single-pass multi-algorithm computation. `core/hashing.hash_string()` for name hashing. `core/paths.resolve_path()` for path resolution. The ten sub-functions are replaced by two shared utility functions. | DEV-01, DEV-02 |
-| `MetaFileRead` (as a standalone function) | Reads and parses sidecar metadata files. Defines 16 internal sub-functions for type detection, parent resolution, data reading (JSON, text, binary, link), and hashing. Depends on `certutil`, `jq`, `Lnk2Path`, `UrlFile2Url`, and `ValidateIsJson`. | `core/sidecar.py` reimplements the behavioral contract using stdlib: `json.loads()` replaces `jq`, `base64.b64encode()` replaces `certutil`, `hashlib` replaces the internal hash functions. `Lnk2Path` and `UrlFile2Url` are not ported — `.lnk` and `.url` are Windows-specific shortcut formats that are treated as opaque binary data in the cross-platform port (Base64-encoded when encountered as sidecar content). | DEV-05, DEV-06 |
+| `MetaFileRead` (as a standalone function) | Reads and parses sidecar metadata files. Defines 16 internal sub-functions for type detection, parent resolution, data reading (JSON, text, binary, link), and hashing. Depends on `certutil`, `jq`, `Lnk2Path`, `UrlFile2Url`, and `ValidateIsJson`. | `core/sidecar.py` reimplements the behavioral contract using stdlib: `json.loads()` replaces `jq`, `base64.b64encode()` replaces `certutil`, `hashlib` replaces the internal hash functions. `Lnk2Path` and `UrlFile2Url` are not ported — `.lnk` and `.url` are Windows-specific shortcut formats that are treated as opaque binary data in the cross-platform implementation (Base64-encoded when encountered as sidecar content). | DEV-05, DEV-06 |
 | `TempOpen` | Creates a temporary file with a UUID-based name in a hardcoded pslib temp directory (`C:\bin\pslib\temp`). | Eliminated. The only consumer was the exiftool argument-file pipeline, which is itself eliminated (DEV-05). If temporary files are needed in the future, `tempfile.NamedTemporaryFile` is the stdlib replacement. | DEV-05 |
 | `TempClose` | Deletes a temporary file created by `TempOpen`. Includes a `ForceAll` mode for batch cleanup of the pslib temp directory. | Eliminated along with `TempOpen`. Python's `tempfile` context managers handle cleanup automatically via `__exit__`. | DEV-05 |
 | `Vbs` | Centralized structured logging function: severity normalization, colorized `Write-Host` output, manual call-stack compression, session ID embedding, monthly log file rotation, log directory bootstrapping. Called by every function in the dependency tree. | Python's `logging` standard library module. Named loggers, hierarchical filtering, pluggable formatters and handlers, and automatic caller identification replace 100% of the `Vbs` implementation. See [§11](#11-logging-and-diagnostics). | DEV-08 |
@@ -7151,10 +7284,10 @@ The original `MakeIndex` and its dependency tree consume two external binaries, 
 
 | Original function | Original purpose | Status in port |
 |-------------------|-----------------|----------------|
-| `ValidateIsLink` | Listed as a dependency in the `MakeIndex` docstring but never actually invoked. `FileId` and `DirectoryId` perform symlink detection inline via `ReparsePoint` attribute check. | Not ported. Dead code in the original. Symlink detection in the port uses `Path.is_symlink()`. | 
+| `ValidateIsLink` | Listed as a dependency in the `MakeIndex` docstring but never actually invoked. `FileId` and `DirectoryId` perform symlink detection inline via `ReparsePoint` attribute check. | Not ported. Dead code in the original. Symlink detection uses `Path.is_symlink()`. | 
 | `ValidateIsFile` | Validates that a path references an existing file. Called by `MetaFileRead`. | Not ported as a standalone function. Replaced by `Path.is_file()` calls inline where needed. |
 | `ValidateIsJson` | Validates whether a file contains valid JSON. Called by `MetaFileRead-Data`. | Not ported as a standalone function. Replaced by a try/except around `json.loads()` — the Pythonic pattern for JSON validation. |
-| `Lnk2Path` | Resolves Windows `.lnk` shortcut files to their target paths. Called by `MetaFileRead-Data-ReadLink`. | Not ported. `.lnk` parsing requires either a Windows COM interface or a third-party library (`pylnk3`). In the cross-platform port, `.lnk` files encountered as sidecar content are treated as opaque binary data and Base64-encoded. A post-MVP enhancement could add `.lnk` resolution on Windows via an optional dependency. |
+| `Lnk2Path` | Resolves Windows `.lnk` shortcut files to their target paths. Called by `MetaFileRead-Data-ReadLink`. | Not ported. `.lnk` parsing requires either a Windows COM interface or a third-party library (`pylnk3`). In the cross-platform implementation, `.lnk` files encountered as sidecar content are treated as opaque binary data and Base64-encoded. A post-MVP enhancement could add `.lnk` resolution on Windows via an optional dependency. |
 | `UrlFile2Url` | Extracts the URL from Windows `.url` internet shortcut files. Called by `MetaFileRead-Data-ReadLink`. | Not ported as a standalone function. `.url` files are simple INI-format text files; the URL is extracted with a regex or `configparser` inline in the sidecar reader. This is a trivial operation that does not warrant a separate function. |
 | `UpdateFunctionStack` | Maintains a colon-delimited call-stack string for `Vbs` logging (e.g., `"MakeIndex:MakeObject:GetFileExif"`). Called by every internal sub-function. | Not ported. Python's `logging` framework provides automatic caller identification via `%(name)s`, `%(funcName)s`, and `%(lineno)s` format tokens. Manual call-stack bookkeeping is unnecessary. | 
 | `VariableStringify` | Converts PowerShell variables to string representations, handling `$null` and empty values. Called by `MakeObject`. | Not ported. Python's `str()`, `repr()`, and the `or` pattern (`value or default`) cover all cases handled by this function. |
@@ -7170,14 +7303,14 @@ The original `MakeIndex` and its dependency tree consume two external binaries, 
 | `$global:MetaSuffixExclude`, `$global:MetaSuffixExcludeString` | Runtime copies of sidecar exclude patterns, promoted to global scope. | `config.sidecar_exclude_patterns` field on `IndexerConfig`, threaded explicitly to `core/sidecar.py`. |
 | `$global:DeleteQueue` | Accumulates sidecar file paths for batch deletion when `MetaMergeDelete` is active. Initialized as empty array, populated during traversal, drained after indexing completes. | A local `list[Path]` managed by `core/entry.py`'s orchestrator function, returned to the caller as part of the result. No global mutation. See [§6.8](#68-index-entry-construction). |
 | `$Sep` | Directory separator character. Used in path construction for renamed files. | `pathlib`'s `/` operator and `os.sep`. Manual separator handling is eliminated entirely ([§6.2](#62-path-resolution-and-manipulation)). |
-| `$D_PSLIB_TEMP` | Hardcoded temp directory path (`C:\bin\pslib\temp`). | Eliminated. No temporary files are used in the port's core pipeline (DEV-05). |
-| `$D_PSLIB_LOGS` | Hardcoded log directory path (`C:\bin\pslib\logs`). | Eliminated. The port does not write log files by default ([§11.1](#111-logging-architecture), Principle 3). |
+| `$D_PSLIB_TEMP` | Hardcoded temp directory path (`C:\bin\pslib\temp`). | Eliminated. No temporary files are used in the core pipeline (DEV-05). |
+| `$D_PSLIB_LOGS` | Hardcoded log directory path (`C:\bin\pslib\logs`). | Eliminated. The tool does not write log files by default ([§11.1](#111-logging-architecture), Principle 3). |
 | `$LibSessionID` | Session GUID generated at pslib script load time, embedded in every `Vbs` log entry. | `uuid.uuid4().hex[:8]` generated per invocation in the CLI/GUI entry point and injected via the `SessionFilter` ([§11.4](#114-session-identifiers)). Scoped to the invocation, not global. |
 
 <a id="summary-of-elimination-impact"></a>
 #### Summary of elimination impact
 
-The port's dependency elimination is substantial in both breadth and depth:
+The dependency elimination is substantial in both breadth and depth:
 
 | Category | Original count | Ported | Eliminated | Elimination rate |
 |----------|---------------|--------|------------|-----------------|
@@ -7191,7 +7324,7 @@ The net effect is a dependency tree that is narrower (one external binary instea
 <a id="125-dependency-verification-at-runtime"></a>
 ### 12.5. Dependency Verification at Runtime
 
-The port verifies dependency availability at runtime rather than failing silently or producing confusing errors deep in the call stack. Verification follows two patterns: proactive probing for the external binary, and import-guarded fallback for optional Python packages.
+The tool verifies dependency availability at runtime rather than failing silently or producing confusing errors deep in the call stack. Verification follows two patterns: proactive probing for the external binary, and import-guarded fallback for optional Python packages.
 
 <a id="exiftool-binary-probing"></a>
 #### Exiftool binary probing
@@ -7222,7 +7355,7 @@ def _exiftool_available() -> bool:
 
 The probe is invoked lazily — on the first call to the exiftool extraction function, not at module import time. This means that importing `shruggie_indexer` as a library does not trigger the probe, and consumers who never call metadata extraction never see the warning. The CLI and GUI entry points do not need to check exiftool availability explicitly — the probe fires automatically when the first eligible file is encountered during indexing.
 
-> **Improvement over original:** The original's `GetFileExifRun` invokes `exiftool` directly for every eligible file without prior availability checking. If exiftool is missing, every invocation produces a separate error, resulting in N errors for N files — where a single diagnostic message would suffice. The port's probe-once approach emits one warning for the entire invocation and avoids spawning N doomed subprocesses.
+> **Historical note:** The original's `GetFileExifRun` invoked exiftool directly for every eligible file without prior availability checking. If exiftool was missing, every invocation produced a separate error, resulting in N errors for N files. The probe-once approach emits one warning for the entire invocation and avoids spawning N doomed subprocesses.
 
 <a id="optional-python-package-import-guards"></a>
 #### Optional Python package import guards
@@ -7837,7 +7970,9 @@ This section defines the testing strategy, test categories, coverage expectation
 
 The test directory layout and fixture structure are defined in [§3.4](#34-test-directory-layout). The pytest configuration (markers, testpaths, strict mode) is defined in `pyproject.toml` ([§13.2](#132-pyprojecttoml-configuration)). The test dependencies (`pytest`, `pytest-cov`, `jsonschema`, `pydantic`) are declared in the `dev` extra ([§12.3](#123-third-party-python-packages)). This section defines the behavioral content of those tests — what each test category verifies, what invariants it enforces, and what the expected inputs and outputs are.
 
-**Testing philosophy:** The original `MakeIndex` has no tests of any kind. No unit tests, no integration tests, no schema conformance checks, no assertion of expected output. Correctness was validated by the author's manual inspection of output files. The port inverts this: every behavioral contract defined in this specification SHOULD have a corresponding test. An AI implementation agent building a module from this specification SHOULD be able to derive the test cases from the module's behavioral contract without additional guidance.
+**Testing philosophy:** Every behavioral contract defined in this specification SHOULD have a corresponding test. An AI implementation agent building a module from this specification SHOULD be able to derive the test cases from the module's behavioral contract without additional guidance.
+
+> **Historical note:** The original `MakeIndex` has no tests of any kind — no unit tests, no integration tests, no schema conformance checks, no assertion of expected output. Correctness was validated by the author's manual inspection of output files.
 
 > **Scope clarification:** This section describes what the tests verify and what inputs they use. It does not prescribe the exact `assert` statements or implementation details of each test function — those are derived by the implementer from the behavioral contracts in [§5](#5-output-schema)–[§11](#11-logging-and-diagnostics). The section provides enough structure for an implementer to produce a complete test suite without ambiguity about coverage scope.
 
@@ -8305,7 +8440,7 @@ The double-marker pattern (`@pytest.mark.platform_windows` plus `@pytest.mark.sk
 <a id="146-backward-compatibility-validation"></a>
 ### 14.6. Backward Compatibility Validation
 
-Backward compatibility tests validate that the port produces output semantically equivalent to the original `MakeIndex` implementation for the same input paths — accounting for the documented v1-to-v2 schema restructuring ([§5](#5-output-schema)) and the sixteen intentional deviations ([§2.6](#26-intentional-deviations-from-the-original)). These tests are not schema conformance tests (those validate structure); they are semantic equivalence tests (these validate that the indexer computes the correct values).
+Backward compatibility tests validate that the tool produces output semantically equivalent to the original `MakeIndex` implementation for the same input paths — accounting for the documented v1-to-v2 schema restructuring ([§5](#5-output-schema)) and the sixteen intentional deviations ([§2.6](#26-intentional-deviations-from-the-original)). These tests are not schema conformance tests (those validate structure); they are semantic equivalence tests (these validate that the indexer computes the correct values).
 
 <a id="reference-data-approach"></a>
 #### Reference data approach
@@ -8319,12 +8454,12 @@ Reference data files follow a naming convention: `tests/fixtures/reference/{test
 
 | Validation target | How it is tested |
 |-------------------|-----------------|
-| Hash identity equivalence | For a file with known content, the port's `id` field matches the reference. This validates that hashing (content encoding, algorithm selection, hex formatting, prefix application) produces the same identity as the original. |
-| Name hash equivalence | For a file with a known name, the port's `name.hashes` match the reference. This validates that string hashing (UTF-8 encoding, case handling) matches the original. |
-| Directory identity equivalence | For a directory with a known name and parent, the port's `id` matches the reference. This validates the two-layer `hash(hash(name) + hash(parent))` scheme. |
-| Timestamp equivalence | For a file with known timestamps, the port's `timestamps` values match the reference within platform precision limits (±1 second for ISO, ±1000 for Unix milliseconds). |
-| Sidecar discovery equivalence | For a file with known sidecar files alongside it, the port discovers and classifies the same sidecars as the original. |
-| Sidecar content equivalence | For a JSON sidecar with known content, the port's parsed metadata matches the reference. |
+| Hash identity equivalence | For a file with known content, the tool's `id` field matches the reference. This validates that hashing (content encoding, algorithm selection, hex formatting, prefix application) produces the same identity as the original. |
+| Name hash equivalence | For a file with a known name, the tool's `name.hashes` match the reference. This validates that string hashing (UTF-8 encoding, case handling) matches the original. |
+| Directory identity equivalence | For a directory with a known name and parent, the tool's `id` matches the reference. This validates the two-layer `hash(hash(name) + hash(parent))` scheme. |
+| Timestamp equivalence | For a file with known timestamps, the tool's `timestamps` values match the reference within platform precision limits (±1 second for ISO, ±1000 for Unix milliseconds). |
+| Sidecar discovery equivalence | For a file with known sidecar files alongside it, the tool discovers and classifies the same sidecars as the original. |
+| Sidecar content equivalence | For a JSON sidecar with known content, the tool's parsed metadata matches the reference. |
 
 <a id="intentional-deviation-exclusions"></a>
 #### Intentional deviation exclusions
@@ -8335,7 +8470,7 @@ The sixteen intentional deviations (DEV-01 through DEV-16, [§2.6](#26-intention
 |-----------|--------------------------------------|
 | DEV-02 (multi-algorithm single-pass hashing) | Reference data includes SHA-256 (and optionally SHA-512) values. SHA-1 is dropped. Tests validate the populated values against independently computed hashes, not against the original's outputs. |
 | DEV-07 (direct timestamp derivation) | Timestamps derived from `os.stat()` floats rather than formatted strings. Tests allow a ±1 second tolerance window for ISO timestamps and ±1000 for Unix millisecond values. |
-| DEV-09 (computed null-hash constants) | The port computes null hashes at module load time. Reference data reflects the computed values (`hash(b"0")`), not the original's hardcoded constants (which should be identical, but the test verifies this). |
+| DEV-09 (computed null-hash constants) | The tool computes null hashes at module load time. Reference data reflects the computed values (`hash(b"0")`), not the original's hardcoded constants (which should be identical, but the test verifies this). |
 
 Tests that exercise unchanged behavior (hash identity, sidecar discovery, directory two-layer scheme) require exact matches. Tests that exercise deviated behavior use the deviation-specific validation rules above.
 
@@ -8408,25 +8543,27 @@ Beyond timing, two resource limits are validated:
 
 **Memory.** The indexer processes files by streaming chunks ([§6.3](#63-hashing-and-identity-generation), [§17.2](#172-chunked-file-reading)) and does not load entire file contents into memory. A benchmark test that hashes a 1 GB file should not cause memory usage to spike to 1 GB. This is validated by monitoring `os.getpid()` memory via `resource.getrusage()` (Unix) or `psutil` (cross-platform, if available in the `dev` extra) before and after the operation.
 
-**Recursion depth.** The recursive directory traversal must not exceed Python's default recursion limit (typically 1000 frames). A benchmark test that indexes a 100-level deep directory tree validates that the implementation does not use call-stack recursion that would fail at depth. If the port uses recursive function calls for tree traversal, the benchmark validates that the maximum practical depth (50–100 levels) is safe. Deeper trees are a pathological case documented in [§16.5](#165-large-file-and-deep-recursion-handling).
+**Recursion depth.** The recursive directory traversal must not exceed Python's default recursion limit (typically 1000 frames). A benchmark test that indexes a 100-level deep directory tree validates that the implementation does not use call-stack recursion that would fail at depth. If the implementation uses recursive function calls for tree traversal, the benchmark validates that the maximum practical depth (50–100 levels) is safe. Deeper trees are a pathological case documented in [§16.5](#165-large-file-and-deep-recursion-handling).
 
 <a id="15-platform-portability"></a>
 ## 15. Platform Portability
 
 This section defines the cross-platform design principles, platform-specific behaviors, and filesystem abstraction strategies that enable `shruggie-indexer` to run correctly on Windows, Linux, and macOS from a single codebase. It is the normative reference for how the indexer handles the platform differences that affect filesystem traversal, path manipulation, timestamp extraction, symlink detection, hashing, and output generation.
 
-The original `MakeIndex` runs exclusively on Windows. It depends on PowerShell, .NET Framework types (`System.IO.Path`, `System.IO.FileAttributes`, `DateTimeOffset`), Windows system utilities (`certutil`), and Windows-specific filesystem assumptions (NTFS semantics, backslash separators, the `ReparsePoint` attribute for symlink detection, reliable creation time via `CreationTime`). The port eliminates every one of these Windows-specific dependencies through Python's cross-platform standard library. This section documents the residual platform differences that Python's abstractions cannot fully hide — the behavioral variations in filesystem semantics that produce different observable output depending on which operating system the indexer runs on.
+`shruggie-indexer` uses Python's cross-platform standard library to abstract away all OS-specific dependencies. This section documents the residual platform differences that Python's abstractions cannot fully hide — the behavioral variations in filesystem semantics that produce different observable output depending on which operating system the indexer runs on.
 
-Design goal G2 ([§2.3](#23-design-goals-and-non-goals)) states: *The port MUST run on Windows, Linux, and macOS without platform-specific code branches in the core indexing engine.* This section specifies how that goal is achieved and where platform differences still surface in the output. [§6](#6-core-operations) (Core Operations) defines what each operation does; this section defines how those operations behave differently across platforms and what the implementer must account for. [§14.5](#145-cross-platform-test-matrix) (Cross-Platform Test Matrix) defines how platform-specific behaviors are tested; this section defines what those tests are verifying.
+> **Historical note:** The original `MakeIndex` runs exclusively on Windows. It depends on PowerShell, .NET Framework types (`System.IO.Path`, `System.IO.FileAttributes`, `DateTimeOffset`), Windows system utilities (`certutil`), and Windows-specific filesystem assumptions (NTFS semantics, backslash separators, the `ReparsePoint` attribute for symlink detection, reliable creation time via `CreationTime`). All of these Windows-specific dependencies are eliminated in `shruggie-indexer`.
+
+Design goal G2 ([§2.3](#23-design-goals-and-non-goals)) states: *The tool MUST run on Windows, Linux, and macOS without platform-specific code branches in the core indexing engine.* This section specifies how that goal is achieved and where platform differences still surface in the output. [§6](#6-core-operations) (Core Operations) defines what each operation does; this section defines how those operations behave differently across platforms and what the implementer must account for. [§14.5](#145-cross-platform-test-matrix) (Cross-Platform Test Matrix) defines how platform-specific behaviors are tested; this section defines what those tests are verifying.
 
 <a id="151-cross-platform-design-principles"></a>
 ### 15.1. Cross-Platform Design Principles
 
-Five design principles govern the port's approach to platform portability. These principles are not aspirational guidelines — they are hard constraints that the implementation MUST satisfy.
+Five design principles govern the tool's approach to platform portability. These principles are not aspirational guidelines — they are hard constraints that the implementation MUST satisfy.
 
 **Principle P1 — No platform-conditional logic in the core engine.** The `core/` and `config/` subpackages MUST NOT contain `if sys.platform == ...` or `if os.name == ...` branches. All platform variation is absorbed by Python standard library abstractions (`pathlib`, `os.stat`, `os.scandir`, `hashlib`, `subprocess`) or by the configuration system. When a platform behavior cannot be abstracted away — such as creation time availability — the code uses a uniform strategy (try/fallback) that works on all platforms without branching on the OS identity.
 
-The rationale for this constraint is maintainability: platform-conditional branches in hot-path code are a persistent source of bugs that are only discoverable when running on the affected platform. Python's standard library already provides cross-platform abstractions for every operation the indexer performs. The port leverages these abstractions rather than reimplementing platform detection.
+The rationale for this constraint is maintainability: platform-conditional branches in hot-path code are a persistent source of bugs that are only discoverable when running on the affected platform. Python's standard library already provides cross-platform abstractions for every operation the indexer performs. The implementation leverages these abstractions rather than reimplementing platform detection.
 
 The one permitted exception is the `cli/main.py` and `gui/app.py` entry points, which MAY contain platform-conditional logic for presentation-layer concerns: console encoding setup, Windows console virtual terminal processing, macOS application bundle registration, and similar concerns that do not affect indexing behavior. These are cosmetic entry-point adjustments, not core-engine branches.
 
@@ -8452,12 +8589,12 @@ The relative-path normalization is performed by `core/paths.py` using `PurePosix
 <a id="152-windows-specific-considerations"></a>
 ### 15.2. Windows-Specific Considerations
 
-Windows is the original's native platform and the only platform it supports. The port must produce equivalent output on Windows while also running correctly on Linux and macOS. This subsection documents the Windows-specific behaviors that the port accounts for.
+Windows is the original `MakeIndex`'s native platform and the only platform it supports. `shruggie-indexer` produces equivalent output on Windows while also running correctly on Linux and macOS. This subsection documents the Windows-specific behaviors that the indexer accounts for.
 
 <a id="path-separators-and-pathlib"></a>
 #### Path separators and `pathlib`
 
-Windows uses backslash (`\`) as the native directory separator. The original explicitly manages separators via the `$Sep` global variable, assigned as `[System.IO.Path]::DirectorySeparatorChar`, and used in string concatenation throughout the codebase (e.g., `$FileRenamedPath = -join("$FileParentDirectory","$Sep","$FileRenamed")`). This manual separator management is entirely eliminated by the port — `pathlib.Path` uses the platform-correct separator for all path operations, and the `/` operator constructs paths without string concatenation:
+Windows uses backslash (`\`) as the native directory separator. The original explicitly manages separators via the `$Sep` global variable, assigned as `[System.IO.Path]::DirectorySeparatorChar`, and used in string concatenation throughout the codebase (e.g., `$FileRenamedPath = -join("$FileParentDirectory","$Sep","$FileRenamed")`). This manual separator management is entirely eliminated — `pathlib.Path` uses the platform-correct separator for all path operations, and the `/` operator constructs paths without string concatenation:
 
 ```python
 # Port: pathlib handles separators automatically
@@ -8465,7 +8602,7 @@ target_path = parent_dir / storage_name
 sidecar_path = item_path.parent / f"{item_path.name}_meta2.json"
 ```
 
-No code in the port references `os.sep` directly for path construction. The only use of `os.sep` is in the output normalization described in Principle P3, where `file_system.relative` paths are converted from platform-native separators to forward slashes.
+No code in the implementation references `os.sep` directly for path construction. The only use of `os.sep` is in the output normalization described in Principle P3, where `file_system.relative` paths are converted from platform-native separators to forward slashes.
 
 <a id="long-path-support"></a>
 #### Long path support
@@ -8479,14 +8616,14 @@ Windows has two path length regimes:
 
 The original checks for the 260-character limit in `Base64DecodeString` (line 635) but does not implement general long-path handling. Python 3.6+ on Windows automatically uses the extended-length path prefix (`\\?\`) for paths exceeding 260 characters when the application manifest declares long-path awareness. CPython 3.6+ includes this manifest.
 
-The port does not implement its own path-length management. It relies on Python's built-in long-path support, which is transparent to the application code. If a user encounters path-length errors on older Windows configurations where `LongPathsEnabled` is not set, the resolution is a Windows configuration change, not a code change in the indexer. A diagnostic message SHOULD be added to the error handler for `OSError` with `winerror 206` (filename or extension too long) that suggests enabling long paths.
+The indexer does not implement its own path-length management. It relies on Python's built-in long-path support, which is transparent to the application code. If a user encounters path-length errors on older Windows configurations where `LongPathsEnabled` is not set, the resolution is a Windows configuration change, not a code change in the indexer. A diagnostic message SHOULD be added to the error handler for `OSError` with `winerror 206` (filename or extension too long) that suggests enabling long paths.
 
 <a id="unc-paths"></a>
 #### UNC paths
 
 Universal Naming Convention paths (`\\server\share\path`) are valid input targets on Windows. `pathlib.PureWindowsPath` handles UNC paths correctly — `Path("\\\\server\\share\\folder").parts` returns `("\\\\server\\share\\", "folder")`, and `Path.resolve()` preserves the UNC prefix.
 
-The port does not special-case UNC paths. They flow through `resolve_path()` ([§6.2](#62-path-resolution-and-manipulation)) and `extract_components()` like any other path. The only behavioral difference is that the `parent_path` for a root-level item on a UNC share will be the share root (`\\server\share`) rather than a drive letter.
+The indexer does not special-case UNC paths. They flow through `resolve_path()` ([§6.2](#62-path-resolution-and-manipulation)) and `extract_components()` like any other path. The only behavioral difference is that the `parent_path` for a root-level item on a UNC share will be the share root (`\\server\share`) rather than a drive letter.
 
 UNC paths are not applicable on Linux or macOS. CIFS/SMB mounts on those platforms appear as local paths (e.g., `/mnt/share/folder`), and the mount abstraction is transparent to the indexer.
 
@@ -8523,7 +8660,7 @@ This is one of the permitted entry-point platform branches (Principle P1 excepti
 
 On Windows systems with real-time antivirus scanning enabled (Windows Defender, third-party AV), the file open operations during hashing may trigger per-file scanning. For large directory trees, this can significantly increase indexing time. The indexer cannot control or bypass real-time scanning. If users report unexpectedly slow performance on Windows, the documentation SHOULD mention AV scanning as a potential cause and suggest excluding the target directory from real-time scanning during indexing.
 
-This is a documentation concern, not a code concern. The port does not implement AV-avoidance strategies.
+This is a documentation concern, not a code concern. The indexer does not implement AV-avoidance strategies.
 
 <a id="153-linux-and-macos-considerations"></a>
 ### 15.3. Linux and macOS Considerations
@@ -8564,7 +8701,7 @@ APFS does not normalize — it preserves whatever form was used at creation. Mos
 
 This normalization difference affects name hashing: `hash_string("café")` would produce different results depending on whether the name is NFC or NFD, because the UTF-8 byte sequences differ. To ensure cross-platform hash determinism, `hash_string()` applies `unicodedata.normalize('NFC', value)` unconditionally on all platforms before encoding to UTF-8 and hashing (DEV-15). This guarantees that a file named `café.txt` produces identical identity hashes regardless of whether the filesystem returned the name in NFC (Windows, typical APFS) or NFD (HFS+). The NFC normalization is applied on all platforms — not just macOS — because APFS preserves whatever form was used at creation, meaning NFD filenames can appear on any macOS volume.
 
-> **Note:** This is a deliberate break from the "hash what the filesystem returns" approach. The original never needed to address cross-platform filename equivalence because it ran exclusively on Windows (which always uses NFC). The port prioritizes cross-platform hash determinism: the same logical filename MUST produce the same identity on all supported platforms. The tradeoff is that re-indexing the same file on an HFS+ volume will produce an identity hash based on the NFC normalization of the filename rather than the NFD form stored on disk — but this is the correct behavior, because the hashed value represents the *logical* filename, not its filesystem-specific encoding.
+> **Note:** This is a deliberate break from the "hash what the filesystem returns" approach. The original never needed to address cross-platform filename equivalence because it ran exclusively on Windows (which always uses NFC). The tool prioritizes cross-platform hash determinism: the same logical filename MUST produce the same identity on all supported platforms. The tradeoff is that re-indexing the same file on an HFS+ volume will produce an identity hash based on the NFC normalization of the filename rather than the NFD form stored on disk — but this is the correct behavior, because the hashed value represents the *logical* filename, not its filesystem-specific encoding.
 
 <a id="macos-extended-attributes-and-quarantine"></a>
 #### macOS: extended attributes and quarantine
@@ -8622,7 +8759,7 @@ On Linux and macOS, files and directories whose names begin with a dot (`.`) are
 
 The indexer does not distinguish between hidden and visible files. All files and directories within the target path are indexed, including dot-files on Linux/macOS and hidden files on Windows. The filesystem exclusion filters ([§6.1](#61-filesystem-traversal-and-discovery)) handle specific system artifacts (`.DS_Store`, `Thumbs.db`, etc.) by name, not by hidden status.
 
-The `Get-ChildItem -Force` flag used in the original includes hidden files; the port's `os.scandir()` includes all entries by default. The behavior is equivalent.
+The `Get-ChildItem -Force` flag used in the original includes hidden files; `os.scandir()` includes all entries by default. The behavior is equivalent.
 
 <a id="atomic-rename-guarantees"></a>
 #### Atomic rename guarantees
@@ -8639,12 +8776,12 @@ The rename operation in [§6.10](#610-file-rename-and-in-place-write-operations)
 
 On Windows, `Path.rename()` will fail if the target file already exists and is a different file (unlike POSIX, where `rename(2)` atomically replaces the target). The collision detection in [§6.10](#610-file-rename-and-in-place-write-operations) — which checks for target existence before calling `rename()` — handles this Windows-specific behavior correctly: if the target exists and is a different inode, a `RenameError` is raised; if it is the same inode (already renamed), the operation is a no-op.
 
-> **Deviation from original:** The original uses PowerShell's `Move-Item`, which delegates to `MoveFileExW` on Windows. The port's `Path.rename()` uses the same underlying system call on Windows and the POSIX `rename(2)` on Linux/macOS. The behavioral difference — Windows `rename` failing on existing targets vs. POSIX `rename` atomically replacing them — is handled by the collision detection layer, making the observable behavior identical across platforms.
+> **Historical note:** The original uses PowerShell's `Move-Item`, which delegates to `MoveFileExW` on Windows. `Path.rename()` uses the same underlying system call on Windows and the POSIX `rename(2)` on Linux/macOS. The behavioral difference — Windows `rename` failing on existing targets vs. POSIX `rename` atomically replacing them — is handled by the collision detection layer, making the observable behavior identical across platforms.
 
 <a id="155-creation-time-portability"></a>
 ### 15.5. Creation Time Portability
 
-Creation time is the single most significant cross-platform behavioral difference that surfaces in the indexer's output. The original relies on .NET's `CreationTime` property, which is always available on Windows. The port must handle platforms where true creation time may not be available.
+Creation time is the single most significant cross-platform behavioral difference that surfaces in the indexer's output. The original relies on .NET's `CreationTime` property, which is always available on Windows. The indexer must handle platforms where true creation time may not be available.
 
 <a id="platform-availability-matrix"></a>
 #### Platform availability matrix
@@ -8696,7 +8833,7 @@ If a future version requires explicit provenance tracking for creation times, a 
 <a id="interaction-with-backward-compatibility-testing"></a>
 #### Interaction with backward compatibility testing
 
-Backward compatibility tests ([§14.6](#146-backward-compatibility-validation)) that validate timestamp equivalence between the port and the original MUST account for the creation-time difference. The original always uses .NET `CreationTime` (true creation time on Windows NTFS). When the port runs on Linux without `st_birthtime` support, the `created` timestamp may differ from the reference value. The test tolerance (±1 second for ISO strings, ±1000 for Unix milliseconds) applies to the numerical precision of the timestamp, not to the semantic difference between creation time and ctime.
+Backward compatibility tests ([§14.6](#146-backward-compatibility-validation)) that validate timestamp equivalence between the tool and the original MUST account for the creation-time difference. The original always uses .NET `CreationTime` (true creation time on Windows NTFS). When the tool runs on Linux without `st_birthtime` support, the `created` timestamp may differ from the reference value. The test tolerance (±1 second for ISO strings, ±1000 for Unix milliseconds) applies to the numerical precision of the timestamp, not to the semantic difference between creation time and ctime.
 
 Platform-specific tests in `tests/platform/` SHOULD include a test that verifies:
 
@@ -8708,7 +8845,7 @@ Platform-specific tests in `tests/platform/` SHOULD include a test that verifies
 <a id="156-symlink-and-reparse-point-handling"></a>
 ### 15.6. Symlink and Reparse Point Handling
 
-Symlink semantics differ significantly between Windows and POSIX systems. The original detects symlinks by checking the `ReparsePoint` attribute in the NTFS file attribute bitmask — a Windows-specific mechanism. The port uses `Path.is_symlink()`, which delegates to the appropriate platform mechanism. This subsection documents the platform-specific behaviors that affect symlink handling.
+Symlink semantics differ significantly between Windows and POSIX systems. The original detects symlinks by checking the `ReparsePoint` attribute in the NTFS file attribute bitmask — a Windows-specific mechanism. The indexer uses `Path.is_symlink()`, which delegates to the appropriate platform mechanism. This subsection documents the platform-specific behaviors that affect symlink handling.
 
 <a id="platform-mechanisms"></a>
 #### Platform mechanisms
@@ -8719,7 +8856,7 @@ Symlink semantics differ significantly between Windows and POSIX systems. The or
 | Linux | `ln -s`, `os.symlink()` | `Path.is_symlink()` → `lstat()` checks `S_IFLNK` in `st_mode` | No special privileges for creation or detection. |
 | macOS | `ln -s`, `os.symlink()` | `Path.is_symlink()` → `lstat()` checks `S_IFLNK` in `st_mode` | No special privileges for creation or detection. |
 
-The `Path.is_symlink()` call is the correct cross-platform abstraction. It returns `True` for symbolic links on all platforms and is the only symlink detection mechanism used by the port.
+The `Path.is_symlink()` call is the correct cross-platform abstraction. It returns `True` for symbolic links on all platforms and is the only symlink detection mechanism used by the indexer.
 
 <a id="windows-junctions-vs-symlinks"></a>
 #### Windows: junctions vs. symlinks
@@ -8731,7 +8868,7 @@ Windows has two types of reparse points that behave like symlinks:
 | Symbolic link (symlink) | File or directory, absolute or relative | `mklink /D` (directory), `mklink` (file), `os.symlink()` | Yes — `Path.is_symlink()` returns `True`. |
 | Junction (mount point) | Directory only, absolute path only | `mklink /J`, `os.path.join()` with junction semantics | Yes — `Path.is_symlink()` returns `True` on Python 3.12+. |
 
-Both junction points and symbolic links have the `FILE_ATTRIBUTE_REPARSE_POINT` attribute set, and Python's `Path.is_symlink()` detects both as of Python 3.12. The original's `Attributes -band ReparsePoint` check also detects both types. The port's behavior matches the original for both junctions and symlinks.
+Both junction points and symbolic links have the `FILE_ATTRIBUTE_REPARSE_POINT` attribute set, and Python's `Path.is_symlink()` detects both as of Python 3.12. The original's `Attributes -band ReparsePoint` check also detects both types. The indexer's behavior matches the original for both junctions and symlinks.
 
 The indexer does not distinguish between junctions and symlinks in the output — both set `attributes.is_link = true` and trigger the same behavioral changes (name hashing instead of content hashing, skipped EXIF extraction, `os.lstat()` for timestamps). This is correct behavior: both types redirect to a different filesystem location, and hashing the link target's content would produce an identity that depends on the target rather than the link itself.
 
@@ -8740,7 +8877,7 @@ The indexer does not distinguish between junctions and symlinks in the output �
 
 A symlink can point to a target on a different filesystem or a different volume. The original does not explicitly handle this case — it simply switches to name hashing when the `ReparsePoint` attribute is detected, regardless of the target's location.
 
-The port preserves this behavior. When `is_symlink()` returns `True`, content hashing is replaced by name hashing, and the link target is not followed for any content-dependent operation (hashing, EXIF extraction). The only operation that follows the link is `Path.resolve()`, which resolves the symlink to its target for the `file_system.absolute` field. If the symlink target does not exist (dangling symlink), `Path.resolve(strict=False)` returns the normalized path without verifying existence, and the entry is populated with degraded fields as documented in [§6.4](#64-symlink-detection).
+The indexer preserves this behavior. When `is_symlink()` returns `True`, content hashing is replaced by name hashing, and the link target is not followed for any content-dependent operation (hashing, EXIF extraction). The only operation that follows the link is `Path.resolve()`, which resolves the symlink to its target for the `file_system.absolute` field. If the symlink target does not exist (dangling symlink), `Path.resolve(strict=False)` returns the normalized path without verifying existence, and the entry is populated with degraded fields as documented in [§6.4](#64-symlink-detection).
 
 <a id="symlink-traversal-safety"></a>
 #### Symlink traversal safety
@@ -8749,7 +8886,7 @@ The indexer does not follow symlinks during directory traversal. The `list_child
 
 This is consistent with the original's behavior. The original's `Get-ChildItem -Force` does not follow symlinks into directories by default — it lists the symlink as an entry without descending into it.
 
-> **Improvement over original:** The original does not explicitly document or test its symlink traversal behavior — the non-descent is a side effect of `Get-ChildItem`'s default behavior rather than a deliberate design decision. The port's explicit `follow_symlinks=False` parameter makes the safety behavior intentional and testable.
+> **Historical note:** The original does not explicitly document or test its symlink traversal behavior — the non-descent is a side effect of `Get-ChildItem`'s default behavior rather than a deliberate design decision. The explicit `follow_symlinks=False` parameter makes the safety behavior intentional and testable.
 
 <a id="symlink-metadata-sources"></a>
 #### Symlink metadata sources
@@ -8810,7 +8947,7 @@ The indexer does not follow symlinks during directory traversal. This is the sin
 
 `list_children()` ([§6.1](#61-filesystem-traversal-and-discovery)) enumerates directory contents using `os.scandir()` with `follow_symlinks=False` for entry classification. A symlink to a directory appears in the traversal results as a single item — it is processed as an `IndexEntry` with `attributes.is_link = True` and an empty `items` list. The traversal does not descend into the symlink target. A symlink to a file likewise appears as a single item with `is_link = True` and is processed using name hashing rather than content hashing ([§6.3](#63-hashing-and-identity-generation)), since reading the target's content would follow the link.
 
-This behavior is consistent with the original's `Get-ChildItem -Force` semantics, which do not follow symlinks into directories by default. The difference is intentionality: the original's non-following behavior is an emergent side effect of PowerShell's default `Get-ChildItem` behavior, while the port's non-following behavior is an explicit `follow_symlinks=False` parameter — a deliberate, testable design decision ([§15.6](#156-symlink-and-reparse-point-handling)).
+This behavior is consistent with the original's `Get-ChildItem -Force` semantics, which do not follow symlinks into directories by default. The difference is intentionality: the original's non-following behavior is an emergent side effect of PowerShell's default `Get-ChildItem` behavior, while the explicit `follow_symlinks=False` parameter is a deliberate, testable design decision ([§15.6](#156-symlink-and-reparse-point-handling)).
 
 <a id="symlink-processing-boundaries"></a>
 #### Symlink processing boundaries
@@ -8870,7 +9007,7 @@ The target path supplied by the user undergoes validation during Stage 2 of the 
 
 3. **Type classification.** `resolved.is_file()` and `resolved.is_dir()` classify the target. If the target is neither a file nor a directory (e.g., a character device, a named pipe, or a socket), an `IndexerError` is raised. The indexer processes only regular files, directories, and symlinks to those types.
 
-4. **Null byte rejection.** Python 3 raises `ValueError: embedded null character` when a `Path` object is constructed from a string containing `\x00`. This rejection happens before any filesystem call, preventing null-byte injection into OS-level path APIs. The port does not need to add explicit null-byte checking — Python's `pathlib` and `os` modules enforce this invariant automatically.
+4. **Null byte rejection.** Python 3 raises `ValueError: embedded null character` when a `Path` object is constructed from a string containing `\x00`. This rejection happens before any filesystem call, preventing null-byte injection into OS-level path APIs. The implementation does not need to add explicit null-byte checking — Python's `pathlib` and `os` modules enforce this invariant automatically.
 
 <a id="filesystem-derived-path-handling"></a>
 #### Filesystem-derived path handling
@@ -8906,12 +9043,12 @@ This pattern has three safety problems. First, the fixed temp directory path (`C
 <a id="port-approach-elimination"></a>
 #### Port approach: elimination
 
-The port eliminates the original's temporary file creation pattern for the exiftool use case. The primary backend uses `PyExifTool`'s `-stay_open` batch mode ([§6.6](#66-exif-and-embedded-metadata-extraction), DEV-05, DEV-16), which communicates via stdin/stdout pipes — no temporary files involved. The subprocess fallback path uses `tempfile`-managed argfiles with automatic cleanup via context managers. In both cases, the original's `-@` argfile switch with manual `TempOpen`/`TempClose` lifecycle and Base64 encoding/decoding pipeline are eliminated.
+The implementation eliminates the original's temporary file creation pattern for the exiftool use case. The primary backend uses `PyExifTool`'s `-stay_open` batch mode ([§6.6](#66-exif-and-embedded-metadata-extraction), DEV-05, DEV-16), which communicates via stdin/stdout pipes — no temporary files involved. The subprocess fallback path uses `tempfile`-managed argfiles with automatic cleanup via context managers. In both cases, the original's `-@` argfile switch with manual `TempOpen`/`TempClose` lifecycle and Base64 encoding/decoding pipeline are eliminated.
 
 <a id="remaining-temporary-file-scenarios"></a>
 #### Remaining temporary file scenarios
 
-Two scenarios in the port may still involve temporary file creation:
+Two scenarios in the implementation may still involve temporary file creation:
 
 **Atomic file writes.** When writing the aggregate output file (`--outfile`), the serializer SHOULD use an atomic write pattern: write to a temporary file in the same directory as the target, then rename the temporary file to the final path. This prevents partial writes from producing a corrupt output file if the process is interrupted during serialization. The implementation uses Python's `tempfile.NamedTemporaryFile(dir=target_dir, delete=False)` to create the temporary file in the correct directory (ensuring the rename is atomic on the same filesystem), writes the complete JSON content, calls `os.replace()` to atomically swap the file into place, and cleans up the temporary file in a `finally` block if the rename fails.
 
@@ -8922,7 +9059,7 @@ The `tempfile` module creates files with restrictive permissions (mode `0o600` o
 <a id="cleanup-guarantee"></a>
 #### Cleanup guarantee
 
-For any scenario where temporary files are created, the port uses context managers or `try`/`finally` blocks to guarantee cleanup:
+For any scenario where temporary files are created, the implementation uses context managers or `try`/`finally` blocks to guarantee cleanup:
 
 ```python
 # Illustrative — not the exact implementation.
@@ -8958,7 +9095,7 @@ def atomic_write(target_path: Path, content: str) -> None:
 
 The `finally` block ensures that the temporary file is removed even if serialization fails, the process receives a signal, or an unexpected exception occurs. The `missing_ok=True` parameter to `unlink()` prevents a secondary exception if the file was already removed.
 
-> **Improvement over original:** The original's `TempOpen`/`TempClose` protocol relies on manual discipline to avoid leaks. The port's context-manager approach makes cleanup automatic and exception-safe, consistent with Python's resource management conventions.
+> **Historical note:** The original's `TempOpen`/`TempClose` protocol relies on manual discipline to avoid leaks. The context-manager approach makes cleanup automatic and exception-safe, consistent with Python's resource management conventions.
 
 <a id="164-metadata-merge-delete-safeguards"></a>
 ### 16.4. Metadata Merge-Delete Safeguards
@@ -8980,7 +9117,7 @@ sidecar content is preserved before deletion.
 
 This prevents the most straightforward data-loss scenario: a user running `shruggie-indexer --meta-merge-delete --stdout` (stdout-only output, no persistent file), where the sidecar content would exist only in the transient stdout stream.
 
-The original enforces this via the `$MMDSafe` variable (lines ~9354–9427 in `MakeIndex`). The port's enforcement is equivalent but implemented as a declarative validation rule rather than an imperative flag check embedded in the output-routing logic.
+The original enforces this via the `$MMDSafe` variable (lines ~9354–9427 in `MakeIndex`). The tool's enforcement is equivalent but implemented as a declarative validation rule rather than an imperative flag check embedded in the output-routing logic.
 
 <a id="safeguard-2-deferred-deletion"></a>
 #### Safeguard 2: Deferred deletion
@@ -9040,7 +9177,7 @@ This is a deliberate design constraint, not an oversight. Simulating MetaMergeDe
 <a id="large-file-hashing"></a>
 #### Large file hashing
 
-The primary resource risk during file hashing is memory consumption. A naïve implementation that reads an entire file into memory before hashing would fail catastrophically for files larger than available RAM. The port's `hash_file()` function ([§6.3](#63-hashing-and-identity-generation)) reads files in fixed-size chunks (64 KB default, [§17.2](#172-chunked-file-reading)) and feeds each chunk to all active hash objects. Peak memory usage is bounded by the chunk size plus the hash objects' internal state — approximately 70 KB regardless of file size. A 100 GB video file and a 1 KB text file consume the same amount of memory during hashing.
+The primary resource risk during file hashing is memory consumption. A naïve implementation that reads an entire file into memory before hashing would fail catastrophically for files larger than available RAM. The `hash_file()` function ([§6.3](#63-hashing-and-identity-generation)) reads files in fixed-size chunks (64 KB default, [§17.2](#172-chunked-file-reading)) and feeds each chunk to all active hash objects. Peak memory usage is bounded by the chunk size plus the hash objects' internal state — approximately 70 KB regardless of file size. A 100 GB video file and a 1 KB text file consume the same amount of memory during hashing.
 
 The chunk-based approach also provides natural interruption points. If a `cancel_event` is checked between chunks (the GUI entry point may implement this for responsiveness), cancellation latency is bounded by the time to read one chunk, not the time to read the entire file.
 
@@ -9053,12 +9190,12 @@ The `exiftool` invocation ([§6.6](#66-exif-and-embedded-metadata-extraction)) i
 
 When the sidecar module ([§6.7](#67-sidecar-metadata-file-handling)) reads a binary sidecar file (thumbnails, screenshots, torrent files) for Base64 encoding, the entire file is read into memory via `path.read_bytes()` and then Base64-encoded. Base64 encoding expands the data by approximately 33%, so a 100 MB thumbnail would consume roughly 133 MB of memory during encoding and remain in memory as part of the `MetadataEntry.data` field throughout the entry's lifetime.
 
-For typical sidecar files — thumbnails are usually under 1 MB, torrent files under 10 MB — this is not a concern. For pathological cases where a user has multi-hundred-megabyte binary sidecars, memory consumption could become significant. The port does not implement streaming Base64 encoding for sidecar files because the encoded data must be held in memory as a JSON-serializable string regardless of how it was encoded. The mitigation is documentation: the user-facing documentation SHOULD note that very large binary sidecars contribute directly to memory usage and output file size, and that excluding them via the metadata exclusion configuration ([§7.5](#75-sidecar-suffix-patterns-and-type-identification)) is appropriate when memory constraints are tight.
+For typical sidecar files — thumbnails are usually under 1 MB, torrent files under 10 MB — this is not a concern. For pathological cases where a user has multi-hundred-megabyte binary sidecars, memory consumption could become significant. The indexer does not implement streaming Base64 encoding for sidecar files because the encoded data must be held in memory as a JSON-serializable string regardless of how it was encoded. The mitigation is documentation: the user-facing documentation SHOULD note that very large binary sidecars contribute directly to memory usage and output file size, and that excluding them via the metadata exclusion configuration ([§7.5](#75-sidecar-suffix-patterns-and-type-identification)) is appropriate when memory constraints are tight.
 
 <a id="deep-directory-recursion"></a>
 #### Deep directory recursion
 
-Python's default recursion limit is 1,000 frames. The port's recursive traversal in `build_directory_entry()` ([§6.8](#68-index-entry-construction)) adds one Python call frame per level of directory nesting. A directory tree nested 900 levels deep would approach the default recursion limit, and a 1,000-level tree would hit it, producing a `RecursionError`.
+Python's default recursion limit is 1,000 frames. The recursive traversal in `build_directory_entry()` ([§6.8](#68-index-entry-construction)) adds one Python call frame per level of directory nesting. A directory tree nested 900 levels deep would approach the default recursion limit, and a 1,000-level tree would hit it, producing a `RecursionError`.
 
 Directory trees deeper than a few hundred levels are virtually nonexistent in real-world filesystems. The deepest common nesting — `node_modules` dependency trees — rarely exceeds 30–50 levels. Nevertheless, the implementation SHOULD handle the edge case gracefully rather than crashing with an unhandled `RecursionError`.
 
@@ -9079,7 +9216,7 @@ A single directory containing a very large number of entries — tens or hundred
 
 For a directory with 100,000 entries, the materialized lists consume approximately 10–20 MB of memory (one `Path` object per entry). This is within acceptable bounds for any system that can run the indexer. For directories with millions of entries — rare but possible on large media servers or backup volumes — the memory consumption scales linearly and may become significant on constrained systems.
 
-The port does not implement streaming or batched entry processing for single-directory enumeration. The sorted-list approach is required for deterministic output ordering ([§6.1](#61-filesystem-traversal-and-discovery)), and the memory overhead is proportional to the directory size, not the total tree size. A directory with 1,000,000 files but only 10 levels of nesting requires ~100 MB for the single largest directory listing, not for the entire tree.
+The indexer does not implement streaming or batched entry processing for single-directory enumeration. The sorted-list approach is required for deterministic output ordering ([§6.1](#61-filesystem-traversal-and-discovery)), and the memory overhead is proportional to the directory size, not the total tree size. A directory with 1,000,000 files but only 10 levels of nesting requires ~100 MB for the single largest directory listing, not for the entire tree.
 
 <a id="json-serialization-memory"></a>
 #### JSON serialization memory
@@ -9095,9 +9232,11 @@ The `--outfile` and `--stdout` output modes inherently require the full tree in 
 <a id="17-performance-considerations"></a>
 ## 17. Performance Considerations
 
-This section defines the performance characteristics, optimization strategies, and resource consumption boundaries of `shruggie-indexer`. It is the normative reference for how the indexer manages computational cost across its five performance-sensitive operations: cryptographic hashing, file I/O, directory enumeration, JSON serialization, and external process invocation. Each subsection describes the optimization approach, the rationale behind the chosen strategy, the measurable impact relative to the original implementation, and the bounds within which the optimization holds.
+This section defines the performance characteristics, optimization strategies, and resource consumption boundaries of `shruggie-indexer`. It is the normative reference for how the indexer manages computational cost across its five performance-sensitive operations: cryptographic hashing, file I/O, directory enumeration, JSON serialization, and external process invocation. Each subsection describes the optimization approach, the rationale behind the chosen strategy, and the bounds within which the optimization holds.
 
-The original `MakeIndex` has no documented performance design — its performance characteristics are emergent side effects of implementation choices made for convenience (separate file reads per hash algorithm, piping through `jq`, writing Base64-encoded arguments to temporary files for exiftool). The port improves on three of these incidental costs significantly and maintains parity on the others. This section makes the performance design explicit so that implementers do not inadvertently regress to the original's approach and so that future optimization work can target the areas with the highest payoff.
+> **Historical note:** The original `MakeIndex` has no documented performance design — its performance characteristics are emergent side effects of implementation choices made for convenience (separate file reads per hash algorithm, piping through `jq`, writing Base64-encoded arguments to temporary files for exiftool). `shruggie-indexer` improves on three of these incidental costs significantly and maintains parity on the others.
+
+This section makes the performance design explicit so that implementers do not inadvertently regress and so that future optimization work can target the areas with the highest payoff.
 
 [§6](#6-core-operations) (Core Operations) defines what each operation does. [§14.7](#147-performance-benchmarks) (Performance Benchmarks) defines how performance is measured and what the baseline expectations are. [§16.5](#165-large-file-and-deep-recursion-handling) (Large File and Deep Recursion Handling) defines the resource consumption safety boundaries. This section sits between those references — it explains *why* the implementation is structured for performance, *how* the key optimizations work, and *where* the remaining performance bottlenecks lie.
 
@@ -9114,7 +9253,7 @@ This is exactly what the original does. `FileId` defines independent sub-functio
 <a id="the-optimization"></a>
 #### The optimization
 
-The port reads each file exactly once, regardless of how many hash algorithms are active. `hash_file()` ([§6.3](#63-hashing-and-identity-generation)) creates one `hashlib` hash object per algorithm, reads the file in chunks, and feeds each chunk to every hash object before reading the next chunk:
+The indexer reads each file exactly once, regardless of how many hash algorithms are active. `hash_file()` ([§6.3](#63-hashing-and-identity-generation)) creates one `hashlib` hash object per algorithm, reads the file in chunks, and feeds each chunk to every hash object before reading the next chunk:
 
 ```python
 # Illustrative — not the exact implementation.
@@ -9181,16 +9320,16 @@ The traversal module (`core/traversal.py`, [§6.1](#61-filesystem-traversal-and-
 
 The original performs two separate `Get-ChildItem` calls per directory — one with the `-File` flag to retrieve files, one with the `-Directory` flag to retrieve directories. Each call independently enumerates the entire directory, applies its filter, and returns the matching subset. For a directory with 10,000 entries, this means two complete readdir traversals, two complete filter passes, and two result-set materializations. The data that distinguishes files from directories (the `d_type` field in POSIX `readdir`, the `dwFileAttributes` field in Windows `FindNextFile`) is available on both passes but only consulted on one.
 
-The port's `os.scandir()` reads the directory once. Each `DirEntry` object returned by `scandir` caches the file/directory classification from the underlying OS call, so `entry.is_file(follow_symlinks=False)` and `entry.is_dir(follow_symlinks=False)` resolve without an additional `stat()` call on platforms that provide `d_type` (Linux, macOS) or `dwFileAttributes` (Windows). Classification and separation into the files and directories lists happen in a single iteration.
+`shruggie-indexer`'s `os.scandir()` reads the directory once. Each `DirEntry` object returned by `scandir` caches the file/directory classification from the underlying OS call, so `entry.is_file(follow_symlinks=False)` and `entry.is_dir(follow_symlinks=False)` resolve without an additional `stat()` call on platforms that provide `d_type` (Linux, macOS) or `dwFileAttributes` (Windows). Classification and separation into the files and directories lists happen in a single iteration.
 
-For a directory with N entries, the original performs 2 × O(N) directory reads plus 2 × O(N) filter passes. The port performs 1 × O(N) directory read plus 1 × O(N) classification pass. On spinning disks where directory reads are seek-limited, or on network filesystems where each readdir round-trip has latency, the single-pass approach can be up to twice as fast for large directories.
+For a directory with N entries, the original performs 2 × O(N) directory reads plus 2 × O(N) filter passes. The indexer performs 1 × O(N) directory read plus 1 × O(N) classification pass. On spinning disks where directory reads are seek-limited, or on network filesystems where each readdir round-trip has latency, the single-pass approach can be up to twice as fast for large directories.
 
 <a id="sorting-cost"></a>
 #### Sorting cost
 
-After enumeration, the port sorts both the file list and the directory list lexicographically by name (case-insensitive). The sort uses Python's Timsort (`sorted()` with a `key` function), which runs in O(N log N) for N entries. For 10,000 entries, this is approximately 130,000 comparisons — completed in milliseconds. For 100,000 entries, approximately 1.7 million comparisons — still well under one second. The sorting cost is negligible relative to the per-item entry construction cost (hashing, stat, potential exiftool invocation).
+After enumeration, the indexer sorts both the file list and the directory list lexicographically by name (case-insensitive). The sort uses Python's Timsort (`sorted()` with a `key` function), which runs in O(N log N) for N entries. For 10,000 entries, this is approximately 130,000 comparisons — completed in milliseconds. For 100,000 entries, approximately 1.7 million comparisons — still well under one second. The sorting cost is negligible relative to the per-item entry construction cost (hashing, stat, potential exiftool invocation).
 
-The original does not explicitly sort — `Get-ChildItem` returns entries in filesystem order (which on NTFS is B-tree sorted, but on ext4 and APFS is effectively directory-creation order). The port's explicit sort ensures deterministic output ordering across platforms, at a cost that is imperceptible for any realistic directory size.
+The original does not explicitly sort — `Get-ChildItem` returns entries in filesystem order (which on NTFS is B-tree sorted, but on ext4 and APFS is effectively directory-creation order). The explicit sort ensures deterministic output ordering across platforms, at a cost that is imperceptible for any realistic directory size.
 
 <a id="memory-consumption-during-traversal"></a>
 #### Memory consumption during traversal
@@ -9265,7 +9404,7 @@ The `--compact` flag ([§8.3](#83-output-mode-options)) selects compact output. 
 
 For files that have embedded metadata, the `exiftool` invocation ([§6.6](#66-exif-and-embedded-metadata-extraction)) is overwhelmingly the most expensive per-file operation in the indexing pipeline. Hashing a 10 MB JPEG takes approximately 20–40 ms (limited by file read speed). Extracting EXIF metadata from the same file via `exiftool` takes 200–500 ms — an order of magnitude more. The cost is almost entirely `exiftool` process startup: the Perl interpreter loads, exiftool's module tree initializes, the file is read, metadata is extracted, and JSON output is produced. For a directory of 1,000 JPEG files, exiftool invocations alone can account for 3–8 minutes of total runtime, dwarfing the combined cost of hashing, stat calls, sidecar discovery, and serialization.
 
-This cost profile is inherited from the original, which invokes exiftool once per file via `GetFileExifRun`. The original routes the invocation through a Base64-decoded argument file and a `jq` post-processing pipeline, adding further per-file overhead (temporary file creation, `certutil` invocation for Base64 decoding, `jq` process startup, and temporary file cleanup). The port eliminates the argument-file machinery and the `jq` pipeline (DEV-05, DEV-06) and uses `pyexiftool`'s `-stay_open` batch mode (DEV-16) as the primary backend, reducing per-file cost from 200–500 ms to 20–50 ms.
+This cost profile is inherited from the original, which invokes exiftool once per file via `GetFileExifRun`. The original routes the invocation through a Base64-decoded argument file and a `jq` post-processing pipeline, adding further per-file overhead (temporary file creation, `certutil` invocation for Base64 decoding, `jq` process startup, and temporary file cleanup). `shruggie-indexer` eliminates the argument-file machinery and the `jq` pipeline (DEV-05, DEV-06) and uses `pyexiftool`'s `-stay_open` batch mode (DEV-16) as the primary backend, reducing per-file cost from 200–500 ms to 20–50 ms.
 
 <a id="batch-invocation-the-primary-approach"></a>
 #### Batch invocation: the primary approach (DEV-16)
@@ -9287,7 +9426,13 @@ with exiftool.ExifToolHelper(common_args=EXIFTOOL_COMMON_ARGS) as et:
 
 The stdin pipe protocol provides an additional benefit: it inherits the same Unicode safety guarantees as exiftool's `-@` argfile interface (documented in exiftool FAQ §18 and the WINDOWS UNICODE FILE NAMES section). File paths written to stdin are passed directly to exiftool's internal filename handler with `-charset filename=utf8`, bypassing shell escaping and OS-level command-line argument encoding entirely. This resolves the special-character argument-passing risks that motivated the original's Base64 encoding pipeline.
 
-**Error isolation in batch mode.** The persistent-process model changes the error isolation characteristics compared to per-file `subprocess.run()`. If exiftool crashes mid-batch, the `ExifToolHelper` context manager detects the failure. The exif module wraps each per-file `get_metadata()` call in a try/except and handles process death by re-entering the `ExifToolHelper` context to spawn a fresh process. The failed file is logged as a field-level error and processing continues. This provides the same item-level error boundary defined in [§4.5](#45-error-handling-strategy) — a single file's exiftool failure does not affect any other file — but with the added cost of a process restart (amortized across subsequent files).
+**Error isolation in batch mode.** The persistent-process model changes the error isolation characteristics compared to per-file `subprocess.run()`. The exif module wraps each per-file `get_metadata()` call in a try/except and distinguishes two failure categories:
+
+1. **Recoverable per-file error** (non-zero exit with valid JSON output). `ExifToolHelper` raises `ExifToolExecuteError` when exiftool returns a non-zero exit code. The handler inspects the exception's stdout for valid JSON metadata. If present and non-trivial (keys beyond `SourceFile`), the metadata is parsed, filtered, and returned normally. The persistent process is **not** reset — a per-file non-zero exit (e.g., exit code 1 for "unknown file type") does not indicate process failure. This matches the original MakeIndex behavior, which captured stdout regardless of exit code.
+
+2. **True process failure** (crash, broken pipe, timeout). If the exception does not contain recoverable stdout, the handler resets the `ExifToolHelper` by exiting and re-entering the context manager to spawn a fresh exiftool process. The failed file is logged as a field-level error and processing continues.
+
+Both categories provide the same item-level error boundary defined in [§4.5](#45-error-handling-strategy) — a single file's exiftool failure does not affect any other file. The distinction between categories avoids the performance penalty of unnecessary process restarts for the common "unknown file type" case. See [§6.6](#66-exif-and-embedded-metadata-extraction) for the full error handling table.
 
 <a id="subprocess-argfile-the-fallback-approach"></a>
 #### Subprocess + argfile: the fallback approach
@@ -9313,14 +9458,14 @@ This fallback exists for resilience. It is not a supported primary configuration
 
 The exiftool availability probe (`shutil.which("exiftool")`, [§6.6](#66-exif-and-embedded-metadata-extraction)) runs once per process lifetime. On most systems, `shutil.which()` resolves in under 1 millisecond by scanning the `PATH` directories. The cost is amortized over the entire invocation and is never repeated — the result is cached in a module-level variable.
 
-The original has no availability probe ([§4.5](#45-error-handling-strategy)). It discovers exiftool's absence through per-file failure: each `GetFileExifRun` call spawns a subprocess that immediately fails, producing a per-file error and the associated overhead of process creation and error-string construction. For a directory of 10,000 files with no exiftool installed, the original spawns and fails 10,000 subprocesses. The port's probe-once approach converts this from O(N) failed subprocess invocations to a single `shutil.which()` call — a performance improvement that is also a usability improvement (one warning message instead of 10,000 error messages).
+The original has no availability probe ([§4.5](#45-error-handling-strategy)). It discovers exiftool's absence through per-file failure: each `GetFileExifRun` call spawns a subprocess that immediately fails, producing a per-file error and the associated overhead of process creation and error-string construction. For a directory of 10,000 files with no exiftool installed, the original spawns and fails 10,000 subprocesses. The probe-once approach converts this from O(N) failed subprocess invocations to a single `shutil.which()` call — a performance improvement that is also a usability improvement (one warning message instead of 10,000 error messages).
 
 <a id="extension-exclusion-as-a-performance-gate"></a>
 #### Extension exclusion as a performance gate
 
 Before invoking exiftool, the module checks the file's extension against the exclusion list ([§7.4](#74-exiftool-exclusion-lists)). The default exclusion set (`csv`, `htm`, `html`, `json`, `tsv`, `xml`) targets file types where exiftool tends to dump the entire file content into the metadata output rather than extracting meaningful embedded metadata. Excluding these types avoids both the subprocess cost and the downstream cost of serializing and storing the bloated metadata output.
 
-The exclusion check is a `frozenset` membership test — O(1) per file. For a mixed-content directory where 30–50% of files are non-media types (a common scenario in project directories that contain code, data, and media), the exclusion filter can eliminate a significant fraction of exiftool invocations without any loss of useful metadata. This is a carry-forward from the original's `$global:MetadataFileParser.Exiftool.Exclude` list, and it serves the same purpose — the port preserves this gate exactly as-is because it is one of the original's better performance decisions.
+The exclusion check is a `frozenset` membership test — O(1) per file. For a mixed-content directory where 30–50% of files are non-media types (a common scenario in project directories that contain code, data, and media), the exclusion filter can eliminate a significant fraction of exiftool invocations without any loss of useful metadata. This is a carry-forward from the original's `$global:MetadataFileParser.Exiftool.Exclude` list, and it serves the same purpose — the tool preserves this gate exactly as-is because it is one of the original's better performance decisions.
 
 <a id="timeout-as-a-safety-bound"></a>
 #### Timeout as a safety bound
@@ -9431,7 +9576,7 @@ A post-MVP enhancement could add `.lnk` resolution on Windows using the optional
 
 **Originating references:** [§12.1](#121-required-external-binaries) (Required External Binaries).
 
-The port requires exiftool ≥ 12.0 for the `-api requestall=3` and `-api largefilesupport=1` arguments but does not enforce version checking at runtime. An older exiftool will likely work for most files but may produce incomplete metadata.
+The tool requires exiftool ≥ 12.0 for the `-api requestall=3` and `-api largefilesupport=1` arguments but does not enforce version checking at runtime. An older exiftool will likely work for most files but may produce incomplete metadata.
 
 A version check would invoke `exiftool -ver` once at startup (alongside the existing `shutil.which()` availability probe), parse the version string, and emit a warning if the version is below the minimum. The check cost is negligible — one additional subprocess invocation per process lifetime, completed in under 100 ms.
 
