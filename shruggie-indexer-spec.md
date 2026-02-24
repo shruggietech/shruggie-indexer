@@ -164,14 +164,14 @@
 <a id="11-purpose-and-audience"></a>
 ### 1.1. Purpose and Audience
 
-This document is the authoritative technical specification for `shruggie-indexer`, a Python reimplementation of the `MakeIndex` function and its full dependency tree from the original PowerShell-based pslib library. It serves as the single source of truth for building the tool from an empty repository to a release-ready codebase, validating its output against the behavior of the original implementation, and maintaining it as the project evolves.
+This document is the authoritative technical specification for `shruggie-indexer`, a cross-platform file and directory indexing tool that produces structured JSON output with hash-based identities, filesystem metadata, EXIF data, and sidecar metadata entries. It serves as the single source of truth for the tool's behavioral contract, architecture, and release engineering — and as the primary reference for maintaining and extending the project.
 
-The specification is written for an **AI-first, Human-second** audience. Its primary consumers are AI implementation agents operating within isolated context windows during sprint-based development. Every section is designed to provide sufficient detail for an AI agent to produce correct, complete code without requiring access to the original PowerShell source or interactive clarification. Human developers and maintainers are the secondary audience — the document is equally valid as a traditional engineering reference, but its level of explicitness and redundancy reflects the needs of stateless AI execution contexts.
+The specification is written for an **AI-first, Human-second** audience. Its primary consumers are AI implementation agents operating within isolated context windows during sprint-based development. Every section is designed to provide sufficient detail for an AI agent to produce correct, complete code without requiring interactive clarification. Human developers and maintainers are the secondary audience — the document is equally valid as a traditional engineering reference, but its level of explicitness and redundancy reflects the needs of stateless AI execution contexts.
 
 This specification describes:
 
 - The complete behavioral contract of the tool, including all input modes, output schemas, configuration surfaces, and edge cases.
-- The architectural decisions that govern the Python port, including where and why it deviates from the original implementation.
+- The architectural decisions that govern the tool's design, including historical context for decisions rooted in the project's origins as a port of the PowerShell `MakeIndex` function (see [§2.2](#22-relationship-to-the-original-implementation)).
 - The repository structure, packaging, testing strategy, and platform portability requirements necessary to ship the tool as a cross-platform CLI utility, Python library, and standalone GUI application.
 
 This specification does NOT serve as a tutorial, user guide, or API reference. Those artifacts are derived from this document but are separate deliverables.
@@ -184,19 +184,27 @@ This specification does NOT serve as a tutorial, user guide, or API reference. T
 
 This specification covers the following:
 
-- **Core indexing engine.** The complete Python reimplementation of the `MakeIndex` function — filesystem traversal, file and directory identity generation (hashing), symlink detection, timestamp extraction and conversion, EXIF/embedded metadata extraction via `exiftool`, sidecar metadata file discovery and parsing, index entry construction, and JSON output serialization.
+- **Core indexing engine.** Filesystem traversal, file and directory identity generation (hashing), symlink detection, timestamp extraction and conversion, EXIF/embedded metadata extraction via `exiftool`, sidecar metadata file discovery and parsing, index entry construction, and JSON output serialization. The engine is a pure library with no presentation-layer dependencies — the CLI and GUI are thin frontends that delegate all indexing work to this layer.
 
-- **All original dependencies.** The eight external pslib functions consumed by `MakeIndex` (`Base64DecodeString`, `Date2UnixTime`, `DirectoryId`, `FileId`, `MetaFileRead`, `TempOpen`, `TempClose`, `Vbs`) and the two external binaries (`exiftool`, `jq`). Where original dependencies are eliminated by Python's standard library or architectural improvements, the specification documents the elimination rationale and replacement strategy.
+- **Dependency architecture.** The tool relies on `exiftool` as its sole external binary dependency for embedded metadata extraction. All other data processing — hashing, timestamp derivation, JSON parsing, sidecar file handling — uses Python standard library modules or a small set of declared third-party packages. See [§12](#12-external-dependencies) for the complete dependency inventory.
 
-- **Output schema (v2).** The complete JSON output schema for index entries as defined by the [shruggie-indexer v2 schema](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json). The v2 schema is a ground-up restructuring of the original MakeIndex v1 output format — it consolidates related fields into logical sub-objects (e.g., `TimestampPair`, `NameObject`, `HashSet`, `SizeObject`), eliminates redundant fields, adds explicit provenance tracking for metadata entries, adds a `schema_version` discriminator, and provides the structural foundation for MetaMergeDelete reversal operations. The v1 schema (`MakeIndex_OutputSchema.json`) remains available as a porting reference for understanding the original implementation's output, but the v2 schema is the target for all new implementation work. A v1-to-v2 migration utility for converting existing v1 index assets to the v2 format is planned but deferred to post-MVP.
+  > **Historical note:** The original PowerShell `MakeIndex` function depended on eight external pslib functions (`Base64DecodeString`, `Date2UnixTime`, `DirectoryId`, `FileId`, `MetaFileRead`, `TempOpen`, `TempClose`, `Vbs`) and two external binaries (`exiftool`, `jq`). The Python tool eliminates six of the eight function dependencies and the `jq` binary dependency through standard library equivalents and architectural improvements. See [§2.6](#26-intentional-deviations-from-the-original) for the full rationale.
 
-- **MetadataFileParser configuration.** The `$global:MetadataFileParser` object from the original pslib library is the source of truth for sidecar metadata file discovery and classification. It defines the regex patterns used to identify sidecar file types (Description, DesktopIni, GenericMetadata, Hash, JsonMetadata, Link, Screenshot, Subtitles, Thumbnail, Torrent), the per-type behavioral attributes (expected data formats, valid parent relationships), the exiftool file-type exclusion list, the extension group classifications (Archive, Audio, Font, Image, Link, Subtitles, Video), and the indexer include/exclude patterns. The original regex patterns in this object have been carefully crafted — including an extensive BCP 47 language code alternation for subtitle detection — and MUST be ported to Python with deliberate care to preserve their exact matching behavior. The isolated reference script `MakeIndex_MetadataFileParser_.ps1` (see [§1.5](#15-reference-documents)) provides the complete object definition for porting reference.
+- **Output schema (v2).** The complete JSON output schema for index entries as defined by the [shruggie-indexer v2 schema](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json). The v2 schema consolidates related fields into logical sub-objects (e.g., `TimestampPair`, `NameObject`, `HashSet`, `SizeObject`), adds explicit provenance tracking for metadata entries, includes a `schema_version` discriminator, and provides the structural foundation for MetaMergeDelete reversal operations. A v1-to-v2 migration utility for converting existing v1 index assets to the v2 format is planned but deferred to post-MVP.
+
+  > **Historical note:** The v1 schema (`MakeIndex_OutputSchema.json`) documents the original MakeIndex output structure and remains available as a porting reference. The v2 schema is a ground-up restructuring that eliminates the v1 schema's flat field layout and structural redundancy.
+
+- **Sidecar metadata configuration.** The sidecar metadata file discovery and classification system defines regex patterns for identifying sidecar file types (Description, DesktopIni, GenericMetadata, Hash, JsonMetadata, Link, Screenshot, Subtitles, Thumbnail, Torrent), per-type behavioral attributes (expected data formats, valid parent relationships), the exiftool file-type exclusion list, extension group classifications (Archive, Audio, Font, Image, Link, Subtitles, Video), and indexer include/exclude patterns. The regex patterns — including an extensive BCP 47 language code alternation for subtitle detection — are externalized into the typed configuration system and are user-modifiable.
+
+  > **Historical note:** The sidecar configuration originates from the `$global:MetadataFileParser` PowerShell ordered hashtable in the original pslib library. The isolated reference script `MakeIndex(MetadataFileParser).ps1` (see [§1.5](#15-reference-documents)) provides the complete original object definition.
 
 - **CLI interface.** The command-line interface exposing all indexing operations — target selection, output mode control, metadata processing options, rename operations, ID type selection, and verbosity/logging configuration.
 
 - **Python API.** The public programmatic interface for consumers who import `shruggie_indexer` as a library rather than invoking it from the command line.
 
-- **Graphical user interface.** A standalone desktop GUI application built with CustomTkinter, modeled after the `shruggie-feedtools` GUI (see [§1.5](#15-reference-documents), External References). The GUI serves as a visual frontend to the same library code used by the CLI. It is shipped as a separate release artifact alongside the CLI executable. The full GUI specification is defined in a later section of this document.
+- **Graphical user interface.** A standalone desktop GUI application built with CustomTkinter, providing a visual frontend to the same library code used by the CLI. The GUI is shipped as a separate release artifact alongside the CLI executable. The full GUI specification is defined in [§10](#10-gui-application) of this document.
+
+  > **Historical note:** The GUI design language (CustomTkinter, two-panel layout, dark theme, shared font stack) is modeled after the `shruggie-feedtools` GUI (see [§1.5](#15-reference-documents), External References).
 
 - **Configuration system.** The externalized configuration architecture that replaces the original's hardcoded `$global:MetadataFileParser` object, including default values, file format, and override/merge behavior.
 
@@ -217,13 +225,13 @@ This specification covers the following:
 
 This specification explicitly does NOT cover:
 
-- **The broader pslib library.** Only the `MakeIndex` function and its dependency tree are ported. The hundreds of other functions in `main.ps1` (e.g., `Add`, `ApkDexDump`, `ChromeBookmark`, etc.) are unrelated to this project.
+- **The broader pslib library.** `shruggie-indexer` originated as a port of the `MakeIndex` function from the PowerShell pslib library. Only that function and its dependency tree informed this project. The hundreds of other functions in the original library are unrelated.
 
-- **The `Encoding` output field.** The original v1 output schema includes an `Encoding` key containing detailed file encoding properties derived from BOM byte inspection. This field is intentionally dropped from the port and does not appear in the v2 schema. The `GetFileEncoding` sub-function and all related logic are not carried forward. See [§5.11](#511-dropped-and-restructured-fields) for the full rationale.
+- **The `Encoding` output field.** The v1 output schema included an `Encoding` key containing detailed file encoding properties derived from BOM byte inspection. This field is intentionally absent from the v2 schema. See [§5.11](#511-dropped-and-restructured-fields) for the full rationale.
 
 - **The v1-to-v2 migration utility.** A migration script for converting existing v1 index assets to the v2 schema format is a planned deliverable but is deferred to post-MVP. It is not part of the v0.1.0 release.
 
-- **The original PowerShell source code.** The original `main.ps1` is closed-source and is not included in the `shruggie-indexer` repository. The original source code for the `MakeIndex` function — including its complete function body, parameter block, and all nested sub-functions — SHALL NOT be included in the repository in any form (neither as a reference file, nor embedded in documentation, nor as inline code comments). All behavioral knowledge required to implement the port is captured in this specification and the reference documents listed in [§1.5](#15-reference-documents). An implementer MUST NOT require access to `main.ps1` or to the `MakeIndex` function source.
+- **The original PowerShell source code.** The original `main.ps1` is closed-source and is not included in the `shruggie-indexer` repository. The original source code for the `MakeIndex` function — including its complete function body, parameter block, and all nested sub-functions — SHALL NOT be included in the repository in any form (neither as a reference file, nor embedded in documentation, nor as inline code comments). All behavioral knowledge required for implementation and maintenance is captured in this specification and the reference documents listed in [§1.5](#15-reference-documents).
 
 <a id="13-document-maintenance"></a>
 ### 1.3. Document Maintenance
@@ -271,10 +279,9 @@ These keywords are capitalized when used in their RFC 2119 sense. Lowercase usag
 
 | Term | Definition |
 |------|------------|
-| **Original** | The PowerShell implementation of `MakeIndex` and its dependency tree within the pslib library (`main.ps1`). Used when describing behavior being ported or intentionally changed. |
-| **Port** | The Python reimplementation described by this specification. Synonymous with `shruggie-indexer`. |
-| **v1 schema** | The original MakeIndex output format as defined by `MakeIndex_OutputSchema.json`. Used as a porting reference only. The port does not target v1 output. |
-| **v2 schema** | The restructured output format defined by `shruggie-indexer-v2.schema.json`. This is the target schema for all implementation work in the port. |
+| **Original** | The PowerShell implementation of `MakeIndex` and its dependency tree within the pslib library (`main.ps1`). Used in historical notes and deviation callouts when describing behavior that informed the current design. |
+| **v1 schema** | The original MakeIndex output format as defined by `MakeIndex_OutputSchema.json`. Retained as a porting reference. The tool does not target v1 output. |
+| **v2 schema** | The current output format defined by `shruggie-indexer-v2.schema.json`. This is the target schema for all implementation work. |
 | **Index entry** | A single structured data object representing a file or directory in the v2 output schema. Defined in [§5](#5-output-schema). |
 | **Sidecar file** | An external metadata file that lives alongside the file it describes, identified by filename pattern matching (e.g., `photo.jpg` may have a sidecar `photo_meta2.json`). |
 | **Content hash** | A cryptographic hash computed from the byte content of a file. Used for file identity. Directories do not have content hashes. |
@@ -287,12 +294,12 @@ These keywords are capitalized when used in their RFC 2119 sense. Lowercase usag
 | **MetaMerge** | The operation of folding sidecar metadata into the parent item's `metadata` array during indexing. |
 | **MetaMergeDelete** | An extension of MetaMerge that queues the original sidecar files for deletion after their content has been merged into the parent item's metadata. The v2 schema's sidecar metadata entries carry sufficient filesystem provenance (path, size, timestamps) to support reversal of this operation. |
 | **In-place write** | Writing individual `_meta2.json` or `_directorymeta2.json` sidecar files alongside each processed item, as opposed to writing a single aggregate output file. |
-| **MetadataFileParser** | The configuration object governing sidecar metadata file discovery and classification. In the original, this is the `$global:MetadataFileParser` PowerShell ordered hashtable. In the port, it is externalized into a typed configuration structure. See [§7](#7-configuration). |
+| **MetadataFileParser** | The configuration object governing sidecar metadata file discovery and classification. Externalized into a typed configuration structure. See [§7](#7-configuration). |
 
 <a id="code-examples"></a>
 #### Code Examples
 
-Code examples in this specification use Python syntax unless otherwise noted. Examples marked with `# Original (PowerShell)` show the original implementation's approach for comparison purposes. Code examples are illustrative — they demonstrate intent and structure but are not necessarily the exact implementation. The implementation SHOULD follow the examples' intent while MAY differing in specific variable names, error handling details, or stylistic choices.
+Code examples in this specification use Python syntax unless otherwise noted. Examples marked with `# Historical reference (PowerShell)` show the original implementation's approach for comparison purposes. Code examples are illustrative — they demonstrate intent and structure but are not necessarily the exact implementation. The implementation SHOULD follow the examples' intent while MAY differing in specific variable names, error handling details, or stylistic choices.
 
 <a id="15-reference-documents"></a>
 ### 1.5. Reference Documents
@@ -313,14 +320,14 @@ The following documents inform this specification. All repository paths are rela
 |----------|----------|-------------|
 | v2 Schema (canonical) | [schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json) | The canonical JSON Schema definition for the v2 index entry output format. This is the target schema for all implementation work. Defines all fields, types, nullability, required properties, definitions (`NameObject`, `HashSet`, `SizeObject`, `TimestampPair`, `TimestampsObject`, `ParentObject`, `MetadataEntry`), and structural constraints. [§5](#5-output-schema) of this specification interprets and extends the schema with behavioral guidance but does not supersede it for field-level definitions. |
 | v2 Schema (local copy) | [`./docs/schema/shruggie-indexer-v2.schema.json`](./docs/schema/shruggie-indexer-v2.schema.json) | Local copy of the canonical v2 schema, committed to the repository. Used by the documentation site ([§3.7](#37-documentation-site)) and as a local validation reference. This file MUST be kept in sync with the canonical hosted version. |
-| v1 Schema (porting reference) | [`./docs/porting-reference/MakeIndex_OutputSchema.json`](./docs/porting-reference/MakeIndex_OutputSchema.json) | The JSON Schema definition for the original MakeIndex v1 output format. Retained as a porting reference for understanding the original implementation's output structure and for informing the eventual v1-to-v2 migration utility. The port does NOT target this schema. |
+| v1 Schema (porting reference) | [`./docs/porting-reference/MakeIndex_OutputSchema.json`](./docs/porting-reference/MakeIndex_OutputSchema.json) | The JSON Schema definition for the original MakeIndex v1 output format. Retained as a porting reference for understanding the original implementation's output structure and for informing the eventual v1-to-v2 migration utility. shruggie-indexer does NOT target this schema. |
 
 <a id="operations-reference"></a>
 #### Operations Reference
 
 | Document | Path | Description |
 |----------|------|-------------|
-| Operations Catalog | [`./docs/porting-reference/MakeIndex_OperationsCatalog.md`](./docs/porting-reference/MakeIndex_OperationsCatalog.md) | Categorized inventory of all logical operations in the original `MakeIndex` and its dependency tree, mapped to recommended Python modules with improvement notes. The primary architectural reference for the port. |
+| Operations Catalog | [`./docs/porting-reference/MakeIndex_OperationsCatalog.md`](./docs/porting-reference/MakeIndex_OperationsCatalog.md) | Categorized inventory of all logical operations in the original `MakeIndex` and its dependency tree, mapped to recommended Python modules with improvement notes. The primary architectural reference for the original-to-Python mapping. |
 
 <a id="configuration-reference"></a>
 #### Configuration Reference
@@ -336,14 +343,14 @@ Each dependency catalog documents a single function from the original pslib libr
 
 | Document | Path | Original Function |
 |----------|------|-------------------|
-| Base64DecodeString | [`./docs/porting-reference/Base64DecodeString_DependencyCatalog.md`](./docs/porting-reference/Base64DecodeString_DependencyCatalog.md) | Decodes Base64-encoded and URL-encoded strings. Eliminated in the port — exiftool arguments are passed directly. |
-| Date2UnixTime | [`./docs/porting-reference/Date2UnixTime_DependencyCatalog.md`](./docs/porting-reference/Date2UnixTime_DependencyCatalog.md) | Converts formatted date strings to Unix timestamps in milliseconds. Eliminated in the port — timestamps are derived directly from stat results. |
+| Base64DecodeString | [`./docs/porting-reference/Base64DecodeString_DependencyCatalog.md`](./docs/porting-reference/Base64DecodeString_DependencyCatalog.md) | Decodes Base64-encoded and URL-encoded strings. Eliminated — exiftool arguments are passed directly. |
+| Date2UnixTime | [`./docs/porting-reference/Date2UnixTime_DependencyCatalog.md`](./docs/porting-reference/Date2UnixTime_DependencyCatalog.md) | Converts formatted date strings to Unix timestamps in milliseconds. Eliminated — timestamps are derived directly from stat results. |
 | DirectoryId | [`./docs/porting-reference/DirectoryId_DependencyCatalog.md`](./docs/porting-reference/DirectoryId_DependencyCatalog.md) | Computes hash-based identity for directories using the two-layer `hash(hash(name) + hash(parentName))` scheme. |
 | FileId | [`./docs/porting-reference/FileId_DependencyCatalog.md`](./docs/porting-reference/FileId_DependencyCatalog.md) | Computes hash-based identity for files from content hashes (or name hashes for symlinks). |
 | MakeIndex | [`./docs/porting-reference/MakeIndex_DependencyCatalog.md`](./docs/porting-reference/MakeIndex_DependencyCatalog.md) | The top-level function being ported. Orchestrates traversal, identity generation, metadata extraction, and output routing. |
 | MetaFileRead | [`./docs/porting-reference/MetaFileRead_DependencyCatalog.md`](./docs/porting-reference/MetaFileRead_DependencyCatalog.md) | Reads and parses sidecar metadata files with format-specific handling (JSON, text, binary, subtitles, hash files, URL/LNK shortcuts). |
-| TempOpen | [`./docs/porting-reference/TempOpen_DependencyCatalog.md`](./docs/porting-reference/TempOpen_DependencyCatalog.md) | Creates temporary files with UUID-based naming. Eliminated in the port — replaced by `tempfile` if needed at all. |
-| TempClose | [`./docs/porting-reference/TempClose_DependencyCatalog.md`](./docs/porting-reference/TempClose_DependencyCatalog.md) | Deletes temporary files by path. Eliminated in the port — replaced by context manager cleanup. |
+| TempOpen | [`./docs/porting-reference/TempOpen_DependencyCatalog.md`](./docs/porting-reference/TempOpen_DependencyCatalog.md) | Creates temporary files with UUID-based naming. Eliminated — replaced by `tempfile` if needed at all. |
+| TempClose | [`./docs/porting-reference/TempClose_DependencyCatalog.md`](./docs/porting-reference/TempClose_DependencyCatalog.md) | Deletes temporary files by path. Eliminated — replaced by context manager cleanup. |
 | Vbs | [`./docs/porting-reference/Vbs_DependencyCatalog.md`](./docs/porting-reference/Vbs_DependencyCatalog.md) | Structured logging with severity levels, caller identification, session IDs, and colorized console output. Replaced by Python's `logging` framework. |
 
 <a id="external-references"></a>
@@ -383,13 +390,13 @@ This project is not published to PyPI. End users download pre-built executables 
 <a id="22-relationship-to-the-original-implementation"></a>
 ### 2.2. Relationship to the Original Implementation
 
-`shruggie-indexer` is a ground-up Python reimplementation of the `MakeIndex` function from the PowerShell-based pslib library (`main.ps1`). The relationship is behavioral, not structural — the port targets the same logical outcomes (filesystem indexing with hash-based identity, metadata extraction, and structured JSON output) but makes no attempt to mirror the original's code organization, naming patterns, or internal architecture.
+`shruggie-indexer` originated as a ground-up Python reimplementation of the `MakeIndex` function from the PowerShell-based pslib library (`main.ps1`). The relationship is behavioral, not structural — the tool targets the same logical outcomes (filesystem indexing with hash-based identity, metadata extraction, and structured JSON output) but uses its own code organization, naming patterns, and internal architecture.
 
-The original `MakeIndex` is one function among hundreds in `main.ps1`, a monolithic 17,000+ line PowerShell script that serves as a general-purpose utility library. `MakeIndex` itself spans approximately 1,500 lines and defines 20+ nested sub-functions inline. It depends on eight additional top-level pslib functions (`Base64DecodeString`, `Date2UnixTime`, `DirectoryId`, `FileId`, `MetaFileRead`, `TempOpen`, `TempClose`, `Vbs`) and two external binaries (`exiftool`, `jq`). The combined dependency tree — including all sub-functions defined within those eight dependencies — encompasses roughly 60 discrete code units.
+The tool carries forward the original's core behavioral contract: given a target path (file or directory), produce a JSON index entry containing hash-based identities, filesystem metadata, timestamps, embedded EXIF data, and sidecar metadata — all structured according to a defined output schema. Everything else — the language, the architecture, the output schema version, the dependency set, the configuration model, and the platform scope — is designed for the Python ecosystem and cross-platform execution.
 
-The port carries forward the original's core behavioral contract: given a target path (file or directory), produce a JSON index entry containing hash-based identities, filesystem metadata, timestamps, embedded EXIF data, and sidecar metadata — all structured according to a defined output schema. Everything else — the language, the architecture, the output schema version, the dependency set, the configuration model, and the platform scope — is reengineered for the Python ecosystem and cross-platform execution.
+The original PowerShell source code is closed-source and is not included in the repository. All behavioral knowledge required for implementation and maintenance is captured in this specification and the reference documents listed in [§1.5](#15-reference-documents). See [§1.2](#12-scope) (Out of Scope) for the full policy on original source handling.
 
-The original PowerShell source code is closed-source and is not included in the `shruggie-indexer` repository. All behavioral knowledge required to implement the port is captured in this specification and the reference documents listed in [§1.5](#15-reference-documents). An implementer MUST NOT require access to `main.ps1` or to the `MakeIndex` function source. See [§1.2](#12-scope) (Out of Scope) for the full policy on original source handling.
+> **Historical note:** The original `MakeIndex` is one function among hundreds in `main.ps1`, a monolithic 17,000+ line PowerShell script that serves as a general-purpose utility library. `MakeIndex` itself spans approximately 1,500 lines with 20+ nested sub-functions. It depends on eight additional top-level pslib functions (`Base64DecodeString`, `Date2UnixTime`, `DirectoryId`, `FileId`, `MetaFileRead`, `TempOpen`, `TempClose`, `Vbs`) and two external binaries (`exiftool`, `jq`). The combined dependency tree encompasses roughly 60 discrete code units.
 
 <a id="23-design-goals-and-non-goals"></a>
 ### 2.3. Design Goals and Non-Goals
@@ -397,28 +404,38 @@ The original PowerShell source code is closed-source and is not included in the 
 <a id="design-goals"></a>
 #### Design Goals
 
-**G1 — Behavioral fidelity.** For any input path that the original `MakeIndex` can process, the port MUST produce a v2 index entry whose semantic content is equivalent to the original's v1 output — after accounting for the documented schema restructuring ([§5](#5-output-schema)) and the intentional deviations listed in [§2.6](#26-intentional-deviations-from-the-original). "Semantic equivalence" means that the same file produces the same hash-based identity, the same timestamp values (within platform precision limits), the same embedded metadata extraction results, and the same sidecar metadata discovery and parsing outcomes. It does NOT mean byte-identical JSON output; the v2 schema reorganizes fields into sub-objects and adds fields that did not exist in v1.
+**G1 — Behavioral fidelity.** For any input path, the tool MUST produce a v2 index entry whose semantic content is correct and complete — the same file always produces the same hash-based identity, the same timestamp values (within platform precision limits), the same embedded metadata extraction results, and the same sidecar metadata discovery and parsing outcomes. "Semantic equivalence" means deterministic, reproducible output. It does NOT mean byte-identical JSON across runs; timestamp access times and output formatting may vary.
 
-**G2 — Cross-platform portability.** The original runs only on Windows due to its reliance on PowerShell, .NET Framework types, `certutil`, Windows-specific path handling, and hardcoded Windows filesystem assumptions. The port MUST run on Windows, Linux, and macOS without platform-specific code branches in the core indexing engine. Platform-specific behavior (such as creation time availability or symlink semantics) is handled through documented abstractions with explicit fallback strategies, not through conditional imports or OS-detection switches in the hot path. The only external binary dependency — `exiftool` — is itself cross-platform.
+> **Historical note (G1):** Behavioral fidelity was originally defined relative to the PowerShell `MakeIndex` function's v1 output, accounting for the documented schema restructuring ([§5](#5-output-schema)) and intentional deviations ([§2.6](#26-intentional-deviations-from-the-original)).
 
-**G3 — Three delivery surfaces from a single codebase.** The tool ships as a CLI utility, a Python library, and a standalone GUI application. All three surfaces consume the same core indexing engine. The CLI and GUI are thin presentation layers over the library API. No indexing logic lives in the CLI argument parser or the GUI event handlers. This is the same architecture used by `shruggie-feedtools`.
+**G2 — Cross-platform portability.** The tool MUST run on Windows, Linux, and macOS without platform-specific code branches in the core indexing engine. Platform-specific behavior (such as creation time availability or symlink semantics) is handled through documented abstractions with explicit fallback strategies, not through conditional imports or OS-detection switches in the hot path. The only external binary dependency — `exiftool` — is itself cross-platform.
 
-**G4 — Externalized, user-modifiable configuration.** The original hardcodes all configuration in the `$global:MetadataFileParser` PowerShell object and in various literal values scattered across the function body (exclusion lists, extension validation regex, exiftool argument strings, system directory filters). The port externalizes all such values into a typed configuration system with sensible defaults, a documented configuration file format, and a merge/override mechanism for user customization. A user SHOULD be able to add a new sidecar metadata pattern, extend the exiftool exclusion list, or modify the filesystem exclusion filters without editing source code.
+> **Historical note (G2):** The original ran only on Windows due to reliance on PowerShell, .NET Framework types, `certutil`, Windows-specific path handling, and hardcoded Windows filesystem assumptions. Cross-platform portability was a primary design goal for the Python rewrite.
 
-**G5 — Dependency minimization.** The port declares a small, deliberately chosen set of required runtime dependencies — `click` (CLI parsing), `orjson` (JSON serialization performance), `pyexiftool` (batch exiftool invocation with safe Unicode argument passing), and `tqdm` (progress reporting) — alongside `exiftool` as the sole required external binary. These four packages are listed in `[project.dependencies]` in `pyproject.toml` and are installed by a bare `pip install shruggie-indexer`. Each was promoted from optional to required because it replaces functionality that would otherwise need to be built from scratch, re-implemented with inferior characteristics, or deferred to post-MVP (see DEV-15, DEV-16, and the per-package rationale in [§12.3](#123-third-party-python-packages)). The GUI package (`customtkinter`) remains optional and is declared as an extra. Development and testing tools (`rich`, `pytest`, `ruff`, etc.) are also declared as extras. The core indexing engine has no other third-party runtime dependencies beyond the four listed above.
+**G3 — Three delivery surfaces from a single codebase.** The tool ships as a CLI utility, a Python library, and a standalone GUI application. All three surfaces consume the same core indexing engine. The CLI and GUI are thin presentation layers over the library API. No indexing logic lives in the CLI argument parser or the GUI event handlers.
 
-**G6 — AI-agent implementability.** Every section of this specification provides sufficient detail for an AI implementation agent to produce correct, complete code for the described component within a single context window, without interactive clarification or access to the original source. Cross-references between sections are explicit. Ambiguous behavioral questions are resolved in the specification text rather than left to implementer judgment. This is the document's primary design constraint and the reason for its level of explicitness.
+> **Historical note (G3):** This is the same architecture used by `shruggie-feedtools`.
 
-**G7 — Structured, v2-native output.** The port targets the v2 output schema exclusively. The v2 schema consolidates the v1 schema's flat field layout into logical sub-objects (`NameObject`, `HashSet`, `SizeObject`, `TimestampPair`, `TimestampsObject`, `ParentObject`, `MetadataEntry`), eliminates redundant fields, adds a `schema_version` discriminator, and provides the structural foundation for MetaMergeDelete reversal. The port does not produce v1 output. A v1-to-v2 migration utility is a planned post-MVP deliverable (see [§1.2](#12-scope), Out of Scope).
+**G4 — Externalized, user-modifiable configuration.** All behavioral parameters — sidecar metadata patterns, exiftool exclusion lists, filesystem exclusion filters, extension validation rules — are externalized into a typed configuration system with sensible defaults, a documented TOML configuration file format, and a merge/override mechanism for user customization. A user SHOULD be able to add a new sidecar metadata pattern, extend the exiftool exclusion list, or modify the filesystem exclusion filters without editing source code.
+
+> **Historical note (G4):** The original hardcoded all configuration in the `$global:MetadataFileParser` PowerShell object and in literal values scattered across the function body. The externalized configuration system is a deliberate architectural improvement.
+
+**G5 — Dependency minimization.** The tool declares a small, deliberately chosen set of required runtime dependencies — `click` (CLI parsing), `orjson` (JSON serialization performance), `pyexiftool` (batch exiftool invocation with safe Unicode argument passing), and `tqdm` (progress reporting) — alongside `exiftool` as the sole required external binary. These four packages are listed in `[project.dependencies]` in `pyproject.toml` and are installed by a bare `pip install shruggie-indexer`. Each was promoted from optional to required because it replaces functionality that would otherwise need to be built from scratch or re-implemented with inferior characteristics (see DEV-15, DEV-16, and the per-package rationale in [§12.3](#123-third-party-python-packages)). The GUI package (`customtkinter`) remains optional and is declared as an extra. Development and testing tools (`rich`, `pytest`, `ruff`, etc.) are also declared as extras. The core indexing engine has no other third-party runtime dependencies beyond the four listed above.
+
+**G6 — AI-agent implementability.** Every section of this specification provides sufficient detail for an AI implementation agent to produce correct, complete code for the described component within a single context window, without interactive clarification. Cross-references between sections are explicit. Ambiguous behavioral questions are resolved in the specification text rather than left to implementer judgment. This is the document's primary design constraint and the reason for its level of explicitness.
+
+**G7 — Structured, v2-native output.** The tool targets the v2 output schema exclusively. The v2 schema consolidates related fields into logical sub-objects (`NameObject`, `HashSet`, `SizeObject`, `TimestampPair`, `TimestampsObject`, `ParentObject`, `MetadataEntry`), adds a `schema_version` discriminator, and provides the structural foundation for MetaMergeDelete reversal. A v1-to-v2 migration utility is a planned post-MVP deliverable (see [§1.2](#12-scope), Out of Scope).
+
+> **Historical note (G7):** The v2 schema is a ground-up restructuring of the original v1 schema, which used a flat field layout with separate top-level keys for each hash variant, timestamp format, and parent attribute. The tool does not produce v1 output.
 
 <a id="non-goals"></a>
 #### Non-Goals
 
-**NG1 — Full pslib port.** Only the `MakeIndex` function and its dependency tree are ported. The hundreds of other functions in `main.ps1` (`Add`, `ApkDexDump`, `ChromeBookmark`, etc.) are unrelated to this project.
+**NG1 — Full pslib port.** Only the `MakeIndex` function and its dependency tree informed this project. The hundreds of other functions in the original pslib library are unrelated.
 
-**NG2 — Backward-compatible v1 JSON output.** The port does not produce output conforming to the v1 schema (`MakeIndex_OutputSchema.json`). Consumers of existing v1 index assets will need the planned v1-to-v2 migration utility (post-MVP) or must adapt their parsers to the v2 schema.
+**NG2 — Backward-compatible v1 JSON output.** The tool does not produce output conforming to the v1 schema (`MakeIndex_OutputSchema.json`). Consumers of existing v1 index assets will need the planned v1-to-v2 migration utility (post-MVP) or must adapt their parsers to the v2 schema.
 
-**NG3 — Drop-in PowerShell replacement.** The port does not replicate the original's PowerShell parameter interface, its `-OutputObject` / `-OutputJson` switch pattern, or its integration with the pslib global state (`$global:MetadataFileParser`, `$global:DeleteQueue`, `$LibSessionID`). The Python tool has its own CLI, API, and configuration system designed for the Python ecosystem.
+**NG3 — Drop-in PowerShell replacement.** The tool has its own CLI, API, and configuration system designed for the Python ecosystem. It does not replicate the original PowerShell parameter interface or integration with pslib global state.
 
 **NG4 — Real-time or watch-mode indexing.** The tool processes a target path and produces output. It does not monitor the filesystem for changes or re-index automatically. File-watching functionality is a potential future enhancement (see [§18](#18-future-considerations)) but is not part of the MVP.
 
@@ -434,7 +451,7 @@ The original PowerShell source code is closed-source and is not included in the 
 
 | Platform | Status | Notes |
 |----------|--------|-------|
-| Windows 10/11 x64 | Primary | The original's sole platform. Primary target for standalone `.exe` builds via PyInstaller. |
+| Windows 10/11 x64 | Primary | Primary target for standalone `.exe` builds via PyInstaller. |
 | Linux x64 (Ubuntu 22.04+, Fedora 38+) | Supported | Full feature parity. CI test matrix includes Ubuntu. |
 | macOS x64 / ARM64 (13 Ventura+) | Supported | Full feature parity. `st_birthtime` available for true creation time. CI test matrix includes macOS. |
 
@@ -447,7 +464,9 @@ The original PowerShell source code is closed-source and is not included in the 
 |--------|---------|---------|-------------|
 | `exiftool` | ≥ 12.0 | Embedded EXIF/XMP/IPTC metadata extraction | Must be installed separately and available on the system `PATH`. See [https://exiftool.org/](https://exiftool.org/) for platform-specific installation instructions. |
 
-`exiftool` is the only external binary dependency. The original also required `jq` for JSON processing and `certutil` for Base64 encoding; both are eliminated in the port (see [§2.6](#26-intentional-deviations-from-the-original)). The tool MUST verify `exiftool` availability at startup and produce a clear, actionable error message if it is not found. If `exiftool` is missing, operations that require it (embedded metadata extraction) MUST fail gracefully with a warning, while operations that do not require it (hashing, timestamp extraction, sidecar metadata reading) MUST continue to function normally.
+`exiftool` is the only external binary dependency. The tool MUST verify `exiftool` availability at startup and produce a clear, actionable error message if it is not found. If `exiftool` is missing, operations that require it (embedded metadata extraction) MUST fail gracefully with a warning, while operations that do not require it (hashing, timestamp extraction, sidecar metadata reading) MUST continue to function normally.
+
+> **Historical note:** The original also required `jq` for JSON processing and `certutil` for Base64 encoding; both are eliminated in the Python tool (see [§2.6](#26-intentional-deviations-from-the-original)).
 
 <a id="runtime-environment"></a>
 #### Runtime Environment
@@ -470,126 +489,124 @@ The implementation MUST NOT use features introduced after Python 3.12 without a 
 <a id="26-intentional-deviations-from-the-original"></a>
 ### 2.6. Intentional Deviations from the Original
 
-This section catalogs the architectural and behavioral decisions where the port deliberately diverges from the original implementation. Each deviation is identified by a short code (e.g., `DEV-01`) for cross-referencing from other sections of this specification. The full technical details of each deviation are developed in the referenced sections; this subsection provides the summary rationale and serves as a navigational index.
+This section catalogs the architectural and behavioral decisions where the tool deliberately diverges from the original PowerShell implementation. Each deviation is identified by a short code (e.g., `DEV-01`) for cross-referencing from other sections of this specification. The full technical details of each deviation are developed in the referenced sections; this subsection provides the summary rationale and serves as a navigational index.
 
 <a id="dev-01-unified-hashing-module"></a>
 #### DEV-01 — Unified hashing module
 
-**Original:** Hashing logic is independently reimplemented in four separate locations — `FileId` (8 sub-functions), `DirectoryId` (5 sub-functions), `ReadMetaFile` (2 sub-functions), and `MetaFileRead` (2+ sub-functions) — each repeating the same `Create() → ComputeHash() → ToString() → replace('-','')` pattern with no shared code.
+A single hashing utility module provides `hash_file()` and `hash_string()` functions consumed by all callers, eliminating code duplication. See [§6.3](#63-hashing-and-identity-generation).
 
-**Port:** A single hashing utility module provides `hash_file()` and `hash_string()` functions consumed by all callers. This eliminates approximately 17 redundant sub-functions. See [§6.3](#63-hashing-and-identity-generation).
+> **Historical note (DEV-01):** The original implemented hashing logic independently in four separate locations — `FileId` (8 sub-functions), `DirectoryId` (5 sub-functions), `ReadMetaFile` (2 sub-functions), and `MetaFileRead` (2+ sub-functions) — each repeating the same `Create() → ComputeHash() → ToString() → replace('-','')` pattern with no shared code. The unified module eliminates approximately 17 redundant sub-functions.
 
 <a id="dev-02-multi-algorithm-single-pass-hashing"></a>
 #### DEV-02 — Multi-algorithm single-pass hashing
 
-**Original:** Only MD5 and SHA256 are computed at runtime, despite the output schema defining fields for SHA1 and SHA512. The additional algorithm fields are left `$null` in practice. Each algorithm is computed in a separate file-read pass.
+MD5 and SHA256 are always computed. SHA512 is computed when explicitly enabled in the configuration (`config.compute_sha512 = True`). SHA1 is not computed — it serves no unique purpose in the identity system and adds overhead without benefit (see [§5.2.1](#521-hashset) for the rationale). All active algorithms are computed in a single file read using `hashlib`'s ability to feed the same byte chunks to multiple hash objects simultaneously, halving the I/O for the default two-algorithm case. See [§6.3](#63-hashing-and-identity-generation).
 
-**Port:** MD5 and SHA256 are always computed. SHA512 is computed when explicitly enabled in the configuration (`config.compute_sha512 = True`). SHA1 is not computed — it serves no unique purpose in the identity system and adds overhead without benefit (see [§5.2.1](#521-hashset) for the rationale). All active algorithms are computed in a single file read using `hashlib`'s ability to feed the same byte chunks to multiple hash objects simultaneously, halving the I/O for the default two-algorithm case compared to the original's one-pass-per-algorithm approach. See [§6.3](#63-hashing-and-identity-generation).
+> **Historical note (DEV-02):** The original computed only MD5 and SHA256 at runtime despite the output schema defining fields for SHA1 and SHA512 (left `$null` in practice). Each algorithm was computed in a separate file-read pass.
 
 <a id="dev-03-unified-filesystem-traversal"></a>
 #### DEV-03 — Unified filesystem traversal
 
-**Original:** Recursive and non-recursive directory traversal are implemented as two entirely separate code paths (`MakeDirectoryIndexRecursiveLogic` and `MakeDirectoryIndexLogic`) with near-complete code duplication. Both paths manually assemble an `ArrayList` from separate `Get-ChildItem` calls for files and directories.
+A single traversal function parameterized by a `recursive: bool` flag handles both modes. `Path.rglob('*')` or `os.walk()` handles the recursive case; `Path.iterdir()` handles the non-recursive case. Both paths feed into the same object-construction pipeline. See [§6.1](#61-filesystem-traversal-and-discovery).
 
-**Port:** A single traversal function parameterized by a `recursive: bool` flag. `Path.rglob('*')` or `os.walk()` handles the recursive case; `Path.iterdir()` handles the non-recursive case. Both paths feed into the same object-construction pipeline. See [§6.1](#61-filesystem-traversal-and-discovery).
+> **Historical note (DEV-03):** The original implemented recursive and non-recursive directory traversal as two entirely separate code paths (`MakeDirectoryIndexRecursiveLogic` and `MakeDirectoryIndexLogic`) with near-complete code duplication. Both paths manually assembled an `ArrayList` from separate `Get-ChildItem` calls for files and directories.
 
 <a id="dev-04-unified-path-resolution"></a>
 #### DEV-04 — Unified path resolution
 
-**Original:** The "resolve path" operation is independently implemented in three locations: `ResolvePath` in `MakeIndex`, `FileId-ResolvePath` in `FileId`, and `DirectoryId-ResolvePath` in `DirectoryId`. All three perform the same `Resolve-Path` → `GetFullPath()` fallback logic.
+A single `resolve_path()` utility function handles all path resolution needs. See [§6.2](#62-path-resolution-and-manipulation).
 
-**Port:** A single `resolve_path()` utility function replaces all three. See [§6.2](#62-path-resolution-and-manipulation).
+> **Historical note (DEV-04):** The original independently implemented the "resolve path" operation in three locations: `ResolvePath` in `MakeIndex`, `FileId-ResolvePath` in `FileId`, and `DirectoryId-ResolvePath` in `DirectoryId`. All three performed the same `Resolve-Path` → `GetFullPath()` fallback logic.
 
 <a id="dev-05-elimination-of-the-base64-argument-encoding-pipeline"></a>
 #### DEV-05 — Elimination of the Base64 argument encoding pipeline
 
-**Original:** Exiftool arguments are stored as Base64-encoded strings in the source code, decoded at runtime by `Base64DecodeString` (which itself calls `certutil` on Windows and handles URL-encoding as a separate opcode), written to a temporary file via `TempOpen`, passed to exiftool via its `-@` argfile switch, and cleaned up via `TempClose`.
+Exiftool arguments are defined as plain Python string lists and communicated to exiftool directly. The primary interface is `pyexiftool` (DEV-16), which uses exiftool's `-stay_open` mode via stdin/stdout pipes — arguments are never written to disk. The fallback interface passes arguments via a `subprocess.run()` call with a `-@` argfile written through Python's `tempfile` module, using `-charset filename=utf8` for Unicode safety. No Base64 encoding is involved. See [§6.6](#66-exif-and-embedded-metadata-extraction).
 
-**Port:** The Base64 encoding pipeline and its four dependencies (`Base64DecodeString`, `certutil`, `TempOpen`, `TempClose`) are eliminated entirely. The primary exiftool interface is `pyexiftool` (DEV-16), which communicates with exiftool's `-stay_open` mode via stdin/stdout pipes — arguments are never written to disk. The fallback interface passes arguments via a `subprocess.run()` call with a `-@` argfile written through Python's `tempfile` module, using `-charset filename=utf8` for Unicode safety. In both cases, exiftool arguments are defined as plain Python string lists — no Base64 encoding, no `certutil`, no Windows-specific decoding. See [§6.6](#66-exif-and-embedded-metadata-extraction).
+> **Historical note (DEV-05):** The original stored exiftool arguments as Base64-encoded strings, decoded them at runtime via `Base64DecodeString` (which called `certutil` on Windows and handled URL-encoding as a separate opcode), wrote them to a temporary file via `TempOpen`, passed them to exiftool via its `-@` argfile switch, and cleaned up via `TempClose`. The entire Base64 pipeline and its four dependencies (`Base64DecodeString`, `certutil`, `TempOpen`, `TempClose`) are eliminated.
 
 <a id="dev-06-elimination-of-jq"></a>
 #### DEV-06 — Elimination of jq
 
-**Original:** Exiftool's JSON output is piped through `jq` for two purposes: compacting the JSON and deleting unwanted keys (ExifToolVersion, FileName, Directory, FilePermissions, etc.).
+Exiftool JSON output is parsed directly with `json.loads()`. Unwanted keys are removed with a dict comprehension against the configured exclusion set. See [§6.6](#66-exif-and-embedded-metadata-extraction).
 
-**Port:** `json.loads()` handles parsing natively. Unwanted keys are removed with a dict comprehension. The `jq` binary dependency is eliminated entirely. See [§6.6](#66-exif-and-embedded-metadata-extraction).
+> **Historical note (DEV-06):** The original piped exiftool's JSON output through `jq` for two purposes: compacting the JSON and deleting unwanted keys. The `jq` binary dependency is eliminated entirely.
 
 <a id="dev-07-direct-timestamp-derivation-date2unixtime-elimination"></a>
 #### DEV-07 — Direct timestamp derivation (Date2UnixTime elimination)
 
-**Original:** Timestamps are read from `Get-Item` as .NET `DateTime` objects, formatted to strings via `.ToString($DateFormat)`, then passed to the external `Date2UnixTime` function which parses those strings back into `DateTimeOffset` objects to call `.ToUnixTimeMilliseconds()` — a needless format-parse-format round-trip.
+Unix timestamps are derived directly from `os.stat()` float values: `int(stat_result.st_mtime * 1000)`. ISO 8601 strings are produced separately from the same `datetime` object. No round-trip parsing. See [§6.5](#65-filesystem-timestamps-and-date-conversion).
 
-**Port:** Unix timestamps are derived directly from `os.stat()` float values: `int(stat_result.st_mtime * 1000)`. ISO 8601 strings are produced separately from the same `datetime` object. No round-trip parsing. `Date2UnixTime` and its own internal dependency chain (`Date2FormatCode`, `Date2UnixTimeSquash`, `Date2UnixTimeCountDigits`, `Date2UnixTimeFormatCode`) are eliminated entirely. See [§6.5](#65-filesystem-timestamps-and-date-conversion).
+> **Historical note (DEV-07):** The original read timestamps from `Get-Item` as .NET `DateTime` objects, formatted them to strings via `.ToString($DateFormat)`, then passed those strings to the external `Date2UnixTime` function which parsed them back into `DateTimeOffset` objects to call `.ToUnixTimeMilliseconds()` — a needless format-parse-format round-trip. `Date2UnixTime` and its own internal dependency chain (`Date2FormatCode`, `Date2UnixTimeSquash`, `Date2UnixTimeCountDigits`, `Date2UnixTimeFormatCode`) are all eliminated.
 
 <a id="dev-08-python-logging-replaces-vbs"></a>
 #### DEV-08 — Python logging replaces Vbs
 
-**Original:** `Vbs` is a custom structured logging function that is the most widely-called function in the pslib library. It implements its own severity normalization, colorized console output via `Write-Host`, call-stack compression (`A:A:A` → `A(3)`), session ID embedding, monthly log file rotation, and log directory bootstrapping — all manually.
+Python's `logging` standard library module provides structured logging with severity levels, formatters for console and file output, rotation handlers, and built-in caller information. The tool uses a logger hierarchy rooted at `shruggie_indexer` with per-module child loggers. See [§11](#11-logging-and-diagnostics).
 
-**Port:** Python's `logging` standard library module provides all of these capabilities natively or through standard handlers: severity levels, formatters for console and file output, `RotatingFileHandler` or `TimedRotatingFileHandler` for log rotation, and built-in caller information. The port uses a logger hierarchy rooted at `shruggie_indexer` with per-module child loggers. See [§11](#11-logging-and-diagnostics).
+> **Historical note (DEV-08):** The original used `Vbs`, a custom structured logging function and the most widely-called function in the pslib library. `Vbs` implemented its own severity normalization, colorized console output via `Write-Host`, call-stack compression (`A:A:A` → `A(3)`), session ID embedding, monthly log file rotation, and log directory bootstrapping — all manually. Python's `logging` module provides all of these capabilities natively or through standard handlers.
 
 <a id="dev-09-computed-null-hash-constants"></a>
 #### DEV-09 — Computed null-hash constants
 
-**Original:** Null-hash constants (the hash of an empty string) are hardcoded as literal hex strings in multiple locations across `DirectoryId` and `FileId` sub-functions (e.g., `D41D8CD98F00B204E9800998ECF8427E` for MD5).
+Null-hash constants (the hash of an empty string) are computed once at module load time: `hashlib.md5(b'').hexdigest().upper()`, etc. This is self-documenting, eliminates the risk of copy-paste errors in long hex strings, and automatically produces correct values if additional algorithms are added in the future. See [§6.3](#63-hashing-and-identity-generation).
 
-**Port:** Null-hash constants are computed once at module load time: `hashlib.md5(b'').hexdigest().upper()`, etc. This is self-documenting, eliminates the risk of copy-paste errors in long hex strings, and automatically produces correct values if additional algorithms are added in the future. See [§6.3](#63-hashing-and-identity-generation).
+> **Historical note (DEV-09):** The original hardcoded null-hash constants as literal hex strings in multiple locations across `DirectoryId` and `FileId` sub-functions (e.g., `D41D8CD98F00B204E9800998ECF8427E` for MD5).
 
 <a id="dev-10-externalized-filesystem-exclusion-filters"></a>
 #### DEV-10 — Externalized filesystem exclusion filters
 
-**Original:** The exclusion of `$RECYCLE.BIN` and `System Volume Information` is hardcoded as inline `Where-Object` filters in the traversal logic. These are Windows-specific system directories.
+The exclusion list is externalized into the configuration system with a cross-platform default set that covers `$RECYCLE.BIN`, `System Volume Information`, `.DS_Store`, `.Spotlight-V100`, `.Trashes`, `.fseventsd`, and similar platform artifacts. Users can extend or override the list via configuration. See [§6.1](#61-filesystem-traversal-and-discovery) and [§7](#7-configuration).
 
-**Port:** The exclusion list is externalized into the configuration system with a cross-platform default set that covers `$RECYCLE.BIN`, `System Volume Information`, `.DS_Store`, `.Spotlight-V100`, `.Trashes`, `.fseventsd`, and similar platform artifacts. Users can extend or override the list via configuration. See [§6.1](#61-filesystem-traversal-and-discovery) and [§7](#7-configuration).
+> **Historical note (DEV-10):** The original hardcoded the exclusion of `$RECYCLE.BIN` and `System Volume Information` as inline `Where-Object` filters in the traversal logic. These are Windows-specific system directories.
 
 <a id="dev-11-v2-output-schema"></a>
 #### DEV-11 — v2 output schema
 
-**Original:** Output conforms to the v1 schema (`MakeIndex_OutputSchema.json`), which uses a flat field layout with separate top-level keys for each hash variant, timestamp format, and parent attribute — resulting in significant structural redundancy.
+Output conforms to the v2 schema, which consolidates related fields into typed sub-objects (`NameObject`, `HashSet`, `SizeObject`, `TimestampPair`, `TimestampsObject`, `ParentObject`), adds a `schema_version` discriminator, adds filesystem provenance fields to `MetadataEntry` for MetaMergeDelete reversal, and eliminates the `Encoding` field (see DEV-12). The v2 schema is defined at [schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json). See [§5](#5-output-schema).
 
-**Port:** Output conforms to the v2 schema, which consolidates related fields into typed sub-objects (`NameObject`, `HashSet`, `SizeObject`, `TimestampPair`, `TimestampsObject`, `ParentObject`), adds a `schema_version` discriminator, adds filesystem provenance fields to `MetadataEntry` for MetaMergeDelete reversal, and eliminates the `Encoding` field (see DEV-12). The v2 schema is defined at [schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json). See [§5](#5-output-schema).
+> **Historical note (DEV-11):** The original's output conformed to the v1 schema (`MakeIndex_OutputSchema.json`), which used a flat field layout with separate top-level keys for each hash variant, timestamp format, and parent attribute — resulting in significant structural redundancy.
 
 <a id="dev-12-encoding-field-dropped"></a>
 #### DEV-12 — Encoding field dropped
 
-**Original:** The v1 output includes an `Encoding` key containing detailed file encoding properties (BOM detection, code page, encoder/decoder fallback objects) derived from the `GetFileEncoding` sub-function, which invokes a custom C# class (`EncodingDetector.cs`) loaded at pslib initialization.
+The `Encoding` field is intentionally absent from the v2 schema. The encoding information it provided (code page identifiers, `IsBrowserDisplay`, `IsMailNewsSave`, etc.) is deeply coupled to the .NET `System.Text.Encoding` type hierarchy and has limited utility outside of .NET consumers. See [§5.11](#511-dropped-and-restructured-fields).
 
-**Port:** The `Encoding` field is intentionally dropped from the v2 schema. The field's value is derived from a .NET-specific BOM inspection mechanism that has no direct Python equivalent producing the same output structure. The encoding information it provides (code page identifiers, `IsBrowserDisplay`, `IsMailNewsSave`, etc.) is deeply coupled to the .NET `System.Text.Encoding` type hierarchy and has limited utility outside of .NET consumers. The `GetFileEncoding` sub-function and all related logic (`EncodingDetector.cs`, `GetFileEncoding-Squash`) are not carried forward. See [§5.11](#511-dropped-and-restructured-fields).
+> **Historical note (DEV-12):** The v1 output included an `Encoding` key containing detailed file encoding properties (BOM detection, code page, encoder/decoder fallback objects) derived from the `GetFileEncoding` sub-function, which invoked a custom C# class (`EncodingDetector.cs`) loaded at pslib initialization. The `GetFileEncoding` sub-function and all related logic (`EncodingDetector.cs`, `GetFileEncoding-Squash`) are not carried forward.
 
 <a id="dev-13-dead-code-removal"></a>
 #### DEV-13 — Dead code removal
 
-**Original:** `ValidateIsLink` is listed as a dependency in the `MakeIndex` docstring but is never actually called — `FileId` and `DirectoryId` perform symlink detection inline. `UpdateFunctionStack` and `VariableStringify` are internal utility functions whose purposes are absorbed by Python built-ins.
-
-**Port:** These functions are not carried forward. See [§12.4](#124-eliminated-original-dependencies).
+The following original functions are not carried forward: `ValidateIsLink` (listed as a dependency but never actually called — `FileId` and `DirectoryId` perform symlink detection inline), `UpdateFunctionStack`, and `VariableStringify` (internal utilities whose purposes are absorbed by Python built-ins). See [§12.4](#124-eliminated-original-dependencies).
 
 <a id="dev-14-configurable-extension-validation"></a>
 #### DEV-14 — Configurable extension validation
 
-**Original:** The extension validation regex `^(([a-z0-9]){1,2}|([a-z0-9]){1}([a-z0-9\-]){1,12}([a-z0-9]){1})$` is hardcoded in `MakeObject`. It rejects extensions longer than 14 characters or those containing non-alphanumeric characters (beyond hyphens).
+The extension validation pattern is externalized into the configuration system so users can adjust it for edge cases (e.g., `.numbers`, `.download`, or other legitimate long extensions) without editing source code. The default pattern preserves the original's intent. See [§7](#7-configuration).
 
-**Port:** The extension validation pattern is externalized into the configuration system so users can adjust it for edge cases (e.g., `.numbers`, `.download`, or other legitimate long extensions) without editing source code. The default pattern preserves the original's intent. See [§7](#7-configuration).
+> **Historical note (DEV-14):** The original hardcoded the extension validation regex `^(([a-z0-9]){1,2}|([a-z0-9]){1}([a-z0-9\-]){1,12}([a-z0-9]){1})$` in `MakeObject`. It rejected extensions longer than 14 characters or those containing non-alphanumeric characters (beyond hyphens).
 
 <a id="dev-15-unconditional-nfc-normalization-before-string-hashing"></a>
 #### DEV-15 — Unconditional NFC normalization before string hashing
 
-**Original:** String values (filenames, directory names) are hashed as-is, using whatever byte representation the OS returns. Because macOS HFS+ stores filenames in NFD (decomposed) form while Windows NTFS and most Linux filesystems store them in NFC (composed) form, the same logical filename produces different hash digests depending on the platform. The original runs exclusively on Windows (NFC), so this discrepancy is unobservable.
+`hash_string()` applies `unicodedata.normalize('NFC', value)` unconditionally on all platforms before encoding to UTF-8 and hashing. This ensures that a file named `café.txt` produces identical identity hashes regardless of whether the filesystem returned the name in NFC (`é` = U+00E9) or NFD (`e` + U+0301). The normalization is unconditional rather than platform-conditional because APFS (macOS) preserves whichever form was used at creation, so NFD filenames can appear on any macOS volume — not just HFS+. Unconditional NFC is the simplest invariant: every string is NFC-normalized before hashing, period.
 
-**Port:** `hash_string()` applies `unicodedata.normalize('NFC', value)` unconditionally on all platforms before encoding to UTF-8 and hashing. This ensures that a file named `café.txt` produces identical identity hashes regardless of whether the filesystem returned the name in NFC (`é` = U+00E9) or NFD (`e` + U+0301). The normalization is unconditional rather than platform-conditional because APFS (macOS) preserves whichever form was used at creation, so NFD filenames can appear on any macOS volume — not just HFS+. Unconditional NFC is the simplest invariant: every string is NFC-normalized before hashing, period.
+The same logical filename MUST produce the same identity on all supported platforms. See [§6.3](#63-hashing-and-identity-generation) and [§15.3](#153-linux-and-macos-considerations).
 
-This is a deliberate break from the "hash what the filesystem returns" philosophy stated in the original's portable hashing model. The original never needed to address cross-platform filename equivalence because it ran on a single platform. The port prioritizes cross-platform hash determinism — the same logical filename MUST produce the same identity on all supported platforms. See [§6.3](#63-hashing-and-identity-generation) and [§15.3](#153-linux-and-macos-considerations).
+> **Historical note (DEV-15):** The original hashed string values as-is, using whatever byte representation the OS returned. Because macOS HFS+ stores filenames in NFD (decomposed) form while Windows NTFS and most Linux filesystems store them in NFC (composed) form, the same logical filename would produce different hash digests depending on the platform. The original ran exclusively on Windows (NFC), so this discrepancy was unobservable. The unconditional NFC normalization is a deliberate break from the original's "hash what the filesystem returns" approach to ensure cross-platform hash determinism.
 
 <a id="dev-16-pyexiftool-batch-mode-as-primary-exiftool-strategy"></a>
 #### DEV-16 — PyExifTool batch mode as primary exiftool strategy
 
-**Original:** Exiftool is invoked once per file through a Base64-decoded argument file pipeline (`Base64DecodeString` → `TempOpen` → exiftool `-@` argfile → `TempClose`). Every invocation spawns a new Perl process and a new `certutil` process for argument decoding.
+The `pyexiftool` package (`>=0.5`) is a required runtime dependency. It uses exiftool's `-stay_open` mode to keep a single persistent Perl process alive for the duration of the indexing run. File paths and arguments are written to the process's stdin pipe one per line — this is semantically equivalent to a continuously open argfile and inherits the same Unicode safety guarantees documented in exiftool's FAQ §18 (`-charset filename=utf8`). Per-file exiftool cost drops from 200–500 ms (process startup dominated) to 20–50 ms (metadata extraction only). A `subprocess.run()` + argfile fallback is retained for environments where `pyexiftool` cannot maintain a stable connection. See [§6.6](#66-exif-and-embedded-metadata-extraction) and [§17.5](#175-exiftool-invocation-strategy).
 
-**Port:** The `pyexiftool` package (`>=0.5`) is a required runtime dependency. It uses exiftool's `-stay_open` mode to keep a single persistent Perl process alive for the duration of the indexing run. File paths and arguments are written to the process's stdin pipe one per line — this is semantically equivalent to a continuously open argfile and inherits the same Unicode safety guarantees documented in exiftool's FAQ §18 (`-charset filename=utf8`). Per-file exiftool cost drops from 200–500 ms (process startup dominated) to 20–50 ms (metadata extraction only). A `subprocess.run()` + argfile fallback is retained for environments where `pyexiftool` cannot maintain a stable connection. See [§6.6](#66-exif-and-embedded-metadata-extraction) and [§17.5](#175-exiftool-invocation-strategy).
+> **Historical note (DEV-16):** The original invoked exiftool once per file through a Base64-decoded argument file pipeline (`Base64DecodeString` → `TempOpen` → exiftool `-@` argfile → `TempClose`). Every invocation spawned a new Perl process and a new `certutil` process for argument decoding.
 
 <a id="3-repository-structure"></a>
 ## 3. Repository Structure
 
-This section defines the complete file and directory layout of the `shruggie-indexer` repository. The structure follows the conventions established by `shruggie-feedtools` (see [§1.5](#15-reference-documents), External References) — specifically the `src`-layout packaging pattern, the `scripts/` directory for platform-paired build and setup scripts, and the separation of porting-reference documentation from project documentation. Where this section does not explicitly define a convention, the `shruggie-feedtools` repository is the normative reference.
+This section defines the complete file and directory layout of the `shruggie-indexer` repository. The structure follows the conventions established by `shruggie-feedtools` (see [§1.5](#15-reference-documents), External References) — specifically the `src`-layout packaging pattern, the `scripts/` directory for platform-paired build and setup scripts, and the separation of reference documentation from project documentation. Where this section does not explicitly define a convention, the `shruggie-feedtools` repository is the normative reference.
 
 All paths in this section are relative to the repository root unless otherwise noted.
 
@@ -630,9 +647,9 @@ shruggie-indexer/
 
 | Path | Type | Description |
 |------|------|-------------|
-| `.archive/` | Directory | Human-only workspace for project notes, prompt files, and historical planning artifacts (including the archived implementation plan). AI agents should not parse or modify contents of this directory unless explicitly instructed. Not tracked in source control. |
+| `.archive/` | Directory | Human-only workspace for project notes, prompt files, and historical planning artifacts. AI agents should not parse or modify contents of this directory unless explicitly instructed. Not tracked in source control. |
 | `.github/` | Directory | GitHub-specific repository configuration. Contains `copilot-instructions.md` (project-level AI coding guidelines) and `workflows/` with CI/CD pipeline definitions: `release.yml` for the release build pipeline (see [§13](#13-packaging-and-distribution)) and `docs.yml` for automated documentation site deployment to GitHub Pages (see [§3.7](#37-documentation-site)). |
-| `docs/` | Directory | All project documentation beyond the top-level specification files. Subdivided into `getting-started/` (installation and quick-start guides), `schema/` (canonical v2 JSON Schema and validation examples), `porting-reference/` (original implementation reference materials), and `user-guide/` (end-user documentation including CLI, GUI, configuration, and API reference). See [§3.6](#36-documentation-artifacts) and [§3.7](#37-documentation-site). |
+| `docs/` | Directory | All project documentation beyond the top-level specification files. Subdivided into `getting-started/` (installation and quick-start guides), `schema/` (canonical v2 JSON Schema and validation examples), `porting-reference/` (historical reference materials from the original implementation), `user-guide/` (end-user documentation including CLI, GUI, configuration, and API reference), and `assets/` (images and media for documentation). See [§3.6](#36-documentation-artifacts) and [§3.7](#37-documentation-site). |
 | `scripts/` | Directory | Platform-paired shell scripts for development environment setup, build automation, and test execution. See [§3.5](#35-scripts-and-build-tooling). |
 | `src/shruggie_indexer/` | Directory | The Python source package. All importable code lives here. See [§3.2](#32-source-package-layout). |
 | `tests/` | Directory | All test code. Mirrors the source package structure. See [§3.4](#34-test-directory-layout). |
@@ -708,8 +725,8 @@ The `core/` subpackage contains all indexing logic. Every module in `core/` corr
 | `hashing.py` | Cat 3 (Hashing & Identity Generation) | Provides `hash_file()` (content hashing) and `hash_string()` (name hashing) functions that compute MD5 and SHA256 by default (with SHA512 opt-in) in a single pass (DEV-01, DEV-02). SHA1 is not computed. Applies unconditional NFC Unicode normalization before string hashing (DEV-15). Computes null-hash constants at module load time (DEV-09). Constructs `HashSet` objects. Implements the directory two-layer identity scheme (`hash(hash(name) + hash(parentName))`). Prefixes identities with `y` (file), `x` (directory), or `z` (generated metadata). |
 | `timestamps.py` | Cat 5 (Filesystem Timestamps & Date Conversion) | Derives Unix timestamps (milliseconds) and ISO 8601 strings directly from `os.stat()` results (DEV-07). Handles creation-time portability: `st_birthtime` on macOS, `st_ctime` on Windows, documented fallback on Linux. Constructs `TimestampPair` and `TimestampsObject` model instances. |
 | `exif.py` | Cat 6 (EXIF / Embedded Metadata Extraction) | Invokes `exiftool` using `pyexiftool`'s `-stay_open` batch mode as the primary backend (DEV-05, DEV-16), with a `subprocess.run()` + argfile fallback. Parses JSON output directly with `json.loads()` (DEV-06). Filters unwanted keys via dict comprehension. Respects the configurable exiftool file-type exclusion list. Handles `exiftool` absence gracefully (warning, not fatal). |
-| `sidecar.py` | Cat 7 (Sidecar Metadata File Handling) | Discovers sidecar metadata files by matching filenames against the configurable regex identification patterns from `MetadataFileParser`. Classifies sidecars by type (Description, JsonMetadata, Hash, Link, Subtitles, Thumbnail, etc.). Reads and parses sidecar content with format-specific handlers (JSON, plain text, hash files, URL/LNK shortcuts). Constructs `MetadataEntry` model instances. This is the Python equivalent of the original `MetaFileRead` function. |
-| `entry.py` | Cat 8 (Output Object Construction & Schema) | Orchestrates the construction of a single `IndexEntry` from a filesystem path. Calls into `paths`, `hashing`, `timestamps`, `exif`, and `sidecar` to gather all components, then assembles the final v2 schema object. This is the Python equivalent of the original `MakeObject` / `MakeFileIndex` / `MakeDirectoryIndex` family of functions. |
+| `sidecar.py` | Cat 7 (Sidecar Metadata File Handling) | Discovers sidecar metadata files by matching filenames against the configurable regex identification patterns from the sidecar configuration. Classifies sidecars by type (Description, JsonMetadata, Hash, Link, Subtitles, Thumbnail, etc.). Reads and parses sidecar content with format-specific handlers (JSON, plain text, hash files, URL/LNK shortcuts). Constructs `MetadataEntry` model instances. |
+| `entry.py` | Cat 8 (Output Object Construction & Schema) | Orchestrates the construction of a single `IndexEntry` from a filesystem path. Calls into `paths`, `hashing`, `timestamps`, `exif`, and `sidecar` to gather all components, then assembles the final v2 schema object. |
 | `serializer.py` | Cat 9 (JSON Serialization & Output Routing) | Converts `IndexEntry` model instances to JSON. Routes output to stdout, a single aggregate file, or per-item in-place sidecar files (`_meta2.json` / `_directorymeta2.json`), depending on the active output mode. Handles pretty-printing vs. compact output. Uses `orjson` as the primary serializer with a `json.dumps()` stdlib fallback for resilience. |
 | `rename.py` | Cat 10 (File Rename & In-Place Write) | Implements the `StorageName` rename operation: renames files and directories from their original names to their hash-based `storage_name` values. Handles collision detection, dry-run mode, and rollback on partial failure. |
 
@@ -724,15 +741,15 @@ The `core/__init__.py` file SHOULD re-export the primary orchestration functions
 
 **Rationale for `models/` as a separate subpackage:** In `shruggie-feedtools`, the Pydantic schema models live inside `core/schema.py`. That works for feedtools because its model layer is relatively flat (one `FeedOutput` model with nested item objects). The indexer's model layer is more complex — the v2 schema defines seven distinct sub-object types, the `IndexEntry` itself is recursive (the `items` field contains child `IndexEntry` objects), and the configuration system introduces a parallel set of typed structures (see `config/types.py` below). Separating `models/` from `core/` avoids circular import risks between the configuration types that `core/` modules consume and the schema types that `core/` modules produce. It also provides a clean import path for external consumers who need the types without pulling in the engine: `from shruggie_indexer.models import IndexEntry`.
 
-> **Deviation note:** This is a structural departure from the `shruggie-feedtools` convention of keeping schema models inside `core/`. The departure is justified by the added complexity of the indexer's type hierarchy and the circular-import risk it introduces. If during implementation the `models/` subpackage proves to contain only `schema.py` with no future growth path, collapsing it back into `core/schema.py` is an acceptable simplification — but the separation SHOULD be the starting point.
+> **Historical note:** This is a structural departure from the `shruggie-feedtools` convention of keeping schema models inside `core/`. The departure is justified by the added complexity of the indexer's type hierarchy and the circular-import risk it introduces. If during implementation the `models/` subpackage proves to contain only `schema.py` with no future growth path, collapsing it back into `core/schema.py` is an acceptable simplification — but the separation SHOULD be the starting point.
 
 <a id="config-configuration-system"></a>
 #### `config/` — Configuration System
 
 | Module | Responsibility |
 |--------|----------------|
-| `types.py` | Defines the typed configuration dataclasses: the top-level `IndexerConfig` and any nested structures for metadata file parser settings, exiftool exclusion lists, filesystem exclusion filters, extension validation patterns, and sidecar suffix patterns. These are the Python equivalent of the original `$global:MetadataFileParser` ordered hashtable, restructured into a typed hierarchy. See [§7.1](#71-configuration-architecture). |
-| `defaults.py` | Contains the hardcoded default values for every configuration field. This is the baseline configuration that applies when no user configuration file is present. The defaults reproduce the behavioral intent of the original's hardcoded values (regex patterns, exclusion lists, extension groups) while extending them for cross-platform coverage (DEV-10). See [§7.2](#72-default-configuration). |
+| `types.py` | Defines the typed configuration dataclasses: the top-level `IndexerConfig` and any nested structures for metadata file parser settings, exiftool exclusion lists, filesystem exclusion filters, extension validation patterns, and sidecar suffix patterns. See [§7.1](#71-configuration-architecture). |
+| `defaults.py` | Contains the hardcoded default values for every configuration field. This is the baseline configuration that applies when no user configuration file is present. The defaults provide sensible behavior for cross-platform file indexing with comprehensive sidecar pattern coverage. See [§7.2](#72-default-configuration). |
 | `loader.py` | Reads TOML configuration files via `tomllib` (stdlib, Python 3.11+), validates their structure against the `types.py` dataclasses, and merges user-provided values over the defaults. Implements the override/merge strategy defined in [§7.7](#77-configuration-override-and-merging-behavior). Provides the `load_config()` function consumed by the CLI, GUI, and public API. |
 
 The `config/__init__.py` file SHOULD export `IndexerConfig`, `load_config()`, and `get_default_config()` as the public configuration API.
@@ -751,7 +768,7 @@ The `cli/` subpackage is intentionally minimal for the MVP. If the CLI grows to 
 
 | Module | Responsibility |
 |--------|----------------|
-| `app.py` | The standalone desktop GUI application built with CustomTkinter. Modeled after the `shruggie-feedtools` GUI: two-panel layout, dark theme, shared font stack and appearance conventions. Provides a visual frontend to the same `core/` library code used by the CLI. Shipped as a separate PyInstaller-built executable artifact. See the GUI specification section of this document. |
+| `app.py` | The standalone desktop GUI application built with CustomTkinter. Uses a two-panel layout with a dark theme. Provides a visual frontend to the same `core/` library code used by the CLI. Shipped as a separate PyInstaller-built executable artifact. See the GUI specification section of this document. |
 
 The `gui/` subpackage is isolated from the rest of the package — it imports from `core/`, `models/`, and `config/`, but nothing outside `gui/` imports from it. The `customtkinter` dependency is declared as an optional extra (`pip install shruggie-indexer[gui]`) and is only imported inside `gui/`. This ensures that the CLI and library surfaces function without any GUI dependencies installed.
 
@@ -897,11 +914,11 @@ docs/
 |------|---------|
 | `index.md` | Documentation site landing page. Provides a project overview and links to the three documentation sections (schema reference, porting reference, user guide). Rendered as the site home page by MkDocs. See [§3.7](#37-documentation-site). |
 | `schema/` | Canonical v2 JSON Schema definition (`shruggie-indexer-v2.schema.json`) and validation examples (`examples/`). The schema file is the local copy of the canonical schema hosted at [schemas.shruggie.tech](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json). The `examples/` subdirectory contains real-world v2-compliant output files used for manual validation reference and documentation. |
-| `porting-reference/` | Reference materials derived from the original PowerShell implementation. These documents inform the port but are not part of the runtime codebase. They include dependency catalogs for each of the eight ported pslib functions, the operations catalog mapping original logic to Python modules, the v1 output schema (for porting reference only — the port does not target v1), the v1 output examples (`v1-examples/`), and the isolated `MetadataFileParser` object definition. An `index.md` provides a navigable overview for the documentation site. These files are committed to the repository for traceability and to support AI implementation agents who may need to consult them during sprint execution. They are read-only reference artifacts — they are never modified after initial commit unless an error in the original documentation is discovered. |
+| `porting-reference/` | Reference materials derived from the original PowerShell implementation. These documents inform the tool's design but are not part of the runtime codebase. They include dependency catalogs for each of the eight original pslib functions, the operations catalog mapping original logic to Python modules, the v1 output schema (for reference only — the tool does not target v1), the v1 output examples (`v1-examples/`), and the isolated `MetadataFileParser` object definition. An `index.md` provides a navigable overview for the documentation site. These files are committed to the repository for traceability and historical reference. They are read-only reference artifacts — they are never modified after initial commit unless an error in the documentation is discovered. |
 | `porting-reference/v1-examples/` | Real-world v1 output examples from the original `MakeIndex` function. These files demonstrate the v1 schema structure as produced by the original implementation and serve as backward-compatibility validation fixtures for the eventual v1-to-v2 migration utility. |
-| `user/` | End-user documentation: installation guide (`installation.md`), quick-start tutorial (`quickstart.md`), configuration reference (`configuration.md`), and changelog (`changelog.md`). An `index.md` provides the user guide landing page. Stub pages are created as part of the MVP repository scaffolding to establish the site navigation skeleton. **Content authoring** is incremental — pages are populated as the CLI interface and configuration system stabilize. |
+| `user/` | End-user documentation: installation guide (`installation.md`), quick-start tutorial (`quickstart.md`), configuration reference (`configuration.md`), and changelog (`changelog.md`). An `index.md` provides the user guide landing page. Pages are populated incrementally as features stabilize. |
 
-**Important constraint (reiterated from [§1.2](#12-scope)):** The original PowerShell source code for the `MakeIndex` function — including its complete function body, parameter block, and all nested sub-functions — SHALL NOT be included in the repository in any form. The `MakeIndex(MetadataFileParser).ps1` file in `porting-reference/` is permitted because it contains only the configuration data object, not the function's implementation logic. The dependency catalogs and operations catalog describe behavior in prose, not source code. No file in `porting-reference/` contains executable `MakeIndex` source.
+**Important constraint (reiterated from [§1.2](#12-scope)):** The original PowerShell source code for the `MakeIndex` function — including its complete function body, parameter block, and all nested sub-functions — SHALL NOT be included in the repository in any form. The `MakeIndex(MetadataFileParser).ps1` file in `porting-reference/` is permitted because it contains only the configuration data object, not the function's implementation logic. The dependency catalogs and operations catalog describe behavior in prose, not source code.
 
 <a id="37-documentation-site"></a>
 ### 3.7. Documentation Site
@@ -1000,7 +1017,7 @@ These packages are NOT required for using, developing, or testing `shruggie-inde
 <a id="4-architecture"></a>
 ## 4. Architecture
 
-This section defines the high-level architecture of `shruggie-indexer` — the processing pipeline, module decomposition, data flow, state management, error handling strategy, and entry point routing. It describes the system as the port intends to build it, not as the original implemented it. Where the original's architecture informed a decision, that lineage is noted. Where the port departs from the original, the deviation is called out explicitly with a rationale.
+This section defines the high-level architecture of `shruggie-indexer` — the processing pipeline, module decomposition, data flow, state management, error handling strategy, and entry point routing. Where design decisions have historical context rooted in the project's origins, that lineage is noted in callout blocks.
 
 The module-level detail here complements the source package layout in [§3.2](#32-source-package-layout) but focuses on **behavioral relationships** between modules — who calls whom, what data crosses each boundary, and what invariants each layer is responsible for maintaining. [§6](#6-core-operations) (Core Operations) provides the per-operation behavioral contracts; this section provides the structural skeleton that those operations hang on.
 
@@ -1031,25 +1048,27 @@ For directory entries in recursive mode, Stage 4 recurses into child items and a
 
 **Stage 5 — Output Routing.** Route the completed entry (or entry tree) to one or more output destinations based on the configured output mode: stdout, a single aggregate file, and/or per-item in-place sidecar files. Serialization to JSON occurs at this stage. In-place sidecar writes happen during traversal (Stage 3–4 loop) so that partial results survive interruption; stdout and aggregate file writes happen after the full entry tree is assembled.
 
-**Stage 6 — Post-Processing.** Execute deferred operations that must occur after all indexing is complete: MetaMergeDelete file removal (if active), global variable cleanup (a no-op in the port — see [§4.4](#44-state-management)), elapsed-time logging, and final status reporting.
+**Stage 6 — Post-Processing.** Execute deferred operations that must occur after all indexing is complete: MetaMergeDelete file removal (if active), elapsed-time logging, and final status reporting.
 
-The stages map to original code as follows, for traceability:
+> **Historical note:** The original's post-processing stage also performed global variable cleanup (`Remove-Variable` on each promoted `$global:` variable). This is unnecessary in the Python implementation due to the no-global-state design (see [§4.4](#44-state-management)).
 
-| Stage | Port Module(s) | Original Function(s) |
-|-------|----------------|---------------------|
-| 1 — Configuration | `config/loader.py` | `$global:MetadataFileParser` initialization, `MakeIndex` param block promoting globals |
-| 2 — Target Resolution | `core/paths.py`, `cli/main.py` | `ResolvePath`, `MakeIndex` input validation and `TargetTyp` assignment |
-| 3 — Traversal | `core/traversal.py` | `MakeDirectoryIndexRecursiveLogic`, `MakeDirectoryIndexLogic`, `MakeFileIndex` |
-| 4 — Entry Construction | `core/entry.py` (orchestrator), `core/hashing.py`, `core/timestamps.py`, `core/exif.py`, `core/sidecar.py`, `core/paths.py` | `MakeObject`, `FileId`, `DirectoryId`, `Date2UnixTime`, `GetFileExif`, `GetFileMetaSiblings`, `ReadMetaFile`, `MetaFileRead` |
-| 5 — Output Routing | `core/serializer.py`, `core/rename.py` | `MakeIndex` output-scenario routing, `ConvertTo-Json`, `Set-Content`, `Move-Item` |
-| 6 — Post-Processing | `core/serializer.py` (finalization), top-level orchestrator | `$global:DeleteQueue` iteration, `Remove-Variable` cleanup |
+The stages map to the tool's module structure as follows:
+
+| Stage | Module(s) |
+|-------|----------|
+| 1 — Configuration | `config/loader.py` |
+| 2 — Target Resolution | `core/paths.py`, `cli/main.py` |
+| 3 — Traversal | `core/traversal.py` |
+| 4 — Entry Construction | `core/entry.py` (orchestrator), `core/hashing.py`, `core/timestamps.py`, `core/exif.py`, `core/sidecar.py`, `core/paths.py` |
+| 5 — Output Routing | `core/serializer.py`, `core/rename.py` |
+| 6 — Post-Processing | `core/serializer.py` (finalization), top-level orchestrator |
 
 <a id="deviation-from-original-pipeline-linearity"></a>
-#### Deviation from original: pipeline linearity
+#### Pipeline linearity
 
-The original interleaves traversal, entry construction, output writing, and rename operations within the bodies of `MakeDirectoryIndexLogic` and `MakeDirectoryIndexRecursiveLogic` — a single function handles discovery, construction, serialization, and file mutation in a tightly coupled loop. This made the original's output scenarios difficult to reason about and contributed to the five-branch `switch` duplication in `MakeObject`.
+Traversal (Stage 3), entry construction (Stage 4), and output routing (Stage 5) are separated at the module boundary level. Entry construction knows nothing about where its output goes. Output routing knows nothing about how entries were built. The one deliberate exception is in-place sidecar writes, which occur within the traversal loop so that partial results survive interruption — but even there, the serializer module is called as a service rather than being inlined into the traversal logic.
 
-The port separates traversal (Stage 3) from entry construction (Stage 4) from output routing (Stage 5) at the module boundary level. Entry construction knows nothing about where its output goes. Output routing knows nothing about how entries were built. The one deliberate exception is in-place sidecar writes, which occur within the traversal loop for the practical reason described in Stage 5 above — but even there, the serializer module is called as a service rather than being inlined into the traversal logic.
+> **Historical note:** The original interleaved traversal, entry construction, output writing, and rename operations within single functions (`MakeDirectoryIndexLogic` and `MakeDirectoryIndexRecursiveLogic`) — a single function handled discovery, construction, serialization, and file mutation in a tightly coupled loop. The clean separation of concerns in the current architecture eliminates this coupling.
 
 <a id="42-module-decomposition"></a>
 ### 4.2. Module Decomposition
@@ -1059,7 +1078,7 @@ This subsection describes the dependency relationships between modules. [§3.2](
 <a id="dependency-graph"></a>
 #### Dependency Graph
 
-The following graph shows the runtime call relationships between the port's Python modules. Arrows point from caller to callee. Modules are grouped by subpackage.
+The following graph shows the runtime call relationships between the tool's Python modules. Arrows point from caller to callee. Modules are grouped by subpackage.
 
 ```
 cli/main.py ──────────────────────┐
@@ -1099,7 +1118,7 @@ Key structural rules:
 
 **Rule 2 — `core/entry.py` is the sole orchestrator.** All coordination between the component modules (hashing, timestamps, exif, sidecar, paths) happens inside `entry.py`. No component module calls another component module directly — `hashing.py` does not call `paths.py`, `exif.py` does not call `hashing.py`. Each component module receives its inputs as function arguments and returns its outputs as return values. `entry.py` wires them together.
 
-> **Deviation note and rationale:** The original's `MakeObject` function calls `FileId`, `DirectoryId`, `Date2UnixTime`, `GetFileExif`, `GetFileMetaSiblings`, and `ReadMetaFile` directly, which in turn each internally call their own copies of path resolution and hashing logic. This created a web of implicit dependencies and the code duplication cataloged in [§2.6](#26-intentional-deviations-from-the-original) (DEV-01 through DEV-04). The port's hub-and-spoke model through `entry.py` eliminates this duplication by making all shared operations (hashing, path resolution) explicit dependencies injected by the orchestrator rather than independently reimplemented by each component.
+> **Historical note:** The original's `MakeObject` function called `FileId`, `DirectoryId`, `Date2UnixTime`, `GetFileExif`, `GetFileMetaSiblings`, and `ReadMetaFile` directly, which in turn each internally called their own copies of path resolution and hashing logic. This created a web of implicit dependencies and the code duplication cataloged in [§2.6](#26-intentional-deviations-from-the-original) (DEV-01 through DEV-04). The hub-and-spoke model through `entry.py` eliminates this duplication by making all shared operations explicit dependencies injected by the orchestrator.
 
 **Rule 3 — `models/schema.py` is a leaf dependency.** The schema model types (`IndexEntry`, `HashSet`, `TimestampPair`, etc.) are pure data structures with no business logic and no imports from `core/` or `config/`. Every `core/` module that produces or consumes schema objects imports from `models/`, but `models/` never imports from `core/`. This prevents circular imports and keeps the data model independently testable.
 
@@ -1108,9 +1127,11 @@ Key structural rules:
 **Rule 5 — `gui/` is isolated.** The `gui/` subpackage imports from `core/`, `models/`, and `config/`, but nothing outside `gui/` imports from it. The `customtkinter` dependency is only imported inside `gui/`. Removing the `gui/` subpackage entirely has zero effect on the CLI or library surfaces.
 
 <a id="module-count-and-original-function-mapping"></a>
-#### Module count and original-function mapping
+#### Module count
 
-The port's 10 `core/` modules, 1 `models/` module, and 3 `config/` modules replace approximately 60 discrete code units from the original (the `MakeIndex` function body, its 20+ inline sub-functions, the 8 external pslib dependencies, and their own internal sub-functions). The consolidation ratio is roughly 4:1, achieved primarily by eliminating the hashing duplication (DEV-01), path resolution duplication (DEV-04), and the five eliminated dependencies (DEV-05 through DEV-08, DEV-13).
+The tool comprises 10 `core/` modules, 1 `models/` module, and 3 `config/` modules. This represents a roughly 4:1 consolidation over the equivalent scope in the original PowerShell implementation, achieved primarily by eliminating the hashing duplication (DEV-01), path resolution duplication (DEV-04), and the five eliminated dependencies (DEV-05 through DEV-08, DEV-13).
+
+> **Historical note:** The original codebase contained approximately 60 discrete code units across the `MakeIndex` function body, its 20+ inline sub-functions, the 8 external pslib dependencies, and their own internal sub-functions.
 
 <a id="43-data-flow"></a>
 ### 4.3. Data Flow
@@ -1194,15 +1215,15 @@ This property makes the core indexing logic straightforward to unit-test: mock t
 <a id="design-principle-no-mutable-global-state"></a>
 #### Design principle: no mutable global state
 
-The original `MakeIndex` relies heavily on mutable global state. The `$global:MetadataFileParser` object, `$global:ExiftoolRejectList`, `$global:MetaSuffixInclude`, `$global:MetaSuffixExclude`, `$global:MetaSuffixIncludeString`, `$global:MetaSuffixExcludeString`, `$global:DeleteQueue`, and `$LibSessionID` are all script-level or explicitly `$global:`-promoted variables that are read and written by deeply nested sub-functions across the call tree. At the end of `MakeIndex`, a cleanup block calls `Remove-Variable` on each promoted global to prevent state leakage between invocations within the same PowerShell session.
-
-The port eliminates global state entirely. All shared data flows through one of two mechanisms:
+`shruggie-indexer` uses no mutable global state. All shared data flows through one of two mechanisms:
 
 1. **Function parameters.** Configuration, file paths, and intermediate results are passed as explicit arguments down the call chain. Every function's data dependencies are visible in its signature.
 
 2. **Return values.** Results flow upward through return values and are collected by the orchestrator (`entry.py`) or the top-level caller.
 
-There are no module-level mutable variables, no singleton objects with hidden state, and no cleanup blocks needed at the end of an invocation. This is possible because the port's module decomposition ([§4.2](#42-module-decomposition)) eliminates the deeply-nested sub-function scoping issue that motivated the original's global promotion pattern — Python's import system and explicit parameter passing provide what PowerShell's scope hierarchy could not.
+There are no module-level mutable variables, no singleton objects with hidden state, and no cleanup blocks needed at the end of an invocation. The module decomposition ([§4.2](#42-module-decomposition)) makes explicit parameter passing sufficient for all shared data flow.
+
+> **Historical note:** The original `MakeIndex` relied heavily on mutable global state. The `$global:MetadataFileParser` object, `$global:ExiftoolRejectList`, `$global:MetaSuffixInclude`, `$global:MetaSuffixExclude`, `$global:MetaSuffixIncludeString`, `$global:MetaSuffixExcludeString`, `$global:DeleteQueue`, and `$LibSessionID` were all script-level or explicitly `$global:`-promoted variables that were read and written by deeply nested sub-functions across the call tree. At the end of `MakeIndex`, a cleanup block called `Remove-Variable` on each promoted global to prevent state leakage between invocations within the same PowerShell session. Python's import system and explicit parameter passing eliminate the need for this pattern entirely.
 
 <a id="state-objects-and-their-lifetimes"></a>
 #### State objects and their lifetimes
@@ -1218,11 +1239,11 @@ There are no module-level mutable variables, no singleton objects with hidden st
 <a id="the-delete-queue"></a>
 #### The delete queue
 
-The delete queue warrants specific attention because it is the one piece of cross-cutting mutable state that the port preserves from the original. When MetaMergeDelete is active, sidecar files that have been successfully merged into their parent entry's `metadata` array are queued for deletion. The deletion itself is deferred to Stage 6 (post-processing) rather than happening inline during traversal, for safety: if the process is interrupted mid-traversal, no sidecar files have been deleted, and the partially-written index entries still reference the original sidecar paths.
+The delete queue warrants specific attention because it is the one piece of cross-cutting mutable state preserved from the original design. When MetaMergeDelete is active, sidecar files that have been successfully merged into their parent entry's `metadata` array are queued for deletion. The deletion itself is deferred to Stage 6 (post-processing) rather than happening inline during traversal, for safety: if the process is interrupted mid-traversal, no sidecar files have been deleted, and the partially-written index entries still reference the sidecar paths.
 
-In the port, the delete queue is implemented as a plain `list[Path]` owned by the top-level orchestrator function (not a global variable). It is passed into `core/sidecar.discover_and_parse()` as a parameter, and that function appends paths to it. After the traversal loop completes and all output has been written, the orchestrator iterates the queue and calls `Path.unlink()` on each entry. Errors during deletion are logged as warnings, not raised as exceptions — a failure to delete one sidecar file does not abort the deletion of others.
+The delete queue is implemented as a plain `list[Path]` owned by the top-level orchestrator function (not a global variable). It is passed into `core/sidecar.discover_and_parse()` as a parameter, and that function appends paths to it. After the traversal loop completes and all output has been written, the orchestrator iterates the queue and calls `Path.unlink()` on each entry. Errors during deletion are logged as warnings, not raised as exceptions — a failure to delete one sidecar file does not abort the deletion of others.
 
-> **Deviation from original:** The original's `$global:DeleteQueue` is a `$global:`-scoped `ArrayList` that `ReadMetaFile` appends to directly. The port makes the delete queue an explicit parameter rather than a global, consistent with the no-global-state principle. The behavioral contract is identical — accumulate during traversal, drain after completion — but the ownership is explicit rather than ambient.
+> **Historical note:** The original's `$global:DeleteQueue` was a `$global:`-scoped `ArrayList` that `ReadMetaFile` appended to directly. The current design makes the delete queue an explicit parameter rather than a global, consistent with the no-global-state principle. The behavioral contract is identical — accumulate during traversal, drain after completion — but the ownership is explicit rather than ambient.
 
 <a id="45-error-handling-strategy"></a>
 ### 4.5. Error Handling Strategy
@@ -1230,16 +1251,16 @@ In the port, the delete queue is implemented as a plain `list[Path]` owned by th
 <a id="design-principle-fail-per-item-not-per-invocation"></a>
 #### Design principle: fail per-item, not per-invocation
 
-When indexing a directory tree that may contain thousands of items, a single unreadable file, a permission error, or a corrupt metadata file MUST NOT abort the entire operation. The port's error handling follows a **per-item isolation** strategy: errors encountered while processing a single file or directory are caught, logged, and result in that item being either skipped or partially populated, while the traversal continues with the next item.
+When indexing a directory tree that may contain thousands of items, a single unreadable file, a permission error, or a corrupt metadata file MUST NOT abort the entire operation. The error handling follows a **per-item isolation** strategy: errors encountered while processing a single file or directory are caught, logged, and result in that item being either skipped or partially populated, while the traversal continues with the next item.
 
-The original follows this same principle in practice — most errors within `MakeObject` are caught, logged via `Vbs`, and result in `$null` values for the affected fields. The port formalizes this into an explicit strategy.
+> **Historical note:** The original follows this same principle in practice — most errors within `MakeObject` are caught, logged via `Vbs`, and result in `$null` values for the affected fields. The current implementation formalizes this into an explicit, tiered strategy.
 
 <a id="error-severity-tiers"></a>
 #### Error severity tiers
 
-| Tier | Behavior | Examples | Original Equivalent |
-|------|----------|----------|-------------------|
-| **Fatal** | Abort the entire invocation. Exit with a non-zero code. | Target path does not exist. Target path is not readable. Invalid configuration file syntax. | Implicit — the original does not cleanly distinguish these, but equivalent conditions cause PowerShell terminating errors. |
+| Tier | Behavior | Examples | Historical Equivalent |
+|------|----------|----------|-----------------------|
+| **Fatal** | Abort the entire invocation. Exit with a non-zero code. | Target path does not exist. Target path is not readable. Invalid configuration file syntax. | Implicit — the original did not cleanly distinguish these, but equivalent conditions caused PowerShell terminating errors. |
 | **Item-level** | Log a warning. Skip the affected item entirely (exclude it from the output). Continue processing remaining items. | Permission denied reading a file. Filesystem error during `stat()`. Symlink target does not exist (and fallback hashing also fails). | Corresponds to `Vbs -Status e` messages within `MakeObject` followed by returning `$null` for the item. |
 | **Field-level** | Log a warning. Populate the affected field with `null` (or its type-appropriate absence value). Include the item in the output with the affected field empty. Continue processing the current item. | `exiftool` not installed (EXIF metadata will be `null`). `exiftool` returns an error for a specific file. A sidecar metadata file exists but contains malformed JSON. Timestamp extraction fails for one timestamp type. | Corresponds to `Vbs -Status w` or `Vbs -Status e` messages within sub-functions, with the field set to `$null`. |
 | **Diagnostic** | Log at debug level. No effect on output. | A file matched the exiftool exclusion list and was skipped. A directory matched the filesystem exclusion filter and was skipped. A sidecar pattern regex matched but the file had no parseable content. | Corresponds to `Vbs -Status d` or `Vbs -Status i` messages. |
@@ -1283,9 +1304,9 @@ The orchestrator (`entry.py`) checks the return value and populates the correspo
 <a id="exiftool-availability"></a>
 #### Exiftool availability
 
-`exiftool` occupies a unique position in the error model: it is the only external binary dependency, and its absence is a **configuration-time condition**, not a per-item error. The port checks for `exiftool` availability once during Stage 1 or at the first attempted invocation, caches the result, and uses it to gate all subsequent exiftool calls. If `exiftool` is not found, a single warning is emitted (not per-file) and all EXIF metadata fields are populated with `null` for the entire invocation. This avoids the performance cost and log noise of repeatedly spawning a doomed subprocess.
+`exiftool` occupies a unique position in the error model: it is the only external binary dependency, and its absence is a **configuration-time condition**, not a per-item error. The tool checks for `exiftool` availability once during Stage 1 or at the first attempted invocation, caches the result, and uses it to gate all subsequent exiftool calls. If `exiftool` is not found, a single warning is emitted (not per-file) and all EXIF metadata fields are populated with `null` for the entire invocation. This avoids the performance cost and log noise of repeatedly spawning a doomed subprocess.
 
-> **Improvement over original:** The original invokes `exiftool` via `GetFileExifRun` for every eligible file without first checking whether the binary exists. If `exiftool` is missing, each invocation fails independently, producing a per-file error. The port's probe-once approach is both more efficient and more user-friendly.
+> **Historical note:** The original invoked `exiftool` via `GetFileExifRun` for every eligible file without first checking whether the binary exists. If `exiftool` was missing, each invocation failed independently, producing a per-file error. The probe-once approach is both more efficient and more user-friendly.
 
 <a id="46-entry-point-routing"></a>
 ### 4.6. Entry Point Routing
@@ -1301,9 +1322,7 @@ Three input scenarios determine how the pipeline executes. The classification is
 | **Directory (flat)** | Target path exists and is a directory; recursive mode is not requested | `directory_flat` | `list_children()` enumerates immediate children. `build_directory_entry()` constructs the parent entry with a single level of child entries in its `items` list. No descent into subdirectories. |
 | **Directory (recursive)** | Target path exists and is a directory; recursive mode is requested | `directory_recursive` | `build_directory_entry()` recurses depth-first into all subdirectories. The result is a fully nested tree of `IndexEntry` objects mirroring the filesystem hierarchy. |
 
-The original uses a numeric `$TargetTyp` variable (`0` = recursive directory, `1` = single file, `2` = flat directory) assigned during input validation, and routes to `MakeDirectoryIndexRecursive`, `MakeFileIndex`, or `MakeDirectoryIndex` respectively. Each of these three entry points calls `MakeObject` — but via separate wrapper functions with near-identical logic (the code duplication noted in DEV-03).
-
-The port replaces this three-way dispatch with two functions that compose naturally:
+The three-way dispatch is implemented with two functions that compose naturally:
 
 - `build_file_entry(path, config) → IndexEntry` — handles a single file.
 - `build_directory_entry(path, config, recursive) → IndexEntry` — handles a directory. When `recursive=True`, it calls itself for child subdirectories and calls `build_file_entry()` for child files. When `recursive=False`, it does the same for immediate children only, without descending.
@@ -1332,23 +1351,27 @@ def index_path(target: Path, config: IndexerConfig) -> IndexEntry:
     raise IndexerError(f"Target is neither a file nor a directory: {resolved}")
 ```
 
-The `config.recursive` flag is the sole control that distinguishes the flat-directory and recursive-directory scenarios. Unlike the original — where the `Recursive` switch, the `Directory` switch, and the `File` switch are three separate parameters requiring mutual-exclusion validation — the port infers the target type from the filesystem and accepts `recursive` as the only behavioral modifier. The CLI SHOULD still accept `--file` and `--directory` flags for explicit disambiguation (e.g., when indexing a symlink whose target type is ambiguous), but these flags refine the classification rather than selecting between separate code paths.
+The `config.recursive` flag is the sole control that distinguishes the flat-directory and recursive-directory scenarios. The CLI SHOULD still accept `--file` and `--directory` flags for explicit disambiguation (e.g., when indexing a symlink whose target type is ambiguous), but these flags refine the classification rather than selecting between separate code paths.
 
-> **Deviation from original:** The original's `TargetTyp` routing selects between three essentially-independent code paths (`MakeDirectoryIndexRecursive`, `MakeFileIndex`, `MakeDirectoryIndex`), each of which is a wrapper that calls `MakeObject` differently and contains its own traversal, output-writing, and rename logic. The port's `index_path()` → `build_file_entry()` / `build_directory_entry()` routing selects between two functions that share all component modules and differ only in whether a traversal loop is present. This eliminates the structural duplication without changing the logical behavior.
+> **Historical note:** The original's `Recursive`, `Directory`, and `File` switches were three separate parameters requiring mutual-exclusion validation. Its `TargetTyp` routing selected between three essentially-independent code paths (`MakeDirectoryIndexRecursive`, `MakeFileIndex`, `MakeDirectoryIndex`), each of which was a wrapper that called `MakeObject` differently and contained its own traversal, output-writing, and rename logic. The current routing selects between two functions that share all component modules and differ only in whether a traversal loop is present, eliminating the structural duplication without changing the logical behavior.
 
 <a id="symlink-routing-edge-case"></a>
 #### Symlink routing edge case
 
-When the target path is a symlink, the classification follows the symlink's target type (file or directory) for routing purposes, but the `is_link` flag on the resulting `IndexEntry` is set to `True`. Content hashing falls back to name hashing for symlinked files (because the link target may be inaccessible or on a different filesystem), and exiftool is skipped for symlinks. This matches the original's behavior — `FileId` and `DirectoryId` both check for the reparse-point attribute and switch to name-based hashing when it is present.
+When the target path is a symlink, the classification follows the symlink's target type (file or directory) for routing purposes, but the `is_link` flag on the resulting `IndexEntry` is set to `True`. Content hashing falls back to name hashing for symlinked files (because the link target may be inaccessible or on a different filesystem), and exiftool is skipped for symlinks.
 
-If the symlink target does not exist (a dangling symlink), the item is treated as an item-level error: a warning is logged, and the item is either skipped or included with degraded fields (null hashes, null timestamps), depending on what information can be recovered from `os.lstat()` (which reads the symlink itself, not its target). The original does not explicitly handle dangling symlinks — the PowerShell `Get-Item` call would fail, and the error would propagate in a platform-dependent way. The port's explicit handling is a minor robustness improvement.
+> **Historical note:** The original's `FileId` and `DirectoryId` both check for the reparse-point attribute and switch to name-based hashing when it is present.
+
+If the symlink target does not exist (a dangling symlink), the item is treated as an item-level error: a warning is logged, and the item is either skipped or included with degraded fields (null hashes, null timestamps), depending on what information can be recovered from `os.lstat()` (which reads the symlink itself, not its target).
+
+> **Historical note:** The original did not explicitly handle dangling symlinks — the PowerShell `Get-Item` call would fail, and the error would propagate in a platform-dependent way. The explicit handling here is a minor robustness improvement.
 
 <a id="5-output-schema"></a>
 ## 5. Output Schema
 
 This section defines the complete v2 output schema for `shruggie-indexer` — the structure, field definitions, type constraints, nullability rules, and behavioral guidance for every field in an `IndexEntry`. The canonical machine-readable schema is the JSON Schema document at [schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json). This section interprets and extends that schema with implementation guidance, v1-to-v2 mapping context, and behavioral notes that a JSON Schema cannot express — but does not supersede the canonical schema for structural or type-level definitions. Where a conflict exists between this section and the canonical schema, the canonical schema governs field names, types, and `required` constraints; this section governs behavioral semantics and implementation strategy.
 
-The v2 schema is a ground-up restructuring of the original MakeIndex v1 output format (`MakeIndex_OutputSchema.json`). The port targets v2 exclusively. It does not produce v1 output. A v1-to-v2 migration utility for converting existing v1 index assets is a planned post-MVP deliverable (see [§1.2](#12-scope), Out of Scope).
+The v2 schema is a ground-up restructuring of the earlier MakeIndex v1 output format (`MakeIndex_OutputSchema.json`). `shruggie-indexer` targets v2 exclusively and does not produce v1 output. A v1-to-v2 migration utility for converting existing v1 index assets is a planned post-MVP deliverable (see [§1.2](#12-scope), Out of Scope).
 
 <a id="51-schema-overview"></a>
 ### 5.1. Schema Overview
@@ -1410,7 +1433,9 @@ A `HashSet` is a collection of cryptographic hash digests for a given input. All
 
 **SHA1 removal:** v1 includes `SHA1` as a required field in most hash objects. v2 drops SHA1 entirely. SHA1 served no unique purpose in the identity scheme (it is not used for `_id` derivation) and adds computational overhead for each hashed input. MD5 provides the legacy default identity algorithm; SHA256 provides the cryptographically strong alternative; SHA512 provides an optional high-strength digest. SHA1 occupies an awkward middle ground where it is neither the fastest, the strongest, nor the default. See [§5.11](#511-dropped-and-restructured-fields) for the full drop rationale.
 
-**Uppercase convention:** All hex strings are uppercase. The original uses uppercase hex throughout (`FileId` and `DirectoryId` both call `.ToUpper()` on their output). The port preserves this convention via `hashlib.hexdigest().upper()`.
+**Uppercase convention:** All hex strings are uppercase, produced via `hashlib.hexdigest().upper()` in the Python implementation.
+
+> **Historical note:** The original PowerShell implementation also uses uppercase hex throughout (`FileId` and `DirectoryId` both call `.ToUpper()` on their output). The convention is preserved for backward compatibility with existing v1 identity values.
 
 > **Implementation note:** The Python `HashSet` dataclass SHOULD have `sha512` as an `Optional[str]` field defaulting to `None`. The serialization helper MUST omit the `sha512` key entirely from the JSON output when its value is `None`, rather than emitting `"sha512": null`. This matches the JSON Schema's `required` constraint (only `md5` and `sha256` are required) and avoids bloating the output with null optional fields.
 
@@ -1428,7 +1453,9 @@ The `text` and `hashes` fields have a co-nullability invariant: when `text` is `
 
 **v1 comparison:** v1 uses separate top-level field pairs — `Name` / `NameHashes`, `ParentName` / `ParentNameHashes` — where the relationship between the text and its hashes is implicit. v2's `NameObject` makes the relationship explicit and eliminates the possibility of a name being present without its hashes or vice versa.
 
-**Hash input encoding:** The hashes in a `NameObject` are computed from the UTF-8 encoded bytes of the `text` string. This matches the original's behavior (PowerShell's `[System.Text.Encoding]::UTF8.GetBytes($Name)` produces UTF-8 bytes) and is the natural encoding for Python's `hashlib` when given `name.encode('utf-8')`.
+**Hash input encoding:** The hashes in a `NameObject` are computed from the UTF-8 encoded bytes of the `text` string, i.e., `hashlib.md5(name.encode('utf-8'))`.
+
+> **Historical note:** The original uses the same encoding: PowerShell's `[System.Text.Encoding]::UTF8.GetBytes($Name)` produces identical UTF-8 bytes.
 
 <a id="523-sizeobject"></a>
 #### 5.2.3. SizeObject
@@ -1462,9 +1489,13 @@ A `TimestampPair` expresses a single timestamp in both ISO 8601 local-time and U
 
 **v1 comparison:** v1 uses separate top-level field pairs — `TimeAccessed` / `UnixTimeAccessed`, `TimeCreated` / `UnixTimeCreated`, `TimeModified` / `UnixTimeModified`. v2's `TimestampPair` consolidates each pair into a single object and nests them inside a `TimestampsObject` (see [§5.2.5](#525-timestampsobject)).
 
-**Fractional seconds precision:** The original's `.ToString($DateFormat)` uses the `fffffff` format specifier, which produces 7 fractional digits (100-nanosecond precision, the resolution of .NET's `DateTime` type). Python's `datetime.isoformat()` produces 6 fractional digits by default (microsecond precision). This is an acceptable deviation — the 7th digit is almost always `0` in practice because filesystem timestamps rarely carry sub-microsecond precision. The ISO string format SHOULD include all available fractional digits without artificial truncation or zero-padding to a specific width. See [§6.5](#65-filesystem-timestamps-and-date-conversion) for the timestamp derivation logic and [§15.5](#155-creation-time-portability) for cross-platform precision considerations.
+**Fractional seconds precision:** Python's `datetime.isoformat()` produces 6 fractional digits by default (microsecond precision). The ISO string format SHOULD include all available fractional digits without artificial truncation or zero-padding to a specific width. See [§6.5](#65-filesystem-timestamps-and-date-conversion) for the timestamp derivation logic and [§15.5](#155-creation-time-portability) for cross-platform precision considerations.
 
-**Millisecond Unix timestamps:** The `unix` value is in milliseconds, not seconds. This matches the original's `[DateTimeOffset]::ToUnixTimeMilliseconds()` and is computed in the port as `int(stat_result.st_mtime * 1000)`. See DEV-07 in [§2.6](#26-intentional-deviations-from-the-original).
+> **Historical note:** The original's `.ToString($DateFormat)` uses the `fffffff` format specifier, which produces 7 fractional digits (100-nanosecond precision, the resolution of .NET's `DateTime` type). The 7th digit is almost always `0` in practice because filesystem timestamps rarely carry sub-microsecond precision. The 6-digit Python output is an acceptable deviation.
+
+**Millisecond Unix timestamps:** The `unix` value is in milliseconds, not seconds, computed as `int(stat_result.st_mtime * 1000)`. See DEV-07 in [§2.6](#26-intentional-deviations-from-the-original).
+
+> **Historical note:** This matches the original's `[DateTimeOffset]::ToUnixTimeMilliseconds()` output.
 
 <a id="525-timestampsobject"></a>
 #### 5.2.5. TimestampsObject
@@ -1582,7 +1613,9 @@ The remaining characters are the uppercase hexadecimal hash digest selected by `
 | Required | Yes |
 | v1 equivalent | None (implicit in v1) |
 
-The hash algorithm used to generate the `id` field. The value is always lowercase. The default is `"md5"`, matching the original's default behavior. The `"sha256"` option exists for workflows that require cryptographically stronger identifiers.
+The hash algorithm used to generate the `id` field. The value is always lowercase. The default is `"md5"`. The `"sha256"` option exists for workflows that require cryptographically stronger identifiers.
+
+> **Historical note:** The original PowerShell implementation also used MD5 as the default identity algorithm.
 
 This field determines:
 
@@ -1642,9 +1675,11 @@ The `name.hashes` field contains the hash digests of the UTF-8 encoded bytes of 
 
 The file extension without the leading period (e.g., `"exe"`, `"json"`, `"tar.gz"`). Null for directories. Also null for files that have no extension.
 
-The extension value is derived from the filesystem name. For multi-part extensions like `.tar.gz`, the implementation SHOULD use the full compound extension. Extension validation is governed by the configurable pattern described in [§7](#7-configuration) (default: the regex from the original, externalized per DEV-14 in [§2.6](#26-intentional-deviations-from-the-original)). Extensions that fail validation are still recorded in this field — validation failures affect only whether the extension is considered "recognized" for purposes like exiftool processing, not whether it is stored.
+The extension value is derived from the filesystem name. For multi-part extensions like `.tar.gz`, the implementation SHOULD use the full compound extension. Extension validation is governed by the configurable pattern described in [§7](#7-configuration) (default: the legacy regex externalized per DEV-14 in [§2.6](#26-intentional-deviations-from-the-original)). Extensions that fail validation are still recorded in this field — validation failures affect only whether the extension is considered "recognized" for purposes like exiftool processing, not whether it is stored.
 
-The extension is stored in lowercase. The original's `MakeObject` converts extensions to lowercase before storage; the port preserves this behavior.
+The extension is stored in lowercase.
+
+> **Historical note:** The original's `MakeObject` also converts extensions to lowercase before storage. This convention is preserved.
 
 <a id="mime_type"></a>
 #### `mime_type`
@@ -1788,7 +1823,9 @@ Child items contained within a directory. Each element is a complete `IndexEntry
 | Item is a directory, recursive mode | Array of child `IndexEntry` objects, where child directories themselves have populated `items` (recursive nesting) |
 | Item is a directory, single-file mode (not applicable) | N/A — a directory in single-file mode is not a valid scenario |
 
-The children in the `items` array SHOULD be ordered files-first, then directories, matching the original's traversal order. Within each group (files, directories), entries SHOULD be ordered by name (lexicographic, case-insensitive). This ordering is a convention for human readability, not a schema constraint — consumers MUST NOT depend on any particular ordering of the `items` array.
+The children in the `items` array SHOULD be ordered files-first, then directories. Within each group (files, directories), entries SHOULD be ordered by name (lexicographic, case-insensitive). This ordering is a convention for human readability, not a schema constraint — consumers MUST NOT depend on any particular ordering of the `items` array.
+
+> **Historical note:** The original also used files-first, directories-second traversal order.
 
 **v1 comparison:** v1's `Items` has the same recursive structure. The v1 schema defines `Items` with `anyOf` permitting `null` elements within the array — the v2 schema tightens this to require that every element in the `items` array is a valid `IndexEntry` (no null entries). If an item cannot be processed (permission error, etc.), it is excluded from the array entirely rather than represented as a null placeholder. This is a stricter contract that simplifies consumer code.
 
@@ -1925,7 +1962,7 @@ This section documents every v1 field that is absent from v2 and every v1 field 
 
 > **Improvement over v1:** The original includes `BaseName` as a top-level required field because PowerShell's `Get-Item` object exposes `.BaseName` as a property and it was inexpensive to include. In a schema designed for clarity and minimalism, derivable fields are omitted.
 
-**`SHA1` (within hash objects)** — Dropped. All v1 hash objects (`Ids`, `NameHashes`, `ContentHashes`, `ParentIds`, `ParentNameHashes`) include a `SHA1` property. v2's `HashSet` drops SHA1 entirely. SHA1 is not used for identity derivation (only MD5 and SHA256 are `id_algorithm` options), it provides no unique value that MD5 or SHA256 does not already provide in the indexer's use case, and computing it adds overhead for every hashed input. SHA1's cryptographic weaknesses (demonstrated collision attacks since 2017) make it unsuitable as a security-relevant digest, and its 160-bit length occupies an awkward middle ground between MD5 (128-bit, fast, legacy default) and SHA256 (256-bit, strong, recommended). The port does not compute SHA1 digests.
+**`SHA1` (within hash objects)** — Dropped. All v1 hash objects (`Ids`, `NameHashes`, `ContentHashes`, `ParentIds`, `ParentNameHashes`) include a `SHA1` property. v2's `HashSet` drops SHA1 entirely. SHA1 is not used for identity derivation (only MD5 and SHA256 are `id_algorithm` options), it provides no unique value that MD5 or SHA256 does not already provide in the indexer's use case, and computing it adds overhead for every hashed input. SHA1's cryptographic weaknesses (demonstrated collision attacks since 2017) make it unsuitable as a security-relevant digest, and its 160-bit length occupies an awkward middle ground between MD5 (128-bit, fast, legacy default) and SHA256 (256-bit, strong, recommended). `shruggie-indexer` does not compute SHA1 digests.
 
 <a id="restructured-fields-v1-v2-mapping"></a>
 #### Restructured fields (v1 → v2 mapping)
@@ -2001,7 +2038,7 @@ This ensures that the implementation's serialization logic stays in sync with th
 
 The core indexing engine (`core/entry.py`) does NOT perform JSON Schema validation at runtime — this would add unacceptable overhead for large directory trees. Instead, the implementation relies on **structural correctness by construction**: the `IndexEntry`, `HashSet`, `NameObject`, `SizeObject`, `TimestampPair`, `TimestampsObject`, `ParentObject`, and `MetadataEntry` dataclasses enforce type constraints and required fields through their constructors. If a field is required by the schema, the corresponding dataclass field has no default value (forcing the caller to provide it). If a field is nullable, the corresponding dataclass field is typed `Optional[T]` with a default of `None`.
 
-For consumers who want runtime validation (e.g., when ingesting index output from untrusted sources), the port provides optional Pydantic models behind an import guard in `models/schema.py`. These models mirror the dataclass definitions but add Pydantic's runtime type checking, pattern validation, and `model_validate_json()` for schema-validating a JSON string on ingestion. The Pydantic models are not used by the core engine. See [§3.2](#32-source-package-layout) for the module layout.
+For consumers who want runtime validation (e.g., when ingesting index output from untrusted sources), optional Pydantic models are available behind an import guard in `models/schema.py`. These models mirror the dataclass definitions but add Pydantic's runtime type checking, pattern validation, and `model_validate_json()` for schema-validating a JSON string on ingestion. The Pydantic models are not used by the core engine. See [§3.2](#32-source-package-layout) for the module layout.
 
 <a id="serialization-invariants"></a>
 #### Serialization invariants
@@ -2047,7 +2084,7 @@ Consumers adapting from v1 to v2 parsing should:
 <a id="6-core-operations"></a>
 ## 6. Core Operations
 
-This section defines the behavioral contract for every operation in the indexing engine — the inputs each operation accepts, the outputs it produces, the invariants it maintains, the error conditions it handles, and the deviations it makes from the original implementation. Each subsection corresponds to one operation category from the Operations Catalog ([§1.5](#15-reference-documents)) and to one or more `core/` modules from the source package layout ([§3.2](#32-source-package-layout)). Together, these subsections constitute the complete specification of what the `core/` subpackage does and how it does it.
+This section defines the behavioral contract for every operation in the indexing engine — the inputs each operation accepts, the outputs it produces, the invariants it maintains, and the error conditions it handles. Each subsection corresponds to one operation category from the Operations Catalog ([§1.5](#15-reference-documents)) and to one or more `core/` modules from the source package layout ([§3.2](#32-source-package-layout)). Together, these subsections constitute the complete specification of what the `core/` subpackage does and how it does it.
 
 The operations are presented in dependency order: foundational operations (traversal, path manipulation, hashing) before the operations that depend on them (entry construction, serialization). An implementer working through these subsections top-to-bottom will build the leaf modules first and the orchestrator last, with each module's dependencies already specified by the time it is reached.
 
@@ -2084,7 +2121,7 @@ def list_children(
 
 The caller — `core/entry.build_directory_entry()` — invokes `list_children()` once per directory being indexed. For recursive mode, the caller recurses into each returned subdirectory; for flat mode, the caller processes only the immediate children. The traversal module itself does not recurse — recursion is controlled by the entry builder ([§6.8](#68-index-entry-construction)), consistent with the separation of traversal from construction described in [§4.1](#41-high-level-processing-pipeline).
 
-> **Deviation from original (DEV-03):** The original has two near-identical traversal code paths: `MakeDirectoryIndexRecursiveLogic` (which calls itself for child directories) and `MakeDirectoryIndexLogic` (which does not recurse). Both paths enumerate children, separate files from directories, filter exclusions, and feed items to `MakeObject` — with almost completely duplicated logic. The port replaces both with a single `list_children()` function that returns files and directories. The recursive/flat distinction is handled by the caller, not by the traversal module. This eliminates the duplication without changing the logical behavior.
+> **Historical note (DEV-03):** The original has two near-identical traversal code paths: `MakeDirectoryIndexRecursiveLogic` (which calls itself for child directories) and `MakeDirectoryIndexLogic` (which does not recurse). Both paths enumerate children, separate files from directories, filter exclusions, and feed items to `MakeObject` — with almost completely duplicated logic. The single `list_children()` function replaces both, with the recursive/flat distinction handled by the caller rather than the traversal module.
 
 <a id="enumeration-strategy"></a>
 #### Enumeration strategy
@@ -2093,12 +2130,14 @@ The caller — `core/entry.build_directory_entry()` — invokes `list_children()
 
 `os.scandir()` is preferred over `Path.iterdir()` because `DirEntry` objects cache the results of `is_file()` and `is_dir()` from the underlying `readdir` call on platforms that support it, avoiding redundant `stat()` calls. For large directories (tens of thousands of entries), this caching produces a measurable performance improvement.
 
-> **Improvement over original:** The original performs two separate `Get-ChildItem` calls — one with `-File` and one with `-Directory` — to separate files from directories. This iterates the directory twice. `os.scandir()` classifies entries in a single pass.
+> **Historical note:** The original performs two separate `Get-ChildItem` calls — one with `-File` and one with `-Directory` — to separate files from directories. This iterates the directory twice. `os.scandir()` classifies entries in a single pass.
 
 <a id="ordering"></a>
 #### Ordering
 
-The returned file list and directory list are each sorted lexicographically by name (case-insensitive). Files are processed before directories by convention — the caller iterates the file list first, then the directory list. This matches the original's traversal order and produces output where file entries precede subdirectory entries within any `items` array.
+The returned file list and directory list are each sorted lexicographically by name (case-insensitive). Files are processed before directories by convention — the caller iterates the file list first, then the directory list. This produces output where file entries precede subdirectory entries within any `items` array.
+
+> **Historical note:** The original also uses files-first, directories-second traversal order.
 
 The sort is performed via `sorted(entries, key=lambda e: e.name.lower())`. The case-insensitive comparison ensures consistent ordering across platforms (Windows is case-insensitive by default; Linux is case-sensitive).
 
@@ -2116,7 +2155,7 @@ Before returning, `list_children()` removes entries whose names match the config
 
 The default set includes all platform-specific entries regardless of the current platform. Filtering a macOS entry on Windows is a no-op (the entry will not exist), but including it in the default list ensures that indexes produced from cross-platform network shares or external drives are clean. See [§7](#7-configuration) for the configuration schema and override mechanism.
 
-> **Deviation from original (DEV-10):** The original hardcodes only `$RECYCLE.BIN` and `System Volume Information` as inline `Where-Object` filters. The port externalizes the exclusion list into configuration and expands the default set to cover all three target platforms.
+> **Historical note (DEV-10):** The original hardcodes only `$RECYCLE.BIN` and `System Volume Information` as inline `Where-Object` filters. The exclusion list is externalized into configuration and expanded to cover all three target platforms.
 
 Exclusion matching is performed by checking `entry.name.lower()` against the set of lowercased exclusion names. For glob-pattern exclusions (e.g., `.Trash-*`), `fnmatch.fnmatch()` is used. Simple string exclusions use direct set membership for O(1) matching. The exclusion check runs once per entry and is a negligible fraction of the traversal cost.
 
@@ -2192,14 +2231,14 @@ def build_storage_path(
     """
 ```
 
-> **Deviation from original (DEV-04):** The original contains three independent copies of path-resolution logic: `ResolvePath` inside `MakeIndex`, `FileId-ResolvePath` inside `FileId`, and `DirectoryId-ResolvePath` inside `DirectoryId`. All three do the same thing — call `Resolve-Path` with a `GetFullPath()` fallback for non-existent paths. The port provides exactly one `resolve_path()` function, called from everywhere. The original also uses `GetParentPath` (a manual `Split-Path` wrapper) and direct `[System.IO.Path]` calls for component extraction. The port consolidates all of these into `extract_components()` using `pathlib` properties.
+> **Historical note (DEV-04):** The original contains three independent copies of path-resolution logic: `ResolvePath` inside `MakeIndex`, `FileId-ResolvePath` inside `FileId`, and `DirectoryId-ResolvePath` inside `DirectoryId`. All three do the same thing — call `Resolve-Path` with a `GetFullPath()` fallback for non-existent paths. A single `resolve_path()` function replaces all three. The original also uses `GetParentPath` (a manual `Split-Path` wrapper) and direct `[System.IO.Path]` calls for component extraction; `extract_components()` consolidates all of these using `pathlib` properties.
 
 <a id="path-resolution-behavior"></a>
 #### Path resolution behavior
 
 `resolve_path()` calls `Path.resolve(strict=True)` for paths that exist on the filesystem. This resolves symlinks, normalizes directory separators, and produces an absolute path. If the path does not exist, `resolve_path()` falls back to `Path.resolve(strict=False)`, which normalizes the path without verifying existence. If neither resolution produces a usable path, an `IndexerError` is raised.
 
-The `strict=True` → `strict=False` fallback mirrors the original's `Resolve-Path` → `GetFullPath()` fallback pattern, but without requiring a try/except around the initial resolution — `pathlib` handles the dispatch cleanly.
+The `strict=True` → `strict=False` fallback is functionally equivalent to the original's `Resolve-Path` → `GetFullPath()` fallback pattern, but `pathlib` handles the dispatch cleanly without requiring a try/except around the initial resolution.
 
 <a id="component-extraction"></a>
 #### Component extraction
@@ -2214,12 +2253,14 @@ The `strict=True` → `strict=False` fallback mirrors the original's `Resolve-Pa
 | `parent_name` | `path.parent.name` | The leaf name of the parent directory. For root-level items (e.g., `C:\file.txt`), this is an empty string — the caller handles this as the "no parent" case. |
 | `parent_path` | `path.parent` | The absolute path to the parent directory. |
 
-The suffix is always lowercased for consistency. The original lowercases extensions via `.ToLower()` in `MakeObject`; the port does the same via `.lower()`.
+The suffix is always lowercased for consistency (`path.suffix.lower()`).
+
+> **Historical note:** The original also lowercases extensions via `.ToLower()` in `MakeObject`.
 
 <a id="extension-validation"></a>
 #### Extension validation
 
-`validate_extension()` matches the extracted suffix against a configurable regex pattern. The default pattern reproduces the intent of the original's hardcoded regex:
+`validate_extension()` matches the extracted suffix against a configurable regex pattern. The default pattern reproduces the intent of the legacy hardcoded regex:
 
 ```
 Original: ^(([a-z0-9]){1,2}|([a-z0-9]){1}([a-z0-9\-]){1,12}([a-z0-9]){1})$
@@ -2227,9 +2268,9 @@ Original: ^(([a-z0-9]){1,2}|([a-z0-9]){1}([a-z0-9\-]){1,12}([a-z0-9]){1})$
 
 This pattern accepts extensions that are 1–2 alphanumeric characters, or 3–14 characters where the first and last are alphanumeric and interior characters may include hyphens. The purpose is to reject malformed or suspiciously long extensions that might indicate corrupted filenames or path components misidentified as extensions.
 
-The port uses `re.fullmatch()` with the pattern compiled once from `config.extension_validation_pattern`. This is the same regex content as the original's but applied via Python's `re` module rather than PowerShell's `-match` operator.
+The pattern is applied via `re.fullmatch()` with the regex compiled once from `config.extension_validation_pattern`. This is the same regex content as the legacy default but applied via Python's `re` module rather than PowerShell's `-match` operator.
 
-> **Deviation from original (DEV-14):** The extension validation regex is externalized into the configuration system rather than hardcoded. Users who encounter legitimate long extensions (e.g., `.numbers`, `.download`, `.crdownload`) can adjust the pattern without editing source code.
+> **Historical note (DEV-14):** The extension validation regex is externalized into the configuration system rather than hardcoded. Users who encounter legitimate long extensions (e.g., `.numbers`, `.download`, `.crdownload`) can adjust the pattern without editing source code.
 
 When validation fails, the extension is treated as absent — the entry's `extension` field is set to `null` and the `storage_name` is constructed from the `id` alone (no extension appended). A debug-level log message is emitted noting the rejected extension.
 
@@ -2247,7 +2288,7 @@ The `2` suffix in `_meta2.json` and `_directorymeta2.json` prevents collision wi
 
 `build_storage_path()` constructs the rename-target path by joining the item's parent directory with its `storage_name`. No separator management is needed — `pathlib`'s `/` operator handles platform-correct path construction.
 
-> **Improvement over original:** The original constructs renamed paths by concatenating strings with the `$Sep` global variable. The port uses `pathlib` path arithmetic, eliminating manual separator handling entirely.
+> **Historical note:** The original constructs renamed paths by concatenating strings with the `$Sep` global variable. `pathlib` path arithmetic eliminates manual separator handling entirely.
 
 ---
 
@@ -2261,9 +2302,9 @@ The `2` suffix in `_meta2.json` and `_directorymeta2.json` prevents collision wi
 <a id="purpose-2"></a>
 #### Purpose
 
-Computes cryptographic hash digests of file contents and name strings, and from those digests produces the deterministic unique identifiers (`id` field) that are the foundation of the indexing system. This is the most dependency-consolidated module in the port — it replaces four separate locations in the original where hashing logic was independently implemented.
+Computes cryptographic hash digests of file contents and name strings, and from those digests produces the deterministic unique identifiers (`id` field) that are the foundation of the indexing system. This is the most dependency-consolidated module in the tool — it replaces four separate locations in the original where hashing logic was independently implemented.
 
-> **Deviation from original (DEV-01):** The original has no fewer than four independent implementations of the same hashing logic: `FileId` (8 sub-functions for file content and name hashing), `DirectoryId` (4 sub-functions for directory name hashing), `ReadMetaFile-GetNameHashMD5` / `-SHA256` (sidecar file name hashing inside MakeIndex), and `MetaFileRead-Sha256-File` / `-Sha256-String` (content and name hashing inside MetaFileRead). The port provides one hashing module with reusable functions, called from everywhere.
+> **Historical note (DEV-01):** The original has no fewer than four independent implementations of the same hashing logic: `FileId` (8 sub-functions for file content and name hashing), `DirectoryId` (4 sub-functions for directory name hashing), `ReadMetaFile-GetNameHashMD5` / `-SHA256` (sidecar file name hashing inside MakeIndex), and `MetaFileRead-Sha256-File` / `-Sha256-String` (content and name hashing inside MetaFileRead). A single hashing module with reusable functions replaces all four.
 
 <a id="public-interface-2"></a>
 #### Public interface
@@ -2317,9 +2358,9 @@ NULL_HASHES: HashSet  # Hash of empty string b'' for each algorithm
 <a id="algorithms"></a>
 #### Algorithms
 
-The port computes MD5 and SHA256 by default for all hash operations. SHA512 is computed when explicitly enabled in the configuration (`config.compute_sha512 = True`). SHA1 is not computed.
+The tool computes MD5 and SHA256 by default for all hash operations. SHA512 is computed when explicitly enabled in the configuration (`config.compute_sha512 = True`). SHA1 is not computed.
 
-> **Deviation from original:** The original's `FileId` and `DirectoryId` accept an `IncludeHashTypes` parameter defaulting to `@('md5', 'sha256')`, and the output schema defines fields for SHA1 and SHA512 that remain empty at runtime. The port drops SHA1 entirely (see [§5.2.1](#521-hashset) for the rationale — SHA1 serves no unique purpose and adds overhead). SHA512 is available as an opt-in for consumers who want high-strength digests. MD5 and SHA256 are always computed because they serve the identity system: MD5 is the legacy default `id_algorithm`, and SHA256 is the recommended alternative.
+> **Historical note:** The original's `FileId` and `DirectoryId` accept an `IncludeHashTypes` parameter defaulting to `@('md5', 'sha256')`, and the output schema defines fields for SHA1 and SHA512 that remain empty at runtime. SHA1 is dropped entirely (see [§5.2.1](#521-hashset) for the rationale — SHA1 serves no unique purpose and adds overhead). SHA512 is available as an opt-in for consumers who want high-strength digests. MD5 and SHA256 are always computed because they serve the identity system: MD5 is the legacy default `id_algorithm`, and SHA256 is the recommended alternative.
 
 <a id="multi-algorithm-single-pass-hashing"></a>
 #### Multi-algorithm single-pass hashing
@@ -2343,7 +2384,7 @@ def hash_file(path: Path, algorithms: tuple[str, ...] = ("md5", "sha256")) -> Ha
 
 The chunk size (`CHUNK_SIZE`) defaults to 65,536 bytes (64 KB). This value balances memory usage against read-call overhead — Python's `hashlib` documentation recommends chunk sizes between 4 KB and 128 KB for stream hashing. The chunk size is not configurable; it is an implementation detail of the hashing module.
 
-> **Improvement over original (DEV-02):** The original computes each hash algorithm in a separate pass, opening and reading the file once per algorithm. For a file hashed with two algorithms, this means two complete reads. The port reads the file once and updates all hash objects from each chunk, halving the I/O for the default two-algorithm case.
+> **Historical note (DEV-02):** The original computes each hash algorithm in a separate pass, opening and reading the file once per algorithm. For a file hashed with two algorithms, this means two complete reads. The tool reads the file once and updates all hash objects from each chunk, halving the I/O for the default two-algorithm case.
 
 <a id="string-hashing"></a>
 #### String hashing
@@ -2365,7 +2406,7 @@ NULL_HASHES = HashSet(
 )
 ```
 
-> **Deviation from original (DEV-09):** The original hardcodes null-hash constants as literal hex strings in multiple locations (e.g., `D41D8CD98F00B204E9800998ECF8427E` for MD5). The port computes them once from `hashlib`, which is self-documenting, immune to copy-paste errors, and automatically correct if the algorithm set changes.
+> **Historical note (DEV-09):** The original hardcodes null-hash constants as literal hex strings in multiple locations (e.g., `D41D8CD98F00B204E9800998ECF8427E` for MD5). The tool computes them once from `hashlib`, which is self-documenting, immune to copy-paste errors, and automatically correct if the algorithm set changes.
 
 <a id="directory-identity-scheme"></a>
 #### Directory identity scheme
@@ -2432,7 +2473,7 @@ Symlink detection uses a single call: `path.is_symlink()`. This works cross-plat
 
 The call is performed on the original path (before symlink resolution) using `os.lstat()` semantics — `Path.is_symlink()` does not follow the link.
 
-> **Improvement over original:** The original uses `(Get-Item).Attributes -band [System.IO.FileAttributes]::ReparsePoint`, a Windows-specific bitwise attribute check. `Path.is_symlink()` is the correct cross-platform equivalent and is strictly simpler.
+> **Historical note:** The original uses `(Get-Item).Attributes -band [System.IO.FileAttributes]::ReparsePoint`, a Windows-specific bitwise attribute check. `Path.is_symlink()` is the correct cross-platform equivalent and is strictly simpler.
 
 <a id="behavioral-effects"></a>
 #### Behavioral effects
@@ -2451,14 +2492,14 @@ For directory symlinks, the identity scheme is unchanged — directory identity 
 <a id="dead-code-validateislink"></a>
 #### Dead code: `ValidateIsLink`
 
-The original lists `ValidateIsLink` as a dependency of `MakeIndex` but never calls it. The `is_symlink` check is performed inline within `FileId` and `DirectoryId`. The port does not carry `ValidateIsLink` forward (DEV-13).
+The original lists `ValidateIsLink` as a dependency of `MakeIndex` but never calls it. The `is_symlink` check is performed inline within `FileId` and `DirectoryId`. `ValidateIsLink` is not carried forward (DEV-13).
 
 <a id="dangling-symlinks"></a>
 #### Dangling symlinks
 
 A dangling symlink (one whose target does not exist) is treated as an item-level warning. `Path.is_symlink()` returns `True` for dangling symlinks (it reads the link itself, not its target). The entry builder proceeds with degraded fields: `hashes` are computed from the name, `size` is `null`, timestamps come from `os.lstat()` (the symlink's own metadata), and exif/sidecar operations are skipped. A warning is logged identifying the dangling link.
 
-> **Improvement over original:** The original does not explicitly handle dangling symlinks. A missing link target causes `Get-Item` to fail, producing platform-dependent error behavior. The port's explicit handling is a robustness improvement.
+> **Historical note:** The original does not explicitly handle dangling symlinks. A missing link target causes `Get-Item` to fail, producing platform-dependent error behavior. The explicit handling here is a robustness improvement.
 
 ---
 
@@ -2508,7 +2549,7 @@ Unix timestamps are derived directly from the stat result's floating-point value
 | `modified.unix` | `st_mtime` | `int(stat_result.st_mtime * 1000)` |
 | `created.unix` | See below | See below |
 
-> **Deviation from original (DEV-07):** The original performs an unnecessary round-trip: it formats a datetime to a string via `.ToString($DateFormat)`, then passes that string to `Date2UnixTime`, which parses it back into a `DateTimeOffset` to call `.ToUnixTimeMilliseconds()`. The port derives Unix timestamps directly from the stat float values — no intermediate string representation, no round-trip parsing, and `Date2UnixTime` (along with its entire internal dependency chain: `Date2FormatCode`, `Date2UnixTimeSquash`, `Date2UnixTimeCountDigits`, `Date2UnixTimeFormatCode`) is eliminated.
+> **Historical note (DEV-07):** The original performs an unnecessary round-trip: it formats a datetime to a string via `.ToString($DateFormat)`, then passes that string to `Date2UnixTime`, which parses it back into a `DateTimeOffset` to call `.ToUnixTimeMilliseconds()`. The tool derives Unix timestamps directly from the stat float values — no intermediate string representation, no round-trip parsing, and `Date2UnixTime` (along with its entire internal dependency chain: `Date2FormatCode`, `Date2UnixTimeSquash`, `Date2UnixTimeCountDigits`, `Date2UnixTimeFormatCode`) is eliminated.
 
 <a id="creation-time-portability"></a>
 #### Creation time portability
@@ -2626,7 +2667,7 @@ def _check_exiftool() -> bool:
     return _exiftool_available
 ```
 
-> **Improvement over original:** The original invokes exiftool for every eligible file without checking availability first. If exiftool is missing, each invocation fails independently, producing a per-file error. The port's probe-once approach avoids spawning doomed subprocesses and reduces log noise to a single warning. See [§4.5](#45-error-handling-strategy) for the full discussion.
+> **Historical note:** The original invokes exiftool for every eligible file without checking availability first. If exiftool is missing, each invocation fails independently, producing a per-file error. The probe-once approach avoids spawning doomed subprocesses and reduces log noise to a single warning. See [§4.5](#45-error-handling-strategy) for the full discussion.
 
 <a id="extension-exclusion"></a>
 #### Extension exclusion
@@ -2686,16 +2727,16 @@ with tempfile.NamedTemporaryFile(mode="w", suffix=".args", delete=True, encoding
     )
 ```
 
-> **Deviation from original (DEV-05, DEV-16):** The original stores exiftool arguments as Base64-encoded strings in the PowerShell source, decodes them at runtime via `Base64DecodeString` (which itself calls `certutil` on Windows), writes them to a temporary file via `TempOpen`, passes the temporary file to exiftool via its `-@` argfile switch, and cleans up via `TempClose`. The port eliminates the Base64 pipeline entirely. The primary backend (`pyexiftool`) communicates via stdin pipes with no disk I/O for arguments. The fallback backend writes a temporary argfile using `tempfile`, which is cross-platform and handles cleanup automatically. Both backends define arguments as plain Python lists — no Base64 encoding, no `certutil`, no Windows-specific decoding.
+> **Historical note (DEV-05, DEV-16):** The original stores exiftool arguments as Base64-encoded strings in the PowerShell source, decodes them at runtime via `Base64DecodeString` (which itself calls `certutil` on Windows), writes them to a temporary file via `TempOpen`, passes the temporary file to exiftool via its `-@` argfile switch, and cleans up via `TempClose`. The Base64 pipeline is eliminated entirely. The primary backend (`pyexiftool`) communicates via stdin pipes with no disk I/O for arguments. The fallback backend writes a temporary argfile using `tempfile`, which is cross-platform and handles cleanup automatically. Both backends define arguments as plain Python lists — no Base64 encoding, no `certutil`, no Windows-specific decoding.
 
 The `timeout=30` parameter (fallback backend only — the batch backend enforces timeouts at the `ExifToolHelper` level) prevents a hung exiftool process from blocking the indexer indefinitely. If the timeout is exceeded, the function returns `None` and a warning is logged. The timeout value is not currently configurable but MAY be exposed in a future configuration update if users encounter legitimate long-running extractions.
 
 <a id="output-parsing-and-key-filtering"></a>
 #### Output parsing and key filtering
 
-Exiftool's `-json` flag produces a JSON array containing one object per input file. Since the port processes one file at a time, the output is always a single-element array. The module parses the output via `json.loads()` and extracts the first element.
+Exiftool's `-json` flag produces a JSON array containing one object per input file. Since the tool processes one file at a time, the output is always a single-element array. The module parses the output via `json.loads()` and extracts the first element.
 
-> **Deviation from original (DEV-06):** The original pipes exiftool output through `jq` for two purposes: compacting the JSON (`jq -c '.[] | .'`) and deleting unwanted keys via a second `jq` pass (`jq -c 'del(.ExifToolVersion, .FileSequence, ...)'`). The port eliminates `jq` entirely. `json.loads()` handles parsing natively, and unwanted keys are removed with a dict comprehension.
+> **Historical note (DEV-06):** The original pipes exiftool output through `jq` for two purposes: compacting the JSON (`jq -c '.[] | .'`) and deleting unwanted keys via a second `jq` pass (`jq -c 'del(.ExifToolVersion, .FileSequence, ...)'`). `jq` is eliminated entirely. `json.loads()` handles parsing natively, and unwanted keys are removed with a dict comprehension.
 
 The unwanted key set includes exiftool operational metadata and OS-specific filesystem attributes that are either redundant with IndexEntry fields or not embedded metadata from the file. Because exiftool with `-G` flags emits group-prefixed keys (e.g. `System:FileName`), the filter matches by **base key name** — the portion after the last `:` separator. This handles both prefixed and unprefixed key forms.
 
@@ -2831,7 +2872,7 @@ The discovery algorithm:
 3. Exclude sidecars whose names match the configured exclusion patterns (`config.metadata_exclude_patterns`).
 4. Return the matched sidecars grouped by type.
 
-> **Improvement over original:** The original's `GetFileMetaSiblings` rescans the parent directory via `Get-ChildItem` for every indexed file. In a directory with 1,000 files, this means 1,000 redundant directory reads. The port's approach — passing the pre-enumerated `siblings` list — performs the directory read once.
+> **Historical note:** The original's `GetFileMetaSiblings` rescans the parent directory via `Get-ChildItem` for every indexed file. In a directory with 1,000 files, this means 1,000 redundant directory reads. Passing the pre-enumerated `siblings` list performs the directory read once.
 
 <a id="type-detection"></a>
 #### Type detection
@@ -2851,7 +2892,9 @@ Each discovered sidecar is classified into exactly one type by matching its file
 | `thumbnail` | Thumbnail/cover images (`.cover`, `.thumb`) | Base64-encoded binary |
 | `torrent` | Torrent files | Base64-encoded binary |
 
-If a sidecar matches zero patterns, it is ignored (not an error — the file simply is not a recognized sidecar type). If a sidecar matches multiple patterns, it is logged as a warning and classified as the first match, consistent with the original's behavior (which also takes the first match from iterating `$MetadataFileParser.Identify` keys).
+If a sidecar matches zero patterns, it is ignored (not an error — the file simply is not a recognized sidecar type). If a sidecar matches multiple patterns, it is logged as a warning and classified as the first match.
+
+> **Historical note:** The original also takes the first match when iterating `$MetadataFileParser.Identify` keys.
 
 <a id="format-specific-readers"></a>
 #### Format-specific readers
@@ -2860,7 +2903,7 @@ After type detection, the sidecar's content is read by a format-specific handler
 
 **JSON reader.** Reads the file content and parses it via `json.loads()`. Used directly for `json_metadata` type. Used as the first attempt in the fallback chain for `description`, `generic_metadata`, and `subtitles`.
 
-> **Improvement over original:** The original's `MetaFileRead-Data-ReadJson` pipes the file through `jq -c '.'` and then `ConvertFrom-Json`. The port uses `json.loads()` directly, eliminating the `jq` dependency for sidecar parsing as well.
+> **Historical note:** The original's `MetaFileRead-Data-ReadJson` pipes the file through `jq -c '.'` and then `ConvertFrom-Json`. Using `json.loads()` directly eliminates the `jq` dependency for sidecar parsing as well.
 
 **Text reader.** Reads the file as UTF-8 text via `path.read_text(encoding="utf-8")`. Returns the content as a string. Used for `description` (when JSON parsing fails), `generic_metadata` (same), and `desktop_ini`.
 
@@ -2868,9 +2911,11 @@ After type detection, the sidecar's content is read by a format-specific handler
 
 **Binary reader.** Reads the file as raw bytes and Base64-encodes them via `base64.b64encode(path.read_bytes()).decode("ascii")`. Used for `screenshot`, `thumbnail`, and `torrent` types, and as the final fallback for types where text and JSON reading both fail.
 
-> **Improvement over original:** The original's binary reader (`MetaFileRead-Data-Base64Encode`) uses `certutil -encode` to convert binary data to Base64, writing to a temporary file and stripping the header/footer lines that `certutil` adds. The port uses `base64.b64encode()` directly — one function call, no external binary, no temporary file.
+> **Historical note:** The original's binary reader (`MetaFileRead-Data-Base64Encode`) uses `certutil -encode` to convert binary data to Base64, writing to a temporary file and stripping the header/footer lines that `certutil` adds. Using `base64.b64encode()` directly eliminates the external binary dependency and temporary file.
 
-**Link reader.** For `.url` files, parses the INI-format content to extract the `URL=` value. For `.lnk` files on Windows, the port MAY use `pylnk3` or `comtypes` to resolve the shortcut target; on non-Windows platforms, `.lnk` files are read as binary (Base64-encoded), since the `.lnk` format is Windows-specific. The original uses the external pslib functions `UrlFile2Url` and `Lnk2Path` for this; the port internalizes the logic.
+**Link reader.** For `.url` files, parses the INI-format content to extract the `URL=` value. For `.lnk` files on Windows, `pylnk3` or `comtypes` MAY be used to resolve the shortcut target; on non-Windows platforms, `.lnk` files are read as binary (Base64-encoded), since the `.lnk` format is Windows-specific.
+
+> **Historical note:** The original uses the external pslib functions `UrlFile2Url` and `Lnk2Path` for link resolution. The tool internalizes this logic.
 
 <a id="fallback-chain"></a>
 #### Fallback chain
@@ -3028,7 +3073,7 @@ def index_path(
 
 **Step 12 — Assembly.** Construct the final `IndexEntry` with all fields populated. Set `schema_version` to `2`, `type` to `"file"`, `items` to `null`.
 
-> **Deviation from original:** The original's `MakeObject` contains a `switch` statement with five near-identical branches (`makeobjectfile`, `makeobjectdirectory`, `makeobjectdirectoryrecursive`, plus defaults) that all construct the same `[PSCustomObject]@{...}` with minor variations. The port uses a single construction path per item type — `build_file_entry()` for files and `build_directory_entry()` for directories — with no switch duplication.
+> **Historical note:** The original's `MakeObject` contains a `switch` statement with five near-identical branches (`makeobjectfile`, `makeobjectdirectory`, `makeobjectdirectoryrecursive`, plus defaults) that all construct the same `[PSCustomObject]@{...}` with minor variations. The tool uses a single construction path per item type — `build_file_entry()` for files and `build_directory_entry()` for directories — with no switch duplication.
 
 <a id="directory-entry-construction-sequence"></a>
 #### Directory entry construction sequence
@@ -3140,7 +3185,7 @@ The serialization helper applies the invariants defined in [§5.12](#512-schema-
 
 When the `orjson` package is available, the serializer MAY use it as a drop-in replacement for faster serialization of large entry trees. `orjson` handles dataclasses natively and produces bytes rather than strings; the serializer wraps the output appropriately. The `orjson` path is gated by a try/except import and is transparent to callers.
 
-> **Improvement over original:** The original uses `ConvertTo-Json -Depth 100` for serialization, which has a known memory ceiling for very large nested structures (documented in the original's own source comments). Python's `json.dumps()` handles arbitrarily deep nesting without this limitation. The `-Depth 100` workaround is unnecessary.
+> **Historical note:** The original uses `ConvertTo-Json -Depth 100` for serialization, which has a known memory ceiling for very large nested structures (documented in the original's own source comments). Python's `json.dumps()` handles arbitrarily deep nesting without this limitation.
 
 <a id="output-routing"></a>
 #### Output routing
@@ -3153,9 +3198,11 @@ The output routing model simplifies the original's seven-scenario matrix into th
 | `--outfile PATH` | `config.output_file` | Write the serialized JSON to the specified file path. |
 | `--inplace` | `config.output_inplace` | Write individual sidecar files alongside each processed item. |
 
-Any combination of these flags is valid. When no output flags are specified, the default is `--stdout` only (matching the original's default behavior).
+Any combination of these flags is valid. When no output flags are specified, the default is `--stdout` only.
 
-> **Improvement over original:** The original's 7-scenario routing switch (`StandardOutput`/`NoStandardOutput` combined with `OutFile`/`OutFileInPlace`/both/neither) is replaced by three independent flags. The routing logic becomes a simple check-and-write for each enabled destination, with no complex scenario matrix. The `NoStandardOutput` negative flag is eliminated — the absence of `--stdout` is sufficient.
+> **Historical note:** The original's default behavior was also stdout-only output.
+
+> **Historical note:** The original's 7-scenario routing switch (`StandardOutput`/`NoStandardOutput` combined with `OutFile`/`OutFileInPlace`/both/neither) is replaced by three independent flags. The routing logic becomes a simple check-and-write for each enabled destination, with no complex scenario matrix. The `NoStandardOutput` negative flag is eliminated — the absence of `--stdout` is sufficient.
 
 <a id="timing-of-writes"></a>
 #### Timing of writes
@@ -3171,7 +3218,7 @@ The in-place write timing is a deliberate design choice preserved from the origi
 <a id="file-encoding"></a>
 #### File encoding
 
-All output files are written as UTF-8 without a BOM, using `Path.write_text(json_string, encoding="utf-8")`. The original uses `Out-File -Encoding UTF8` on Windows, which also produces UTF-8 (with or without BOM depending on PowerShell version). The port normalizes to UTF-8-no-BOM across all platforms.
+All output files are written as UTF-8 without a BOM, using `Path.write_text(json_string, encoding="utf-8")`. The original uses `Out-File -Encoding UTF8` on Windows, which also produces UTF-8 (with or without BOM depending on PowerShell version). The tool normalizes to UTF-8-no-BOM across all platforms.
 
 ---
 
@@ -3224,14 +3271,18 @@ If the target path exists and is the same inode as the source (meaning the file 
 <a id="rename-implies-in-place-output"></a>
 #### Rename implies in-place output
 
-When the `--rename` flag is active, the configuration MUST also activate `--inplace` output. The rename module does not write sidecar files itself — that is handled by `serializer.write_inplace()`. The configuration loader enforces the implication: `config.rename = True` → `config.output_inplace = True`. This matches the original's safety behavior (`MakeIndex` forces `OutFileInPlace = $true` when `Rename = $true`).
+When the `--rename` flag is active, the configuration MUST also activate `--inplace` output. The rename module does not write sidecar files itself — that is handled by `serializer.write_inplace()`. The configuration loader enforces the implication: `config.rename = True` → `config.output_inplace = True`.
+
+> **Historical note:** The original enforces this same constraint (`MakeIndex` forces `OutFileInPlace = $true` when `Rename = $true`).
 
 The sidecar file written alongside each renamed item serves as the reversal manifest: it contains the original filename in `name.text`, allowing a future revert operation to reconstruct the original path.
 
 <a id="safety-metamergedelete-guard"></a>
 #### Safety: MetaMergeDelete guard
 
-When MetaMergeDelete is active, the configuration MUST require that at least one output mechanism (`--outfile` or `--inplace`) is enabled. This prevents the scenario where sidecar metadata files are deleted without their content being captured in any output. The original enforces this via the `$MMDSafe` variable; the port enforces it as a configuration validation rule during Stage 1.
+When MetaMergeDelete is active, the configuration MUST require that at least one output mechanism (`--outfile` or `--inplace`) is enabled. This prevents the scenario where sidecar metadata files are deleted without their content being captured in any output. This constraint is enforced as a configuration validation rule during Stage 1.
+
+> **Historical note:** The original enforces this via the `$MMDSafe` variable.
 
 If MetaMergeDelete is requested with no output mechanism, the configuration loader raises a fatal error before any processing begins.
 
@@ -3240,7 +3291,7 @@ If MetaMergeDelete is requested with no output mechanism, the configuration load
 
 The `dry_run` parameter causes the function to compute and return the target path without performing the actual rename. The serializer still writes the sidecar file (using the would-be new path), and the `IndexEntry` still contains the `storage_name`. Dry-run mode allows users to preview what a rename operation would do before committing to it.
 
-> **Improvement over original:** The original does not support dry-run for renames. The port adds this as a safety feature, particularly useful for users running rename operations on large directory trees for the first time.
+> **Historical note:** The original does not support dry-run for renames. This capability is a safety feature, particularly useful for users running rename operations on large directory trees for the first time.
 
 <a id="revert-capability"></a>
 #### Revert capability
@@ -3250,7 +3301,9 @@ The original's source comments include a "To-Do" note about adding a `Revert` pa
 <a id="7-configuration"></a>
 ## 7. Configuration
 
-This section defines the configuration system that replaces the original's hardcoded `$global:MetadataFileParser` object and the literal values scattered throughout the `MakeIndex` function body. It specifies every configurable field, its type, its default value, the TOML file format used for user overrides, and the layered resolution strategy that merges defaults, user files, and CLI/API arguments into a single immutable configuration object.
+This section defines the externalized configuration system. It specifies every configurable field, its type, its default value, the TOML file format used for user overrides, and the layered resolution strategy that merges defaults, user files, and CLI/API arguments into a single immutable configuration object.
+
+> **Historical note:** The original hardcoded all configuration in the `$global:MetadataFileParser` object and in literal values scattered throughout the `MakeIndex` function body. The externalized configuration system is a deliberate architectural improvement (design goal G4).
 
 The configuration system implements design goal G4 ([§2.3](#23-design-goals-and-non-goals)): a user SHOULD be able to add a new sidecar metadata pattern, extend the exiftool exclusion list, or modify the filesystem exclusion filters without editing source code. It also implements the no-global-state principle from [§4.4](#44-state-management): the configuration is constructed once during Stage 1 of the processing pipeline ([§4.1](#41-high-level-processing-pipeline)), frozen into an immutable object, and threaded through the entire call chain as an explicit function parameter.
 
@@ -3306,9 +3359,9 @@ class IndexerConfig:
     extension_groups: MappingProxyType[str, tuple[str, ...]] = ...
 ```
 
-The `frozen=True` parameter ensures that the object is immutable after construction. Mutable collection types in the original (`list`, `dict`, `set`) are replaced with their immutable counterparts (`tuple`, `frozenset`, `MappingProxyType`) to enforce this at the field level. If using Pydantic instead of stdlib `dataclasses`, the equivalent is `model_config = ConfigDict(frozen=True)`.
+The `frozen=True` parameter ensures that the object is immutable after construction. Mutable collection types (`list`, `dict`, `set`) are replaced with their immutable counterparts (`tuple`, `frozenset`, `MappingProxyType`) to enforce this at the field level. If using Pydantic instead of stdlib `dataclasses`, the equivalent is `model_config = ConfigDict(frozen=True)`.
 
-> **Deviation from original:** The original distributes configuration across six global variables (`$global:MetadataFileParser`, `$global:ExiftoolRejectList`, `$global:MetaSuffixInclude`, `$global:MetaSuffixIncludeString`, `$global:MetaSuffixExclude`, `$global:MetaSuffixExcludeString`) plus inline literals in the function body. The port consolidates everything into a single typed, immutable object. See [§4.4](#44-state-management) for the full rationale.
+> **Historical note:** The original distributes configuration across six global variables (`$global:MetadataFileParser`, `$global:ExiftoolRejectList`, `$global:MetaSuffixInclude`, `$global:MetaSuffixIncludeString`, `$global:MetaSuffixExclude`, `$global:MetaSuffixExcludeString`) plus inline literals in the function body. The single typed, immutable object consolidates everything. See [§4.4](#44-state-management) for the full rationale.
 
 <a id="nested-configuration-types"></a>
 #### Nested configuration types
@@ -3327,7 +3380,7 @@ class MetadataTypeAttributes:
     parent_can_be_directory: bool
 ```
 
-This is the Python equivalent of the original's `$MetadataFileParser.Attributes.<TypeName>` sub-objects (e.g., `Description`, `GenericMetadata`, `Hash`, etc.). The field names are converted from PascalCase to snake_case per Python convention.
+This is the Python equivalent of the legacy `$MetadataFileParser.Attributes.<TypeName>` sub-objects (e.g., `Description`, `GenericMetadata`, `Hash`, etc.). The field names are converted from PascalCase to snake_case per Python convention.
 
 ```python
 @dataclass(frozen=True)
@@ -3337,7 +3390,7 @@ class ExiftoolConfig:
     base_args: tuple[str, ...]
 ```
 
-Implementations MAY flatten these nested types into top-level `IndexerConfig` fields if the nesting adds no practical value for their codebase. The specification uses the nested form because it mirrors the logical grouping of the original `MetadataFileParser` and produces cleaner TOML sections ([§7.6](#76-configuration-file-format)).
+Implementations MAY flatten these nested types into top-level `IndexerConfig` fields if the nesting adds no practical value for their codebase. The specification uses the nested form because it mirrors the logical grouping of the legacy `MetadataFileParser` and produces cleaner TOML sections ([§7.6](#76-configuration-file-format)).
 
 <a id="configuration-construction-flow"></a>
 #### Configuration construction flow
@@ -3358,9 +3411,9 @@ Steps 2–4 follow the layered precedence defined in [§3.3](#33-configuration-f
 <a id="parameter-implications"></a>
 #### Parameter implications
 
-Certain flag combinations carry implicit dependencies. The configuration loader enforces these implications after merging all layers, matching the original's behavior:
+Certain flag combinations carry implicit dependencies. The configuration loader enforces these implications after merging all layers:
 
-| If this is `True`... | ...then force this to `True` | Original equivalent |
+| If this is `True`... | ...then force this to `True` | Legacy equivalent |
 |---|---|---|
 | `rename` | `output_inplace` | `$Rename` → `$OutFileInPlace = $true` (line ~9360) |
 | `meta_merge_delete` | `meta_merge` | `$MetaMergeDelete` → `$MetaMerge = $true` (line ~9447) |
@@ -3371,23 +3424,27 @@ These implications are applied in reverse dependency order — `meta_merge_delet
 <a id="output-mode-defaulting"></a>
 #### Output mode defaulting
 
-The original's output mode resolution (lines ~9352–9437) applies complex conditional logic to determine whether stdout is active based on which output flags the user specified. The port simplifies this to a single rule:
+The output mode resolution logic applies a single rule:
 
 - If neither `output_file` nor `output_inplace` is specified, and `output_stdout` was not explicitly set to `False`, then `output_stdout` defaults to `True`.
 - If `output_file` or `output_inplace` is specified, `output_stdout` defaults to `False` unless the user explicitly passes `--stdout`.
 
-The original's `NoStandardOutput` / `StandardOutput` dual-flag pattern (a positive and negative flag for the same boolean) is eliminated. The port uses a single `output_stdout` field. The CLI provides only `--stdout` and `--no-stdout`; absence of either flag triggers the defaulting logic above.
+The `NoStandardOutput` / `StandardOutput` dual-flag pattern (a positive and negative flag for the same boolean) from the legacy interface is eliminated. A single `output_stdout` field is used. The CLI provides only `--stdout` and `--no-stdout`; absence of either flag triggers the defaulting logic above.
 
-> **Improvement over original:** The original's output mode resolution is a 90-line block with nested conditionals, redundant inverse-variable tracking (`$NoStandardOutput = !$StandardOutput`), and commented-out debug logging. The port's rule is two sentences. The behavioral outcome is identical.
+> **Historical note:** The original's output mode resolution is a 90-line block with nested conditionals, redundant inverse-variable tracking (`$NoStandardOutput = !$StandardOutput`), and commented-out debug logging. The current rule is two sentences. The behavioral outcome is identical.
 
 <a id="validation-rules"></a>
 #### Validation rules
 
 After implication propagation and output mode defaulting, the configuration loader validates the following invariants. Violations are fatal errors raised before any processing begins:
 
-1. **MetaMergeDelete safety.** If `meta_merge_delete` is `True`, at least one of `output_file` or `output_inplace` MUST also be `True`. This prevents the scenario where sidecar files are deleted without their content being captured in any persistent output. The original enforces this via the `$MMDSafe` variable (lines ~9354–9427); the port enforces it as a declarative validation rule.
+1. **MetaMergeDelete safety.** If `meta_merge_delete` is `True`, at least one of `output_file` or `output_inplace` MUST also be `True`. This prevents the scenario where sidecar files are deleted without their content being captured in any persistent output.
 
-2. **IdType validity.** `id_algorithm` MUST be either `"md5"` or `"sha256"`. The original validates this with a `switch` statement that falls through to an error (line ~8776). The port validates during configuration construction.
+   > **Historical note:** The original enforces this via the `$MMDSafe` variable (lines ~9354–9427); the current design enforces it as a declarative validation rule.
+
+2. **IdType validity.** `id_algorithm` MUST be either `"md5"` or `"sha256"`. Validation occurs during configuration construction.
+
+   > **Historical note:** The original validates this with a `switch` statement that falls through to an error (line ~8776).
 
 3. **Path conflicts.** If `output_file` is specified, it MUST NOT point to a path inside the target directory when `output_inplace` is also active. (Writing the aggregate output file into the same directory tree being indexed with in-place writes active would cause the aggregate file to be indexed on subsequent runs.)
 
@@ -3434,7 +3491,7 @@ This is the original's extension validation regex, transcribed exactly. It accep
 
 **Improved validation (with dotfile protection):**
 
-The port fixes this edge case with a two-stage validation strategy:
+The tool addresses this edge case with a two-stage validation strategy:
 
 1. **Dotfile detection (prerequisite check):** Before applying the extension validation regex, determine whether the file is a dotfile. A filename is classified as a dotfile if:
    - Its basename (after stripping directory path) begins with a dot
@@ -3463,14 +3520,14 @@ The regex itself is unchanged from the original, ensuring backward compatibility
 | `main.js` | No | `js` | ✔ Validates against regex |
 | `.DS_Store` | Yes | *(none)* | ✔ Regex not applied (dotfile) |
 
-**Implementation note:** The Python `os.path.splitext()` function exhibits the dotfile behavior inherited from the original — `os.path.splitext(".gitignore")` returns `(".gitignore", "")`, correctly treating the file as having no extension. The port's implementation in `core/filesystem.py` ([§6.2](#62-path-resolution-and-manipulation)) leverages this behavior and adds an explicit dotfile check to ensure the extension validation step is skipped entirely for these files.
+**Implementation note:** Python's `os.path.splitext()` function handles this correctly — `os.path.splitext(".gitignore")` returns `(".gitignore", "")`, treating the file as having no extension. The implementation in `core/filesystem.py` ([§6.2](#62-path-resolution-and-manipulation)) leverages this behavior and adds an explicit dotfile check to ensure the extension validation step is skipped entirely for these files.
 
-This pattern remains configurable (DEV-14) — users who encounter legitimate extensions rejected by the pattern can relax it in their config file. The default preserves the original's validation logic while fixing the dotfile semantic error.
+This pattern remains configurable (DEV-14) — users who encounter legitimate extensions rejected by the pattern can relax it in their config file. The default preserves the legacy validation logic while fixing the dotfile semantic error.
 
 <a id="filesystem-exclusion-defaults"></a>
 #### Filesystem exclusion defaults
 
-The default filesystem exclusion set extends the original's Windows-only pair to cover all three target platforms:
+The default filesystem exclusion set extends the legacy Windows-only pair to cover all three target platforms:
 
 ```python
 FILESYSTEM_EXCLUDES = frozenset({
@@ -3528,9 +3585,9 @@ EXIFTOOL_BASE_ARGS = (
 )
 ```
 
-These are the original's exiftool arguments, decoded from the Base64-encoded `$ArgsQ` string (the quiet-mode variant — the port controls verbosity through its own logging system, not through exiftool's `-quiet` flag). The arguments are stored as a plain Python tuple rather than being Base64-encoded (DEV-05).
+These are the legacy exiftool arguments, decoded from the Base64-encoded `$ArgsQ` string (the quiet-mode variant — the tool controls verbosity through its own logging system, not through exiftool's `-quiet` flag). The arguments are stored as a plain Python tuple rather than being Base64-encoded (DEV-05).
 
-> **Improvement over original:** The original Base64-encodes the exiftool argument strings (`$ArgsV`, `$ArgsQ`) and decodes them at runtime via `Base64DecodeString`, writing the result to a temporary file that is then passed to exiftool via `-@ "$TempArgsFile"`. This three-step pipeline (encode → decode → write to file → pass as arg file) is entirely unnecessary. The port stores the arguments as a plain tuple and passes them directly to `subprocess.run()` as a list. The `-b` flag (binary output) present in the original's verbose argument set is intentionally omitted from the default — it causes exiftool to emit binary-encoded values in the JSON output, which complicates downstream parsing. If binary output is needed for specific use cases, it can be added via configuration.
+> **Historical note:** The original Base64-encodes the exiftool argument strings (`$ArgsV`, `$ArgsQ`) and decodes them at runtime via `Base64DecodeString`, writing the result to a temporary file that is then passed to exiftool via `-@ "$TempArgsFile"`. This three-step pipeline (encode → decode → write to file → pass as arg file) is entirely unnecessary. The arguments are stored as a plain tuple and passed directly to `subprocess.run()` as a list. The `-b` flag (binary output) present in the legacy verbose argument set is intentionally omitted from the default — it causes exiftool to emit binary-encoded values in the JSON output, which complicates downstream parsing. If binary output is needed for specific use cases, it can be added via configuration.
 
 <a id="metadata-identification-pattern-defaults"></a>
 #### Metadata identification pattern defaults
@@ -3552,9 +3609,9 @@ The extension groups from the original's `$MetadataFileParser.ExtensionGroups` a
 <a id="73-metadata-file-parser-configuration"></a>
 ### 7.3. Metadata File Parser Configuration
 
-This subsection specifies the complete porting of the original `$global:MetadataFileParser` ordered hashtable into the typed configuration system. The original object contains four top-level sub-objects — `Attributes`, `Identify`, `Exiftool`, and `ExtensionGroups` — plus a derived `Indexer` sub-object. Each is mapped to a corresponding field or group of fields in `IndexerConfig`.
+This subsection specifies the complete mapping of the legacy `$global:MetadataFileParser` ordered hashtable into the typed configuration system. The structure contains four top-level sub-objects — `Attributes`, `Identify`, `Exiftool`, and `ExtensionGroups` — plus a derived `Indexer` sub-object. Each is mapped to a corresponding field or group of fields in `IndexerConfig`.
 
-The isolated reference script `MakeIndex(MetadataFileParser).ps1` ([§1.5](#15-reference-documents)) is the authoritative source for the original patterns. This section reproduces the complete content with porting guidance.
+The isolated reference script `MakeIndex(MetadataFileParser).ps1` ([§1.5](#15-reference-documents)) is the authoritative source for the legacy patterns. This section reproduces the complete content with mapping guidance.
 
 <a id="attributes-metadata_attributes"></a>
 #### Attributes → `metadata_attributes`
@@ -3581,9 +3638,9 @@ The type names are converted from PascalCase (`DesktopIni`) to snake_case (`desk
 
 The `Identify` sub-object contains the regex patterns used to classify a filename as a sidecar metadata file and determine its type. Each type maps to an ordered list of regex patterns. A filename matches a type if it matches any pattern in that type's list. Patterns within a list are ordered from most specific to most generic (where applicable — notably the Subtitles patterns).
 
-These patterns are the most critical configuration data to port correctly. The regex syntax used by the original is PowerShell's `-match` operator, which uses .NET regular expressions. The patterns in `MetadataFileParser.Identify` use a subset of .NET regex that is fully compatible with Python's `re` module — specifically: character classes, alternation, anchors (`^`, `$`), quantifiers, and grouping. No .NET-specific regex features (lookbehind with variable length, named balancing groups) are used. The patterns can therefore be transcribed to Python without syntactic modification.
+These patterns are the most critical configuration data to map correctly. The regex syntax used by the legacy implementation is PowerShell's `-match` operator, which uses .NET regular expressions. The patterns in `MetadataFileParser.Identify` use a subset of .NET regex that is fully compatible with Python's `re` module — specifically: character classes, alternation, anchors (`^`, `$`), quantifiers, and grouping. No .NET-specific regex features (lookbehind with variable length, named balancing groups) are used. The patterns can therefore be transcribed to Python without syntactic modification.
 
-**Porting rule:** Each pattern string is compiled in Python via `re.compile(pattern, re.IGNORECASE)`. The `re.IGNORECASE` flag is applied because the original's `-match` operator performs case-insensitive matching by default in PowerShell. All patterns are applied using `re.search()` against the full filename (not just the extension), matching the original's behavior where patterns may anchor to the start or end of the filename.
+**Compilation rule:** Each pattern string is compiled in Python via `re.compile(pattern, re.IGNORECASE)`. The `re.IGNORECASE` flag is applied because PowerShell's `-match` operator performs case-insensitive matching by default. All patterns are applied using `re.search()` against the full filename (not just the extension), matching the legacy behavior where patterns may anchor to the start or end of the filename.
 
 The complete pattern inventory, transcribed from `MakeIndex(MetadataFileParser).ps1`:
 
@@ -3697,7 +3754,7 @@ The original's `$MetadataFileParser.Indexer` sub-object contains two derived arr
 - `Include`: A union of all patterns from the `Identify` sub-object, computed at load time by iterating `$MetadataFileParser.Identify.Keys` and collecting all per-type patterns into a flat array.
 - `ExcludeString` / `IncludeString`: The `Exclude` and `Include` arrays joined with `|` into single alternation strings.
 
-The port preserves and extends the `Exclude` patterns as `metadata_exclude_patterns`:
+The `Exclude` patterns are preserved and extended as `metadata_exclude_patterns`:
 
 ```python
 METADATA_EXCLUDE_PATTERNS = (
@@ -3707,16 +3764,16 @@ METADATA_EXCLUDE_PATTERNS = (
 )
 ```
 
-**v1/v2 sidecar coexistence in the exclusion pattern.** The first pattern uses the `2?` quantifier to match both the original v1 naming convention (`_meta.json`, `_directorymeta.json`) and the port's v2 naming convention (`_meta2.json`, `_directorymeta2.json`). This is necessary because the indexer may operate on directory trees that contain legacy v1 sidecar files from previous `MakeIndex` runs, newly generated v2 sidecar files from the port, or both simultaneously during a migration period. Both generations of sidecar output files are indexer artifacts and MUST be excluded from traversal to prevent the indexer from indexing its own output. See [§5.13](#513-backward-compatibility-considerations) for the full v1/v2 coexistence rationale and [§6.9](#69-json-serialization-and-output-routing) for the v2 naming convention used by the serializer.
+**v1/v2 sidecar coexistence in the exclusion pattern.** The first pattern uses the `2?` quantifier to match both the v1 naming convention (`_meta.json`, `_directorymeta.json`) and the v2 naming convention (`_meta2.json`, `_directorymeta2.json`). This is necessary because the indexer may operate on directory trees that contain legacy v1 sidecar files from previous `MakeIndex` runs, newly generated v2 sidecar files, or both simultaneously during a migration period. Both generations of sidecar output files are indexer artifacts and MUST be excluded from traversal to prevent the indexer from indexing its own output. See [§5.13](#513-backward-compatibility-considerations) for the full v1/v2 coexistence rationale and [§6.9](#69-json-serialization-and-output-routing) for the v2 naming convention used by the serializer.
 
-> **Improvement over original:** The original pre-joins the `Include` and `Exclude` arrays into single `IncludeString` / `ExcludeString` alternation strings for use with PowerShell's `-match` operator. This is an optimization for PowerShell's regex engine, which compiles the pattern on every `-match` call. In Python, patterns are compiled once via `re.compile()` and reused. The pre-joined alternation strings are unnecessary — the port stores individual compiled patterns and iterates them. This is equally fast for the small number of patterns involved (typically under 30 total) and simpler to maintain, debug, and extend. The `IncludeString` / `ExcludeString` fields are not ported.
+> **Historical note:** The original pre-joins the `Include` and `Exclude` arrays into single `IncludeString` / `ExcludeString` alternation strings for use with PowerShell's `-match` operator. This is an optimization for PowerShell's regex engine, which compiles the pattern on every `-match` call. In Python, patterns are compiled once via `re.compile()` and reused. The pre-joined alternation strings are unnecessary — individual compiled patterns are stored and iterated instead. This is equally fast for the small number of patterns involved (typically under 30 total) and simpler to maintain, debug, and extend. The `IncludeString` / `ExcludeString` fields are not carried forward.
 
 The `Include` set (the union of all `Identify` patterns) is not stored as a separate configuration field. Instead, the determination of whether a filename is a sidecar metadata file is performed by iterating `metadata_identify` and checking for any match — which is logically equivalent to checking against the union. If a fast "is this a sidecar at all?" check is needed as a hot-path optimization, the loader MAY compute a combined alternation pattern at construction time and expose it as a read-only property on `IndexerConfig`.
 
 <a id="extensiongroups-extension_groups"></a>
 #### ExtensionGroups → `extension_groups`
 
-The `ExtensionGroups` sub-object classifies common file extensions into seven categories. These groups are used by the sidecar parser ([§6.7](#67-sidecar-metadata-file-handling)) to infer expected content types and validate parent-child relationships (e.g., a `subtitles` sidecar should be a sibling of a Video or Audio file, not an Image file). The complete lists, carried forward verbatim from the original:
+The `ExtensionGroups` sub-object classifies common file extensions into seven categories. These groups are used by the sidecar parser ([§6.7](#67-sidecar-metadata-file-handling)) to infer expected content types and validate parent-child relationships (e.g., a `subtitles` sidecar should be a sibling of a Video or Audio file, not an Image file). The complete lists, carried forward verbatim from the legacy configuration:
 
 | Group | Extensions |
 |-------|-----------|
@@ -3730,7 +3787,7 @@ The `ExtensionGroups` sub-object classifies common file extensions into seven ca
 
 All extensions are stored in lowercase without a leading dot. Extension groups are stored as a `MappingProxyType[str, tuple[str, ...]]` in `IndexerConfig`.
 
-**Note on duplicates:** The original's `audio` list contains `wv` twice. The port deduplicates this during loading — `frozenset` or `tuple(sorted(set(...)))` naturally eliminates duplicates.
+**Note on duplicates:** The legacy `audio` list contains `wv` twice. The loader deduplicates this during loading — `frozenset` or `tuple(sorted(set(...)))` naturally eliminates duplicates.
 
 **Note on overlapping extensions:** Some extensions appear in multiple groups (e.g., `3gp` in both Audio and Video, `svg` in both Font and Image, `mp2` in both Audio and Video, `rm` in both Audio and Video, `webm` in both Audio and Video, `raw` in both Audio and Image). This is intentional — a `.3gp` file may contain audio, video, or both. The extension groups describe what a file *could* be, not a mutually exclusive classification. The sidecar parser uses these groups as heuristics, not definitive type assignments.
 
@@ -3967,7 +4024,7 @@ This pattern applies to all collection fields:
 | `metadata_identify.<type>` | `metadata_identify.<type>_append` |
 | `extension_groups.<group>` | `extension_groups.<group>_append` |
 
-> **Improvement over original:** The original provides no mechanism for user customization of configuration — all values are hardcoded in the script source. The port's layered merge system with both replace and append semantics gives users full control without requiring source code modification, fulfilling design goal G4.
+> **Historical note:** The original provides no mechanism for user customization of configuration — all values are hardcoded in the script source. The layered merge system with both replace and append semantics gives users full control without requiring source code modification, fulfilling design goal G4.
 
 <a id="cliapi-overrides"></a>
 #### CLI/API overrides
@@ -4014,7 +4071,7 @@ The CLI module is `cli/main.py` ([§3.2](#32-source-package-layout)). The entry 
 
 **CLI framework:** The CLI uses `click` as its argument parsing framework. `click` is a required runtime dependency declared in `[project.dependencies]` in `pyproject.toml` ([§12.3](#123-third-party-python-packages)). A resilience-only import guard in `__main__.py` catches `ImportError` and produces a clear message directing the user to reinstall (`pip install shruggie-indexer`) — this path is not expected in normal operation. The core library modules do not import `click` — it is consumed exclusively by `cli/main.py`.
 
-> **Deviation from original:** The original's CLI is the `Param()` block of a PowerShell function — 14 parameters with aliases, switches, and manual validation logic spanning ~200 lines. The port replaces this with `click` decorators, which handle type conversion, mutual exclusion, default propagation, and help text generation declaratively. The port also adds capabilities absent from the original: `--version`, `--dry-run`, `--config`, `--no-stdout`, structured exit codes, and graceful interrupt handling ([§8.11](#811-signal-handling-and-graceful-interruption)).
+> **Historical note:** The original's CLI is the `Param()` block of a PowerShell function — 14 parameters with aliases, switches, and manual validation logic spanning ~200 lines. `click` decorators replace this with declarative type conversion, mutual exclusion, default propagation, and help text generation. The tool also adds capabilities absent from the original: `--version`, `--dry-run`, `--config`, `--no-stdout`, structured exit codes, and graceful interrupt handling ([§8.11](#811-signal-handling-and-graceful-interruption)).
 
 <a id="81-command-structure"></a>
 ### 8.1. Command Structure
@@ -4092,7 +4149,7 @@ General:
 <a id="positional-argument-target"></a>
 #### Positional argument: `TARGET`
 
-The `TARGET` argument specifies the file or directory to index. It is optional — when omitted, the current working directory is used as the target, matching the original's default behavior.
+The `TARGET` argument specifies the file or directory to index. It is optional — when omitted, the current working directory is used as the target.
 
 ```python
 @click.argument("target", required=False, default=None, type=click.Path(exists=True))
@@ -4100,9 +4157,11 @@ The `TARGET` argument specifies the file or directory to index. It is optional �
 
 If a `TARGET` is provided but does not exist on the filesystem, `click.Path(exists=True)` raises a `click.BadParameter` error before the indexing engine is invoked. The error message includes the path and the specific reason for failure (does not exist, permission denied, etc.).
 
-When `TARGET` is `None` (omitted), the CLI sets it to `Path.cwd()`. This matches the original's behavior where `$Directory` defaults to the current directory when neither `-Directory` nor `-File` is specified.
+When `TARGET` is `None` (omitted), the CLI sets it to `Path.cwd()`.
 
-> **Deviation from original:** The original uses two separate parameters (`-Directory` and `-File`) that are mutually exclusive. The port uses a single positional argument and infers the target type from the filesystem. The `--file` / `--directory` flags (below) provide explicit disambiguation when needed but are not the primary input mechanism.
+> **Historical note:** The original also defaults to the current directory when neither `-Directory` nor `-File` is specified.
+
+> **Historical note:** The original uses two separate parameters (`-Directory` and `-File`) that are mutually exclusive. The tool uses a single positional argument and infers the target type from the filesystem. The `--file` / `--directory` flags (below) provide explicit disambiguation when needed but are not the primary input mechanism.
 
 <a id="target-type-disambiguation---file---directory"></a>
 #### Target type disambiguation: `--file` / `--directory`
@@ -4121,7 +4180,7 @@ The `--file` and `--directory` flags override auto-detection. They exist for two
 
 If `--file` is specified but the target is a directory (or vice versa), the CLI logs a warning and proceeds with the user's explicit classification. This is a deliberate choice — the user may have a valid reason for the override (e.g., testing edge cases). The warning ensures visibility into the mismatch.
 
-> **Deviation from original:** The original raises a fatal error when `-File` is specified but the path is not a file (`"The specified file does not exist"`). The port relaxes this to a warning when the explicit flag conflicts with the filesystem type, since the positional argument already validates path existence. The hard error remains only when the target path does not exist at all.
+> **Historical note:** The original raises a fatal error when `-File` is specified but the path is not a file (`"The specified file does not exist"`). The tool relaxes this to a warning when the explicit flag conflicts with the filesystem type, since the positional argument already validates path existence. The hard error remains only when the target path does not exist at all.
 
 <a id="recursion-control---recursive---no-recursive"></a>
 #### Recursion control: `--recursive` / `--no-recursive`
@@ -4139,7 +4198,9 @@ The `None` default (tri-state: `True`, `False`, or unspecified) allows the CLI t
 <a id="83-output-mode-options"></a>
 ### 8.3. Output Mode Options
 
-Output mode is controlled by three independent boolean flags that compose naturally. This replaces the original's seven-scenario routing matrix ([§6.9](#69-json-serialization-and-output-routing)) with a simpler model: each flag independently enables a destination, and any combination is valid.
+Output mode is controlled by three independent boolean flags that compose naturally. Each flag independently enables a destination, and any combination is valid.
+
+> **Historical note:** This model replaces the original's seven-scenario routing matrix ([§6.9](#69-json-serialization-and-output-routing)).
 
 <a id="stdout---no-stdout"></a>
 #### `--stdout` / `--no-stdout`
@@ -4155,7 +4216,7 @@ Enables or disables writing the complete JSON output to `sys.stdout`. The tri-st
 
 This matches the original's behavior where `StandardOutput` defaults to `True` when no output files are specified, and defaults to `False` when `OutFile` or `OutFileInPlace` is present.
 
-> **Improvement over original:** The original provides both `-StandardOutput` and `-NoStandardOutput` switches — a positive and negative flag for the same boolean, requiring a 10-line sanity check to resolve conflicts. The port uses `click`'s built-in flag pair syntax (`--stdout/--no-stdout`), which enforces mutual exclusion at the parser level and produces the correct tri-state value without manual conflict resolution.
+> **Historical note:** The original provides both `-StandardOutput` and `-NoStandardOutput` switches — a positive and negative flag for the same boolean, requiring a 10-line sanity check to resolve conflicts. The tool uses `click`'s built-in flag pair syntax (`--stdout/--no-stdout`), which enforces mutual exclusion at the parser level and produces the correct tri-state value without manual conflict resolution.
 
 <a id="outfile--o"></a>
 #### `--outfile`, `-o`
@@ -4168,7 +4229,7 @@ Specifies a file path for the combined JSON output. The complete index entry tre
 
 If the parent directory of the specified path does not exist, the CLI raises a `click.BadParameter` error. The tool does not create parent directories — this is a deliberate safety choice to prevent accidental writes to unexpected locations.
 
-If the file already exists, it is overwritten without prompting. The original behaves the same way (`Out-File -Force`).
+If the file already exists, it is overwritten without prompting, matching the original's `Out-File -Force` behavior.
 
 <a id="inplace"></a>
 #### `--inplace`
@@ -4215,7 +4276,7 @@ Extends `--meta-merge` by queuing the original sidecar files for deletion after 
 
 This flag carries a safety requirement: at least one persistent output mechanism (`--outfile` or `--inplace`) MUST be active when `--meta-merge-delete` is specified. Without a persistent output, the sidecar file content would be captured only in stdout — which is volatile and cannot be reliably recovered. If this safety condition is not met, the CLI exits with a fatal configuration error before any processing begins ([§7.1](#71-configuration-architecture), validation rules).
 
-> **Deviation from original:** The original silently disables MetaMergeDelete when the safety condition is not met (`$MetaMergeDelete = $false`) and continues processing. The port treats this as a fatal error. The rationale: silently disabling a destructive flag is surprising behavior that could lead a user to believe their sidecar files are safe for manual deletion when they are not. An explicit error forces the user to acknowledge the safety requirement.
+> **Historical note:** The original silently disables MetaMergeDelete when the safety condition is not met (`$MetaMergeDelete = $false`) and continues processing. The tool treats this as a fatal error. The rationale: silently disabling a destructive flag is surprising behavior that could lead a user to believe their sidecar files are safe for manual deletion when they are not. An explicit error forces the user to acknowledge the safety requirement.
 
 <a id="85-rename-option"></a>
 ### 8.5. Rename Option
@@ -4242,7 +4303,7 @@ Previews rename operations without executing them. When active, the rename modul
 
 The `--dry-run` flag is only meaningful when `--rename` is also active. If `--dry-run` is specified without `--rename`, it is silently ignored — there is nothing to preview.
 
-> **Improvement over original:** The original does not support dry-run for renames. The port adds this as a safety feature, particularly valuable for users running rename operations on large directory trees for the first time.
+> **Historical note:** The original does not support dry-run for renames. This capability was added as a safety feature, particularly valuable for users running rename operations on large directory trees for the first time.
 
 <a id="86-id-type-selection"></a>
 ### 8.6. ID Type Selection
@@ -4260,7 +4321,7 @@ Valid values are `md5` and `sha256`. The input is case-insensitive (`MD5`, `Md5`
 
 Both MD5 and SHA256 hashes are always computed regardless of this setting ([§6.3](#63-hashing-and-identity-generation)). This flag is a presentation choice — it selects which pre-computed hash is promoted to the `id` field. The full `HashSet` containing all computed algorithms is always available in the entry's `hashes` sub-objects.
 
-> **Deviation from original:** The original defaults `IdType` to `"SHA256"`. The port defaults to `"md5"` ([§7.1](#71-configuration-architecture)). MD5 produces shorter identifiers (32 hex characters vs. 64), resulting in shorter `storage_name` values and shorter sidecar filenames. For the identity use case (uniquely naming files within a local index), MD5's collision resistance is more than sufficient. Users who prefer SHA256 identifiers can set `--id-type sha256` or configure it in the TOML file.
+> **Historical note:** The original defaults `IdType` to `"SHA256"`. The tool defaults to `"md5"` ([§7.1](#71-configuration-architecture)). MD5 produces shorter identifiers (32 hex characters vs. 64), resulting in shorter `storage_name` values and shorter sidecar filenames. For the identity use case (uniquely naming files within a local index), MD5's collision resistance is more than sufficient. Users who prefer SHA256 identifiers can set `--id-type sha256` or configure it in the TOML file.
 
 <a id="compute-sha512"></a>
 #### `--compute-sha512`
@@ -4300,7 +4361,7 @@ log_level = {0: logging.WARNING, 1: logging.INFO}.get(verbose, logging.DEBUG)
 
 Any count ≥ 2 maps to `DEBUG`. The distinction between `-vv` and `-vvv` is handled within the logging configuration by enabling or disabling specific logger names, not by defining additional log levels.
 
-> **Deviation from original:** The original uses a binary `$Verbosity` boolean (`$true`/`$false`). The port adopts a graduated verbosity model consistent with Unix CLI conventions and Python's `logging` framework. The original's `$Verbosity = $true` maps approximately to `-v` (INFO level) in the port.
+> **Historical note:** The original uses a binary `$Verbosity` boolean (`$true`/`$false`). The tool adopts a graduated verbosity model consistent with Unix CLI conventions and Python's `logging` framework. The original's `$Verbosity = $true` maps approximately to `-v` (INFO level).
 
 <a id="q---quiet"></a>
 #### `-q`, `--quiet`
@@ -4463,7 +4524,7 @@ def main():
         sys.exit(ExitCode.RUNTIME_ERROR)
 ```
 
-> **Improvement over original:** The original does not define exit codes. It uses PowerShell's default `return` behavior, which yields `$null` for most error conditions and relies on `Vbs` log messages for error visibility. Scripts calling `MakeIndex` cannot programmatically distinguish between "completed with warnings" and "failed entirely." The port's structured exit codes enable reliable error handling in automation pipelines.
+> **Historical note:** The original does not define exit codes. It uses PowerShell's default `return` behavior, which yields `$null` for most error conditions and relies on `Vbs` log messages for error visibility. Scripts calling `MakeIndex` cannot programmatically distinguish between "completed with warnings" and "failed entirely." The tool's structured exit codes enable reliable error handling in automation pipelines.
 
 <a id="exit-code-interaction-with---quiet"></a>
 #### Exit code interaction with `--quiet`
@@ -4579,7 +4640,7 @@ If a rename operation is interrupted, files renamed before the interrupt retain 
 
 When the CLI is displaying a progress bar (via `tqdm` or `rich`, see [§11.6](#116-progress-reporting)), the interrupt message from Phase 1 must not corrupt the progress bar rendering. Both `tqdm` and `rich` provide mechanisms for this: `tqdm.write()` prints a message without disrupting the active progress bar, and `rich.console.Console` supports `stderr` output that coexists with progress displays. The interrupt message MUST use the progress library's safe-print mechanism rather than a bare `print()` call. The illustrative code in the mechanism section above uses `print()` for clarity; the implementation MUST substitute the appropriate library-aware output method.
 
-> **Improvement over original:** The original PowerShell implementation has no interrupt handling. `Ctrl+C` during a `MakeIndex` invocation triggers PowerShell's default `StopProcessing()` behavior, which terminates the pipeline immediately with no cleanup. This can leave partially written output files, orphaned temporary files (from `TempOpen`/`TempClose`), and — in MetaMergeDelete mode — a state where some sidecar files have been deleted but the aggregate output was never written. The port's cooperative cancellation model eliminates all of these failure modes.
+> **Historical note:** The original PowerShell implementation has no interrupt handling. `Ctrl+C` during a `MakeIndex` invocation triggers PowerShell's default `StopProcessing()` behavior, which terminates the pipeline immediately with no cleanup. This can leave partially written output files, orphaned temporary files (from `TempOpen`/`TempClose`), and — in MetaMergeDelete mode — a state where some sidecar files have been deleted but the aggregate output was never written. The tool's cooperative cancellation model eliminates all of these failure modes.
 
 <a id="9-python-api"></a>
 ## 9. Python API
@@ -4590,7 +4651,7 @@ The API is design goal G3 in action ([§2.3](#23-design-goals-and-non-goals)): a
 
 **Module location:** The public API surface is defined in `__init__.py` at the top level of the `shruggie_indexer` package ([§3.2](#32-source-package-layout)). Internal modules (`core/`, `config/`, `models/`) are implementation details — consumers import from the top-level namespace, not from subpackages.
 
-> **Deviation from original:** The original `MakeIndex` is a single PowerShell function with 14 parameters that conflates configuration, execution, and output routing in one call. There is no "library API" — calling `MakeIndex` from another PowerShell script is possible but not designed for, and the function relies on global state (`$global:MetadataFileParser`, `$global:DeleteQueue`) that makes isolated invocation fragile. The port's API separates configuration construction from indexing execution from output routing, each with its own function and return type, enabling clean programmatic composition.
+> **Historical note:** The original `MakeIndex` is a single PowerShell function with 14 parameters that conflates configuration, execution, and output routing in one call. There is no "library API" — calling `MakeIndex` from another PowerShell script is possible but not designed for, and the function relies on global state (`$global:MetadataFileParser`, `$global:DeleteQueue`) that makes isolated invocation fragile. The tool's API separates configuration construction from indexing execution from output routing, each with its own function and return type, enabling clean programmatic composition.
 
 <a id="91-public-api-surface"></a>
 ### 9.1. Public API Surface
@@ -4736,7 +4797,7 @@ def index_path(
 
 **Default config convenience:** The `config=None` default is a deliberate API usability decision. The most common programmatic use case — "index this path with default settings" — should require exactly one function call, not two. The config object is still constructed properly through the full `load_config()` pipeline, including user config file resolution. Callers who need non-default settings must construct a config explicitly.
 
-> **Deviation from original:** The original `MakeIndex` accepts a `-Directory` or `-File` parameter, one of four output mode switches, a `-Meta`/`-MetaMerge`/`-MetaMergeDelete` switch, and performs output routing internally. The port's `index_path()` does none of that — it accepts a path and a config, produces a data structure, and returns it. Output routing is the caller's responsibility. This separation is what makes the function composable: the same `IndexEntry` can be serialized to stdout, written to a file, stored in a database, or piped into another processing step, without `index_path()` knowing or caring about the destination.
+> **Historical note:** The original `MakeIndex` accepts a `-Directory` or `-File` parameter, one of four output mode switches, a `-Meta`/`-MetaMerge`/`-MetaMergeDelete` switch, and performs output routing internally. The tool's `index_path()` does none of that — it accepts a path and a config, produces a data structure, and returns it. Output routing is the caller's responsibility. This separation is what makes the function composable: the same `IndexEntry` can be serialized to stdout, written to a file, stored in a database, or piped into another processing step, without `index_path()` knowing or caring about the destination.
 
 <a id="build_file_entry"></a>
 #### `build_file_entry()`
@@ -4871,7 +4932,7 @@ def serialize_entry(
     Args:
         entry: The IndexEntry to serialize.
         indent: JSON indentation level. 2 (default) produces
-                human-readable output matching the original's
+                human-readable output matching the legacy
                 ConvertTo-Json formatting. None produces compact
                 single-line JSON.
         sort_keys: Whether to sort JSON object keys alphabetically.
@@ -5421,7 +5482,7 @@ These exceptions are defined in `core/entry.py` (for target, runtime, and cancel
 
 The exception hierarchy maps directly to the CLI exit codes ([§8.10](#810-exit-codes)): `IndexerConfigError` → exit code 2, `IndexerTargetError` → exit code 3, `IndexerRuntimeError` → exit code 4, `IndexerCancellationError` → exit code 5 (`INTERRUPTED`). `RenameError` is a subclass of `IndexerRuntimeError` for exit code purposes but is distinct for programmatic callers who want to handle rename failures specifically. `IndexerCancellationError` is raised when the `cancel_event` parameter (available on `index_path()` and `build_directory_entry()`) is set by a caller. In the GUI, the cancel event is set by the Cancel button ([§10.5](#105-indexing-execution-and-progress)). In the CLI, it is set by the `SIGINT` handler when the user presses `Ctrl+C` ([§8.11](#811-signal-handling-and-graceful-interruption)).
 
-> **Improvement over original:** The original communicates errors through `Vbs` log messages and PowerShell's unstructured error stream. There are no typed exceptions, no error hierarchy, and no programmatic way to distinguish between "target not found," "configuration invalid," and "runtime failure." The port's typed exceptions enable callers to implement precise error recovery strategies.
+> **Historical note:** The original communicates errors through `Vbs` log messages and PowerShell's unstructured error stream. There are no typed exceptions, no error hierarchy, and no programmatic way to distinguish between "target not found," "configuration invalid," and "runtime failure." The tool's typed exceptions enable callers to implement precise error recovery strategies.
 
 <a id="10-gui-application"></a>
 ## 10. GUI Application
