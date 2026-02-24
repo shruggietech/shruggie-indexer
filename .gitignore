@@ -198,7 +198,7 @@ cython_debug/
 .pypirc
 
 # Project-specific: archive and generated spec renderings
-.archive/
+#.archive/
 shruggie-indexer-spec.html
 shruggie-indexer-spec.pdf
 
