@@ -9,12 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Tests: Non-zero exit metadata recovery** — Added `TestNonZeroExitMetadataRecovery` test class with five cases covering batch recovery, subprocess recovery, empty-stdout fallback, helper reset on unrecoverable errors, and `Error` key exclusion.
 - **CLI: `--log-file` flag** — New option to write log output to a persistent file. `--log-file` (no argument) writes to the default platform-specific app data directory; `--log-file <path>` writes to a custom location. Log files are named `YYYY-MM-DD_HHMMSS.log` and include timestamps, session ID, and logger name.
 - **TOML: `[logging]` configuration section** — Added `logging.file_enabled` and `logging.file_path` keys to enable persistent log file output via configuration files.
 - **GUI: "Write log files" settings toggle** — New checkbox in the Settings page Logging section. When enabled, each operation writes a timestamped log file to the app data directory. Toggle state is persisted across sessions.
 
 ### Fixed
 
+- **GUI: Progress bar layout stability** — Replaced the swappable progress/output panel arrangement with a fixed-height progress region embedded directly within the Operations page. The region uses `pack_propagate(False)` to maintain a constant 120 px allocation, toggling between idle (START button) and running (progress bar + cancel) sub-frames without reflowing surrounding controls.
+- **ExifTool: Metadata recovery on non-zero exit** — ExifTool invocations that exit with a non-zero status (e.g. unsupported file types producing partial JSON on stdout) now attempt to recover valid metadata from the output before falling back. Previously, any non-zero exit discarded all data. Added `_recover_metadata_from_error()` and `_log_exiftool_error_field()` helpers; "Unknown file type" warnings are now logged at INFO instead of WARNING. Added `"Error"` to `EXIFTOOL_EXCLUDED_KEYS`.
 - **GUI: Log capture pipeline** — Core library log messages and progress event messages now both appear in the output panel's log view with timestamps. Previously, most diagnostic output was silently dropped or consumed by the progress panel without forwarding to the log stream.
 - **GUI: Log entry timestamps and formatting** — Log entries in the GUI log panel now use the `HH:MM:SS  LEVEL  message` format with color coding: red for ERROR/CRITICAL, amber for WARNING, muted gray for DEBUG, and default text color for INFO.
 - **GUI: Log auto-scroll behavior** — The log panel now auto-scrolls to the bottom when new content arrives, pauses auto-scroll when the user scrolls upward, and resumes when scrolled back to the bottom.
@@ -23,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **GUI: Centralized control reconciliation** — Replaced `_update_controls()` with `_reconcile_controls()`, a single method implementing the full dependency matrix for all Operations page controls. Manages recursive toggle state across five target scenarios, in-place sidecar forcing for Meta Merge Delete, SHA-512 settings sync, output placeholder text, and destructive indicator updates. All control-change callbacks now route through this method.
 - Expanded `EXIFTOOL_EXCLUDED_KEYS` from 8 to 24 entries. Added `SourceFile`, redundant timestamp/size keys already captured in IndexEntry fields, OS-specific filesystem attributes (`FileAttributes`, `FileDeviceNumber`, `FileInodeNumber`, etc.), and ExifTool operational keys (`Now`, `ProcessingTime`).
 - **GUI: Consolidated tab layout** — Replaced four separate operation tabs (Index, Meta Merge, Meta Merge Delete, Rename) with a single Operations page using an operation-type selector dropdown. Sidebar now contains three tabs: Operations, Settings, and About.
 - **GUI: Destructive-operation indicator** — Added a real-time visual indicator (green/red dot) that reflects whether the selected operation and dry-run state combination is destructive.

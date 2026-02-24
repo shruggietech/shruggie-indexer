@@ -65,6 +65,11 @@ _DEFAULT_OUTPUT_HEIGHT = 250
 _MIN_OUTPUT_HEIGHT = 100
 _MAX_OUTPUT_HEIGHT = 600
 
+# Fixed height for the progress/action region (SS10.9 Standard 1.3.6).
+# Must accommodate the tallest state: status row + progress bar + current
+# file label + cancel button, with internal padding.
+_PROGRESS_REGION_HEIGHT = 120
+
 # Compact control sizing — controls modestly larger than adjacent label text
 _CTRL_HEIGHT = 26
 _CB_SIZE = 16
@@ -758,21 +763,26 @@ class OutputPanel(ctk.CTkFrame):
 
 
 # ---------------------------------------------------------------------------
-# Progress panel
+# Progress panel — compact, fixed-height, embeddable in the operations page
 # ---------------------------------------------------------------------------
 
 
 class ProgressPanel(ctk.CTkFrame):
-    """Progress display shown during background indexing execution."""
+    """Compact progress display embedded in the fixed-height action region.
+
+    Does NOT contain a log textbox — all log output goes to the shared
+    ``OutputPanel``.  This panel displays only the progress bar, status
+    label, elapsed timer, and current-file indicator.
+    """
 
     def __init__(self, master: Any, **kwargs: Any) -> None:
-        super().__init__(master, **kwargs)
+        super().__init__(master, fg_color="transparent", **kwargs)
         self._start_time: float = 0.0
         self._build_widgets()
 
     def _build_widgets(self) -> None:
         info_frame = ctk.CTkFrame(self, fg_color="transparent")
-        info_frame.pack(fill="x", pady=(0, 6))
+        info_frame.pack(fill="x", pady=(0, 4))
 
         self.status_label = ctk.CTkLabel(info_frame, text="Preparing...", anchor="w")
         self.status_label.pack(side="left", fill="x", expand=True)
@@ -788,23 +798,17 @@ class ProgressPanel(ctk.CTkFrame):
             font=ctk.CTkFont(size=11),
             text_color=("gray40", "gray60"),
         )
-        self.current_label.pack(fill="x", pady=(0, 6))
-
-        self.log_text = ctk.CTkTextbox(
-            self, state="disabled", wrap="word", height=100,
-            font=ctk.CTkFont(family=_MONOSPACE_FONTS[0], size=11),
-        )
-        self.log_text.pack(fill="both", expand=True)
+        self.current_label.pack(fill="x")
 
     def start(self) -> None:
         self._start_time = time.monotonic()
         self.progress_bar.configure(mode="indeterminate")
         self.progress_bar.start()
-        self.status_label.configure(text="Discovering items...")
+        self.status_label.configure(
+            text="Discovering items...",
+            text_color=ctk.ThemeManager.theme["CTkLabel"]["text_color"],
+        )
         self.current_label.configure(text="")
-        self.log_text.configure(state="normal")
-        self.log_text.delete("1.0", "end")
-        self.log_text.configure(state="disabled")
 
     def update_progress(self, event: ProgressEvent) -> None:
         elapsed = time.monotonic() - self._start_time
@@ -829,16 +833,6 @@ class ProgressPanel(ctk.CTkFrame):
             if len(display_path) > 80:
                 display_path = "..." + display_path[-77:]
             self.current_label.configure(text=display_path)
-
-        if event.message:
-            self.append_log_message(event.message)
-
-    def append_log_message(self, msg: str) -> None:
-        """Append a message to the progress log area."""
-        self.log_text.configure(state="normal")
-        self.log_text.insert("end", msg + "\n")
-        self.log_text.see("end")
-        self.log_text.configure(state="disabled")
 
     def stop(self) -> None:
         self.progress_bar.stop()
@@ -897,7 +891,7 @@ class OperationsPage(ctk.CTkFrame):
         self._target_validation_error: str | None = None
         self._build_widgets()
         # Apply initial control state
-        self._update_controls()
+        self._reconcile_controls()
 
     # -- Widget construction ------------------------------------------------
 
@@ -909,27 +903,52 @@ class OperationsPage(ctk.CTkFrame):
             anchor="w",
         ).pack(fill="x", pady=(0, 8))
 
-        # Action button pinned at bottom (pack before scroll to claim space)
-        self._action_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self._action_frame.pack(fill="x", side="bottom", pady=(8, 0))
+        # Fixed-height progress/action region pinned at bottom (SS10.9 1.3.6).
+        # Packed before the scroll area so it claims space first.
+        self._progress_region = ctk.CTkFrame(
+            self, height=_PROGRESS_REGION_HEIGHT,
+        )
+        self._progress_region.pack(fill="x", side="bottom", pady=(8, 0))
+        self._progress_region.pack_propagate(False)
 
-        # Center the START button at ≤50 % window width
+        # -- Idle sub-frame (START button, centered) --
+        self._idle_frame = ctk.CTkFrame(
+            self._progress_region, fg_color="transparent",
+        )
         self.action_btn = _CtkButton(
-            self._action_frame, text=_ACTION_LABEL_START, height=36,
+            self._idle_frame, text=_ACTION_LABEL_START, height=36,
             font=ctk.CTkFont(size=14, weight="bold"),
             fg_color=("#1b8a1b", "#22882a"),
             hover_color=("#167016", "#1d6e23"),
             command=self._on_action,
         )
-        self.action_btn.pack(anchor="center")
+        self.action_btn.pack(anchor="center", expand=True)
+        _Tooltip(self.action_btn, "Start the selected operation on the target path.")
         # Constrain width to 50 % of parent on resize
-        self._action_frame.bind(
+        self._idle_frame.bind(
             "<Configure>",
             lambda e: self.action_btn.configure(
                 width=min(350, max(180, int(e.width * 0.45))),
             ),
         )
-        _Tooltip(self.action_btn, "Start the selected operation on the target path.")
+
+        # -- Running sub-frame (progress + cancel) --
+        self._running_frame = ctk.CTkFrame(
+            self._progress_region, fg_color="transparent",
+        )
+        self._progress_panel = ProgressPanel(self._running_frame)
+        self._progress_panel.pack(fill="x", pady=(4, 2))
+        self._cancel_btn = _CtkButton(
+            self._running_frame, text=_ACTION_LABEL_RUNNING, height=32,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color=("#cc3333", "#cc3333"),
+            hover_color=("#aa2222", "#aa2222"),
+            command=self._on_action,
+        )
+        self._cancel_btn.pack(anchor="center", pady=(2, 4))
+
+        # Start in idle state
+        self._idle_frame.pack(fill="both", expand=True)
 
         # Auto-scrollable frame — scrollbar only appears when content
         # overflows; mousewheel events do not propagate to the output panel.
@@ -1182,7 +1201,7 @@ class OperationsPage(ctk.CTkFrame):
     def _build_output_group(self) -> None:
         self._output_group = _LabeledGroup(
             self._scroll.content, "Output",
-            "Control where results are written.",
+            "Control where results are written.  Leave blank to use defaults.",
         )
         self._output_group.pack(fill="x", pady=(0, 6))
         c = self._output_group.content
@@ -1205,7 +1224,7 @@ class OperationsPage(ctk.CTkFrame):
             rb.pack(side="left", padx=(0, 10))
             self._output_mode_radios[val] = rb
             _Tooltip(rb, {
-                "view": "Display results in the output panel only.",
+                "view": "Display results in the output panel only — no files written to disk.",
                 "save": "Write results to a file without displaying.",
                 "both": "Display results and save to a file.",
             }[val])
@@ -1228,10 +1247,14 @@ class OperationsPage(ctk.CTkFrame):
         )
         self._outfile_entry = _CtkEntry(
             self._outfile_frame,
-            placeholder_text="Output file path (auto-suggested)",
+            placeholder_text="Default: sidecar files alongside input",
         )
         self._outfile_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
-        _Tooltip(self._outfile_entry, "File path where output will be saved.")
+        _Tooltip(
+            self._outfile_entry,
+            "Optional: specify a custom output file path.\n"
+            "Leave blank to use default sidecar naming.",
+        )
 
         self._outfile_browse_btn = _CtkButton(
             self._outfile_frame, text="Browse", width=80,
@@ -1362,7 +1385,7 @@ class OperationsPage(ctk.CTkFrame):
 
     def _on_operation_changed(self, _choice: str) -> None:
         """Update control state for the selected operation."""
-        self._update_controls()
+        self._reconcile_controls()
 
     def _on_type_changed(self) -> None:
         """Handle target type radio change."""
@@ -1372,20 +1395,20 @@ class OperationsPage(ctk.CTkFrame):
     def _on_target_or_type_change(self) -> None:
         """Re-validate target/type combo, update auto-suggest, refresh."""
         self._try_auto_suggest()
-        self._update_controls()
+        self._reconcile_controls()
 
     def _on_output_mode_changed(self) -> None:
         """Update output file field state based on mode."""
-        self._update_output_controls()
+        self._reconcile_controls()
         self._try_auto_suggest()
 
     def _on_rename_changed(self) -> None:
         """Rename checkbox toggled — refresh dependent controls."""
-        self._update_controls()
+        self._reconcile_controls()
 
     def _on_dry_run_changed(self) -> None:
         """Dry-run checkbox toggled — update destructive indicator."""
-        self._update_destructive_indicator()
+        self._reconcile_controls()
 
     @staticmethod
     def _disable_cb(cb: ctk.CTkCheckBox, *, select: bool = False) -> None:
@@ -1409,32 +1432,60 @@ class OperationsPage(ctk.CTkFrame):
             fg_color=ctk.ThemeManager.theme["CTkCheckBox"]["fg_color"],
         )
 
-    def _update_controls(self) -> None:
-        """Master control update — enable/disable all controls based on state.
+    def _reconcile_controls(self) -> None:
+        """Centralized state reconciliation — single source of truth.
 
-        No widgets are hidden; only ``state`` and info labels change.
+        Reads all control values and sets the enabled/disabled state, default
+        values, placeholder text, and info labels for every dependent control.
+        Implements the full dependency matrix from §3.2 of the updates doc.
+
+        Called on initial construction, whenever any input changes, and after
+        restoring session state.
+
+        **SS10.9 Standard 1.3.3** — Control Interdependency Transparency.
         """
         op = self._op_type_var.get()
         rename_on = self._rename_var.get()
         selected_type = self._type_var.get()
+        target_kind = self._detect_target_kind()
+        target_path = self._path_entry.get().strip()
 
         # -- Target validation --
         err = self._validate_target_type()
         self._target_validation_error = err
         self._target_error_label.configure(text=err or "")
 
-        # -- Recursive --
-        target_kind = self._detect_target_kind()
-        if selected_type == "file" or (
-            selected_type != "directory" and target_kind == "file"
-        ):
+        # -- Recursive toggle (§3.2.1) --
+        if selected_type == "directory":
+            # Directory type → default ON, user can toggle
+            self._enable_cb(self._recursive_cb)
+            if not target_path:
+                # No path yet; set default
+                self._recursive_var.set(True)
+            self._recursive_info_label.configure(text="")
+        elif selected_type == "file":
+            # File type → OFF, disabled
+            self._recursive_var.set(False)
             self._disable_cb(self._recursive_cb)
             self._recursive_info_label.configure(
-                text="Recursive is not applicable when the target is a single file.",
+                text="Recursive is not applicable to single-file targets.",
             )
-        else:
-            self._enable_cb(self._recursive_cb)
-            self._recursive_info_label.configure(text="")
+        elif selected_type == "auto":
+            if target_kind == "file":
+                # Auto resolves to file → OFF, disabled
+                self._recursive_var.set(False)
+                self._disable_cb(self._recursive_cb)
+                self._recursive_info_label.configure(
+                    text="Recursive is not applicable to single-file targets.",
+                )
+            elif target_kind == "directory":
+                # Auto resolves to directory → OFF default, user can toggle
+                self._enable_cb(self._recursive_cb)
+                self._recursive_info_label.configure(text="")
+            else:
+                # Auto, not yet selected → OFF default, user can toggle
+                self._enable_cb(self._recursive_cb)
+                self._recursive_info_label.configure(text="")
 
         # -- SHA-512 override from Settings --
         self._sync_sha512_from_settings()
@@ -1457,24 +1508,91 @@ class OperationsPage(ctk.CTkFrame):
                 text="Enable \"Rename files\" to configure dry-run mode.",
             )
 
-        # -- In-place sidecar --
+        # -- In-place sidecar (§3.2.3) --
         if op == _OP_META_MERGE_DELETE:
+            # Meta Merge Delete → forced ON, disabled
+            self._inplace_var.set(True)
+            self._disable_cb(self._inplace_cb, select=True)
+            self._inplace_info_label.configure(
+                text="In-place output is required for Meta Merge Delete "
+                     "because original sidecar files are deleted after merging.",
+            )
+        elif op in (_OP_INDEX, _OP_META_MERGE):
+            # Index / Meta Merge → available, default ON for directories
+            self._enable_cb(self._inplace_cb)
+            effective_type = selected_type
+            if effective_type == "auto":
+                effective_type = target_kind or "unknown"
+            if effective_type == "directory":
+                self._inplace_info_label.configure(
+                    text="Per-file sidecar JSON files written alongside indexed files.",
+                )
+            else:
+                self._inplace_info_label.configure(text="")
+        else:
             self._enable_cb(self._inplace_cb)
             self._inplace_info_label.configure(text="")
+
+        # -- Output mode + file (§3.2.2) --
+        mode = self._output_mode_var.get()
+
+        # All operations allow all output modes
+        for rb in self._output_mode_radios.values():
+            rb.configure(state="normal")
+        self._output_mode_info_label.configure(text="")
+
+        if mode in ("save", "both"):
+            self._outfile_entry.configure(state="normal")
+            self._outfile_browse_btn.configure(state="normal")
+            self._outfile_info_label.configure(text="")
         else:
-            self._disable_cb(self._inplace_cb)
-            self._inplace_info_label.configure(
-                text="In-place sidecar output is only available for Meta Merge Delete.",
+            self._outfile_entry.configure(state="disabled")
+            self._outfile_browse_btn.configure(state="disabled")
+            self._outfile_info_label.configure(
+                text="Select \"Save to file\" or \"Both\" to specify an output file.",
             )
 
-        # -- Output controls --
-        self._update_output_controls()
+        # -- Output placeholder text (§3.2.2: communicate default behavior) --
+        self._update_output_placeholder()
 
         # -- Destructive indicator --
-        self._update_destructive_indicator()
+        destructive = False
+        if op == _OP_META_MERGE_DELETE:
+            destructive = True
+        elif rename_on and not self._dry_run_var.get():
+            destructive = True
+        self._indicator.set_destructive(destructive)
 
         # -- Action button enabled state --
-        self._update_action_button_state()
+        if self._target_validation_error:
+            self.action_btn.configure(state="disabled")
+        else:
+            self.action_btn.configure(state="normal")
+
+    def _update_output_placeholder(self) -> None:
+        """Set the output file entry's placeholder based on current context."""
+        target_path = self._path_entry.get().strip()
+        selected_type = self._type_var.get()
+        target_kind = self._detect_target_kind()
+
+        effective_type = selected_type
+        if effective_type == "auto":
+            effective_type = target_kind or "unknown"
+
+        if target_path:
+            name = Path(target_path).name
+            if effective_type == "directory":
+                placeholder = f"Default: {name}_directorymeta2.json + per-file sidecars"
+            else:
+                placeholder = f"Default: {name}_meta2.json alongside input"
+        elif effective_type == "directory":
+            placeholder = "Default: <dirname>_directorymeta2.json + per-file sidecars"
+        elif effective_type == "file":
+            placeholder = "Default: <filename>_meta2.json alongside input"
+        else:
+            placeholder = "Default: sidecar files alongside input"
+
+        self._outfile_entry.configure(placeholder_text=placeholder)
 
     def _sync_sha512_from_settings(self) -> None:
         """Force-enable SHA-512 checkbox if Settings says 'always compute'."""
@@ -1491,56 +1609,6 @@ class OperationsPage(ctk.CTkFrame):
         else:
             self._enable_cb(self._sha512_cb)
             self._sha512_override_label.configure(text="")
-
-    def _update_output_controls(self) -> None:
-        """Enable/disable output mode and output file controls."""
-        op = self._op_type_var.get()
-        mode = self._output_mode_var.get()
-
-        if op == _OP_META_MERGE_DELETE:
-            # Mode locked to "save" — output file is mandatory
-            for rb in self._output_mode_radios.values():
-                rb.configure(state="disabled")
-            self._output_mode_var.set("save")
-            self._output_mode_info_label.configure(
-                text="Meta Merge Delete always saves to a file (output file required).",
-            )
-            self._outfile_entry.configure(state="normal")
-            self._outfile_browse_btn.configure(state="normal")
-            self._outfile_info_label.configure(text="")
-        else:
-            for rb in self._output_mode_radios.values():
-                rb.configure(state="normal")
-            self._output_mode_info_label.configure(text="")
-
-            if mode in ("save", "both"):
-                self._outfile_entry.configure(state="normal")
-                self._outfile_browse_btn.configure(state="normal")
-                self._outfile_info_label.configure(text="")
-            else:
-                self._outfile_entry.configure(state="disabled")
-                self._outfile_browse_btn.configure(state="disabled")
-                self._outfile_info_label.configure(
-                    text="Select \"Save to file\" or \"Both\" to specify an output file.",
-                )
-
-    def _update_destructive_indicator(self) -> None:
-        """Update the destructive/non-destructive indicator."""
-        op = self._op_type_var.get()
-        rename_on = self._rename_var.get()
-        destructive = False
-        if op == _OP_META_MERGE_DELETE:
-            destructive = True
-        elif rename_on and not self._dry_run_var.get():
-            destructive = True
-        self._indicator.set_destructive(destructive)
-
-    def _update_action_button_state(self) -> None:
-        """Enable/disable Start based on validation state."""
-        if self._target_validation_error:
-            self.action_btn.configure(state="disabled")
-        else:
-            self.action_btn.configure(state="normal")
 
     # -- Action button handler ----------------------------------------------
 
@@ -1604,9 +1672,6 @@ class OperationsPage(ctk.CTkFrame):
 
     def get_output_mode(self) -> str:
         """Return the effective output mode for post-job display logic."""
-        op = self._op_type_var.get()
-        if op == _OP_META_MERGE_DELETE:
-            return "save"
         return self._output_mode_var.get()
 
     def get_output_file(self) -> str:
@@ -1616,30 +1681,30 @@ class OperationsPage(ctk.CTkFrame):
         """Return error message if invalid, else ``None``."""
         if self._target_validation_error:
             return self._target_validation_error
-        op = self._op_type_var.get()
-        if op == _OP_META_MERGE_DELETE:
-            if not self._outfile_entry.get().strip():
-                return "Meta Merge Delete requires an output file path."
         return None
 
     # -- Running state ------------------------------------------------------
 
     def set_running(self, running: bool) -> None:
+        """Toggle the progress region between idle and running states.
+
+        **SS10.9 Standard 1.3.6:** The progress region occupies the same
+        fixed-height space in all states — no layout shift occurs.
+        """
         state = "normal" if not running else "disabled"
         self._path_entry.configure(state=state)
         self._browse_single_btn.configure(state=state)
         self._browse_file_btn.configure(state=state)
         self._browse_dir_btn.configure(state=state)
+
         if running:
-            self.action_btn.configure(
-                text=_ACTION_LABEL_RUNNING,
-                fg_color=("#cc3333", "#cc3333"),
-            )
+            # Switch to running sub-frame within the fixed region
+            self._idle_frame.pack_forget()
+            self._running_frame.pack(fill="both", expand=True)
         else:
-            self.action_btn.configure(
-                text=_ACTION_LABEL_START,
-                fg_color=("#1b8a1b", "#22882a"),
-            )
+            # Switch to idle sub-frame within the fixed region
+            self._running_frame.pack_forget()
+            self._idle_frame.pack(fill="both", expand=True)
 
     # -- Session persistence ------------------------------------------------
 
@@ -1697,7 +1762,7 @@ class OperationsPage(ctk.CTkFrame):
             self._last_auto_suggested = state["output_file"]
         # Update controls for the restored state
         self._update_browse_buttons()
-        self._update_controls()
+        self._reconcile_controls()
 
     def restore_from_old_session(
         self, old_active_tab: str, tab_states: dict[str, Any],
@@ -1736,7 +1801,7 @@ class OperationsPage(ctk.CTkFrame):
             self._outfile_entry.insert(0, old_state["outfile"])
 
         self._update_browse_buttons()
-        self._update_controls()
+        self._reconcile_controls()
 
 
 # ---------------------------------------------------------------------------
@@ -2179,9 +2244,6 @@ class ShruggiIndexerApp(ctk.CTk):
         self._output_panel.pack_propagate(False)
         self._output_panel.configure(height=self._output_height)
 
-        # Progress panel (replaces output during execution)
-        self._progress_panel = ProgressPanel(self._main_area)
-
         # Show the default tab
         self._switch_tab(_TAB_OPERATIONS)
 
@@ -2212,9 +2274,7 @@ class ShruggiIndexerApp(ctk.CTk):
         if tab_id in (_TAB_SETTINGS, _TAB_ABOUT):
             self._drag_handle.pack_forget()
             self._output_panel.pack_forget()
-            self._progress_panel.pack_forget()
-        elif not self._job_running:
-            self._progress_panel.pack_forget()
+        else:
             self._output_panel.configure(height=self._output_height)
             self._output_panel.pack(side="bottom", fill="x")
             self._drag_handle.pack(side="bottom", fill="x", pady=(2, 2))
@@ -2301,7 +2361,6 @@ class ShruggiIndexerApp(ctk.CTk):
         while count < 200:
             try:
                 msg = self._log_queue.get_nowait()
-                self._progress_panel.append_log_message(msg)
                 self._output_panel.append_log(msg)
             except queue.Empty:
                 break
@@ -2350,11 +2409,8 @@ class ShruggiIndexerApp(ctk.CTk):
         # Auto-clear output (item 2.6)
         self._output_panel.clear()
 
-        # Show progress, hide output
-        self._drag_handle.pack_forget()
-        self._output_panel.pack_forget()
-        self._progress_panel.pack(fill="both", expand=True, pady=(12, 0))
-        self._progress_panel.start()
+        # Start progress display in the ops page's embedded progress region
+        self._ops_page._progress_panel.start()
 
         # Start log capture (item 2.11)
         self._start_log_capture()
@@ -2400,7 +2456,7 @@ class ShruggiIndexerApp(ctk.CTk):
         self.after(0, lambda: self._handle_progress(event))
 
     def _handle_progress(self, event: ProgressEvent) -> None:
-        self._progress_panel.update_progress(event)
+        self._ops_page._progress_panel.update_progress(event)
         if event.message:
             ts = time.strftime("%H:%M:%S")
             self._output_panel.append_log(f"{ts}  INFO     {event.message}")
@@ -2415,14 +2471,15 @@ class ShruggiIndexerApp(ctk.CTk):
 
     def _on_job_complete(self, result: dict[str, Any]) -> None:
         """Handle completion of a background job (item 2.8)."""
-        self._progress_panel.stop()
+        progress = self._ops_page._progress_panel
+        progress.stop()
         self._stop_log_capture()
 
         status = result.get("status", "error")
         output_mode = self._last_output_mode
 
         if status == "success":
-            self._progress_panel.status_label.configure(
+            progress.status_label.configure(
                 text="Complete", text_color=("green", "#00cc00"),
             )
             json_text = result.get("json", "")
@@ -2437,13 +2494,13 @@ class ShruggiIndexerApp(ctk.CTk):
                 self._output_panel.set_json(json_text)
 
         elif status == "cancelled":
-            self._progress_panel.status_label.configure(
+            progress.status_label.configure(
                 text="Cancelled", text_color=("#cc8800", "#ffaa00"),
             )
             self._output_panel.append_log(result.get("message", "Cancelled."))
 
         else:
-            self._progress_panel.status_label.configure(
+            progress.status_label.configure(
                 text="Error", text_color=("#cc3333", "#ff4444"),
             )
             self._output_panel.append_log(
@@ -2455,12 +2512,6 @@ class ShruggiIndexerApp(ctk.CTk):
         if isinstance(self._ops_page, OperationsPage):
             self._ops_page.set_running(False)
         self._set_sidebar_enabled(True)
-
-        # Switch from progress to output
-        self._progress_panel.pack_forget()
-        self._output_panel.configure(height=self._output_height)
-        self._output_panel.pack(side="bottom", fill="x")
-        self._drag_handle.pack(side="bottom", fill="x", pady=(2, 2))
 
         self._save_session()
 

@@ -100,6 +100,7 @@ EXIFTOOL_EXCLUDED_KEYS: frozenset[str] = frozenset({
     # ExifTool operational metadata
     "Now",
     "ProcessingTime",
+    "Error",
 })
 """Keys filtered from exiftool output before returning.
 
@@ -204,7 +205,14 @@ def _get_batch_helper() -> Any:
 
 
 def _extract_batch(path: Path) -> dict[str, Any] | None:
-    """Extract metadata using pyexiftool batch mode."""
+    """Extract metadata using pyexiftool batch mode.
+
+    Handles ``ExifToolExecuteError`` (non-zero exit) by attempting to
+    recover valid metadata from the exception's stdout.  ExifTool returns
+    exit code 1 for "unknown file type" but still produces usable system-
+    level metadata — discarding it is a behavioral regression vs. the
+    original MakeIndex.
+    """
     helper = _get_batch_helper()
     if helper is None:
         # Fall through to subprocess if batch mode fails.
@@ -217,13 +225,68 @@ def _extract_batch(path: Path) -> dict[str, Any] | None:
             return None
         return _filter_keys(result[0])
     except Exception as exc:
-        # Process may have died — reset helper for next call.
+        # Attempt metadata recovery from ExifToolExecuteError on non-zero
+        # exit.  Do NOT reset the persistent process — a per-file non-zero
+        # exit code does not indicate process failure (§3.3.2-C).
+        recovered = _recover_metadata_from_error(exc, path)
+        if recovered is not None:
+            return recovered
+
+        # True process failure — reset helper for next call.
         global _batch_helper
         logger.warning("pyexiftool error for %s: %s — resetting", path, exc)
         with contextlib.suppress(Exception):
             _batch_helper.__exit__(None, None, None)
         _batch_helper = None
         return None
+
+
+def _recover_metadata_from_error(
+    exc: Exception, path: Path,
+) -> dict[str, Any] | None:
+    """Attempt to extract valid metadata from an ExifToolExecuteError.
+
+    Returns filtered metadata if the exception's stdout contains valid JSON
+    with meaningful keys beyond ``SourceFile``.  Returns ``None`` if
+    recovery is not possible (true process failure, no stdout, invalid JSON).
+    """
+    # Check if this is an ExifToolExecuteError with stdout data.
+    stdout = getattr(exc, "stdout", None)
+    if not stdout or not isinstance(stdout, str):
+        return None
+
+    # Attempt to parse the stdout as JSON.
+    parsed = _parse_json_output(stdout, path)
+    if parsed is None:
+        return None
+
+    # Check for ExifTool:Error informational field.
+    _log_exiftool_error_field(parsed, path)
+
+    return parsed
+
+
+def _log_exiftool_error_field(
+    data: dict[str, Any], path: Path,
+) -> None:
+    """Log ExifTool:Error fields at INFO level when metadata was recovered.
+
+    The ``ExifTool:Error`` field with value ``"Unknown file type"`` is
+    informational — exiftool still returns system-level metadata (§3.3.2-D).
+    """
+    for key, value in data.items():
+        if _base_key(key) == "Error" and isinstance(value, str):
+            if "unknown file type" in value.lower():
+                logger.info(
+                    "ExifTool: unknown file type for %s; system metadata preserved",
+                    path.name,
+                )
+            else:
+                logger.info(
+                    "ExifTool: %s for %s; metadata recovered",
+                    value, path.name,
+                )
+            break
 
 
 # ---------------------------------------------------------------------------
@@ -263,6 +326,13 @@ def _extract_subprocess(path: Path) -> dict[str, Any] | None:
             pass
 
         if result.returncode != 0:
+            # Non-zero exit does not mean no output.  ExifTool exit code 1
+            # signals warnings (e.g., "Unknown file type") but stdout may
+            # still contain valid system-level metadata (§3.3.2-A).
+            recovered = _parse_json_output(result.stdout, path)
+            if recovered is not None:
+                _log_exiftool_error_field(recovered, path)
+                return recovered
             logger.warning(
                 "exiftool exited with code %d for %s: %s",
                 result.returncode,

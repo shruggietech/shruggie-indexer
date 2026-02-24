@@ -236,6 +236,8 @@ class TestKeyFiltering:
             "FileInodeNumber", "FileHardLinks", "FileUserID",
             "FileGroupID", "FileDeviceID", "FileBlockSize",
             "FileBlockCount", "Now", "ProcessingTime",
+            # ExifTool informational error field
+            "Error",
         }
         assert required.issubset(EXIFTOOL_EXCLUDED_KEYS)
 
@@ -366,3 +368,144 @@ class TestBackendReset:
         assert result is None
         # The helper should have been reset to None.
         assert exif_mod._batch_helper is None
+
+
+class TestNonZeroExitMetadataRecovery:
+    """Test that valid metadata is recovered from non-zero exit codes.
+
+    ExifTool returns exit code 1 for "Unknown file type" but still produces
+    valid system-level metadata.  These tests verify that shruggie-indexer
+    captures this metadata instead of discarding it (§3.3).
+    """
+
+    _7Z_EXIFTOOL_RESPONSE = [{
+        "SourceFile": "FeedsExport.7z",
+        "ExifTool:ExifToolVersion": 13.10,
+        "ExifTool:Now": "2026:02:23 19:35:11-05:00",
+        "ExifTool:Error": "Unknown file type",
+        "ExifTool:ProcessingTime": "0.366 s",
+        "System:FileSize": "728 MB",
+        "System:FileModifyDate": "2026:02:09 16:14:22-05:00",
+        "System:FileAccessDate": "2026:02:23 19:35:11-05:00",
+        "System:FileCreateDate": "2026:02:23 19:28:39-05:00",
+        "System:FileAttributes": "Regular; (none); Archive",
+        # MIMEType survives key filtering — validates metadata recovery.
+        "File:MIMEType": "application/x-7z-compressed",
+    }]
+
+    def test_batch_recovers_metadata_on_nonzero_exit(
+        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Batch backend recovers valid JSON from ExifToolExecuteError."""
+        import shruggie_indexer.core.exif as exif_mod
+
+        # Simulate ExifToolExecuteError with valid stdout
+        stdout_json = json.dumps(self._7Z_EXIFTOOL_RESPONSE)
+
+        class FakeExifToolExecuteError(Exception):
+            def __init__(self_inner) -> None:  # noqa: N805, ANN101
+                super().__init__("execute returned a non-zero exit status: 1")
+                self_inner.returncode = 1
+                self_inner.stdout = stdout_json
+                self_inner.stderr = ""
+                self_inner.cmd = ["-json"]
+
+        mock_helper = MagicMock()
+        mock_helper.get_metadata.side_effect = FakeExifToolExecuteError()
+
+        monkeypatch.setattr(exif_mod, "_exiftool_path", "exiftool")
+        monkeypatch.setattr(exif_mod, "_pyexiftool_available", True)
+        monkeypatch.setattr(exif_mod, "_backend", "batch")
+        monkeypatch.setattr(exif_mod, "_batch_helper", mock_helper)
+
+        config = _cfg(extract_exif=True)
+        result = extract_exif(sample_file, config)
+
+        # Must return filtered metadata, NOT None.
+        assert result is not None
+        assert isinstance(result, dict)
+        # Excluded keys must be removed (SourceFile, FileSize, Error, etc.)
+        assert "SourceFile" not in result
+        assert "ExifTool:ExifToolVersion" not in result
+        assert "ExifTool:Now" not in result
+        assert "ExifTool:ProcessingTime" not in result
+        assert "ExifTool:Error" not in result
+        assert "System:FileSize" not in result
+        assert "System:FileModifyDate" not in result
+        assert "System:FileAttributes" not in result
+        # The batch helper must NOT be reset after a recoverable error.
+        assert exif_mod._batch_helper is mock_helper
+
+    def test_subprocess_recovers_metadata_on_nonzero_exit(
+        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Subprocess fallback recovers valid JSON on exit code 1."""
+        import shruggie_indexer.core.exif as exif_mod
+
+        monkeypatch.setattr(exif_mod, "_exiftool_path", "exiftool")
+        monkeypatch.setattr(exif_mod, "_pyexiftool_available", False)
+        monkeypatch.setattr(exif_mod, "_backend", "subprocess")
+
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stdout = json.dumps(self._7Z_EXIFTOOL_RESPONSE)
+        mock_result.stderr = "Warning: Unknown file type"
+
+        with patch("subprocess.run", return_value=mock_result):
+            config = _cfg(extract_exif=True)
+            result = extract_exif(sample_file, config)
+
+        # Must return filtered metadata, NOT None.
+        assert result is not None
+        assert isinstance(result, dict)
+        # Excluded keys removed
+        assert "SourceFile" not in result
+        assert "ExifTool:Error" not in result
+
+    def test_nonzero_exit_no_stdout_returns_none(
+        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Non-zero exit with no stdout data returns None (true failure)."""
+        import shruggie_indexer.core.exif as exif_mod
+
+        monkeypatch.setattr(exif_mod, "_exiftool_path", "exiftool")
+        monkeypatch.setattr(exif_mod, "_pyexiftool_available", False)
+        monkeypatch.setattr(exif_mod, "_backend", "subprocess")
+
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mock_result.stderr = "Fatal error"
+
+        with patch("subprocess.run", return_value=mock_result):
+            config = _cfg(extract_exif=True)
+            result = extract_exif(sample_file, config)
+
+        assert result is None
+
+    def test_batch_nonzero_no_stdout_resets_helper(
+        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Batch error with no recoverable stdout resets the helper."""
+        import shruggie_indexer.core.exif as exif_mod
+
+        # Error without stdout attribute (true process failure)
+        mock_helper = MagicMock()
+        mock_helper.get_metadata.side_effect = RuntimeError("broken pipe")
+        mock_helper.__exit__ = MagicMock()
+
+        monkeypatch.setattr(exif_mod, "_exiftool_path", "exiftool")
+        monkeypatch.setattr(exif_mod, "_pyexiftool_available", True)
+        monkeypatch.setattr(exif_mod, "_backend", "batch")
+        monkeypatch.setattr(exif_mod, "_batch_helper", mock_helper)
+
+        with patch("subprocess.run", side_effect=OSError("no exiftool")):
+            config = _cfg(extract_exif=True)
+            result = extract_exif(sample_file, config)
+
+        assert result is None
+        assert exif_mod._batch_helper is None
+
+    def test_error_key_excluded_from_output(self) -> None:
+        """The 'Error' base key is in EXIFTOOL_EXCLUDED_KEYS."""
+        assert "Error" in EXIFTOOL_EXCLUDED_KEYS
