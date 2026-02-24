@@ -92,6 +92,7 @@ class IndexerConfig:
 
     # ── Exiftool ────────────────────────────────────────────────────────
     exiftool_exclude_extensions: frozenset[str] = field(default_factory=frozenset)
+    exiftool_exclude_keys: frozenset[str] = field(default_factory=frozenset)
     exiftool_args: tuple[str, ...] = ()
 
     # ── Metadata file parser ────────────────────────────────────────────

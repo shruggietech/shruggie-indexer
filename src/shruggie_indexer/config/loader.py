@@ -23,6 +23,7 @@ from typing import Any
 from shruggie_indexer.config.defaults import (
     DEFAULT_EXIFTOOL_ARGS,
     DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS,
+    DEFAULT_EXIFTOOL_EXCLUDE_KEYS,
     DEFAULT_EXTENSION_GROUPS,
     DEFAULT_EXTENSION_VALIDATION_PATTERN,
     DEFAULT_FILESYSTEM_EXCLUDE_GLOBS,
@@ -122,6 +123,7 @@ def _get_defaults_dict() -> dict[str, Any]:
     d["filesystem_excludes"] = set(DEFAULT_FILESYSTEM_EXCLUDES)
     d["filesystem_exclude_globs"] = list(DEFAULT_FILESYSTEM_EXCLUDE_GLOBS)
     d["exiftool_exclude_extensions"] = set(DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS)
+    d["exiftool_exclude_keys"] = set(DEFAULT_EXIFTOOL_EXCLUDE_KEYS)
     d["exiftool_args"] = list(DEFAULT_EXIFTOOL_ARGS)
     d["metadata_identify"] = {
         k: list(v) for k, v in DEFAULT_METADATA_IDENTIFY_STRINGS.items()
@@ -193,6 +195,14 @@ def _merge_toml(config_dict: dict[str, Any], toml_data: dict[str, Any]) -> None:
             config_dict["exiftool_args"] = list(exif_section["base_args"])
         if "base_args_append" in exif_section:
             config_dict["exiftool_args"].extend(exif_section["base_args_append"])
+        if "exclude_keys" in exif_section:
+            config_dict["exiftool_exclude_keys"] = set(
+                exif_section["exclude_keys"]
+            )
+        if "exclude_keys_append" in exif_section:
+            config_dict["exiftool_exclude_keys"].update(
+                exif_section["exclude_keys_append"]
+            )
 
     # Metadata identification patterns section
     identify_section = toml_data.get("metadata_identify", {})
@@ -270,6 +280,7 @@ def _merge_overrides(config_dict: dict[str, Any], overrides: dict[str, Any]) -> 
     # Dotted key mappings for nested structures
     dotted_map = {
         "exiftool.exclude_extensions": "exiftool_exclude_extensions",
+        "exiftool.exclude_keys": "exiftool_exclude_keys",
         "exiftool.base_args": "exiftool_args",
         "filesystem_excludes": "filesystem_excludes",
         "filesystem_exclude_globs": "filesystem_exclude_globs",
@@ -440,6 +451,9 @@ def _build_config(config_dict: dict[str, Any]) -> IndexerConfig:
         ),
         exiftool_exclude_extensions=frozenset(
             config_dict.get("exiftool_exclude_extensions", set())
+        ),
+        exiftool_exclude_keys=frozenset(
+            config_dict.get("exiftool_exclude_keys", set())
         ),
         exiftool_args=tuple(config_dict.get("exiftool_args", [])),
         metadata_identify=MappingProxyType(compiled_identify),

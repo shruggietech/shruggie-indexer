@@ -97,6 +97,8 @@ globs = [".trash-*"]
 
 [exiftool]
 exclude_extensions = ["csv", "htm", "html", "json", "tsv", "xml"]
+# exclude_keys = [...]          # Replace the entire key exclusion set (advanced)
+# exclude_keys_append = [...]   # Append additional keys to the default exclusion set
 base_args = [
     "-extractEmbedded3",
     "-scanForXMP",
@@ -238,7 +240,28 @@ For types where multiple formats are expected, the reader attempts formats in or
 
 After ExifTool returns metadata, certain operational and OS-specific keys are filtered out before storage. Because exiftool with `-G` flags emits group-prefixed keys (e.g. `System:FileName`), the filter matches by **base key name** (the portion after the last `:` separator).
 
-The complete exclusion set:
+The key exclusion set is configurable via two TOML keys:
+
+| Config key | Behavior |
+|------------|----------|
+| `exiftool.exclude_keys = [...]` | **Replace** — the specified list becomes the complete exclusion set. |
+| `exiftool.exclude_keys_append = [...]` | **Append** — entries are added to the compiled default set below. |
+
+Example — append additional keys:
+
+```toml
+[exiftool]
+exclude_keys_append = ["Copyright", "Artist"]
+```
+
+Example — replace the entire set (advanced):
+
+```toml
+[exiftool]
+exclude_keys = ["SourceFile", "Directory", "FileName"]
+```
+
+The compiled default exclusion set:
 
 | Base key | Category |
 |----------|----------|
@@ -284,7 +307,7 @@ Collection fields (lists and sets) use two strategies depending on the key name:
 | `exclude_extensions = [...]` | **Replace** — the specified list becomes the complete set. |
 | `exclude_extensions_append = [...]` | **Append** — entries are added to the existing set. |
 
-This convention applies to all collection fields: `filesystem_excludes.names`, `filesystem_excludes.globs`, `exiftool.exclude_extensions`, `exiftool.base_args`, `metadata_exclude.patterns`, and `extension_groups.*`.
+This convention applies to all collection fields: `filesystem_excludes.names`, `filesystem_excludes.globs`, `exiftool.exclude_extensions`, `exiftool.exclude_keys`, `exiftool.base_args`, `metadata_exclude.patterns`, and `extension_groups.*`.
 
 ### Unknown fields
 

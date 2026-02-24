@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Config: User-customizable ExifTool key exclusions** — Added `exiftool.exclude_keys` (replace) and `exiftool.exclude_keys_append` (extend) configuration keys for controlling which metadata keys are filtered from ExifTool output. The compiled default set is unchanged; users can now extend or replace it via TOML configuration files or API overrides without modifying source code. Added `exiftool_exclude_keys` field to `IndexerConfig`, `DEFAULT_EXIFTOOL_EXCLUDE_KEYS` to compiled defaults, and TOML merge logic for both replace and append modes. Includes eight new unit tests covering replace mode, append mode, TOML loading, config loader round-tripping, and end-to-end extraction with custom sets.
 - **Tests: Non-zero exit metadata recovery** — Added `TestNonZeroExitMetadataRecovery` test class with five cases covering batch recovery, subprocess recovery, empty-stdout fallback, helper reset on unrecoverable errors, and `Error` key exclusion.
 - **CLI: `--log-file` flag** — New option to write log output to a persistent file. `--log-file` (no argument) writes to the default platform-specific app data directory; `--log-file <path>` writes to a custom location. Log files are named `YYYY-MM-DD_HHMMSS.log` and include timestamps, session ID, and logger name.
 - **TOML: `[logging]` configuration section** — Added `logging.file_enabled` and `logging.file_path` keys to enable persistent log file output via configuration files.
@@ -26,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **ExifTool: `_filter_keys()` accepts configurable exclusion set** — `_filter_keys()` now takes an `exclude_keys` parameter instead of referencing the module-level constant. The exclusion set is resolved from `IndexerConfig.exiftool_exclude_keys` and threaded through all backend call paths (`_extract_batch`, `_extract_subprocess`, `_parse_json_output`, `_recover_metadata_from_error`). The module-level `EXIFTOOL_EXCLUDED_KEYS` constant is retained for backward compatibility and reference.
 - **GUI: Centralized control reconciliation** — Replaced `_update_controls()` with `_reconcile_controls()`, a single method implementing the full dependency matrix for all Operations page controls. Manages recursive toggle state across five target scenarios, in-place sidecar forcing for Meta Merge Delete, SHA-512 settings sync, output placeholder text, and destructive indicator updates. All control-change callbacks now route through this method.
 - Expanded `EXIFTOOL_EXCLUDED_KEYS` from 8 to 24 entries. Added `SourceFile`, redundant timestamp/size keys already captured in IndexEntry fields, OS-specific filesystem attributes (`FileAttributes`, `FileDeviceNumber`, `FileInodeNumber`, etc.), and ExifTool operational keys (`Now`, `ProcessingTime`).
 - **GUI: Consolidated tab layout** — Replaced four separate operation tabs (Index, Meta Merge, Meta Merge Delete, Rename) with a single Operations page using an operation-type selector dropdown. Sidebar now contains three tabs: Operations, Settings, and About.

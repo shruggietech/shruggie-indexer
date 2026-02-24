@@ -204,7 +204,7 @@ def _get_batch_helper() -> Any:
         return None
 
 
-def _extract_batch(path: Path) -> dict[str, Any] | None:
+def _extract_batch(path: Path, config: IndexerConfig) -> dict[str, Any] | None:
     """Extract metadata using pyexiftool batch mode.
 
     Handles ``ExifToolExecuteError`` (non-zero exit) by attempting to
@@ -216,19 +216,21 @@ def _extract_batch(path: Path) -> dict[str, Any] | None:
     helper = _get_batch_helper()
     if helper is None:
         # Fall through to subprocess if batch mode fails.
-        return _extract_subprocess(path)
+        return _extract_subprocess(path, config)
+
+    exclude_keys = config.exiftool_exclude_keys
 
     try:
         result = helper.get_metadata(str(path))
         if not result:
             logger.debug("exiftool returned empty metadata for %s", path)
             return None
-        return _filter_keys(result[0])
+        return _filter_keys(result[0], exclude_keys)
     except Exception as exc:
         # Attempt metadata recovery from ExifToolExecuteError on non-zero
         # exit.  Do NOT reset the persistent process — a per-file non-zero
         # exit code does not indicate process failure (§3.3.2-C).
-        recovered = _recover_metadata_from_error(exc, path)
+        recovered = _recover_metadata_from_error(exc, path, exclude_keys)
         if recovered is not None:
             return recovered
 
@@ -242,7 +244,7 @@ def _extract_batch(path: Path) -> dict[str, Any] | None:
 
 
 def _recover_metadata_from_error(
-    exc: Exception, path: Path,
+    exc: Exception, path: Path, exclude_keys: frozenset[str],
 ) -> dict[str, Any] | None:
     """Attempt to extract valid metadata from an ExifToolExecuteError.
 
@@ -256,7 +258,7 @@ def _recover_metadata_from_error(
         return None
 
     # Attempt to parse the stdout as JSON.
-    parsed = _parse_json_output(stdout, path)
+    parsed = _parse_json_output(stdout, path, exclude_keys)
     if parsed is None:
         return None
 
@@ -294,8 +296,9 @@ def _log_exiftool_error_field(
 # ---------------------------------------------------------------------------
 
 
-def _extract_subprocess(path: Path) -> dict[str, Any] | None:
+def _extract_subprocess(path: Path, config: IndexerConfig) -> dict[str, Any] | None:
     """Extract metadata using subprocess + argfile fallback."""
+    exclude_keys = config.exiftool_exclude_keys
     try:
         # Write arguments to a temporary argfile for exiftool's -@ switch.
         with tempfile.NamedTemporaryFile(
@@ -329,7 +332,7 @@ def _extract_subprocess(path: Path) -> dict[str, Any] | None:
             # Non-zero exit does not mean no output.  ExifTool exit code 1
             # signals warnings (e.g., "Unknown file type") but stdout may
             # still contain valid system-level metadata (§3.3.2-A).
-            recovered = _parse_json_output(result.stdout, path)
+            recovered = _parse_json_output(result.stdout, path, exclude_keys)
             if recovered is not None:
                 _log_exiftool_error_field(recovered, path)
                 return recovered
@@ -341,7 +344,7 @@ def _extract_subprocess(path: Path) -> dict[str, Any] | None:
             )
             return None
 
-        return _parse_json_output(result.stdout, path)
+        return _parse_json_output(result.stdout, path, exclude_keys)
 
     except subprocess.TimeoutExpired:
         logger.warning("exiftool timed out after %ds for %s", _EXIFTOOL_TIMEOUT, path)
@@ -356,7 +359,9 @@ def _extract_subprocess(path: Path) -> dict[str, Any] | None:
 # ---------------------------------------------------------------------------
 
 
-def _parse_json_output(stdout: str, path: Path) -> dict[str, Any] | None:
+def _parse_json_output(
+    stdout: str, path: Path, exclude_keys: frozenset[str],
+) -> dict[str, Any] | None:
     """Parse exiftool JSON output and extract the first element."""
     if not stdout or not stdout.strip():
         logger.debug("exiftool produced no output for %s", path)
@@ -377,7 +382,7 @@ def _parse_json_output(stdout: str, path: Path) -> dict[str, Any] | None:
         logger.warning("Unexpected exiftool result type for %s", path)
         return None
 
-    filtered = _filter_keys(result)
+    filtered = _filter_keys(result, exclude_keys)
     if not filtered:
         logger.debug("exiftool returned only excluded keys for %s", path)
         return None
@@ -395,7 +400,9 @@ def _base_key(key: str) -> str:
     return key.rsplit(":", 1)[-1]
 
 
-def _filter_keys(data: dict[str, Any]) -> dict[str, Any]:
+def _filter_keys(
+    data: dict[str, Any], exclude_keys: frozenset[str],
+) -> dict[str, Any]:
     """Remove excluded keys from exiftool output.
 
     Keys are matched by their base name (after the last ``:``) to
@@ -403,7 +410,7 @@ def _filter_keys(data: dict[str, Any]) -> dict[str, Any]:
     """
     return {
         k: v for k, v in data.items()
-        if _base_key(k) not in EXIFTOOL_EXCLUDED_KEYS
+        if _base_key(k) not in exclude_keys
     }
 
 
@@ -451,5 +458,5 @@ def extract_exif(
 
     # Dispatch to selected backend.
     if _backend == "batch":
-        return _extract_batch(path)
-    return _extract_subprocess(path)
+        return _extract_batch(path, config)
+    return _extract_subprocess(path, config)

@@ -22,6 +22,7 @@ from shruggie_indexer.config.types import MetadataTypeAttributes
 __all__ = [
     "DEFAULT_EXIFTOOL_ARGS",
     "DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS",
+    "DEFAULT_EXIFTOOL_EXCLUDE_KEYS",
     "DEFAULT_EXTENSION_GROUPS",
     "DEFAULT_EXTENSION_VALIDATION_PATTERN",
     "DEFAULT_FILESYSTEM_EXCLUDES",
@@ -97,6 +98,47 @@ DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS: frozenset[str] = frozenset({
     "tsv",
     "xml",
 })
+
+DEFAULT_EXIFTOOL_EXCLUDE_KEYS: frozenset[str] = frozenset({
+    # Original v1 jq deletion list
+    "ExifToolVersion",
+    "FileSequence",
+    "NewGUID",
+    "Directory",
+    "FileName",
+    "FilePath",
+    "BaseName",
+    "FilePermissions",
+    # Absolute path exposure
+    "SourceFile",
+    # Redundant — captured in IndexEntry size/timestamps objects
+    "FileSize",
+    "FileModifyDate",
+    "FileAccessDate",
+    "FileCreateDate",
+    # OS-specific filesystem attributes (not embedded metadata)
+    "FileAttributes",
+    "FileDeviceNumber",
+    "FileInodeNumber",
+    "FileHardLinks",
+    "FileUserID",
+    "FileGroupID",
+    "FileDeviceID",
+    "FileBlockSize",
+    "FileBlockCount",
+    # ExifTool operational metadata
+    "Now",
+    "ProcessingTime",
+    "Error",
+})
+"""Default set of exiftool output keys to exclude.
+
+Keys are matched by their base name (the portion after the last ``:``)
+to handle group-prefixed output from ``-G`` flags.
+
+Configurable via ``exiftool.exclude_keys`` (replace) or
+``exiftool.exclude_keys_append`` (extend) in TOML configuration.
+"""
 
 DEFAULT_EXIFTOOL_ARGS: tuple[str, ...] = (
     "-extractEmbedded3",

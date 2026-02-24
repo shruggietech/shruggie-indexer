@@ -271,7 +271,7 @@ class TestFilterKeysDirect:
             "SourceFile": "/tmp/test.txt",
             "ExifTool:Now": "2026:01:01",
         }
-        result = _filter_keys(data)
+        result = _filter_keys(data, EXIFTOOL_EXCLUDED_KEYS)
         assert result == {"File:MIMEType": "text/plain"}
 
     def test_no_excluded_keys(self) -> None:
@@ -280,7 +280,7 @@ class TestFilterKeysDirect:
             "File:MIMEType": "text/plain",
             "Composite:Duration": 42,
         }
-        result = _filter_keys(data)
+        result = _filter_keys(data, EXIFTOOL_EXCLUDED_KEYS)
         assert result == data
 
     def test_all_excluded_returns_empty(self) -> None:
@@ -290,8 +290,130 @@ class TestFilterKeysDirect:
             "ExifToolVersion": 12.76,
             "SourceFile": "/tmp/test.txt",
         }
-        result = _filter_keys(data)
+        result = _filter_keys(data, EXIFTOOL_EXCLUDED_KEYS)
         assert result == {}
+
+
+class TestConfigurableExcludeKeys:
+    """Test user-customizable exiftool key exclusions (§4.3)."""
+
+    def test_default_config_matches_hardcoded_set(self) -> None:
+        """Default config produces the same exclusion set as EXIFTOOL_EXCLUDED_KEYS."""
+        config = _cfg(extract_exif=True)
+        assert config.exiftool_exclude_keys == EXIFTOOL_EXCLUDED_KEYS
+
+    def test_replace_mode(self) -> None:
+        """exiftool.exclude_keys replaces the entire exclusion set."""
+        custom_set = frozenset({"SourceFile"})
+        result = _filter_keys(
+            {
+                "SourceFile": "/tmp/test.txt",
+                "ExifToolVersion": 12.76,
+                "File:MIMEType": "text/plain",
+            },
+            custom_set,
+        )
+        # Only SourceFile should be excluded; ExifToolVersion passes through
+        assert "SourceFile" not in result
+        assert result == {"ExifToolVersion": 12.76, "File:MIMEType": "text/plain"}
+
+    def test_append_mode(self) -> None:
+        """exiftool.exclude_keys_append adds keys to the default set."""
+        extended_set = EXIFTOOL_EXCLUDED_KEYS | {"Copyright", "Artist"}
+        data = {
+            "Copyright": "2026 Test",
+            "Artist": "John Doe",
+            "File:MIMEType": "text/plain",
+            "ExifToolVersion": 12.76,  # in default set
+        }
+        result = _filter_keys(data, extended_set)
+        # Copyright, Artist, and ExifToolVersion should all be excluded
+        assert result == {"File:MIMEType": "text/plain"}
+
+    def test_replace_mode_via_config_loader(self) -> None:
+        """Config loader correctly resolves a replace-mode exclusion set."""
+        from shruggie_indexer.config.loader import load_config
+
+        config = load_config(
+            overrides={"exiftool.exclude_keys": frozenset({"SourceFile", "FileName"})},
+        )
+        assert config.exiftool_exclude_keys == frozenset({"SourceFile", "FileName"})
+
+    def test_append_mode_via_toml(self, tmp_path: Path) -> None:
+        """TOML exclude_keys_append extends the default set."""
+        from shruggie_indexer.config.loader import load_config
+
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            '[exiftool]\nexclude_keys_append = ["Copyright", "Artist"]\n',
+            encoding="utf-8",
+        )
+        config = load_config(config_file=config_file)
+        assert "Copyright" in config.exiftool_exclude_keys
+        assert "Artist" in config.exiftool_exclude_keys
+        # Default keys must still be present
+        assert "SourceFile" in config.exiftool_exclude_keys
+        assert "ExifToolVersion" in config.exiftool_exclude_keys
+
+    def test_replace_mode_via_toml(self, tmp_path: Path) -> None:
+        """TOML exclude_keys replaces the entire set."""
+        from shruggie_indexer.config.loader import load_config
+
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            '[exiftool]\nexclude_keys = ["SourceFile"]\n',
+            encoding="utf-8",
+        )
+        config = load_config(config_file=config_file)
+        assert config.exiftool_exclude_keys == frozenset({"SourceFile"})
+
+    def test_custom_exclusion_applied_in_extract(
+        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Custom exclusion set is applied during extract_exif."""
+        import shruggie_indexer.core.exif as exif_mod
+
+        data = [{
+            "File:MIMEType": "text/plain",
+            "Copyright": "2026 Test",
+            "SourceFile": "/tmp/test.txt",
+        }]
+
+        monkeypatch.setattr(exif_mod, "_exiftool_path", "exiftool")
+        monkeypatch.setattr(exif_mod, "_pyexiftool_available", False)
+        monkeypatch.setattr(exif_mod, "_backend", "subprocess")
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = json.dumps(data)
+        mock_result.stderr = ""
+
+        # Use a custom set that only excludes SourceFile
+        config = load_config(
+            overrides={
+                "extract_exif": True,
+                "exiftool.exclude_keys": frozenset({"SourceFile"}),
+            },
+        )
+        with patch("subprocess.run", return_value=mock_result):
+            result = extract_exif(sample_file, config)
+
+        assert result is not None
+        # SourceFile excluded by custom set
+        assert "SourceFile" not in result
+        # Copyright NOT excluded (not in custom set)
+        assert "Copyright" in result
+        assert result["File:MIMEType"] == "text/plain"
+
+    def test_empty_exclusion_set_passes_all(self) -> None:
+        """An empty exclusion set passes all keys through."""
+        data = {
+            "SourceFile": "/tmp/test.txt",
+            "ExifToolVersion": 12.76,
+            "File:MIMEType": "text/plain",
+        }
+        result = _filter_keys(data, frozenset())
+        assert result == data
 
 
 class TestTimeoutHandling:
