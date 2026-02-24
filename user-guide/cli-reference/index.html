@@ -1032,6 +1032,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#-log-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --log-file
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2105,6 +2116,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#-log-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --log-file
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2426,6 +2448,61 @@ shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>-o
 <div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>-q
 </code></pre></div>
 <p>In quiet mode, the exit code is the primary success/failure signal.</p>
+<h3 id="-log-file"><code>--log-file</code></h3>
+<p>Write log output to a persistent file for later analysis.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Write to the default app data directory</span>
+shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>--log-file
+
+<span class="c1"># Write to a specific file</span>
+shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>--log-file<span class="w"> </span>/path/to/output.log
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Usage</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--log-file</code> (no argument)</td>
+<td>Write to the default platform-specific log directory</td>
+</tr>
+<tr>
+<td><code>--log-file &lt;path&gt;</code></td>
+<td>Write to the specified file path</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Default log directory by platform:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Directory</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Windows</td>
+<td><code>%LOCALAPPDATA%\ShruggieTech\shruggie-indexer\logs\</code></td>
+</tr>
+<tr>
+<td>macOS</td>
+<td><code>~/Library/Application Support/ShruggieTech/shruggie-indexer/logs/</code></td>
+</tr>
+<tr>
+<td>Linux</td>
+<td><code>~/.local/share/shruggie-indexer/logs/</code></td>
+</tr>
+</tbody>
+</table>
+<p>Log files are named by date and session: <code>YYYY-MM-DD_HHMMSS.log</code>. The log level written to the file matches the currently configured verbosity.</p>
+<p>Log file output can also be enabled via the TOML configuration file:</p>
+<div class="highlight"><pre><span></span><code><span class="k">[logging]</span>
+<span class="n">file_enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="c1"># file_path = &quot;&quot;  # empty = use default app data location</span>
+</code></pre></div>
 <h2 id="general-options">General Options</h2>
 <h3 id="-version"><code>--version</code></h3>
 <p>Print the installed version and exit.</p>

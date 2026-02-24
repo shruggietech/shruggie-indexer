@@ -850,6 +850,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#logging-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#filesystem-exclusion-defaults" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1767,6 +1778,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#logging-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#filesystem-exclusion-defaults" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2063,6 +2085,12 @@
 <span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 <span class="n">dry_run</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 
+<span class="c1"># ── Logging ─────────────────────────────────────────────────</span>
+
+<span class="k">[logging]</span>
+<span class="n">file_enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="w">         </span><span class="c1"># Enable persistent log file output</span>
+<span class="c1"># file_path = &quot;&quot;             # Empty = default app data directory</span>
+
 <span class="c1"># ── Extension validation ───────────────────────────────────</span>
 
 <span class="k">[extensions]</span>
@@ -2178,6 +2206,56 @@
 <div class="highlight"><pre><span></span><code>^(([a-z0-9]){1,2}|([a-z0-9])([a-z0-9\-]){1,12}([a-z0-9]))$
 </code></pre></div>
 <p>Extensions that fail validation are recorded in the output's <code>extension</code> field but are treated as unrecognized for ExifTool processing purposes.</p>
+<h3 id="logging-configuration">Logging configuration</h3>
+<p>The <code>[logging]</code> section controls persistent log file output. By default, shruggie-indexer does not write log files — diagnostic output goes to stderr (CLI) or the in-app log panel (GUI).</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>logging.file_enabled</code></td>
+<td><code>false</code></td>
+<td>Enable persistent log file output.</td>
+</tr>
+<tr>
+<td><code>logging.file_path</code></td>
+<td><code>""</code> (empty)</td>
+<td>Path to the log file. Empty uses the default platform-specific directory.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Default log directory by platform:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Directory</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Windows</td>
+<td><code>%LOCALAPPDATA%\ShruggieTech\shruggie-indexer\logs\</code></td>
+</tr>
+<tr>
+<td>macOS</td>
+<td><code>~/Library/Application Support/ShruggieTech/shruggie-indexer/logs/</code></td>
+</tr>
+<tr>
+<td>Linux</td>
+<td><code>~/.local/share/shruggie-indexer/logs/</code></td>
+</tr>
+</tbody>
+</table>
+<p>Log files are named by date and session: <code>YYYY-MM-DD_HHMMSS.log</code>. The log file format includes timestamps, session ID, log level, logger name, and message:</p>
+<div class="highlight"><pre><span></span><code>2026-02-23 14:30:02  abc123  INFO      shruggie_indexer.core.hasher  Hashing file: photo.jpg
+</code></pre></div>
+<p>The CLI equivalent is the <code>--log-file</code> flag. In the GUI, enable "Write log files" in Settings.</p>
 <h3 id="filesystem-exclusion-defaults">Filesystem exclusion defaults</h3>
 <p>The default exclusion set covers system artifacts across all supported platforms:</p>
 <table>
