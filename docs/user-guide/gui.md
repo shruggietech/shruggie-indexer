@@ -251,3 +251,20 @@ If the JSON output exceeds 10 MB, the output panel will show a "too large to dis
 ### Application Appears Frozen
 
 Long-running operations process files one at a time in the background. The interface should remain responsive. If you see no progress updates, check the log view for error messages. You can always cancel with ++escape++ or the Cancel button.
+
+---
+
+## To Do
+
+!!! note "Screenshots Needed"
+    This page requires annotated screenshots of the GUI application to illustrate
+    the interface elements described above. Screenshots should cover:
+
+    - The Operations page in idle state
+    - The Operations page during an active indexing run (progress bar, log stream)
+    - The Settings page
+    - The About page
+    - The output panel showing JSON output and log view
+    - A destructive operation confirmation dialog
+
+    Screenshot assets will be stored in `docs/assets/images/gui/`.
