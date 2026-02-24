@@ -69,12 +69,17 @@ def configure_logging(
     *,
     verbose: int = 0,
     quiet: bool = False,
+    log_file: Path | str | None = None,
 ) -> None:
-    """Set up package-scoped logging to stderr.
+    """Set up package-scoped logging to stderr and optionally to a file.
 
     Args:
         verbose: Verbosity count (0 = WARNING, 1 = INFO, 2+ = DEBUG).
         quiet: When ``True``, overrides *verbose* and sets CRITICAL.
+        log_file: When set, also write log output to a persistent file.
+            Pass ``True`` or an empty string to use the default app data
+            directory; pass a path string or ``Path`` to write to a specific
+            file.
     """
     if quiet:
         level = logging.CRITICAL
@@ -97,6 +102,19 @@ def configure_logging(
 
     handler.setFormatter(logging.Formatter(fmt))
     pkg_logger.addHandler(handler)
+
+    # Persistent log file (SS11.1)
+    if log_file is not None:
+        from shruggie_indexer.cli.log_file import make_file_handler
+
+        file_path: Path | None = None
+        if isinstance(log_file, (str, Path)) and str(log_file).strip():
+            file_path = Path(log_file)
+        # None -> use default app data directory
+        file_handler = make_file_handler(file_path)
+        file_handler.setLevel(level)
+        pkg_logger.addHandler(file_handler)
+        pkg_logger.info("Log file: %s", file_handler.baseFilename)
 
     # Silence overly chatty trace loggers at -vv (only visible at -vvv)
     if verbose == 2:
@@ -320,6 +338,18 @@ def _drain_delete_queue(queue: list[Path]) -> int:
     default=False,
     help="Suppress all non-error output.",
 )
+@click.option(
+    "--log-file",
+    "log_file",
+    default=None,
+    is_flag=False,
+    flag_value="",
+    help=(
+        "Write log output to a persistent file. Without a path argument, "
+        "writes to the default app data directory. With a path, writes to "
+        "the specified file."
+    ),
+)
 # -- General --
 @click.version_option(version=__version__, prog_name="shruggie-indexer")
 def main(
@@ -339,6 +369,7 @@ def main(
     config_file: str | None,
     verbose: int,
     quiet: bool,
+    log_file: str | None,
 ) -> None:
     """Index files and directories with hash-based identities."""
     from shruggie_indexer.config.loader import load_config
@@ -352,7 +383,25 @@ def main(
     )
 
     # ── Logging ─────────────────────────────────────────────────────────
-    configure_logging(verbose=verbose, quiet=quiet)
+    # Resolve log-file from TOML config if not set via CLI
+    effective_log_file = log_file
+    if effective_log_file is None and config_file is not None:
+        # Peek at TOML for [logging] section before full config load
+        try:
+            import tomllib
+            toml_data = tomllib.loads(
+                Path(config_file).read_text(encoding="utf-8"),
+            )
+            logging_section = toml_data.get("logging", {})
+            if isinstance(logging_section, dict):
+                if logging_section.get("file_enabled", False):
+                    effective_log_file = logging_section.get("file_path", "")
+        except Exception:  # noqa: BLE001
+            pass  # Config errors are handled later by load_config
+
+    configure_logging(
+        verbose=verbose, quiet=quiet, log_file=effective_log_file,
+    )
 
     # ── Signal handling ─────────────────────────────────────────────────
     cancel_event = threading.Event()

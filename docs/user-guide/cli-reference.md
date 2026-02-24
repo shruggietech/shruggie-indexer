@@ -221,6 +221,41 @@ shruggie-indexer path/to/target -q
 
 In quiet mode, the exit code is the primary success/failure signal.
 
+### `--log-file`
+
+Write log output to a persistent file for later analysis.
+
+```bash
+# Write to the default app data directory
+shruggie-indexer path/to/target --log-file
+
+# Write to a specific file
+shruggie-indexer path/to/target --log-file /path/to/output.log
+```
+
+| Usage | Behavior |
+|-------|----------|
+| `--log-file` (no argument) | Write to the default platform-specific log directory |
+| `--log-file <path>` | Write to the specified file path |
+
+**Default log directory by platform:**
+
+| Platform | Directory |
+|----------|-----------|
+| Windows | `%LOCALAPPDATA%\ShruggieTech\shruggie-indexer\logs\` |
+| macOS | `~/Library/Application Support/ShruggieTech/shruggie-indexer/logs/` |
+| Linux | `~/.local/share/shruggie-indexer/logs/` |
+
+Log files are named by date and session: `YYYY-MM-DD_HHMMSS.log`. The log level written to the file matches the currently configured verbosity.
+
+Log file output can also be enabled via the TOML configuration file:
+
+```toml
+[logging]
+file_enabled = true
+# file_path = ""  # empty = use default app data location
+```
+
 ## General Options
 
 ### `--version`

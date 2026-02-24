@@ -64,6 +64,12 @@ meta_merge_delete = false
 enabled = false
 dry_run = false
 
+# ── Logging ─────────────────────────────────────────────────
+
+[logging]
+file_enabled = false         # Enable persistent log file output
+# file_path = ""             # Empty = default app data directory
+
 # ── Extension validation ───────────────────────────────────
 
 [extensions]
@@ -138,6 +144,31 @@ The default pattern accepts extensions of 1–2 alphanumeric characters, or 3–
 ```
 
 Extensions that fail validation are recorded in the output's `extension` field but are treated as unrecognized for ExifTool processing purposes.
+
+### Logging configuration
+
+The `[logging]` section controls persistent log file output. By default, shruggie-indexer does not write log files — diagnostic output goes to stderr (CLI) or the in-app log panel (GUI).
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `logging.file_enabled` | `false` | Enable persistent log file output. |
+| `logging.file_path` | `""` (empty) | Path to the log file. Empty uses the default platform-specific directory. |
+
+**Default log directory by platform:**
+
+| Platform | Directory |
+|----------|-----------|
+| Windows | `%LOCALAPPDATA%\ShruggieTech\shruggie-indexer\logs\` |
+| macOS | `~/Library/Application Support/ShruggieTech/shruggie-indexer/logs/` |
+| Linux | `~/.local/share/shruggie-indexer/logs/` |
+
+Log files are named by date and session: `YYYY-MM-DD_HHMMSS.log`. The log file format includes timestamps, session ID, log level, logger name, and message:
+
+```
+2026-02-23 14:30:02  abc123  INFO      shruggie_indexer.core.hasher  Hashing file: photo.jpg
+```
+
+The CLI equivalent is the `--log-file` flag. In the GUI, enable "Write log files" in Settings.
 
 ### Filesystem exclusion defaults
 

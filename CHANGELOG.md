@@ -7,8 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **CLI: `--log-file` flag** — New option to write log output to a persistent file. `--log-file` (no argument) writes to the default platform-specific app data directory; `--log-file <path>` writes to a custom location. Log files are named `YYYY-MM-DD_HHMMSS.log` and include timestamps, session ID, and logger name.
+- **TOML: `[logging]` configuration section** — Added `logging.file_enabled` and `logging.file_path` keys to enable persistent log file output via configuration files.
+- **GUI: "Write log files" settings toggle** — New checkbox in the Settings page Logging section. When enabled, each operation writes a timestamped log file to the app data directory. Toggle state is persisted across sessions.
+
 ### Fixed
 
+- **GUI: Log capture pipeline** — Core library log messages and progress event messages now both appear in the output panel's log view with timestamps. Previously, most diagnostic output was silently dropped or consumed by the progress panel without forwarding to the log stream.
+- **GUI: Log entry timestamps and formatting** — Log entries in the GUI log panel now use the `HH:MM:SS  LEVEL  message` format with color coding: red for ERROR/CRITICAL, amber for WARNING, muted gray for DEBUG, and default text color for INFO.
+- **GUI: Log auto-scroll behavior** — The log panel now auto-scrolls to the bottom when new content arrives, pauses auto-scroll when the user scrolls upward, and resumes when scrolled back to the bottom.
+- **GUI: Log panel Save and Copy buttons** — Save and Copy buttons are now enabled whenever the active view (Output or Log) contains content. Previously they were permanently disabled in the log view. Save in log view opens a save-as dialog for `.log` files.
 - ExifTool key filtering now correctly handles group-prefixed keys (e.g. `System:FileName`) by matching on the base key name after the last `:` separator. Previously, the `-G3:1` flag caused all keys to carry group prefixes, which bypassed the exact-match exclusion check and leaked sensitive filesystem details into output.
 
 ### Changed

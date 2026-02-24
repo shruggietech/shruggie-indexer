@@ -240,6 +240,7 @@ def _merge_toml(config_dict: dict[str, Any], toml_data: dict[str, Any]) -> None:
         "rename", "dry_run", "extension_validation_pattern",
         "filesystem_excludes", "exiftool", "metadata_identify",
         "metadata_exclude", "extension_groups",
+        "logging",  # Handled by CLI/GUI, not by IndexerConfig
     }
     for key in toml_data:
         if key not in known_top:

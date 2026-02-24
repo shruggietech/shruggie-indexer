@@ -495,11 +495,20 @@ class _LogQueueHandler(logging.Handler):
 class OutputPanel(ctk.CTkFrame):
     """Shared output panel with JSON/Log toggle, Copy, Save, and Clear."""
 
+    # Log level color coding (SS11.5)
+    _LOG_COLORS: dict[str, str] = {
+        "ERROR": "#ff4444",
+        "CRITICAL": "#ff4444",
+        "WARNING": "#ffaa00",
+        "DEBUG": "#888888",
+    }
+
     def __init__(self, master: Any, **kwargs: Any) -> None:
         super().__init__(master, **kwargs)
         self._json_text = ""
         self._log_lines: list[str] = []
         self._showing_json = True
+        self._auto_scroll = True
         self._build_widgets()
 
     def _build_widgets(self) -> None:
@@ -534,7 +543,7 @@ class OutputPanel(ctk.CTkFrame):
             toolbar, text="Save", width=60, command=self._save, state="disabled",
         )
         self.save_btn.pack(side="right", padx=(4, 0))
-        _Tooltip(self.save_btn, "Save JSON output to a file.")
+        _Tooltip(self.save_btn, "Save current view content to a file.")
 
         # Text display
         self.textbox = ctk.CTkTextbox(
@@ -542,6 +551,16 @@ class OutputPanel(ctk.CTkFrame):
             font=ctk.CTkFont(family=_MONOSPACE_FONTS[0], size=12),
         )
         self.textbox.pack(fill="both", expand=True)
+
+        # Configure log-level color tags
+        for level, color in self._LOG_COLORS.items():
+            self.textbox._textbox.tag_configure(f"log_{level}", foreground=color)
+
+        # Auto-scroll detection: pause when user scrolls up
+        self.textbox._textbox.bind("<MouseWheel>", self._on_scroll)
+        self.textbox._textbox.bind("<Button-4>", self._on_scroll)
+        self.textbox._textbox.bind("<Button-5>", self._on_scroll)
+        self.textbox._textbox.bind("<ButtonRelease-1>", self._on_scroll)
 
     def set_json(self, text: str) -> None:
         """Set the JSON result text and switch to output view."""
@@ -570,29 +589,73 @@ class OutputPanel(ctk.CTkFrame):
         self._log_lines.append(line)
         if not self._showing_json:
             self.textbox.configure(state="normal")
+            start_idx = self.textbox._textbox.index("end-1c")
             self.textbox.insert("end", line + "\n")
-            self.textbox.see("end")
+            end_idx = self.textbox._textbox.index("end-1c")
+            # Apply color tag based on log level
+            tag = self._detect_level_tag(line)
+            if tag:
+                self.textbox._textbox.tag_add(tag, start_idx, end_idx)
+            if self._auto_scroll:
+                self.textbox.see("end")
             self.textbox.configure(state="disabled")
+        self._update_button_state()
+
+    def _detect_level_tag(self, line: str) -> str | None:
+        """Return the tag name for a log line's level, or None for INFO."""
+        # Format: "HH:MM:SS  LEVEL    message" — level starts after timestamp
+        for level in ("ERROR", "CRITICAL", "WARNING", "DEBUG"):
+            if f"  {level}" in line:
+                return f"log_{level}"
+        return None
+
+    def _on_scroll(self, _event: Any = None) -> None:
+        """Detect user scroll and pause/resume auto-scroll."""
+        if not self._showing_json:
+            # Check if scrollbar is at the bottom
+            self.after(10, self._check_scroll_position)
+
+    def _check_scroll_position(self) -> None:
+        """Check if the textbox is scrolled to the bottom."""
+        try:
+            _, ymax = self.textbox._textbox.yview()
+            self._auto_scroll = ymax >= 0.98
+        except Exception:  # noqa: BLE001
+            self._auto_scroll = True
 
     def clear(self) -> None:
         """Clear both JSON and log content."""
         self._json_text = ""
         self._log_lines.clear()
+        self._auto_scroll = True
         self.textbox.configure(state="normal")
         self.textbox.delete("1.0", "end")
         self.textbox.configure(state="disabled")
         self.copy_btn.configure(state="disabled")
         self.save_btn.configure(state="disabled")
 
+    def _update_button_state(self) -> None:
+        """Enable Save/Copy when the active view has content."""
+        if self._showing_json:
+            has_content = bool(self._json_text)
+        else:
+            has_content = bool(self._log_lines)
+        state = "normal" if has_content else "disabled"
+        self.copy_btn.configure(state=state)
+        self.save_btn.configure(state=state)
+
     def _show_json(self) -> None:
         self._showing_json = True
         self._update_toggle_style()
         self._refresh_view()
+        self._update_button_state()
 
     def _show_log(self) -> None:
         self._showing_json = False
+        self._auto_scroll = True
         self._update_toggle_style()
         self._refresh_view()
+        self._update_button_state()
 
     def _update_toggle_style(self) -> None:
         if self._showing_json:
@@ -630,7 +693,16 @@ class OutputPanel(ctk.CTkFrame):
                     with contextlib.suppress(Exception):
                         _apply_json_highlighting(self.textbox, text)
         else:
-            self.textbox.insert("1.0", "\n".join(self._log_lines))
+            content = "\n".join(self._log_lines)
+            self.textbox.insert("1.0", content)
+            # Apply color tags to each log line
+            for i, line in enumerate(self._log_lines):
+                tag = self._detect_level_tag(line)
+                if tag:
+                    line_num = i + 1
+                    self.textbox._textbox.tag_add(
+                        tag, f"{line_num}.0", f"{line_num}.end",
+                    )
             self.textbox.see("end")
         self.textbox.configure(state="disabled")
 
@@ -651,16 +723,27 @@ class OutputPanel(ctk.CTkFrame):
         )
 
     def _save(self) -> None:
-        if not self._json_text:
-            return
-        path = filedialog.asksaveasfilename(
-            title="Save JSON Output",
-            defaultextension=".json",
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-        )
+        if self._showing_json:
+            text = self._json_text
+            if not text:
+                return
+            path = filedialog.asksaveasfilename(
+                title="Save JSON Output",
+                defaultextension=".json",
+                filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            )
+        else:
+            text = "\n".join(self._log_lines)
+            if not text:
+                return
+            path = filedialog.asksaveasfilename(
+                title="Save Log Output",
+                defaultextension=".log",
+                filetypes=[("Log files", "*.log"), ("Text files", "*.txt"), ("All files", "*.*")],
+            )
         if path:
             try:
-                Path(path).write_text(self._json_text + "\n", encoding="utf-8")
+                Path(path).write_text(text + "\n", encoding="utf-8")
                 self._show_toast(f"Saved to {Path(path).name}")
             except OSError as exc:
                 messagebox.showerror("Save Error", str(exc))
@@ -1736,6 +1819,18 @@ class SettingsTab(ctk.CTkFrame):
                 "debug": "Show detailed per-item processing log.",
             }[val])
 
+        self.log_to_file_var = ctk.BooleanVar(value=False)
+        log_file_cb = _CtkCheckBox(
+            scroll, text="Write log files",
+            variable=self.log_to_file_var,
+        )
+        log_file_cb.pack(fill="x", pady=(0, 8))
+        _Tooltip(
+            log_file_cb,
+            "When enabled, each operation writes a log file to the app data "
+            "directory for later analysis.",
+        )
+
         # -- Interface ---
         self._section_header(scroll, "Interface")
 
@@ -1817,6 +1912,7 @@ class SettingsTab(ctk.CTkFrame):
             self.sha512_var.set(False)
             self.indent_var.set("2")
             self.verbosity_var.set("normal")
+            self.log_to_file_var.set(False)
             self.tooltips_var.set(True)
             self.config_entry.delete(0, "end")
             _Tooltip.set_enabled(True)
@@ -1839,6 +1935,7 @@ class SettingsTab(ctk.CTkFrame):
             "sha512": self.sha512_var.get(),
             "indent": self.indent_var.get(),
             "verbosity": self.verbosity_var.get(),
+            "log_to_file": self.log_to_file_var.get(),
             "tooltips": self.tooltips_var.get(),
             "config_file": self.config_entry.get(),
         }
@@ -1852,6 +1949,8 @@ class SettingsTab(ctk.CTkFrame):
             self.indent_var.set(state["indent"])
         if "verbosity" in state:
             self.verbosity_var.set(state["verbosity"])
+        if "log_to_file" in state:
+            self.log_to_file_var.set(state["log_to_file"])
         if "tooltips" in state:
             self.tooltips_var.set(state["tooltips"])
             _Tooltip.set_enabled(state["tooltips"])
@@ -1988,7 +2087,10 @@ class ShruggiIndexerApp(ctk.CTk):
         # Logging handler (item 2.11)
         self._log_handler = _LogQueueHandler(self._log_queue)
         self._log_handler.setFormatter(
-            logging.Formatter("%(levelname)-7s %(name)s: %(message)s"),
+            logging.Formatter(
+                "%(asctime)s  %(levelname)-7s  %(message)s",
+                datefmt="%H:%M:%S",
+            ),
         )
 
         # Window setup
@@ -2164,6 +2266,15 @@ class ShruggiIndexerApp(ctk.CTk):
         self._log_handler.setLevel(level)
         lib_logger.addHandler(self._log_handler)
 
+        # Persistent log file (SS11.1)
+        self._file_handler: logging.FileHandler | None = None
+        if settings.log_to_file_var.get():
+            from shruggie_indexer.cli.log_file import make_file_handler
+
+            self._file_handler = make_file_handler()
+            self._file_handler.setLevel(level)
+            lib_logger.addHandler(self._file_handler)
+
         # Start polling log queue
         self._poll_log_messages()
 
@@ -2171,6 +2282,10 @@ class ShruggiIndexerApp(ctk.CTk):
         """Remove the queue-based handler from the library logger."""
         lib_logger = logging.getLogger("shruggie_indexer")
         lib_logger.removeHandler(self._log_handler)
+        if self._file_handler is not None:
+            lib_logger.removeHandler(self._file_handler)
+            self._file_handler.close()
+            self._file_handler = None
         # Drain any remaining messages
         self._drain_log_queue()
 
@@ -2287,7 +2402,8 @@ class ShruggiIndexerApp(ctk.CTk):
     def _handle_progress(self, event: ProgressEvent) -> None:
         self._progress_panel.update_progress(event)
         if event.message:
-            self._output_panel.append_log(event.message)
+            ts = time.strftime("%H:%M:%S")
+            self._output_panel.append_log(f"{ts}  INFO     {event.message}")
 
     def _poll_results(self) -> None:
         try:
