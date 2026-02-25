@@ -1366,7 +1366,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Unreleased">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#011-2026-02-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.1 - 2026-02-25
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.1 - 2026-02-25">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1396,39 +1407,6 @@
     <span class="md-ellipsis">
       
         Fixed
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#changed_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Changed
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Fixed
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#changed_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Changed
       
     </span>
   </a>
@@ -1511,7 +1489,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Unreleased">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#011-2026-02-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.1 - 2026-02-25
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.1 - 2026-02-25">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1541,39 +1530,6 @@
     <span class="md-ellipsis">
       
         Fixed
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#changed_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Changed
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Fixed
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#changed_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Changed
       
     </span>
   </a>
@@ -1637,7 +1593,8 @@
 <p>All notable changes to this project are documented in this file.</p>
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
-<h2 id="unreleased"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.0...HEAD">Unreleased</a></h2>
+<h2 id="unreleased"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.1...HEAD">Unreleased</a></h2>
+<h2 id="011-2026-02-25"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.0...v0.1.1">0.1.1</a> - 2026-02-25</h2>
 <h3 id="added">Added</h3>
 <ul>
 <li><strong>Schema: <code>session_id</code> field on IndexEntry</strong> — New optional <code>session_id</code> field (UUID4 string) identifies the indexing invocation that produced each entry. All entries within a single CLI, GUI, or API invocation share the same value. Enables downstream consumers (primarily <code>shruggie-catalog</code>) to perform run correlation, staleness detection, provenance linking, and batch integrity verification. The field is optional and absent from the <code>required</code> array; <code>schema_version</code> remains <code>2</code>. When <code>index_path()</code> is called without an explicit <code>session_id</code>, one is auto-generated. Ref: spec §18.1.14.</li>
@@ -1654,34 +1611,16 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Core: <code>index_path()</code> accepts optional <code>session_id</code> keyword argument</strong> — The public API function <code>index_path()</code> now accepts an optional <code>session_id: str | None</code> parameter. When omitted, a UUID4 is auto-generated per call. CLI and GUI entry points generate and pass their own session IDs.</li>
 <li><strong>Core: <code>build_file_entry()</code> and <code>build_directory_entry()</code> accept <code>session_id</code></strong> — Both builder functions now accept a <code>session_id</code> keyword argument and thread it into all recursive child entries. Both functions generate an <code>indexed_at</code> timestamp at construction time.</li>
 <li><strong>Schema: v2 JSON Schema updated</strong> — Added <code>session_id</code> (with UUID4 pattern validation) and <code>indexed_at</code> (TimestampPair <code>$ref</code>) property definitions to the root IndexEntry schema. Neither field is added to the <code>required</code> array. <code>additionalProperties</code> remains <code>false</code>.</li>
-<li><strong>Docs: Schema reference updated</strong> — <code>docs/schema/index.md</code> updated to document <code>session_id</code> and <code>indexed_at</code> in the top-level fields table with a note on their optional status.- <strong>Docs: Changelog auto-sync</strong> — <code>docs/changelog.md</code> is now auto-copied from the repository root <code>CHANGELOG.md</code> during CI build, eliminating manual synchronization drift. The docs CI workflow (<code>docs.yml</code>) copies the root changelog before <code>mkdocs build</code> and triggers on <code>CHANGELOG.md</code> changes. A header comment in <code>docs/changelog.md</code> warns against direct edits.</li>
+<li><strong>Docs: Schema reference updated</strong> — <code>docs/schema/index.md</code> updated to document <code>session_id</code> and <code>indexed_at</code> in the top-level fields table with a note on their optional status.</li>
+<li><strong>Docs: Changelog auto-sync</strong> — <code>docs/changelog.md</code> is now auto-copied from the repository root <code>CHANGELOG.md</code> during CI build, eliminating manual synchronization drift. The docs CI workflow (<code>docs.yml</code>) copies the root changelog before <code>mkdocs build</code> and triggers on <code>CHANGELOG.md</code> changes. A header comment in <code>docs/changelog.md</code> warns against direct edits.</li>
 <li><strong>Docs: Python API reference updated</strong> — Updated <code>docs/user-guide/python-api.md</code> to reflect the new <code>session_id</code> parameter on <code>index_path()</code>, <code>build_file_entry()</code>, and <code>build_directory_entry()</code>, and the new <code>session_id</code> and <code>indexed_at</code> fields on <code>IndexEntry</code>.</li>
 <li><strong>Docs: GUI guide updated</strong> — Added Advanced Configuration section documentation to <code>docs/user-guide/gui.md</code> describing the collapsed settings scaffold, its five configuration groups, and the deferred editing note.</li>
 <li><strong>Tests: <code>sidecar-testbed</code> fixture</strong> — Created <code>tests/fixtures/sidecar-testbed/</code> directory tree with 19 files across 3 subdirectories, exercising all sidecar exclusion, merge, delete, and rename scenarios. Includes content files, sidecar variants (json_metadata, description, screenshot, hash, yaml), prior-run indexer output artifacts, and false-positive candidates (<code>standalone_notes.txt</code>).</li>
 <li><strong>Core: <code>rename_inplace_sidecar()</code> function</strong> — New public function in <code>core/rename.py</code> that renames an in-place <code>_meta2.json</code> sidecar file from <code>{original_name}_meta2.json</code> to <code>{storage_name}_meta2.json</code> after a content file is renamed. Prevents orphaned sidecars and incorrect sidecar naming when rename is active. Exported via <code>shruggie_indexer.__init__</code>.</li>
 <li><strong>Core: Rename phase diagnostic logging</strong> — Added comprehensive <code>DEBUG</code>-level logging to <code>_rename_tree()</code> in both GUI and CLI. Each rename candidate now logs its type and storage_name. Directory entries log item count on descent and skip reason when empty.</li>
-</ul>
-<h3 id="fixed">Fixed</h3>
-<ul>
-<li><strong>GUI/CLI: Root directory in-place sidecar duplicating aggregate output</strong> — <code>_write_inplace_tree()</code> wrote an in-place sidecar for the root target directory inside the target (<code>data/data_directorymeta2.json</code>), duplicating the aggregate output file written alongside the target (<code>data_directorymeta2.json</code>). Both contained the same full entry tree with the same filename, differing only in location. Fixed by skipping the root directory entry during in-place sidecar traversal. Child directory sidecars are unaffected.</li>
-<li><strong>Core: In-place directory sidecar naming</strong> — <code>build_sidecar_path()</code> in <code>core/paths.py</code> constructed directory sidecar paths as <code>&lt;dir&gt;/_directorymeta2.json</code> (bare name with no identifying prefix). Every directory in the tree received an identically named file, making them indistinguishable in file managers and inconsistent with both the aggregate output naming (<code>{dirname}_directorymeta2.json</code>) and file sidecar naming (<code>{filename}_meta2.json</code>). Fixed to produce <code>&lt;dir&gt;/{dirname}_directorymeta2.json</code>. The <code>metadata_exclude_patterns</code> regex continues to match the corrected filenames because the pattern is end-anchored.</li>
-<li><strong>Core: Sidecar files indexed as standalone items</strong> — <code>list_children()</code> in <code>traversal.py</code> was not applying <code>metadata_exclude_patterns</code> during item enumeration. Indexer output artifacts (<code>_meta.json</code>, <code>_meta2.json</code>, <code>_directorymeta2.json</code>) were being treated as regular files — fully indexed, hashed, EXIF-checked, renamed, and given their own sidecar output (creating absurd filenames like <code>file_meta.json_meta2.json</code>). Fixed by adding Layer 1 filtering: files matching <code>metadata_exclude_patterns</code> are now unconditionally excluded during traversal.</li>
-<li><strong>Core: Sidecar companion files indexed as standalone items when MetaMerge active</strong> — When MetaMerge was enabled, files matching <code>metadata_identify</code> sidecar patterns (e.g., <code>.info.json</code>, <code>.description</code>, <code>_screen.jpg</code>, <code>.md5</code>, <code>.yaml</code>) appeared as both standalone index entries AND sidecar metadata sources. Fixed by adding Layer 2 filtering in <code>build_directory_entry()</code>: recognized sidecar files are excluded from the entry-building iteration while remaining in the full <code>siblings</code> list for sidecar discovery. This ensures sidecars are consumed exclusively through the merge system without breaking sidecar discovery's sibling enumeration.</li>
-<li><strong>GUI/CLI: MetaMergeDelete log levels incorrect</strong> — <code>_drain_delete_queue()</code> in both GUI and CLI used <code>logger.debug</code> for successful deletions and <code>logger.warning</code> for failures. Per spec, successful deletions must be logged at <code>INFO</code> (<code>Sidecar deleted: {path}</code>) and failures at <code>ERROR</code> (<code>Sidecar delete FAILED: {path}: {exception}</code>). Fixed in both entry points.</li>
-<li><strong>GUI/CLI: In-place sidecar files named using pre-rename filename</strong> — When both rename and in-place output were active, <code>_meta2.json</code> sidecar files were written using the original filename (e.g., <code>photo.jpg_meta2.json</code>) instead of the post-rename storage name (e.g., <code>yABC123.jpg_meta2.json</code>). This created orphaned sidecars with no on-disk association to the renamed content file. Fixed by wiring <code>rename_inplace_sidecar()</code> into the rename phase of both GUI and CLI, renaming the sidecar file alongside its content file.</li>
-<li><strong>GUI/CLI: Pipeline ordering for rename + in-place output</strong> — In-place sidecar writes were happening independently of the rename phase. Swapped ordering so in-place writes occur before rename, and the rename phase handles both the content file and its sidecar atomically. This preserves partial-result survival for non-rename cases while ensuring correct sidecar naming when rename is active.</li>
-<li><strong>Core: Rename collision logging</strong> — When multiple files share an identical content hash and the rename target already exists on disk, the collision was previously either raised as a <code>RenameError</code> (caught silently by callers) or skipped with no log output. <code>rename_item()</code> now logs a <code>WARNING</code>-level message (<code>Rename SKIPPED (collision): {original_name} → {storage_name} (target already exists)</code>) and returns the original path without raising. Callers in both GUI and CLI now check the return value to skip in-place sidecar rename for collision-skipped files, preserving the original filename as the sidecar base.</li>
-<li><strong>GUI: Session debug logging referenced non-existent attribute</strong> — <code>_save_session()</code> and <code>_restore_session()</code> referenced <code>SessionManager._path</code> which does not exist after the namespace migration. Fixed to use <code>_write_path</code> and <code>_read_path</code> respectively.</li>
-</ul>
-<h3 id="changed_1">Changed</h3>
-<ul>
 <li><strong>Core: <code>build_directory_entry()</code> Layer 2 sidecar filtering</strong> — Moved sidecar-pattern exclusion (Layer 2) from <code>list_children()</code> into <code>build_directory_entry()</code>. The full file list from <code>list_children()</code> is preserved as <code>siblings</code> for sidecar discovery, while a filtered <code>entry_files</code> list (excluding recognized sidecar patterns) is used for child entry construction. This architectural change ensures sidecar discovery can find companion files while preventing them from being indexed as standalone items.</li>
-<li>
-<p><strong>Core: <code>list_children()</code> now applies Layer 1 filtering</strong> — <code>list_children()</code> in <code>traversal.py</code> now applies <code>metadata_exclude_patterns</code> (compiled regexes) against all filenames after the scandir loop, before sorting. This is a new filtering step that was previously absent from the traversal module.</p>
-</li>
-<li>
-<p><strong>Core: <code>shutdown_exiftool()</code> API</strong> — New public function (<code>shruggie_indexer.shutdown_exiftool()</code>) that explicitly terminates the persistent ExifTool batch-mode process. Registered via <code>atexit</code> for automatic cleanup and called explicitly by the GUI's <code>_on_close()</code> handler.</p>
-</li>
+<li><strong>Core: <code>list_children()</code> now applies Layer 1 filtering</strong> — <code>list_children()</code> in <code>traversal.py</code> now applies <code>metadata_exclude_patterns</code> (compiled regexes) against all filenames after the scandir loop, before sorting. This is a new filtering step that was previously absent from the traversal module.</li>
+<li><strong>Core: <code>shutdown_exiftool()</code> API</strong> — New public function (<code>shruggie_indexer.shutdown_exiftool()</code>) that explicitly terminates the persistent ExifTool batch-mode process. Registered via <code>atexit</code> for automatic cleanup and called explicitly by the GUI's <code>_on_close()</code> handler.</li>
 <li><strong>Spec: v0.1.1 synchronization</strong> — Updated technical specification to reflect all v0.1.1 implementation changes. Rewrote §3.3 (config file locations with <code>shruggie-tech</code> ecosystem namespace and legacy fallback). Updated §3.6 (docs tree with <code>getting-started/</code>, <code>user-guide/</code>, top-level <code>changelog.md</code>, <code>assets/</code>). Added §3.7.3 (changelog synchronization mechanism). Updated §5.3 and §5.4 (<code>session_id</code> and <code>indexed_at</code> field documentation). Updated §6.8 (entry construction signatures and session/timestamp steps). Updated §7.6 (config path table). Updated §9.2 (public API signatures and behavioral contract). Updated §10.1 (session file paths with migration behavior). Updated §10.4 (Open Config Folder paths, added Advanced Configuration scaffold subsection). Updated §11.4 (session lifecycle for JSON output). Marked §18.1.14 as IMPLEMENTED. Updated §18.2.2 (<code>session_id</code> struck through as implemented).</li>
 <li><strong>Docs: GUI screenshot infrastructure</strong> — Created <code>docs/assets/images/gui/</code> directory for storing annotated GUI screenshots. Added a "To Do" section to the GUI documentation page (<code>docs/user-guide/gui.md</code>) listing the required screenshots.</li>
 <li><strong>Config: User-customizable ExifTool key exclusions</strong> — Added <code>exiftool.exclude_keys</code> (replace) and <code>exiftool.exclude_keys_append</code> (extend) configuration keys for controlling which metadata keys are filtered from ExifTool output. The compiled default set is unchanged; users can now extend or replace it via TOML configuration files or API overrides without modifying source code. Added <code>exiftool_exclude_keys</code> field to <code>IndexerConfig</code>, <code>DEFAULT_EXIFTOOL_EXCLUDE_KEYS</code> to compiled defaults, and TOML merge logic for both replace and append modes. Includes eight new unit tests covering replace mode, append mode, TOML loading, config loader round-tripping, and end-to-end extraction with custom sets.</li>
@@ -1689,24 +1628,6 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>CLI: <code>--log-file</code> flag</strong> — New option to write log output to a persistent file. <code>--log-file</code> (no argument) writes to the default platform-specific app data directory; <code>--log-file &lt;path&gt;</code> writes to a custom location. Log files are named <code>YYYY-MM-DD_HHMMSS.log</code> and include timestamps, session ID, and logger name.</li>
 <li><strong>TOML: <code>[logging]</code> configuration section</strong> — Added <code>logging.file_enabled</code> and <code>logging.file_path</code> keys to enable persistent log file output via configuration files.</li>
 <li><strong>GUI: "Write log files" settings toggle</strong> — New checkbox in the Settings page Logging section. When enabled, each operation writes a timestamped log file to the app data directory. Toggle state is persisted across sessions.</li>
-</ul>
-<h3 id="fixed_1">Fixed</h3>
-<ul>
-<li><strong>GUI: Rename operation silently failing</strong> — The GUI's <code>_background_job()</code> was missing the Stage 6 post-processing that the CLI performs: after indexing, each completed entry must be passed through <code>rename_item()</code> to execute the rename. The GUI skipped this step entirely, so rename operations appeared to succeed but never moved any files. Fixed by adding a rename loop matching the CLI's Stage 6 implementation.</li>
-<li><strong>GUI: Meta Merge Delete not deleting sidecar files</strong> — Two bugs prevented sidecar deletion in the GUI: (1) no <code>delete_queue</code> list was created or passed to <code>index_path()</code>, so sidecar paths were never collected; (2) no drain call was made to <code>os.unlink()</code> the queued paths after indexing. Fixed by creating the queue, threading it through <code>index_path()</code>, and draining it at the end of the background job.</li>
-<li><strong>GUI: In-place sidecar writes not firing</strong> — When Multi-file (in-place) output mode was selected, the background job never called <code>write_inplace()</code> to write per-item sidecar JSON files alongside originals. Fixed by adding <code>_write_inplace_tree()</code> to the post-processing sequence.</li>
-<li><strong>ExifTool: WARNING regression for unknown file types</strong> — <code>_recover_metadata_from_error()</code> failed to recover valid metadata from <code>ExifToolExecuteError</code> because pyexiftool ≥ 0.5 provides <code>stdout</code> as <code>bytes</code>, not <code>str</code>. The <code>isinstance(stdout, str)</code> guard always failed, causing every non-zero exit to fall through to a WARNING log. Fixed by adding a <code>bytes</code> → <code>str</code> decode step before JSON parsing.</li>
-<li><strong>GUI: Output panel forced tab switch</strong> — <code>OutputPanel.set_json()</code> unconditionally switched the active view to the Output tab on every operation completion, interrupting users reviewing the Log tab. Fixed: if the Output tab is already active, content is refreshed in place; if the Log tab is active, the Output button flashes green for 3 seconds to signal new content without switching.</li>
-<li><strong>GUI: Progress bar layout stability</strong> — Replaced the swappable progress/output panel arrangement with a fixed-height progress region embedded directly within the Operations page. The region uses <code>pack_propagate(False)</code> to maintain a constant 120 px allocation, toggling between idle (START button) and running (progress bar + cancel) sub-frames without reflowing surrounding controls.</li>
-<li><strong>ExifTool: Metadata recovery on non-zero exit</strong> — ExifTool invocations that exit with a non-zero status (e.g. unsupported file types producing partial JSON on stdout) now attempt to recover valid metadata from the output before falling back. Previously, any non-zero exit discarded all data. Added <code>_recover_metadata_from_error()</code> and <code>_log_exiftool_error_field()</code> helpers; "Unknown file type" warnings are now logged at INFO instead of WARNING. Added <code>"Error"</code> to <code>EXIFTOOL_EXCLUDED_KEYS</code>.</li>
-<li><strong>GUI: Log capture pipeline</strong> — Core library log messages and progress event messages now both appear in the output panel's log view with timestamps. Previously, most diagnostic output was silently dropped or consumed by the progress panel without forwarding to the log stream.</li>
-<li><strong>GUI: Log entry timestamps and formatting</strong> — Log entries in the GUI log panel now use the <code>HH:MM:SS  LEVEL  message</code> format with color coding: red for ERROR/CRITICAL, amber for WARNING, muted gray for DEBUG, and default text color for INFO.</li>
-<li><strong>GUI: Log auto-scroll behavior</strong> — The log panel now auto-scrolls to the bottom when new content arrives, pauses auto-scroll when the user scrolls upward, and resumes when scrolled back to the bottom.</li>
-<li><strong>GUI: Log panel Save and Copy buttons</strong> — Save and Copy buttons are now enabled whenever the active view (Output or Log) contains content. Previously they were permanently disabled in the log view. Save in log view opens a save-as dialog for <code>.log</code> files.</li>
-<li>ExifTool key filtering now correctly handles group-prefixed keys (e.g. <code>System:FileName</code>) by matching on the base key name after the last <code>:</code> separator. Previously, the <code>-G3:1</code> flag caused all keys to carry group prefixes, which bypassed the exact-match exclusion check and leaked sensitive filesystem details into output.</li>
-</ul>
-<h3 id="changed_2">Changed</h3>
-<ul>
 <li><strong>GUI: 3-mode output system</strong> — Replaced the dry-run checkbox, in-place checkbox, output mode radio buttons (<code>View only</code> / <code>Save to file</code> / <code>Both</code>), and editable output file entry with a single <code>CTkOptionMenu</code> dropdown offering three modes: <strong>Single file</strong> (one aggregate JSON), <strong>Multi-file</strong> (per-item in-place sidecars), and <strong>View only</strong> (display in output panel, nothing written to disk). The output path is now auto-computed and displayed in a read-only entry. Multi-file mode is only available for directory targets; View only is unavailable for Meta Merge Delete. Constraint enforcement and fallback logic are handled by <code>_reconcile_controls()</code>.</li>
 <li><strong>GUI: ExifTool process cleanup on exit</strong> — The <code>_on_close()</code> handler now explicitly calls <code>shutdown_exiftool()</code> before <code>self.destroy()</code>, ensuring the persistent ExifTool batch-mode process is terminated cleanly on window close. An <code>atexit</code> fallback is also registered for non-GUI exit paths.</li>
 <li><strong>GUI: Output panel tab-aware completion</strong> — Operation completion no longer force-switches the output panel to the Output tab. If the user is viewing the Log tab, the Output button flashes green for 3 seconds to signal new content availability; if already on the Output tab, content refreshes in place.</li>
@@ -1757,6 +1678,30 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Spec SS10: GUI Application</strong> — Comprehensive spec update to reflect the consolidated GUI architecture implemented in Sections 1–5. Rewrote SS10 introduction, SS10.1 session persistence (v2 format), SS10.2 window layout (3-tab sidebar, version label), SS10.3 target selection (consolidated operations page, dual browse, auto-suggest output, context-sensitive controls), SS10.4 configuration panel (removed embedded About, added Interface/tooltips section), SS10.5 action button and job exclusivity (single Operations page model), SS10.6 output display (Clear button, copy feedback, resizable panel, auto-clear, post-job display modes), SS10.7 keyboard shortcuts (Ctrl+1–3 for pages, Ctrl+Shift+C for copy). Added new SS10.8 supplemental components subsection covering destructive indicator, About tab, tooltips, labeled group frames, and debug logging. Updated to reflect rename as feature toggle (not standalone operation), always-visible controls with enable/disable paradigm, green START button, target/type validation, and SHA-512 settings sync.</li>
 <li><strong>Spec SS10.9: GUI Design Standards</strong> — Added new subsection to the technical specification codifying GUI design governance. Adopts Jakob Nielsen's 10 Usability Heuristics by reference as the baseline evaluation framework. Defines seven project-specific UI standards: layout stability, state-driven control visibility, control interdependency transparency, output handling clarity, destructive operation safeguards, progress/feedback area allocation, and log/output panel behavior. Includes a directive requiring all GUI implementation work (including AI agent sessions) to comply with these standards.</li>
 <li><strong>Deprecated <code>shruggie-indexer-plan.md</code></strong> — Moved the completed implementation plan from the repository root to <code>.archive/</code>. Added <code>.archive/</code>, <code>shruggie-indexer-spec.html</code>, and <code>shruggie-indexer-spec.pdf</code> to <code>.gitignore</code>.</li>
+</ul>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li><strong>GUI/CLI: Root directory in-place sidecar duplicating aggregate output</strong> — <code>_write_inplace_tree()</code> wrote an in-place sidecar for the root target directory inside the target (<code>data/data_directorymeta2.json</code>), duplicating the aggregate output file written alongside the target (<code>data_directorymeta2.json</code>). Both contained the same full entry tree with the same filename, differing only in location. Fixed by skipping the root directory entry during in-place sidecar traversal. Child directory sidecars are unaffected.</li>
+<li><strong>Core: In-place directory sidecar naming</strong> — <code>build_sidecar_path()</code> in <code>core/paths.py</code> constructed directory sidecar paths as <code>&lt;dir&gt;/_directorymeta2.json</code> (bare name with no identifying prefix). Every directory in the tree received an identically named file, making them indistinguishable in file managers and inconsistent with both the aggregate output naming (<code>{dirname}_directorymeta2.json</code>) and file sidecar naming (<code>{filename}_meta2.json</code>). Fixed to produce <code>&lt;dir&gt;/{dirname}_directorymeta2.json</code>. The <code>metadata_exclude_patterns</code> regex continues to match the corrected filenames because the pattern is end-anchored.</li>
+<li><strong>Core: Sidecar files indexed as standalone items</strong> — <code>list_children()</code> in <code>traversal.py</code> was not applying <code>metadata_exclude_patterns</code> during item enumeration. Indexer output artifacts (<code>_meta.json</code>, <code>_meta2.json</code>, <code>_directorymeta2.json</code>) were being treated as regular files — fully indexed, hashed, EXIF-checked, renamed, and given their own sidecar output (creating absurd filenames like <code>file_meta.json_meta2.json</code>). Fixed by adding Layer 1 filtering: files matching <code>metadata_exclude_patterns</code> are now unconditionally excluded during traversal.</li>
+<li><strong>Core: Sidecar companion files indexed as standalone items when MetaMerge active</strong> — When MetaMerge was enabled, files matching <code>metadata_identify</code> sidecar patterns (e.g., <code>.info.json</code>, <code>.description</code>, <code>_screen.jpg</code>, <code>.md5</code>, <code>.yaml</code>) appeared as both standalone index entries AND sidecar metadata sources. Fixed by adding Layer 2 filtering in <code>build_directory_entry()</code>: recognized sidecar files are excluded from the entry-building iteration while remaining in the full <code>siblings</code> list for sidecar discovery. This ensures sidecars are consumed exclusively through the merge system without breaking sidecar discovery's sibling enumeration.</li>
+<li><strong>GUI/CLI: MetaMergeDelete log levels incorrect</strong> — <code>_drain_delete_queue()</code> in both GUI and CLI used <code>logger.debug</code> for successful deletions and <code>logger.warning</code> for failures. Per spec, successful deletions must be logged at <code>INFO</code> (<code>Sidecar deleted: {path}</code>) and failures at <code>ERROR</code> (<code>Sidecar delete FAILED: {path}: {exception}</code>). Fixed in both entry points.</li>
+<li><strong>GUI/CLI: In-place sidecar files named using pre-rename filename</strong> — When both rename and in-place output were active, <code>_meta2.json</code> sidecar files were written using the original filename (e.g., <code>photo.jpg_meta2.json</code>) instead of the post-rename storage name (e.g., <code>yABC123.jpg_meta2.json</code>). This created orphaned sidecars with no on-disk association to the renamed content file. Fixed by wiring <code>rename_inplace_sidecar()</code> into the rename phase of both GUI and CLI, renaming the sidecar file alongside its content file.</li>
+<li><strong>GUI/CLI: Pipeline ordering for rename + in-place output</strong> — In-place sidecar writes were happening independently of the rename phase. Swapped ordering so in-place writes occur before rename, and the rename phase handles both the content file and its sidecar atomically. This preserves partial-result survival for non-rename cases while ensuring correct sidecar naming when rename is active.</li>
+<li><strong>Core: Rename collision logging</strong> — When multiple files share an identical content hash and the rename target already exists on disk, the collision was previously either raised as a <code>RenameError</code> (caught silently by callers) or skipped with no log output. <code>rename_item()</code> now logs a <code>WARNING</code>-level message (<code>Rename SKIPPED (collision): {original_name} → {storage_name} (target already exists)</code>) and returns the original path without raising. Callers in both GUI and CLI now check the return value to skip in-place sidecar rename for collision-skipped files, preserving the original filename as the sidecar base.</li>
+<li><strong>GUI: Session debug logging referenced non-existent attribute</strong> — <code>_save_session()</code> and <code>_restore_session()</code> referenced <code>SessionManager._path</code> which does not exist after the namespace migration. Fixed to use <code>_write_path</code> and <code>_read_path</code> respectively.</li>
+<li><strong>GUI: Rename operation silently failing</strong> — The GUI's <code>_background_job()</code> was missing the Stage 6 post-processing that the CLI performs: after indexing, each completed entry must be passed through <code>rename_item()</code> to execute the rename. The GUI skipped this step entirely, so rename operations appeared to succeed but never moved any files. Fixed by adding a rename loop matching the CLI's Stage 6 implementation.</li>
+<li><strong>GUI: Meta Merge Delete not deleting sidecar files</strong> — Two bugs prevented sidecar deletion in the GUI: (1) no <code>delete_queue</code> list was created or passed to <code>index_path()</code>, so sidecar paths were never collected; (2) no drain call was made to <code>os.unlink()</code> the queued paths after indexing. Fixed by creating the queue, threading it through <code>index_path()</code>, and draining it at the end of the background job.</li>
+<li><strong>GUI: In-place sidecar writes not firing</strong> — When Multi-file (in-place) output mode was selected, the background job never called <code>write_inplace()</code> to write per-item sidecar JSON files alongside originals. Fixed by adding <code>_write_inplace_tree()</code> to the post-processing sequence.</li>
+<li><strong>ExifTool: WARNING regression for unknown file types</strong> — <code>_recover_metadata_from_error()</code> failed to recover valid metadata from <code>ExifToolExecuteError</code> because pyexiftool ≥ 0.5 provides <code>stdout</code> as <code>bytes</code>, not <code>str</code>. The <code>isinstance(stdout, str)</code> guard always failed, causing every non-zero exit to fall through to a WARNING log. Fixed by adding a <code>bytes</code> → <code>str</code> decode step before JSON parsing.</li>
+<li><strong>GUI: Output panel forced tab switch</strong> — <code>OutputPanel.set_json()</code> unconditionally switched the active view to the Output tab on every operation completion, interrupting users reviewing the Log tab. Fixed: if the Output tab is already active, content is refreshed in place; if the Log tab is active, the Output button flashes green for 3 seconds to signal new content without switching.</li>
+<li><strong>GUI: Progress bar layout stability</strong> — Replaced the swappable progress/output panel arrangement with a fixed-height progress region embedded directly within the Operations page. The region uses <code>pack_propagate(False)</code> to maintain a constant 120 px allocation, toggling between idle (START button) and running (progress bar + cancel) sub-frames without reflowing surrounding controls.</li>
+<li><strong>ExifTool: Metadata recovery on non-zero exit</strong> — ExifTool invocations that exit with a non-zero status (e.g. unsupported file types producing partial JSON on stdout) now attempt to recover valid metadata from the output before falling back. Previously, any non-zero exit discarded all data. Added <code>_recover_metadata_from_error()</code> and <code>_log_exiftool_error_field()</code> helpers; "Unknown file type" warnings are now logged at INFO instead of WARNING. Added <code>"Error"</code> to <code>EXIFTOOL_EXCLUDED_KEYS</code>.</li>
+<li><strong>GUI: Log capture pipeline</strong> — Core library log messages and progress event messages now both appear in the output panel's log view with timestamps. Previously, most diagnostic output was silently dropped or consumed by the progress panel without forwarding to the log stream.</li>
+<li><strong>GUI: Log entry timestamps and formatting</strong> — Log entries in the GUI log panel now use the <code>HH:MM:SS  LEVEL  message</code> format with color coding: red for ERROR/CRITICAL, amber for WARNING, muted gray for DEBUG, and default text color for INFO.</li>
+<li><strong>GUI: Log auto-scroll behavior</strong> — The log panel now auto-scrolls to the bottom when new content arrives, pauses auto-scroll when the user scrolls upward, and resumes when scrolled back to the bottom.</li>
+<li><strong>GUI: Log panel Save and Copy buttons</strong> — Save and Copy buttons are now enabled whenever the active view (Output or Log) contains content. Previously they were permanently disabled in the log view. Save in log view opens a save-as dialog for <code>.log</code> files.</li>
+<li>ExifTool key filtering now correctly handles group-prefixed keys (e.g. <code>System:FileName</code>) by matching on the base key name after the last <code>:</code> separator. Previously, the <code>-G3:1</code> flag caused all keys to carry group prefixes, which bypassed the exact-match exclusion check and leaked sensitive filesystem details into output.</li>
 </ul>
 <h2 id="010-2026-02-20"><a href="https://github.com/shruggietech/shruggie-indexer/releases/tag/v0.1.0">0.1.0</a> - 2026-02-20</h2>
 <h3 id="added_1">Added</h3>
