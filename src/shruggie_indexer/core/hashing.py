@@ -15,13 +15,13 @@ See spec §6.3 for full behavioral guidance.
 from __future__ import annotations
 
 import hashlib
-import threading
 import unicodedata
 from typing import TYPE_CHECKING
 
 from shruggie_indexer.models.schema import HashSet
 
 if TYPE_CHECKING:
+    import threading
     from pathlib import Path
 
 __all__ = [

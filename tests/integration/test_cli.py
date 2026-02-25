@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from shruggie_indexer._version import __version__
 from shruggie_indexer.cli.main import main
 
 # ---------------------------------------------------------------------------
@@ -65,10 +66,10 @@ class TestCliHelp:
         assert "Usage" in result.output or "usage" in result.output.lower()
 
     def test_version_prints_version(self, runner: CliRunner) -> None:
-        """--version prints 0.1.0 and exits 0."""
+        """--version prints the current version and exits 0."""
         result = runner.invoke(main, ["--version"])
         assert result.exit_code == 0
-        assert "0.1.0" in result.output
+        assert __version__ in result.output
 
 
 class TestCliDefaultInvocation:

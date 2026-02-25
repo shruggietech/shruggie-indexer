@@ -17,7 +17,7 @@ import json
 import logging
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from shruggie_indexer.core._formatting import human_readable_size
@@ -161,7 +161,7 @@ def _assemble_metadata(
 
 def _make_indexed_at() -> TimestampPair:
     """Create a ``TimestampPair`` for the current UTC time."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     iso = now.strftime("%Y-%m-%dT%H:%M:%S.%f") + "+00:00"
     unix_ms = int(now.timestamp() * 1000)
     return TimestampPair(iso=iso, unix=unix_ms)
@@ -668,7 +668,8 @@ def index_path(
     are ignored for single-file targets.
     """
     resolved = resolve_path(target)
-    logger.info("index_path: target=%s, type=%s", resolved, "file" if resolved.is_file() else "directory" if resolved.is_dir() else "unknown")
+    target_type = "file" if resolved.is_file() else "directory" if resolved.is_dir() else "unknown"
+    logger.info("index_path: target=%s, type=%s", resolved, target_type)
 
     # Generate a session ID if the caller did not supply one.
     if session_id is None:

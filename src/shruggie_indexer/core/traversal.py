@@ -33,10 +33,10 @@ from __future__ import annotations
 import fnmatch
 import logging
 import os
-import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    import re
     from collections.abc import Mapping
     from pathlib import Path
 

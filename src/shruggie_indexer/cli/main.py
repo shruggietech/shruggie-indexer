@@ -395,10 +395,9 @@ def main(
                 Path(config_file).read_text(encoding="utf-8"),
             )
             logging_section = toml_data.get("logging", {})
-            if isinstance(logging_section, dict):
-                if logging_section.get("file_enabled", False):
-                    effective_log_file = logging_section.get("file_path", "")
-        except Exception:  # noqa: BLE001
+            if isinstance(logging_section, dict) and logging_section.get("file_enabled", False):
+                effective_log_file = logging_section.get("file_path", "")
+        except Exception:
             pass  # Config errors are handled later by load_config
 
     configure_logging(

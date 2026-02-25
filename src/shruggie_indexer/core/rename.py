@@ -32,8 +32,8 @@ if TYPE_CHECKING:
     from shruggie_indexer.models.schema import IndexEntry
 
 __all__ = [
-    "rename_item",
     "rename_inplace_sidecar",
+    "rename_item",
 ]
 
 logger = logging.getLogger(__name__)

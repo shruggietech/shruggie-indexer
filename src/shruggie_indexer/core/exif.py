@@ -292,7 +292,7 @@ def _recover_metadata_from_error(
     if isinstance(stdout, bytes):
         try:
             stdout = stdout.decode("utf-8", errors="replace")
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
     if not isinstance(stdout, str):
         return None

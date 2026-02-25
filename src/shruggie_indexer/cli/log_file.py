@@ -11,12 +11,8 @@ from __future__ import annotations
 import logging
 import os
 import platform
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
 
 __all__ = [
     "get_default_log_dir",
@@ -60,7 +56,7 @@ def get_default_log_dir() -> Path:
 
 def _generate_log_filename() -> str:
     """Generate a log filename from the current UTC time: ``YYYY-MM-DD_HHMMSS.log``."""
-    now = datetime.now(tz=timezone.utc).astimezone()
+    now = datetime.now(tz=UTC).astimezone()
     return now.strftime("%Y-%m-%d_%H%M%S") + ".log"
 
 

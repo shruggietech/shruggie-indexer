@@ -29,7 +29,7 @@ from dataclasses import replace
 from functools import partial
 from pathlib import Path
 from tkinter import filedialog, messagebox
-from typing import Any
+from typing import Any, ClassVar
 
 import customtkinter as ctk
 
@@ -295,7 +295,7 @@ _JSON_RE = re.compile("|".join(f"(?P<{n}>{p})" for n, p in _JSON_PATTERNS))
 
 def _apply_json_highlighting(textbox: ctk.CTkTextbox, text: str) -> None:
     """Apply tag-based syntax coloring to *textbox* containing *text*."""
-    inner = textbox._textbox  # noqa: SLF001
+    inner = textbox._textbox
     for tag_name, color in _JSON_COLORS.items():
         inner.tag_configure(tag_name, foreground=color)
     for match in _JSON_RE.finditer(text):
@@ -319,8 +319,8 @@ class _Tooltip:
     via the Settings tab toggle.
     """
 
-    _all_tooltips: list[_Tooltip] = []
-    _enabled: bool = True
+    _all_tooltips: ClassVar[list[_Tooltip]] = []
+    _enabled: ClassVar[bool] = True
 
     def __init__(self, widget: Any, text: str) -> None:
         self._widget = widget
@@ -574,7 +574,7 @@ class _LogQueueHandler(logging.Handler):
         try:
             msg = self.format(record)
             self._queue.put_nowait(msg)
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
 
 
@@ -587,7 +587,7 @@ class OutputPanel(ctk.CTkFrame):
     """Shared output panel with JSON/Log toggle, Copy, Save, and Clear."""
 
     # Log level color coding (SS11.5)
-    _LOG_COLORS: dict[str, str] = {
+    _LOG_COLORS: ClassVar[dict[str, str]] = {
         "ERROR": "#ff4444",
         "CRITICAL": "#ff4444",
         "WARNING": "#ffaa00",
@@ -743,7 +743,7 @@ class OutputPanel(ctk.CTkFrame):
         try:
             _, ymax = self.textbox._textbox.yview()
             self._auto_scroll = ymax >= 0.98
-        except Exception:  # noqa: BLE001
+        except Exception:
             self._auto_scroll = True
 
     def clear(self) -> None:
@@ -759,10 +759,7 @@ class OutputPanel(ctk.CTkFrame):
 
     def _update_button_state(self) -> None:
         """Enable Save/Copy when the active view has content."""
-        if self._showing_json:
-            has_content = bool(self._json_text)
-        else:
-            has_content = bool(self._log_lines)
+        has_content = bool(self._json_text) if self._showing_json else bool(self._log_lines)
         state = "normal" if has_content else "disabled"
         self.copy_btn.configure(state=state)
         self.save_btn.configure(state=state)
@@ -1574,10 +1571,7 @@ class OperationsPage(ctk.CTkFrame):
         # Enforce fallback if current mode is no longer valid.
         if mode not in available_modes:
             # Determine default: Multi-file for directories, Single for files.
-            if is_dir and _OUT_MULTI in available_modes:
-                mode = _OUT_MULTI
-            else:
-                mode = _OUT_SINGLE
+            mode = _OUT_MULTI if is_dir and _OUT_MULTI in available_modes else _OUT_SINGLE
             self._output_mode_var.set(mode)
 
         # Update the selector to show only available modes.
@@ -2028,11 +2022,11 @@ class SettingsTab(ctk.CTkFrame):
         folder = session_path.parent
         folder.mkdir(parents=True, exist_ok=True)
         if platform.system() == "Windows":
-            os.startfile(folder)  # noqa: S606
+            os.startfile(folder)
         elif platform.system() == "Darwin":
-            subprocess.Popen(["open", str(folder)])  # noqa: S603, S607
+            subprocess.Popen(["open", str(folder)])
         else:
-            subprocess.Popen(["xdg-open", str(folder)])  # noqa: S603, S607
+            subprocess.Popen(["xdg-open", str(folder)])
 
     # ------------------------------------------------------------------
     # Advanced Configuration — scaffold (read-only)
@@ -2553,7 +2547,8 @@ class ShruggiIndexerApp(ctk.CTk):
 
     def _switch_tab(self, tab_id: str) -> None:
         """Show the specified tab and update sidebar highlighting."""
-        if self._job_running and tab_id not in (_TAB_SETTINGS, _TAB_ABOUT) and tab_id != self._active_tab_id:
+        is_non_nav_tab = tab_id not in (_TAB_SETTINGS, _TAB_ABOUT)
+        if self._job_running and is_non_nav_tab and tab_id != self._active_tab_id:
             return
 
         for tab in self._tabs.values():
@@ -2817,7 +2812,7 @@ class ShruggiIndexerApp(ctk.CTk):
             logger.error("Operation failed: %s", exc)
             result = {"status": "error", "message": str(exc)}
 
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.error(
                 "Unhandled exception in background thread: %s",
                 exc,
