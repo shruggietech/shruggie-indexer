@@ -2211,7 +2211,7 @@ published on the GitHub release page.</p>
 <ul>
 <li><strong>Output mode</strong> (dropdown):<ul>
 <li><strong>Single file</strong> — All results are written to one aggregate JSON file. The file path is shown in a read-only display below the dropdown.</li>
-<li><strong>Multi-file</strong> — Results are written as individual sidecar JSON files alongside each processed file (e.g., <code>photo.jpg_meta2.json</code>). Only available when the target is a directory.</li>
+<li><strong>Multi-file</strong> — Results are written as individual sidecar JSON files alongside each processed file (e.g., <code>photo.jpg_meta2.json</code>) and inside each subdirectory (e.g., <code>images_directorymeta2.json</code>). The root target directory does not receive an in-place sidecar — use <strong>Single file</strong> mode for the aggregate output. Only available when the target is a directory.</li>
 <li><strong>View only</strong> — Results are displayed in the output panel at the bottom of the window. Nothing is written to disk. Not available for Meta Merge Delete operations.</li>
 </ul>
 </li>

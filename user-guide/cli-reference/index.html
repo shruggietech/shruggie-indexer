@@ -2306,7 +2306,7 @@ shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>-o
 <p>Write individual sidecar JSON files alongside each indexed item.</p>
 <div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--inplace
 </code></pre></div>
-<p>For files, the sidecar is named <code>&lt;filename&gt;_meta2.json</code>. For directories, the sidecar is named <code>&lt;dirname&gt;_directorymeta2.json</code> and placed inside the directory.</p>
+<p>For files, the sidecar is named <code>&lt;filename&gt;_meta2.json</code>. For directories, the sidecar is named <code>&lt;dirname&gt;_directorymeta2.json</code> and placed inside the directory. The root target directory does not receive an in-place sidecar — the aggregate output file (<code>--outfile</code>) serves that purpose.</p>
 <table>
 <thead>
 <tr>
