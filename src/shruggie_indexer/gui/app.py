@@ -47,6 +47,16 @@ from shruggie_indexer import (
     shutdown_exiftool,
     write_inplace,
 )
+from shruggie_indexer.config.defaults import (
+    DEFAULT_EXIFTOOL_ARGS,
+    DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS,
+    DEFAULT_EXIFTOOL_EXCLUDE_KEYS,
+    DEFAULT_EXTENSION_VALIDATION_PATTERN,
+    DEFAULT_FILESYSTEM_EXCLUDE_GLOBS,
+    DEFAULT_FILESYSTEM_EXCLUDES,
+    DEFAULT_METADATA_EXCLUDE_PATTERN_STRINGS,
+    DEFAULT_METADATA_IDENTIFY_STRINGS,
+)
 
 __all__ = ["ShruggiIndexerApp", "main"]
 
@@ -1968,6 +1978,9 @@ class SettingsTab(ctk.CTkFrame):
         open_btn.pack(side="left")
         _Tooltip(open_btn, "Open the configuration directory in your file manager.")
 
+        # -- Advanced Configuration (scaffold) ---
+        self._build_advanced_section(scroll)
+
     @staticmethod
     def _section_header(
         parent: ctk.CTkFrame, text: str,
@@ -2021,6 +2034,229 @@ class SettingsTab(ctk.CTkFrame):
         else:
             subprocess.Popen(["xdg-open", str(folder)])  # noqa: S603, S607
 
+    # ------------------------------------------------------------------
+    # Advanced Configuration — scaffold (read-only)
+    #
+    # TODO(v0.2.0): Full editing, data binding, and persistence for
+    # advanced configuration settings is deferred to a post-v0.1.1
+    # release.  This scaffold displays compiled default values in
+    # read-only mode.  When editing is implemented:
+    #   - Regex patterns must be validated in real-time (compile on
+    #     each keystroke; show red border/tooltip on invalid patterns).
+    #   - Each group must have a working "Reset to Defaults" button.
+    #   - Editable list widgets (add/remove/reorder) replace the
+    #     current read-only textboxes.
+    #   - Shared vs. tool-specific settings distinction must be
+    #     activated when cross-tool configuration is implemented.
+    # See spec §7, §10.4, §10.9 and 20260225-003-Updates.md §3.
+    # ------------------------------------------------------------------
+
+    def _build_advanced_section(self, parent: ctk.CTkFrame) -> None:
+        """Build the collapsed Advanced Configuration scaffold."""
+        # Thin separator before the section
+        ctk.CTkFrame(
+            parent, height=1, fg_color="gray50",
+        ).pack(fill="x", pady=(20, 0))
+
+        # Clickable header row with disclosure arrow
+        hdr = ctk.CTkFrame(parent, fg_color="transparent")
+        hdr.pack(fill="x", pady=(8, 0))
+
+        self._adv_arrow = ctk.CTkLabel(
+            hdr, text="\u25b6", width=20, anchor="w",
+            font=ctk.CTkFont(size=12),
+        )
+        self._adv_arrow.pack(side="left")
+
+        adv_title = ctk.CTkLabel(
+            hdr, text="Advanced Configuration",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            anchor="w", cursor="hand2",
+        )
+        adv_title.pack(side="left", fill="x")
+
+        for widget in (self._adv_arrow, adv_title, hdr):
+            widget.bind("<Button-1>", lambda _e: self._toggle_advanced())
+
+        # Content frame — starts hidden (collapsed by default)
+        self._adv_content = ctk.CTkFrame(parent, fg_color="transparent")
+        self._adv_expanded = False
+
+        # Populate the groups once (they stay built, just hidden)
+        self._build_advanced_groups()
+
+    def _toggle_advanced(self) -> None:
+        """Toggle the Advanced section between collapsed and expanded."""
+        if self._adv_expanded:
+            self._adv_content.pack_forget()
+            self._adv_arrow.configure(text="\u25b6")  # ▶
+        else:
+            self._adv_content.pack(fill="x", pady=(4, 0))
+            self._adv_arrow.configure(text="\u25bc")  # ▼
+        self._adv_expanded = not self._adv_expanded
+
+    def _build_advanced_groups(self) -> None:
+        """Populate the advanced config groups with read-only defaults."""
+        content = self._adv_content
+
+        # -- Cross-utility cosmetic separator (§3.4) --
+        # "Shared" placeholder for future cross-tool settings.
+        shared_lbl = ctk.CTkLabel(
+            content,
+            text="Shared Settings  (not yet available)",
+            font=ctk.CTkFont(size=12, slant="italic"),
+            text_color="gray60", anchor="w",
+        )
+        shared_lbl.pack(fill="x", pady=(8, 2))
+        _Tooltip(
+            shared_lbl,
+            "Cross-tool shared configuration (shared.toml) will be "
+            "available in a future release.",
+        )
+
+        ctk.CTkFrame(
+            content, height=1, fg_color="gray40",
+        ).pack(fill="x", pady=(2, 8))
+
+        tool_lbl = ctk.CTkLabel(
+            content,
+            text="Indexer-Specific Settings",
+            font=ctk.CTkFont(size=12, slant="italic"),
+            text_color="gray60", anchor="w",
+        )
+        tool_lbl.pack(fill="x", pady=(0, 4))
+        _Tooltip(
+            tool_lbl,
+            "These settings apply only to shruggie-indexer.  When cross-tool "
+            "configuration is available, shared defaults will appear above.",
+        )
+
+        # Group 1: Filesystem Exclusion
+        self._build_adv_fs_group(content)
+        # Group 2: ExifTool
+        self._build_adv_exiftool_group(content)
+        # Group 3: Extension Validation
+        self._build_adv_ext_validation_group(content)
+        # Group 4: Sidecar Identification
+        self._build_adv_sidecar_group(content)
+        # Group 5: Metadata Exclusion
+        self._build_adv_metadata_exclude_group(content)
+
+    # -- Group builders --------------------------------------------------
+
+    def _build_adv_fs_group(self, parent: ctk.CTkFrame) -> None:
+        self._section_header(parent, "Filesystem Exclusion")
+
+        self._adv_field_label(parent, "Excluded names")
+        names = sorted(DEFAULT_FILESYSTEM_EXCLUDES)
+        self._adv_readonly_textbox(parent, ", ".join(names), height=60)
+
+        self._adv_field_label(parent, "Excluded globs")
+        self._adv_readonly_textbox(
+            parent, "\n".join(DEFAULT_FILESYSTEM_EXCLUDE_GLOBS), height=30,
+        )
+
+        self._adv_disabled_reset(parent)
+
+    def _build_adv_exiftool_group(self, parent: ctk.CTkFrame) -> None:
+        self._section_header(parent, "ExifTool")
+
+        self._adv_field_label(parent, "Exclude extensions")
+        exts = sorted(DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS)
+        self._adv_readonly_textbox(parent, ", ".join(exts), height=30)
+
+        self._adv_field_label(parent, "Exclude keys")
+        keys = sorted(DEFAULT_EXIFTOOL_EXCLUDE_KEYS)
+        self._adv_readonly_textbox(parent, ", ".join(keys), height=80)
+
+        self._adv_field_label(parent, "Base arguments")
+        self._adv_readonly_textbox(
+            parent, " ".join(DEFAULT_EXIFTOOL_ARGS), height=50,
+        )
+
+        self._adv_disabled_reset(parent)
+
+    def _build_adv_ext_validation_group(self, parent: ctk.CTkFrame) -> None:
+        self._section_header(parent, "Extension Validation")
+
+        self._adv_field_label(parent, "Pattern")
+        self._adv_readonly_textbox(
+            parent, DEFAULT_EXTENSION_VALIDATION_PATTERN, height=30,
+        )
+
+        self._adv_disabled_reset(parent)
+
+    def _build_adv_sidecar_group(self, parent: ctk.CTkFrame) -> None:
+        self._section_header(parent, "Sidecar Identification")
+
+        lines: list[str] = []
+        for type_name in sorted(DEFAULT_METADATA_IDENTIFY_STRINGS):
+            patterns = DEFAULT_METADATA_IDENTIFY_STRINGS[type_name]
+            lines.append(f"{type_name}:")
+            for pat in patterns:
+                # Truncate extremely long patterns (e.g. BCP 47
+                # alternation) in the scaffold view for readability.
+                display = pat if len(pat) <= 120 else pat[:117] + "..."
+                lines.append(f"  {display}")
+            lines.append("")
+
+        self._adv_readonly_textbox(
+            parent, "\n".join(lines).rstrip(), height=200,
+        )
+
+        self._adv_disabled_reset(parent)
+
+    def _build_adv_metadata_exclude_group(self, parent: ctk.CTkFrame) -> None:
+        self._section_header(parent, "Metadata Exclusion")
+
+        self._adv_field_label(parent, "Exclude patterns")
+        self._adv_readonly_textbox(
+            parent,
+            "\n".join(DEFAULT_METADATA_EXCLUDE_PATTERN_STRINGS),
+            height=60,
+        )
+
+        self._adv_disabled_reset(parent)
+
+    # -- Shared helpers for the advanced scaffold -----------------------
+
+    @staticmethod
+    def _adv_field_label(parent: ctk.CTkFrame, text: str) -> None:
+        """Small muted label identifying a read-only field."""
+        ctk.CTkLabel(
+            parent, text=f"{text}:", anchor="w", text_color="gray70",
+        ).pack(fill="x")
+
+    @staticmethod
+    def _adv_readonly_textbox(
+        parent: ctk.CTkFrame, content: str, *, height: int = 80,
+    ) -> ctk.CTkTextbox:
+        """Create a read-only monospace textbox displaying *content*."""
+        tb = ctk.CTkTextbox(
+            parent,
+            height=height,
+            font=ctk.CTkFont(family="Consolas", size=12),
+            wrap="word",
+            activate_scrollbars=True,
+        )
+        tb.insert("1.0", content)
+        tb.configure(state="disabled")
+        tb.pack(fill="x", pady=(0, 8))
+        return tb
+
+    @staticmethod
+    def _adv_disabled_reset(parent: ctk.CTkFrame) -> None:
+        """Disabled per-group \"Reset to Defaults\" button (scaffold)."""
+        btn = _CtkButton(
+            parent, text="Reset to Defaults", width=140, state="disabled",
+        )
+        btn.pack(anchor="w", pady=(4, 12))
+        _Tooltip(
+            btn,
+            "Editing is not available in this release. Per-group reset "
+            "will be enabled when advanced editing is implemented.",
+        )
+
     def get_state(self) -> dict[str, Any]:
         return {
             "id_algorithm": self.id_algo_var.get(),
@@ -2030,6 +2266,7 @@ class SettingsTab(ctk.CTkFrame):
             "log_to_file": self.log_to_file_var.get(),
             "tooltips": self.tooltips_var.get(),
             "config_file": self.config_entry.get(),
+            "advanced_expanded": self._adv_expanded,
         }
 
     def restore_state(self, state: dict[str, Any]) -> None:
@@ -2049,6 +2286,8 @@ class SettingsTab(ctk.CTkFrame):
         if "config_file" in state:
             self.config_entry.delete(0, "end")
             self.config_entry.insert(0, state["config_file"])
+        if state.get("advanced_expanded", False):
+            self._toggle_advanced()
 
 
 # ---------------------------------------------------------------------------
@@ -2826,14 +3065,14 @@ class ShruggiIndexerApp(ctk.CTk):
             "output_panel_height": self._output_height,
         }
         self._session.save(data)
-        logger.debug("Session saved to: %s", self._session._path)
+        logger.debug("Session saved to: %s", self._session._write_path)
 
     def _restore_session(self) -> None:
         data = self._session.load()
         if not data:
             logger.debug("No session to restore")
             return
-        logger.debug("Session restored from: %s", self._session._path)
+        logger.debug("Session restored from: %s", self._session._read_path)
 
         # Geometry
         if "geometry" in data:
