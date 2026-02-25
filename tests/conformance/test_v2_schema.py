@@ -322,6 +322,102 @@ class TestSchemaRejections:
             jsonschema.validate(instance=data, schema=v2_schema)
 
 
+class TestSessionIdAndIndexedAt:
+    """Tests for the catalog-readiness fields: session_id and indexed_at."""
+
+    def test_entry_with_session_id_validates(
+        self, v2_schema: dict[str, Any],
+    ) -> None:
+        """An entry with session_id validates against the schema."""
+        entry = _make_file_entry(
+            session_id="550e8400-e29b-41d4-a716-446655440000",
+        )
+        _validate(entry, v2_schema)
+
+    def test_entry_with_indexed_at_validates(
+        self, v2_schema: dict[str, Any],
+    ) -> None:
+        """An entry with indexed_at (TimestampPair) validates."""
+        entry = _make_file_entry(
+            indexed_at=TimestampPair(
+                iso="2026-02-25T12:00:00.000000+00:00",
+                unix=1772049600000,
+            ),
+        )
+        _validate(entry, v2_schema)
+
+    def test_entry_with_both_new_fields_validates(
+        self, v2_schema: dict[str, Any],
+    ) -> None:
+        """An entry with both session_id and indexed_at validates."""
+        entry = _make_file_entry(
+            session_id="550e8400-e29b-41d4-a716-446655440000",
+            indexed_at=TimestampPair(
+                iso="2026-02-25T12:00:00.000000+00:00",
+                unix=1772049600000,
+            ),
+        )
+        _validate(entry, v2_schema)
+
+    def test_entry_without_new_fields_validates(
+        self, v2_schema: dict[str, Any],
+    ) -> None:
+        """An entry without session_id or indexed_at still validates."""
+        entry = _make_file_entry()
+        assert entry.session_id is None
+        assert entry.indexed_at is None
+        _validate(entry, v2_schema)
+
+    def test_invalid_session_id_format_rejected(
+        self, v2_schema: dict[str, Any],
+    ) -> None:
+        """session_id that does not match UUID4 pattern is rejected."""
+        entry = _make_file_entry(
+            session_id="550e8400-e29b-41d4-a716-446655440000",
+        )
+        json_str = serialize_entry(entry)
+        data = json.loads(json_str)
+        data["session_id"] = "not-a-uuid"
+
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=data, schema=v2_schema)
+
+    def test_real_file_entry_has_session_and_indexed_at(
+        self,
+        sample_file: Path,
+        mock_exiftool: None,
+        v2_schema: dict[str, Any],
+    ) -> None:
+        """IndexEntry from index_path() has session_id and indexed_at."""
+        config = _cfg()
+        entry = index_path(sample_file, config)
+
+        assert entry.session_id is not None
+        assert entry.indexed_at is not None
+        assert entry.indexed_at.iso is not None
+        assert entry.indexed_at.unix > 0
+        _validate(entry, v2_schema)
+
+    def test_directory_entry_children_share_session_id(
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
+        v2_schema: dict[str, Any],
+    ) -> None:
+        """All children in a directory share the parent's session_id."""
+        config = _cfg()
+        entry = build_directory_entry(
+            sample_tree, config, recursive=True,
+            session_id="aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee",
+        )
+
+        _validate(entry, v2_schema)
+        assert entry.session_id == "aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee"
+        assert entry.items is not None
+        for child in entry.items:
+            assert child.session_id == "aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee"
+
+
 class TestHashSetPatterns:
     """Tests for hash pattern enforcement."""
 

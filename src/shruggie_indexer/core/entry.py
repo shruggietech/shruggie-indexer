@@ -16,6 +16,8 @@ from __future__ import annotations
 import json
 import logging
 import time
+import uuid
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from shruggie_indexer.core._formatting import human_readable_size
@@ -49,6 +51,7 @@ from shruggie_indexer.models.schema import (
     NameObject,
     ParentObject,
     SizeObject,
+    TimestampPair,
 )
 
 if TYPE_CHECKING:
@@ -156,6 +159,14 @@ def _assemble_metadata(
     return entries
 
 
+def _make_indexed_at() -> TimestampPair:
+    """Create a ``TimestampPair`` for the current UTC time."""
+    now = datetime.now(timezone.utc)
+    iso = now.strftime("%Y-%m-%dT%H:%M:%S.%f") + "+00:00"
+    unix_ms = int(now.timestamp() * 1000)
+    return TimestampPair(iso=iso, unix=unix_ms)
+
+
 def _enumerate_siblings(path: Path) -> list[Path]:
     """List sibling files in the path's parent directory.
 
@@ -184,6 +195,7 @@ def build_file_entry(
     *,
     cancel_event: threading.Event | None = None,
     _index_root: Path | None = None,
+    session_id: str | None = None,
 ) -> IndexEntry:
     """Build a complete ``IndexEntry`` for a single file.
 
@@ -324,6 +336,8 @@ def build_file_entry(
         items=None,
         metadata=metadata,
         mime_type=mime_type,
+        session_id=session_id,
+        indexed_at=_make_indexed_at(),
     )
 
 
@@ -336,6 +350,7 @@ def build_directory_entry(
     cancel_event: threading.Event | None = None,
     *,
     _index_root: Path | None = None,
+    session_id: str | None = None,
 ) -> IndexEntry:
     """Build a complete ``IndexEntry`` for a directory.
 
@@ -467,6 +482,7 @@ def build_directory_entry(
                 delete_queue=delete_queue,
                 cancel_event=cancel_event,
                 _index_root=index_root,
+                session_id=session_id,
             )
             child_entries.append(child_entry)
             _item_elapsed = time.monotonic() - _item_start
@@ -509,10 +525,12 @@ def build_directory_entry(
                     progress_callback=progress_callback,
                     cancel_event=cancel_event,
                     _index_root=index_root,
+                    session_id=session_id,
                 )
             else:
                 child_entry = _build_shallow_directory_entry(
                     child_path, config, index_root,
+                    session_id=session_id,
                 )
             child_entries.append(child_entry)
         except IndexerCancellationError:
@@ -564,6 +582,8 @@ def build_directory_entry(
         ),
         items=child_entries,
         metadata=None,
+        session_id=session_id,
+        indexed_at=_make_indexed_at(),
     )
 
 
@@ -571,6 +591,8 @@ def _build_shallow_directory_entry(
     path: Path,
     config: IndexerConfig,
     index_root: Path,
+    *,
+    session_id: str | None = None,
 ) -> IndexEntry:
     """Build a directory entry without enumerating children.
 
@@ -622,6 +644,8 @@ def _build_shallow_directory_entry(
         ),
         items=None,
         metadata=None,
+        session_id=session_id,
+        indexed_at=_make_indexed_at(),
     )
 
 
@@ -632,6 +656,7 @@ def index_path(
     delete_queue: list[Path] | None = None,
     progress_callback: Callable[[ProgressEvent], None] | None = None,
     cancel_event: threading.Event | None = None,
+    session_id: str | None = None,
 ) -> IndexEntry:
     """Top-level entry point: classify target and dispatch.
 
@@ -645,10 +670,15 @@ def index_path(
     resolved = resolve_path(target)
     logger.info("index_path: target=%s, type=%s", resolved, "file" if resolved.is_file() else "directory" if resolved.is_dir() else "unknown")
 
+    # Generate a session ID if the caller did not supply one.
+    if session_id is None:
+        session_id = str(uuid.uuid4())
+
     if resolved.is_file():
         return build_file_entry(
             resolved, config, delete_queue=delete_queue,
             cancel_event=cancel_event,
+            session_id=session_id,
         )
 
     if resolved.is_dir():
@@ -659,6 +689,7 @@ def index_path(
             delete_queue=delete_queue,
             progress_callback=progress_callback,
             cancel_event=cancel_event,
+            session_id=session_id,
         )
 
     raise IndexerTargetError(

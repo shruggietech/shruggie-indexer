@@ -300,6 +300,12 @@ class IndexEntry:
 
     mime_type: str | None = None
 
+    session_id: str | None = None
+    """UUID4 identifying the indexing session that produced this entry."""
+
+    indexed_at: TimestampPair | None = None
+    """Timestamp when this entry was constructed by the indexer."""
+
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-ready dict.
 
@@ -326,4 +332,8 @@ class IndexEntry:
                 [m.to_dict() for m in self.metadata] if self.metadata is not None else None
             ),
         }
+        if self.session_id is not None:
+            d["session_id"] = self.session_id
+        if self.indexed_at is not None:
+            d["indexed_at"] = self.indexed_at.to_dict()
         return d

@@ -23,6 +23,7 @@ import sys
 import threading
 import time
 import tkinter as tk
+import uuid
 import webbrowser
 from dataclasses import replace
 from functools import partial
@@ -2469,12 +2470,14 @@ class ShruggiIndexerApp(ctk.CTk):
 
             # ── Execute indexing ────────────────────────────────────────
             logger.info("Indexing started for: %s", target)
+            session_id = str(uuid.uuid4())
             entry = index_path(
                 target,
                 config,
                 delete_queue=delete_queue,
                 progress_callback=self._on_progress,
                 cancel_event=self._cancel_event,
+                session_id=session_id,
             )
 
             # ── In-place sidecar output ─────────────────────────────────

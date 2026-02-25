@@ -12,6 +12,7 @@ import logging
 import signal
 import sys
 import threading
+import uuid
 from enum import IntEnum
 from pathlib import Path
 from typing import Any
@@ -493,6 +494,9 @@ def main(
         # ── Progress callback ───────────────────────────────────────────
         progress_cb = _make_progress_callback(verbose)
 
+        # ── Session ID ──────────────────────────────────────────────────
+        session_id = str(uuid.uuid4())
+
         # ── Execute indexing ────────────────────────────────────────────
         logger.info("Indexing target: %s", target_path)
         entry = index_path(
@@ -501,6 +505,7 @@ def main(
             delete_queue=delete_queue,
             progress_callback=progress_cb,
             cancel_event=cancel_event,
+            session_id=session_id,
         )
 
         # ── In-place output ─────────────────────────────────────────────

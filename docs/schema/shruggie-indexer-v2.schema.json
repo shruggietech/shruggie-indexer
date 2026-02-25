@@ -337,6 +337,17 @@
           "items": { "$ref": "#/definitions/MetadataEntry" }
         }
       ]
+    },
+
+    "session_id": {
+      "description": "A UUID4 string that identifies the indexing invocation (session) that produced this entry. All entries generated within a single CLI, GUI, or API invocation share the same session_id. Useful for run correlation, staleness detection, provenance linking, and batch integrity verification by downstream consumers such as shruggie-catalog.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+
+    "indexed_at": {
+      "description": "The moment this IndexEntry was constructed by the indexer. Records the observation time as distinct from the file's own filesystem timestamps. Uses the same TimestampPair format (iso + unix) as the timestamps fields.",
+      "$ref": "#/definitions/TimestampPair"
     }
   },
 

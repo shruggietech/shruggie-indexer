@@ -39,6 +39,8 @@ An `IndexEntry` is the root JSON object describing a single indexed file or dire
 | `attributes` | `object` | Yes | Symlink status and deterministic storage name. |
 | `items` | `array[IndexEntry]` or `null` | No | Child entries (directory) or `null` (file). |
 | `metadata` | `array[MetadataEntry]` or `null` | No | Metadata records (file) or `null` (directory). |
+| `session_id` | `string` (UUID4) | No | Identifies the indexing invocation that produced this entry. All entries within a single CLI/GUI/API invocation share the same value. |
+| `indexed_at` | `TimestampPair` | No | The moment this IndexEntry was constructed. Distinct from file timestamps — records the indexer's observation time. |
 
 `additionalProperties` is `false`. The `required` set:
 
@@ -46,6 +48,8 @@ An `IndexEntry` is the root JSON object describing a single indexed file or dire
 ["schema_version", "id", "id_algorithm", "type", "name",
  "extension", "size", "hashes", "file_system", "timestamps", "attributes"]
 ```
+
+`session_id` and `indexed_at` are declared properties but are **not** in the `required` array. They are present when the indexer is invoked through the standard CLI, GUI, or API entry points. Entries constructed directly (e.g., in tests) may omit them.
 
 ### Field behavior by type
 

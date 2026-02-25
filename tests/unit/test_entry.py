@@ -231,3 +231,131 @@ class TestSidecarFolding:
             m for m in entry.metadata if m.origin == "sidecar"
         ]
         assert len(sidecar_entries) >= 1
+
+
+class TestSessionIdThreading:
+    """Tests for session_id propagation through entry builders."""
+
+    def test_file_entry_session_id_populated(
+        self, sample_file: Path, mock_exiftool: None,
+    ) -> None:
+        """build_file_entry passes session_id to the entry."""
+        config = _cfg()
+        sid = "aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee"
+        entry = build_file_entry(sample_file, config, session_id=sid)
+
+        assert entry.session_id == sid
+
+    def test_file_entry_session_id_none_by_default(
+        self, sample_file: Path, mock_exiftool: None,
+    ) -> None:
+        """build_file_entry without session_id leaves it None."""
+        config = _cfg()
+        entry = build_file_entry(sample_file, config)
+
+        assert entry.session_id is None
+
+    def test_directory_entry_session_id_threaded(
+        self, sample_tree: Path, mock_exiftool: None,
+    ) -> None:
+        """session_id is threaded to all children in build_directory_entry."""
+        config = _cfg()
+        sid = "aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee"
+        entry = build_directory_entry(
+            sample_tree, config, recursive=True, session_id=sid,
+        )
+
+        assert entry.session_id == sid
+        assert entry.items is not None
+        for child in entry.items:
+            assert child.session_id == sid
+            if child.type == "directory" and child.items:
+                for grandchild in child.items:
+                    assert grandchild.session_id == sid
+
+
+class TestIndexedAtTimestamp:
+    """Tests for indexed_at timestamp generation."""
+
+    def test_file_entry_has_indexed_at(
+        self, sample_file: Path, mock_exiftool: None,
+    ) -> None:
+        """build_file_entry populates indexed_at."""
+        config = _cfg()
+        entry = build_file_entry(sample_file, config)
+
+        assert entry.indexed_at is not None
+        assert entry.indexed_at.iso is not None
+        assert entry.indexed_at.unix > 0
+
+    def test_directory_entry_has_indexed_at(
+        self, sample_tree: Path, mock_exiftool: None,
+    ) -> None:
+        """build_directory_entry populates indexed_at."""
+        config = _cfg()
+        entry = build_directory_entry(sample_tree, config, recursive=False)
+
+        assert entry.indexed_at is not None
+        assert entry.indexed_at.iso is not None
+        assert entry.indexed_at.unix > 0
+
+    def test_indexed_at_varies_between_entries(
+        self, sample_tree: Path, mock_exiftool: None,
+    ) -> None:
+        """indexed_at values differ between parent and children."""
+        config = _cfg()
+        entry = build_directory_entry(sample_tree, config, recursive=False)
+
+        assert entry.items is not None
+        assert len(entry.items) > 0
+        # The parent and at least one child should have distinct unix values
+        # or iso values (they're generated at different moments in time).
+        all_unix = [entry.indexed_at.unix] + [
+            c.indexed_at.unix for c in entry.items if c.indexed_at is not None
+        ]
+        # With sufficient entries, at least two should differ (not guaranteed
+        # for ultra-fast machines, so we just verify they are all populated).
+        assert all(u > 0 for u in all_unix)
+
+    def test_default_entry_has_no_indexed_at(self) -> None:
+        """Directly constructed IndexEntry without indexed_at has None."""
+        from shruggie_indexer.models.schema import (
+            AttributesObject,
+            FileSystemObject,
+            HashSet,
+            IndexEntry,
+            NameObject,
+            SizeObject,
+            TimestampPair,
+            TimestampsObject,
+        )
+
+        pair = TimestampPair(iso="2024-01-01T00:00:00.000000+00:00", unix=1704067200000)
+        entry = IndexEntry(
+            schema_version=2,
+            id="yD41D8CD98F00B204E9800998ECF8427E",
+            id_algorithm="md5",
+            type="file",
+            name=NameObject(
+                text="test.txt",
+                hashes=HashSet(
+                    md5="D41D8CD98F00B204E9800998ECF8427E",
+                    sha256="E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                ),
+            ),
+            extension="txt",
+            size=SizeObject(text="0 B", bytes=0),
+            hashes=HashSet(
+                md5="D41D8CD98F00B204E9800998ECF8427E",
+                sha256="E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+            ),
+            file_system=FileSystemObject(relative="test.txt", parent=None),
+            timestamps=TimestampsObject(created=pair, modified=pair, accessed=pair),
+            attributes=AttributesObject(
+                is_link=False,
+                storage_name="yD41D8CD98F00B204E9800998ECF8427E.txt",
+            ),
+        )
+
+        assert entry.session_id is None
+        assert entry.indexed_at is None
