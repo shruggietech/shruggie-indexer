@@ -187,7 +187,7 @@ jobs:
 
           version = os.environ["VERSION"]
           changelog_path = pathlib.Path("CHANGELOG.md")
-          output_path = pathlib.Path("release-artifacts/RELEASE_BODY.md")
+          output_path = pathlib.Path("RELEASE_BODY.md")
 
           changelog_section = ""
           if changelog_path.exists():
@@ -238,4 +238,4 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, 'rc') }}
           files: release-artifacts/*
-          body_path: release-artifacts/RELEASE_BODY.md
+          body_path: RELEASE_BODY.md
