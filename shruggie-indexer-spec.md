@@ -3266,12 +3266,14 @@ All output files are written as UTF-8 without a BOM, using `Path.write_text(json
 
 The `write_inplace()` function writes directory sidecars using the `{dirname}_directorymeta2.json` convention inside the directory itself (via `paths.build_sidecar_path()`). For example, the directory `photos/vacation/` receives a sidecar at `photos/vacation/vacation_directorymeta2.json`.
 
-The aggregate output file written alongside the target directory (via `--outfile`) also uses the `{dirname}_directorymeta2.json` naming convention. Both the aggregate and in-place directory sidecars use the same filename — they differ only in location:
+> **Updated 2026-02-25:** The root directory entry (the traversal target itself) is excluded from in-place sidecar output. The root directory's in-place sidecar would be written inside the target directory with the same filename as the aggregate output written alongside it, producing a redundant duplicate. The `_write_inplace_tree()` helper in both GUI and CLI skips the root entry; child directories are unaffected.
 
-| Output type | Location | Example |
-|-------------|----------|--------|
-| Aggregate (`--outfile`) | Alongside the target directory | `photos/vacation_directorymeta2.json` |
-| In-place (`--inplace`) | Inside each directory | `photos/vacation/vacation_directorymeta2.json` |
+The aggregate output file written alongside the target directory (via `--outfile`) uses the `{dirname}_directorymeta2.json` naming convention. In-place directory sidecars for child directories use the same naming — they differ only in scope and location:
+
+| Output type | Location | Example | Scope |
+|-------------|----------|---------|-------|
+| Aggregate (`--outfile`) | Alongside the target directory | `photos/vacation_directorymeta2.json` | Full entry tree |
+| In-place (`--inplace`) | Inside each child directory | `photos/vacation/images/images_directorymeta2.json` | Subtree for that directory |
 
 #### In-place sidecar rename coordination
 

@@ -563,20 +563,26 @@ def _write_inplace_tree(
     entry: Any,
     root_path: Path,
     write_fn: Any,
+    *,
+    _is_root: bool = True,
 ) -> None:
     """Recursively write in-place sidecar files for an entry tree.
 
     Walks the ``items`` tree and writes a sidecar file for each entry.
+    The root directory entry is skipped because its in-place sidecar
+    (written inside the target) duplicates the aggregate output file
+    (written alongside the target).  Child sidecars are unaffected.
     """
     if entry.type == "file":
         item_path = root_path.parent / entry.file_system.relative
         write_fn(entry, item_path, "file")
     elif entry.type == "directory":
-        dir_path = root_path.parent / entry.file_system.relative
-        write_fn(entry, dir_path, "directory")
+        if not _is_root:
+            dir_path = root_path.parent / entry.file_system.relative
+            write_fn(entry, dir_path, "directory")
         if entry.items:
             for child in entry.items:
-                _write_inplace_tree(child, root_path, write_fn)
+                _write_inplace_tree(child, root_path, write_fn, _is_root=False)
 
 
 def _rename_tree(

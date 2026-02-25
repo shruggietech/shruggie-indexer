@@ -113,7 +113,7 @@ The Output section uses a dropdown menu to select where results are written:
 
 - **Output mode** (dropdown):
     - **Single file** — All results are written to one aggregate JSON file. The file path is shown in a read-only display below the dropdown.
-    - **Multi-file** — Results are written as individual sidecar JSON files alongside each processed file (e.g., `photo.jpg_meta2.json`). Only available when the target is a directory.
+    - **Multi-file** — Results are written as individual sidecar JSON files alongside each processed file (e.g., `photo.jpg_meta2.json`) and inside each subdirectory (e.g., `images_directorymeta2.json`). The root target directory does not receive an in-place sidecar — use **Single file** mode for the aggregate output. Only available when the target is a directory.
     - **View only** — Results are displayed in the output panel at the bottom of the window. Nothing is written to disk. Not available for Meta Merge Delete operations.
 - **Output path** — A read-only field showing the auto-computed output path based on your target. For "View only" mode, this displays "(displayed in viewer)". For "Multi-file" mode, a note explains that sidecar files are written alongside originals.
 

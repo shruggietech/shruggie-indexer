@@ -80,7 +80,7 @@ Write individual sidecar JSON files alongside each indexed item.
 shruggie-indexer path/to/directory/ --inplace
 ```
 
-For files, the sidecar is named `<filename>_meta2.json`. For directories, the sidecar is named `<dirname>_directorymeta2.json` and placed inside the directory.
+For files, the sidecar is named `<filename>_meta2.json`. For directories, the sidecar is named `<dirname>_directorymeta2.json` and placed inside the directory. The root target directory does not receive an in-place sidecar — the aggregate output file (`--outfile`) serves that purpose.
 
 | Item | Sidecar path |
 |------|-------------|

@@ -2547,17 +2547,27 @@ class ShruggiIndexerApp(ctk.CTk):
         return deleted
 
     @staticmethod
-    def _write_inplace_tree(entry: Any, root_path: Path) -> None:
-        """Recursively write in-place sidecar files for an entry tree."""
+    def _write_inplace_tree(
+        entry: Any, root_path: Path, *, _is_root: bool = True,
+    ) -> None:
+        """Recursively write in-place sidecar files for an entry tree.
+
+        The root directory entry is skipped because its in-place sidecar
+        (written inside the target) duplicates the aggregate output file
+        (written alongside the target).  Child sidecars are unaffected.
+        """
         if entry.type == "file":
             item_path = root_path.parent / entry.file_system.relative
             write_inplace(entry, item_path, "file")
         elif entry.type == "directory":
-            dir_path = root_path.parent / entry.file_system.relative
-            write_inplace(entry, dir_path, "directory")
+            if not _is_root:
+                dir_path = root_path.parent / entry.file_system.relative
+                write_inplace(entry, dir_path, "directory")
             if entry.items:
                 for child in entry.items:
-                    ShruggiIndexerApp._write_inplace_tree(child, root_path)
+                    ShruggiIndexerApp._write_inplace_tree(
+                        child, root_path, _is_root=False,
+                    )
 
     @staticmethod
     def _rename_tree(
