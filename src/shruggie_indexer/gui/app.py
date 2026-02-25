@@ -160,38 +160,95 @@ class SessionManager:
     Session stores: window geometry, active tab, operation state, settings,
     and output panel height.  Gracefully falls back to defaults when the
     file is missing or corrupt.
+
+    Since v0.1.1, session files are stored under the shared ShruggieTech
+    ecosystem namespace (``<base>/shruggie-tech/shruggie-indexer/``).  On
+    read, the manager checks the new path first then falls back to the
+    legacy v0.1.0 path (``<base>/shruggie-indexer/``).  Writes always go to
+    the new path (auto-migrate on write).
     """
 
+    _SESSION_FILENAME = "gui-session.json"
+    _ECOSYSTEM_DIR = "shruggie-tech"
+    _TOOL_DIR = "shruggie-indexer"
+    _LEGACY_DIR = "shruggie-indexer"  # v0.1.0 path (without ecosystem parent)
+
     def __init__(self) -> None:
-        self._path = self._resolve_path()
+        self._write_path = self._resolve_path()
+        self._read_path = self._resolve_read_path()
         self._data: dict[str, Any] = {}
 
     @staticmethod
-    def _resolve_path() -> Path:
+    def _config_base() -> Path:
+        """Return the platform-standard base directory."""
         system = platform.system()
         if system == "Windows":
-            base = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
-        elif system == "Darwin":
-            base = Path.home() / "Library" / "Application Support"
-        else:
-            base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
-        return base / "shruggie-indexer" / "gui-session.json"
+            return Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+        if system == "Darwin":
+            return Path.home() / "Library" / "Application Support"
+        return Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+
+    @classmethod
+    def _resolve_path(cls) -> Path:
+        """Return the canonical (new-namespace) session file path.
+
+        This is the path used for writes and for "Open Config Folder".
+        """
+        return (
+            cls._config_base()
+            / cls._ECOSYSTEM_DIR
+            / cls._TOOL_DIR
+            / cls._SESSION_FILENAME
+        )
+
+    @classmethod
+    def _resolve_read_path(cls) -> Path:
+        """Return the path to read session data from.
+
+        Checks the new namespaced location first.  If it does not exist,
+        falls back to the legacy v0.1.0 location.  If neither exists,
+        returns the new path (load will produce an empty dict).
+        """
+        base = cls._config_base()
+        new_path = base / cls._ECOSYSTEM_DIR / cls._TOOL_DIR / cls._SESSION_FILENAME
+        if new_path.exists():
+            return new_path
+
+        legacy_path = base / cls._LEGACY_DIR / cls._SESSION_FILENAME
+        if legacy_path.exists():
+            logger.info(
+                "Session file found at legacy path %s — "
+                "it will be migrated to %s on next save.",
+                legacy_path,
+                new_path,
+            )
+            return legacy_path
+
+        return new_path
 
     def load(self) -> dict[str, Any]:
         """Load session data.  Returns empty dict on any failure."""
         try:
-            if self._path.exists():
-                self._data = json.loads(self._path.read_text(encoding="utf-8"))
+            if self._read_path.exists():
+                self._data = json.loads(
+                    self._read_path.read_text(encoding="utf-8"),
+                )
         except (json.JSONDecodeError, OSError, ValueError):
             self._data = {}
         return self._data
 
     def save(self, data: dict[str, Any]) -> None:
-        """Persist session data.  Silently ignores write failures."""
+        """Persist session data to the new namespace path.
+
+        Always writes to the new ecosystem-namespaced location, even if
+        the data was originally loaded from the legacy path.  The legacy
+        file is intentionally preserved (the user may be running an older
+        version concurrently).
+        """
         self._data = data
         try:
-            self._path.parent.mkdir(parents=True, exist_ok=True)
-            self._path.write_text(
+            self._write_path.parent.mkdir(parents=True, exist_ok=True)
+            self._write_path.write_text(
                 json.dumps(data, indent=2, ensure_ascii=False) + "\n",
                 encoding="utf-8",
             )

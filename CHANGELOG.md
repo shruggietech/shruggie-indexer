@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Infra: Shared configuration namespace** — Configuration and session storage paths now use a shared ShruggieTech ecosystem directory (`<base>/shruggie-tech/shruggie-indexer/`) instead of the tool-specific `<base>/shruggie-indexer/` path used in v0.1.0. Both the TOML config loader and GUI `SessionManager` check the new path first, fall back to the legacy path with an INFO-level migration recommendation, and always write to the new path. Old files are never deleted. Prepares the directory structure for future ecosystem tools (`shruggie-catalog`, `shruggie-vault`, `shruggie-sync`).
 - **Core: `index_path()` accepts optional `session_id` keyword argument** — The public API function `index_path()` now accepts an optional `session_id: str | None` parameter. When omitted, a UUID4 is auto-generated per call. CLI and GUI entry points generate and pass their own session IDs.
 - **Core: `build_file_entry()` and `build_directory_entry()` accept `session_id`** — Both builder functions now accept a `session_id` keyword argument and thread it into all recursive child entries. Both functions generate an `indexed_at` timestamp at construction time.
 - **Schema: v2 JSON Schema updated** — Added `session_id` (with UUID4 pattern validation) and `indexed_at` (TimestampPair `$ref`) property definitions to the root IndexEntry schema. Neither field is added to the `required` array. `additionalProperties` remains `false`.

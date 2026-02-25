@@ -45,7 +45,9 @@ logger = logging.getLogger(__name__)
 
 # Config file names
 _USER_CONFIG_FILENAME = "config.toml"
-_USER_CONFIG_DIR_NAME = "shruggie-indexer"
+_ECOSYSTEM_DIR_NAME = "shruggie-tech"
+_TOOL_DIR_NAME = "shruggie-indexer"
+_LEGACY_DIR_NAME = "shruggie-indexer"  # v0.1.0 path (without ecosystem parent)
 _PROJECT_CONFIG_FILENAME = ".shruggie-indexer.toml"
 
 
@@ -54,25 +56,39 @@ _PROJECT_CONFIG_FILENAME = ".shruggie-indexer.toml"
 # ---------------------------------------------------------------------------
 
 
+def _resolve_config_base() -> Path:
+    """Return the platform-standard base directory for user configuration."""
+    if sys.platform == "win32":
+        return Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    return Path(xdg) if xdg else Path.home() / ".config"
+
+
 def _find_user_config() -> Path | None:
     """Resolve the platform-standard user configuration file path.
 
-    Returns ``None`` if the file does not exist.
+    Searches the new ecosystem namespace first
+    (``<base>/shruggie-tech/shruggie-indexer/config.toml``), then falls back
+    to the legacy v0.1.0 path (``<base>/shruggie-indexer/config.toml``).
+    Returns ``None`` if neither file exists.
     """
-    if sys.platform == "win32":
-        # %APPDATA%\shruggie-indexer\config.toml
-        appdata = os.environ.get("APPDATA")
-        if appdata:
-            p = Path(appdata) / _USER_CONFIG_DIR_NAME / _USER_CONFIG_FILENAME
-            if p.is_file():
-                return p
-    else:
-        # $XDG_CONFIG_HOME/shruggie-indexer/config.toml  (fallback: ~/.config)
-        xdg = os.environ.get("XDG_CONFIG_HOME")
-        base = Path(xdg) if xdg else Path.home() / ".config"
-        p = base / _USER_CONFIG_DIR_NAME / _USER_CONFIG_FILENAME
-        if p.is_file():
-            return p
+    base = _resolve_config_base()
+
+    # New namespaced path  (v0.1.1+)
+    new_path = base / _ECOSYSTEM_DIR_NAME / _TOOL_DIR_NAME / _USER_CONFIG_FILENAME
+    if new_path.is_file():
+        return new_path
+
+    # Legacy path  (v0.1.0)
+    legacy_path = base / _LEGACY_DIR_NAME / _USER_CONFIG_FILENAME
+    if legacy_path.is_file():
+        logger.info(
+            "Configuration file found at legacy path %s — "
+            "consider moving it to %s",
+            legacy_path,
+            new_path,
+        )
+        return legacy_path
 
     return None
 

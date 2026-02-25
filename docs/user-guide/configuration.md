@@ -17,10 +17,19 @@ Configuration values are resolved in the following order. Higher-priority layers
 
 | Platform | User config path |
 |----------|-----------------|
-| Linux / macOS | `~/.config/shruggie-indexer/config.toml` |
-| Windows | `%APPDATA%\shruggie-indexer\config.toml` |
+| Linux | `~/.config/shruggie-tech/shruggie-indexer/config.toml` |
+| macOS | `~/Library/Application Support/shruggie-tech/shruggie-indexer/config.toml` |
+| Windows | `%APPDATA%\shruggie-tech\shruggie-indexer\config.toml` |
 
 Project-local config files (`.shruggie-indexer.toml`) are searched starting from the target directory and walking up to the filesystem root.
+
+!!! info "Migration from v0.1.0"
+    Prior to v0.1.1, configuration files were stored directly under
+    `<base>/shruggie-indexer/` (without the `shruggie-tech/` parent directory).
+    The tool checks the new path first and falls back to the legacy path
+    transparently. An INFO-level log message is emitted when the legacy path
+    is used, recommending relocation to the new path. No files are deleted
+    during migration.
 
 To specify a config file explicitly from the command line:
 
