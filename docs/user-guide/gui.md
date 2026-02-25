@@ -201,6 +201,25 @@ The Settings tab lets you customize default behavior. Changes take effect immedi
 - **Reset to Defaults** — Resets all settings to their factory values (asks for confirmation first).
 - **Open Config Folder** — Opens the folder where the application stores its session data.
 
+### Advanced Configuration
+
+Below the standard settings, a collapsed **Advanced Configuration** section provides visibility into the full set of TOML-configurable behaviors. Expanding the section reveals five labeled groups:
+
+| Group | Contents |
+|-------|----------|
+| **Filesystem Exclusion** | Default `filesystem_excludes.names` and `filesystem_excludes.globs` values. |
+| **ExifTool** | Default `exiftool.exclude_extensions`, `exiftool.exclude_keys`, and `exiftool.base_args` values. |
+| **Extension Validation** | Default `extension_validation_pattern` regex. |
+| **Sidecar Identification** | Default `metadata_identify` per-type regex lists. |
+| **Metadata Exclusion** | Default `metadata_exclude.patterns` regex list. |
+
+Each group displays its compiled default values in read-only monospace textboxes. The section includes a cosmetic "Shared Settings" / "Indexer-Specific Settings" separator preparing for future cross-tool configuration via `shared.toml`.
+
+!!! note "Editing Deferred"
+    The Advanced Configuration section is read-only in this release. Full editing,
+    data binding, and persistence will be added in a future version. Each group
+    includes a disabled "Reset to Defaults" button placeholder.
+
 ---
 
 ## About Tab

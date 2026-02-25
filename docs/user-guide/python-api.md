@@ -52,6 +52,7 @@ def index_path(
     *,
     progress_callback: Callable[[ProgressEvent], None] | None = None,
     cancel_event: threading.Event | None = None,
+    session_id: str | None = None,
 ) -> IndexEntry: ...
 ```
 
@@ -61,6 +62,7 @@ def index_path(
 | `config` | `IndexerConfig \| None` | Resolved configuration. When `None`, compiled defaults are used (equivalent to `load_config()` with no arguments). |
 | `progress_callback` | `Callable[[ProgressEvent], None] \| None` | Called after each item is processed during directory traversal. Must be non-blocking. Ignored for single-file targets. |
 | `cancel_event` | `threading.Event \| None` | Checked between items during directory traversal. When set, raises `IndexerCancellationError`. Ignored for single-file targets. |
+| `session_id` | `str \| None` | UUID4 identifying this indexing session. When `None`, a new UUID4 is auto-generated. All entries produced by a single call share the same session ID. |
 
 **Returns:** A fully populated `IndexEntry` conforming to the v2 schema.
 
@@ -84,6 +86,7 @@ def build_file_entry(
     *,
     siblings: list[Path] | None = None,
     delete_queue: list[Path] | None = None,
+    session_id: str | None = None,
 ) -> IndexEntry: ...
 ```
 
@@ -93,6 +96,7 @@ def build_file_entry(
 | `config` | `IndexerConfig` | Resolved configuration. |
 | `siblings` | `list[Path] \| None` | Pre-enumerated sibling files for sidecar discovery. When `None`, the parent directory is enumerated on demand. |
 | `delete_queue` | `list[Path] \| None` | When MetaMergeDelete is active, sidecar paths are appended here for deferred deletion by the caller. |
+| `session_id` | `str \| None` | UUID4 session identifier. Threaded into the constructed entry's `session_id` field. |
 
 ### `build_directory_entry()`
 
@@ -107,6 +111,7 @@ def build_directory_entry(
     delete_queue: list[Path] | None = None,
     progress_callback: Callable[[ProgressEvent], None] | None = None,
     cancel_event: threading.Event | None = None,
+    session_id: str | None = None,
 ) -> IndexEntry: ...
 ```
 
@@ -118,6 +123,7 @@ def build_directory_entry(
 | `delete_queue` | `list[Path] \| None` | MetaMergeDelete accumulator. |
 | `progress_callback` | `Callable \| None` | Progress callback forwarded through recursive calls. |
 | `cancel_event` | `threading.Event \| None` | Cancellation event forwarded through recursive calls. |
+| `session_id` | `str \| None` | UUID4 session identifier. Threaded into all child entries during recursive construction. |
 
 ### `serialize_entry()`
 
@@ -226,6 +232,8 @@ class IndexEntry:
     items: list[IndexEntry] | None = None
     metadata: list[MetadataEntry] | None = None
     mime_type: str | None = None
+    session_id: str | None = None    # UUID4 identifying the indexing session
+    indexed_at: TimestampPair | None = None  # When this entry was constructed
 ```
 
 ### Reusable types
