@@ -778,16 +778,30 @@ If the GUI grows in complexity (custom widgets, asset files, multiple views), ad
 <a id="33-configuration-file-locations"></a>
 ### 3.3. Configuration File Locations
 
+> **Updated 2026-02-25:** The user config directory was moved from a tool-level namespace (`shruggie-indexer/`) to the shared ecosystem namespace (`shruggie-tech/shruggie-indexer/`). Legacy paths are still read via automatic fallback; see Migration below.
+
 The indexer's configuration system uses a layered resolution strategy. The following locations are checked in order, with later sources overriding earlier ones:
 
 | Priority | Location | Description |
 |----------|----------|-------------|
 | 1 (lowest) | Compiled defaults | The values in `config/defaults.py`. Always present. |
-| 2 | User config directory | `~/.config/shruggie-indexer/config.toml` on Linux/macOS, `%APPDATA%\shruggie-indexer\config.toml` on Windows. Per-user persistent configuration. |
-| 3 | Project/working directory | `./shruggie-indexer.toml` in the current working directory. Per-project overrides. |
+| 2 | User config directory | `<base>/shruggie-tech/shruggie-indexer/config.toml` where `<base>` is the platform-standard config root (see path table below). Per-user persistent configuration. |
+| 3 | Project/working directory | `.shruggie-indexer.toml` in the target directory or its ancestors (ancestor walk). Per-project overrides. |
 | 4 (highest) | CLI flags | Command-line arguments override all file-based configuration. |
 
-The user config directory path is resolved using Python's `platformdirs` conventions (or a manual equivalent using `os.environ` lookups for `XDG_CONFIG_HOME` / `APPDATA`). The implementation MUST NOT hardcode platform-specific paths — the resolution logic must work correctly on all three target platforms.
+**User config directory paths (v0.1.1+):**
+
+| Platform | Path |
+|----------|------|
+| Windows  | `%APPDATA%\shruggie-tech\shruggie-indexer\config.toml` |
+| Linux    | `~/.config/shruggie-tech/shruggie-indexer/config.toml` (or `$XDG_CONFIG_HOME/shruggie-tech/shruggie-indexer/config.toml` if set) |
+| macOS    | `~/.config/shruggie-tech/shruggie-indexer/config.toml` |
+
+The two-level directory structure (`shruggie-tech/shruggie-indexer/`) places the tool's configuration under a shared ecosystem namespace. Other tools in the `shruggie-tech` family (e.g., `shruggie-feedtools`, `shruggie-catalog`) use sibling directories under the same `shruggie-tech/` parent, providing consistent discoverability and a single parent directory for users managing multiple `shruggie-tech` tools.
+
+The base directory is resolved via `os.environ` lookups (`APPDATA` on Windows, `XDG_CONFIG_HOME` on Linux/macOS) with hardcoded fallbacks (`~/AppData/Roaming`, `~/.config`). The implementation MUST NOT hardcode full platform-specific paths — the resolution logic must work correctly on all three target platforms.
+
+**Migration from v0.1.0 paths.** The v0.1.0 release used a flat `shruggie-indexer/` directory at the config root (e.g., `%APPDATA%\shruggie-indexer\config.toml`). The v0.1.1 resolution strategy checks the new namespaced path first; if the file is not found there, it falls back to the legacy v0.1.0 path. When a configuration file is found at the legacy path, the tool logs an `INFO`-level message advising the user to move it to the new location. This is a read-only fallback — the tool does not automatically copy or move the file. The GUI session persistence layer ([§10.1](#101-gui-framework-and-architecture)) performs auto-migration of its own session file on write (see session persistence section for details).
 
 Configuration files are TOML format, parsed by `tomllib` (stdlib). See [§7.6](#76-configuration-file-format) for the file format specification and [§7.7](#77-configuration-override-and-merging-behavior) for the merge/override behavior.
 
@@ -877,10 +891,20 @@ The documentation site build configuration (`mkdocs.yml`) lives at the repositor
 <a id="36-documentation-artifacts"></a>
 ### 3.6. Documentation Artifacts
 
+> **Updated 2026-02-25:** Directory tree updated to reflect the actual `docs/` layout as shipped in v0.1.1. The `user/` subdirectory was split into `getting-started/` and `user-guide/` for clearer navigation hierarchy. A top-level `changelog.md` was added (auto-copied from `CHANGELOG.md` at the repository root). An `assets/images/` directory was added for site images.
+
 ```
 docs/
 ├── index.md
+├── changelog.md
+├── assets/
+│   └── images/
+├── getting-started/
+│   ├── installation.md
+│   ├── quickstart.md
+│   └── exiftool.md
 ├── schema/
+│   ├── index.md
 │   ├── shruggie-indexer-v2.schema.json
 │   └── examples/
 │       └── flashplayer.exe_meta2.json
@@ -903,21 +927,25 @@ docs/
 │       ├── exiftool.exe_meta.json
 │       ├── flashplayer.exe_meta.json
 │       └── SearchMyFiles.chm_meta.json
-└── user/
+└── user-guide/
     ├── index.md
-    ├── installation.md
-    ├── quickstart.md
+    ├── gui.md
+    ├── cli-reference.md
     ├── configuration.md
-    └── changelog.md
+    ├── python-api.md
+    └── platform-notes.md
 ```
 
 | Path | Purpose |
 |------|---------|
-| `index.md` | Documentation site landing page. Provides a project overview and links to the three documentation sections (schema reference, porting reference, user guide). Rendered as the site home page by MkDocs. See [§3.7](#37-documentation-site). |
-| `schema/` | Canonical v2 JSON Schema definition (`shruggie-indexer-v2.schema.json`) and validation examples (`examples/`). The schema file is the local copy of the canonical schema hosted at [schemas.shruggie.tech](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json). The `examples/` subdirectory contains real-world v2-compliant output files used for manual validation reference and documentation. |
+| `index.md` | Documentation site landing page. Provides a project overview, quick-links section (GitHub, PyPI, PDF download), and links to the three documentation sections. Rendered as the site home page by MkDocs. See [§3.7](#37-documentation-site). |
+| `changelog.md` | Auto-copied from `CHANGELOG.md` at the repository root. Contains a header comment (`<!-- THIS FILE IS AUTO-COPIED ... -->`) identifying it as a generated file. See [§3.7](#37-documentation-site) for the copy mechanism. |
+| `assets/images/` | Static image assets used by the documentation site (social previews, screenshots). |
+| `getting-started/` | Onboarding documentation: installation guide (`installation.md`), quick-start tutorial (`quickstart.md`), and ExifTool setup guide (`exiftool.md`). Split from the original `user/` directory for clearer navigation hierarchy. |
+| `schema/` | Canonical v2 JSON Schema definition (`shruggie-indexer-v2.schema.json`), a schema overview page (`index.md`), and validation examples (`examples/`). The schema file is the local copy of the canonical schema hosted at [schemas.shruggie.tech](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json). The `examples/` subdirectory contains real-world v2-compliant output files used for manual validation reference and documentation. |
 | `porting-reference/` | Reference materials derived from the original PowerShell implementation. These documents inform the tool's design but are not part of the runtime codebase. They include dependency catalogs for each of the eight original pslib functions, the operations catalog mapping original logic to Python modules, the v1 output schema (for reference only — the tool does not target v1), the v1 output examples (`v1-examples/`), and the isolated `MetadataFileParser` object definition. An `index.md` provides a navigable overview for the documentation site. These files are committed to the repository for traceability and historical reference. They are read-only reference artifacts — they are never modified after initial commit unless an error in the documentation is discovered. |
 | `porting-reference/v1-examples/` | Real-world v1 output examples from the original `MakeIndex` function. These files demonstrate the v1 schema structure as produced by the original implementation and serve as backward-compatibility validation fixtures for the eventual v1-to-v2 migration utility. |
-| `user/` | End-user documentation: installation guide (`installation.md`), quick-start tutorial (`quickstart.md`), configuration reference (`configuration.md`), and changelog (`changelog.md`). An `index.md` provides the user guide landing page. Pages are populated incrementally as features stabilize. |
+| `user-guide/` | End-user documentation: desktop application guide (`gui.md`), CLI reference (`cli-reference.md`), configuration reference (`configuration.md`), Python API documentation (`python-api.md`), and platform notes (`platform-notes.md`). An `index.md` provides the user guide landing page. Pages are populated incrementally as features stabilize. |
 
 **Important constraint (reiterated from [§1.2](#12-scope)):** The original PowerShell source code for the `MakeIndex` function — including its complete function body, parameter block, and all nested sub-functions — SHALL NOT be included in the repository in any form. The `MakeIndex(MetadataFileParser).ps1` file in `porting-reference/` is permitted because it contains only the configuration data object, not the function's implementation logic. The dependency catalogs and operations catalog describe behavior in prose, not source code.
 
@@ -981,16 +1009,32 @@ nav:
 
 The `docs/` directory contains non-Markdown files (`.json`, `.ps1`) that are reference artifacts rather than documentation pages. MkDocs copies these files to the built site as static assets. They are linked from their parent section's `index.md` page as downloadable files rather than rendered as documentation content. The navigation entries for `.json` and `.ps1` files produce direct download links in the built site.
 
-<a id="373-build-and-preview"></a>
-#### 3.7.3. Build and Preview
+<a id="373-changelog-synchronization"></a>
+#### 3.7.3. Changelog Synchronization
+
+> **Added 2026-02-25.**
+
+The documentation site's changelog page (`docs/changelog.md`) is a copy of `CHANGELOG.md` at the repository root. The copy is maintained manually — the file begins with a header comment identifying it as auto-copied:
+
+```markdown
+<!-- THIS FILE IS AUTO-COPIED FROM CHANGELOG.md AT THE REPOSITORY ROOT. -->
+<!-- DO NOT EDIT THIS FILE DIRECTLY. Edit CHANGELOG.md instead. -->
+```
+
+The canonical changelog is `CHANGELOG.md` at the repository root. All edits are made there. When the documentation site is built or deployed, `docs/changelog.md` MUST reflect the current state of `CHANGELOG.md`. If the two files diverge, the root `CHANGELOG.md` is authoritative.
+
+This approach (Option B: build-time/manual copy) was chosen over MkDocs symlink support or plugin-based inclusion because it is portable across all platforms, requires no additional MkDocs plugins, and produces a self-contained `docs/` directory that can be built without special tooling.
+
+<a id="374-build-and-preview"></a>
+#### 3.7.4. Build and Preview
 
 | Command | Purpose |
 |---------|---------|
 | `mkdocs serve` | Starts a local development server with live reload. Used during documentation authoring to preview changes. Serves at `http://127.0.0.1:8000/` by default. |
 | `mkdocs build` | Produces the static site in the `site/` directory. The `site/` directory is listed in `.gitignore` and is never committed. |
 
-<a id="374-deployment"></a>
-#### 3.7.4. Deployment
+<a id="375-deployment"></a>
+#### 3.7.5. Deployment
 
 The documentation site is deployed to GitHub Pages via a dedicated GitHub Actions workflow (`.github/workflows/docs.yml`). The workflow:
 
@@ -1000,8 +1044,8 @@ The documentation site is deployed to GitHub Pages via a dedicated GitHub Action
 
 The `--strict` flag ensures that documentation quality is enforced in CI — broken internal links, missing navigation targets, and unreferenced pages cause build failures rather than silent degradation.
 
-<a id="375-dependencies"></a>
-#### 3.7.5. Dependencies
+<a id="376-dependencies"></a>
+#### 3.7.6. Dependencies
 
 `mkdocs` and `mkdocs-material` are added as optional development dependencies in `pyproject.toml` under a `[project.optional-dependencies]` docs group:
 
@@ -1536,6 +1580,8 @@ The parent `id` is computed using the same two-layer directory hashing scheme as
 <a id="53-top-level-indexentry-fields"></a>
 ### 5.3. Top-Level IndexEntry Fields
 
+> **Updated 2026-02-25:** Added `session_id` and `indexed_at` fields per Pending Updates (2026-02-24), Section 1. Both are optional and not in the `required` array.
+
 An `IndexEntry` is a JSON object conforming to the root schema. It describes a single indexed file or directory. The following table lists all top-level properties in the order they appear in the canonical schema. Detailed behavioral guidance for each field follows in [§5.4](#54-identity-fields) through [§5.10](#510-metadata-array-and-metadataentry-fields).
 
 | Property | Type | Required | Section |
@@ -1544,6 +1590,8 @@ An `IndexEntry` is a JSON object conforming to the root schema. It describes a s
 | `id` | `string` | Yes | [§5.4](#54-identity-fields) |
 | `id_algorithm` | `string` (enum) | Yes | [§5.4](#54-identity-fields) |
 | `type` | `string` (enum) | Yes | [§5.4](#54-identity-fields) |
+| `session_id` | `string` (UUID4) or `null` | No | [§5.4](#54-identity-fields) |
+| `indexed_at` | `TimestampPair` or `null` | No | [§5.4](#54-identity-fields) |
 | `name` | `NameObject` | Yes | [§5.5](#55-naming-and-content-fields) |
 | `extension` | `string` or `null` | Yes | [§5.5](#55-naming-and-content-fields) |
 | `mime_type` | `string` or `null` | No | [§5.5](#55-naming-and-content-fields) |
@@ -1555,7 +1603,7 @@ An `IndexEntry` is a JSON object conforming to the root schema. It describes a s
 | `items` | `array` of `IndexEntry` or `null` | No | [§5.9](#59-recursive-items-field) |
 | `metadata` | `array` of `MetadataEntry` or `null` | No | [§5.10](#510-metadata-array-and-metadataentry-fields) |
 
-`additionalProperties` is `false` at the root level — no extra keys are permitted. The `required` array in the canonical schema is:
+`additionalProperties` is `false` at the root level — all permitted keys are explicitly enumerated in the canonical schema. The `required` array in the canonical schema is:
 
 ```json
 [
@@ -1564,7 +1612,7 @@ An `IndexEntry` is a JSON object conforming to the root schema. It describes a s
 ]
 ```
 
-The `items` and `metadata` fields are not in the `required` array. They MAY be omitted entirely (not just set to `null`) when not applicable. However, the implementation SHOULD include them with explicit `null` values for consistency — an `IndexEntry` for a file emits `"items": null`, `"metadata": null` rather than omitting the keys. This makes every entry structurally uniform, which simplifies consumer parsing. The `mime_type` field is also not required and follows the same convention.
+The `items`, `metadata`, `session_id`, `indexed_at`, and `mime_type` fields are not in the `required` array. They MAY be omitted entirely (not just set to `null`) when not applicable. However, the implementation SHOULD include them with explicit `null` values for consistency — an `IndexEntry` for a file emits `"items": null`, `"metadata": null` rather than omitting the keys. This makes every entry structurally uniform, which simplifies consumer parsing. The `session_id` and `indexed_at` fields follow a different convention: they are conditionally included (present when the indexer populates them, absent when not). The `to_dict()` serializer omits these fields when their value is `None`, rather than emitting `null`. This keeps output compact for consumers that do not use session tracking.
 
 <a id="54-identity-fields"></a>
 ### 5.4. Identity Fields
@@ -1644,6 +1692,58 @@ The fundamental filesystem type of the indexed item. This is the primary structu
 | `"directory"` | `null` | `null` | Array of child `IndexEntry` or `null` | `null` |
 
 **v1 comparison:** v1 uses `IsDirectory: true/false`. v2 replaces this with a string enum for three reasons. First, it eliminates the implicit "IsFile" concept (v1 has no explicit `IsFile` field — it is inferred from `IsDirectory: false`). Second, it avoids the boolean ambiguity where `false` carries semantic meaning that must be negated to interpret ("not a directory" → "a file"). Third, string enums are extensible if future schema versions need to add item types (e.g., `"symlink"` as a distinct type rather than a flag).
+
+<a id="session_id"></a>
+#### `session_id`
+
+> **Added 2026-02-25:** Implements the session ID in JSON output per Pending Updates (2026-02-24), Section 1.3. Previously listed as a future consideration in [§18.1.14](#18114-session-id-in-json-output).
+
+| Attribute | Value |
+|-----------|-------|
+| Type | `string` (UUID4) |
+| Pattern | `^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$` |
+| Required | No |
+| v1 equivalent | None |
+
+Identifies the indexing invocation (session) that produced this entry. The value is a UUID4 string in standard hyphenated lowercase format (e.g., `"a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"`). All entries produced by a single CLI or GUI invocation share the same `session_id`. This enables downstream consumers — particularly `shruggie-catalog` — to correlate entries by run, detect staleness, verify batch integrity, and link entries to their originating log output.
+
+**Population rules:**
+
+| Entry point | Behavior |
+|-------------|----------|
+| CLI | A UUID4 is generated once at CLI startup and threaded through all `index_path()` / `build_*_entry()` calls. |
+| GUI | A UUID4 is generated per operation execution (per "START" button press) and passed to `index_path()`. |
+| API (`index_path()`) | If `session_id` is `None` (the default), a new UUID4 is auto-generated. If provided by the caller, the caller's value is used. |
+| API (`build_file_entry()` / `build_directory_entry()`) | The caller provides `session_id` directly. No auto-generation at this level — callers responsible for their own session management. |
+
+**Serialization:** When `session_id` is `None`, the field is omitted entirely from JSON output (not emitted as `null`). When present, it appears after the `type` field and before `name`.
+
+> **New in v2 (additive).** This is a purely additive field. The `schema_version` remains `2`. Existing consumers that do not recognize the field will ignore it (the canonical JSON Schema enumerates it as an optional property).
+
+<a id="indexed_at"></a>
+#### `indexed_at`
+
+> **Added 2026-02-25:** Implements per-entry observation timestamps per Pending Updates (2026-02-24), Section 1.4.
+
+| Attribute | Value |
+|-----------|-------|
+| Type | `TimestampPair` |
+| Required | No |
+| v1 equivalent | None |
+
+Records the moment this `IndexEntry` was constructed by the indexer, as a `TimestampPair` containing both an ISO 8601 string (`iso`) and a Unix timestamp in milliseconds (`unix`). This timestamp is distinct from the file's own timestamps (`timestamps.created`, `timestamps.modified`, `timestamps.accessed`) — those record filesystem events; `indexed_at` records the indexer's observation time.
+
+**Value to downstream consumers:**
+
+- **Ordering.** Determine which of two snapshots of the same file is newer without requiring the consumer to maintain a separate "ingested_at" timestamp.
+- **TTL and freshness policies.** Enforce rules like "re-index files whose snapshots are older than N days."
+- **Debugging.** Correlate indexing artifacts with real-world events ("when was this file last indexed?").
+
+**Population rules:** The timestamp is generated from `datetime.now(timezone.utc)` at the moment each individual entry is constructed (inside `build_file_entry()` and `build_directory_entry()`). Unlike `session_id` — which is shared across all entries in a session — `indexed_at` values are unique per entry. Entries constructed earlier in a traversal have earlier `indexed_at` values than entries constructed later.
+
+**Serialization:** When `indexed_at` is `None`, the field is omitted entirely from JSON output (not emitted as `null`). When present, it appears after `session_id` and before `name`.
+
+> **New in v2 (additive).** Same additive semantics as `session_id` — optional, not in the `required` array, `schema_version` stays at `2`.
 
 <a id="55-naming-and-content-fields"></a>
 ### 5.5. Naming and Content Fields
@@ -3107,7 +3207,9 @@ def index_path(
 
 **Step 11 — Storage name.** Construct `attributes.storage_name` from the `id` and `extension`: `f"{id}.{extension}"` for files with extensions, or just `id` for files without.
 
-**Step 12 — Assembly.** Construct the final `IndexEntry` with all fields populated. Set `schema_version` to `2`, `type` to `"file"`, `items` to `null`.
+**Step 12 — Session and observation time.** Set `session_id` to the value passed by the caller (may be `None`). Generate `indexed_at` by calling `_make_indexed_at()`, which captures the current UTC time as a `TimestampPair`. The `indexed_at` value is unique per entry — it records the moment *this specific* entry was constructed, not the session start time.
+
+**Step 13 — Assembly.** Construct the final `IndexEntry` with all fields populated. Set `schema_version` to `2`, `type` to `"file"`, `items` to `null`.
 
 > **Historical note:** The original's `MakeObject` contains a `switch` statement with five near-identical branches (`makeobjectfile`, `makeobjectdirectory`, `makeobjectdirectoryrecursive`, plus defaults) that all construct the same `[PSCustomObject]@{...}` with minor variations. The tool uses a single construction path per item type — `build_file_entry()` for files and `build_directory_entry()` for directories — with no switch duplication.
 
@@ -3129,8 +3231,8 @@ After constructing its own identity and timestamps, `build_directory_entry()` en
 
 1. **Discovery.** Call `traversal.list_children(path, config)` to obtain the sorted file and directory lists. If `progress_callback` is not `None`, emit a `ProgressEvent` with `phase="discovery"`, `items_total` set to `len(files) + len(directories)`, `items_completed=0`, and `level="info"`.
 2. **Cancellation checkpoint.** At the top of each loop iteration (before processing the next child, whether file or subdirectory), check `cancel_event.is_set()` if `cancel_event` is not `None`. If the event is set, raise `IndexerCancellationError` immediately. No partial results are returned — the partially assembled `items` list is discarded.
-3. **File children.** For each child file: call `build_file_entry(child, config, siblings=all_child_files, delete_queue=...)`. After the call returns (or the child is skipped due to error), if `progress_callback` is not `None`, emit a `ProgressEvent` with `phase="processing"`, the updated `items_completed` count, `current_path=child`, and `level="info"` (or `"warning"` if the child was skipped).
-4. **Directory children.** For each child subdirectory (when `recursive=True`): call `build_directory_entry(child, config, recursive=True, delete_queue=..., progress_callback=progress_callback, cancel_event=cancel_event)`. The same `progress_callback` and `cancel_event` are forwarded so that progress spans the entire tree and cancellation is effective at any recursion depth. After the recursive call returns, emit a `ProgressEvent` with updated counts.
+3. **File children.** For each child file: call `build_file_entry(child, config, siblings=all_child_files, delete_queue=..., session_id=session_id)`. The `session_id` is threaded through so all child entries share the same session identifier. After the call returns (or the child is skipped due to error), if `progress_callback` is not `None`, emit a `ProgressEvent` with `phase="processing"`, the updated `items_completed` count, `current_path=child`, and `level="info"` (or `"warning"` if the child was skipped).
+4. **Directory children.** For each child subdirectory (when `recursive=True`): call `build_directory_entry(child, config, recursive=True, delete_queue=..., progress_callback=progress_callback, cancel_event=cancel_event, session_id=session_id)`. The same `progress_callback`, `cancel_event`, and `session_id` are forwarded so that progress spans the entire tree, cancellation is effective at any recursion depth, and all entries share the same session identifier. After the recursive call returns, emit a `ProgressEvent` with updated counts.
 5. **Assembly.** Collect all child `IndexEntry` objects into the `items` list (files first, then directories, each group sorted by name).
 6. **Size aggregation.** Compute the directory's `size.bytes` as the sum of all child `size.bytes` values (recursive — includes all descendants).
 
@@ -4004,7 +4106,7 @@ The configuration file name is `config.toml`. The resolution paths are defined i
 | Priority | Location | Description |
 |----------|----------|-------------|
 | 1 (lowest) | Compiled defaults | `config/defaults.py`. Always present. |
-| 2 | User config directory | `~/.config/shruggie-indexer/config.toml` (Linux/macOS) or `%APPDATA%\shruggie-indexer\config.toml` (Windows). |
+| 2 | User config directory | `<base>/shruggie-tech/shruggie-indexer/config.toml` (see [§3.3](#33-configuration-file-locations) for platform-specific base paths). |
 | 3 | Project-local config | `.shruggie-indexer.toml` in the target directory or its ancestors (searched upward). |
 | 4 (highest) | CLI/API arguments | Command-line flags or `index_path()` keyword arguments. |
 
@@ -4904,6 +5006,8 @@ These are the primary functions for performing indexing operations. They compose
 
 The top-level entry point. Given a filesystem path and a configuration, produces a complete `IndexEntry`. This is the function the CLI and GUI call — it handles target resolution, classification, and dispatch.
 
+> **Updated 2026-02-25:** Added `session_id` parameter per Pending Updates (2026-02-24), Section 1.
+
 ```python
 def index_path(
     target: Path | str,
@@ -4911,6 +5015,7 @@ def index_path(
     *,
     progress_callback: Callable[[ProgressEvent], None] | None = None,
     cancel_event: threading.Event | None = None,
+    session_id: str | None = None,
 ) -> IndexEntry:
     """Index a file or directory and return the complete entry.
 
@@ -4937,6 +5042,13 @@ def index_path(
                 built entry tree is not returned — cancellation is
                 a clean abort, not a partial result. Ignored for
                 single-file targets.
+        session_id: Optional UUID4 string identifying the indexing
+                session. When None (the default), a new UUID4 is
+                auto-generated, ensuring all entries produced by the
+                call share the same session identifier. When provided
+                by the caller, the caller's value is used verbatim.
+                The session_id is threaded through to all child
+                entries during recursive directory traversal.
 
     Returns:
         A fully populated IndexEntry conforming to the v2 schema.
@@ -4962,8 +5074,9 @@ def index_path(
 2. The path is resolved to an absolute canonical form via `core.paths.resolve_path()` ([§6.2](#62-path-resolution-and-manipulation)).
 3. If `config` is `None`, the function calls `load_config()` with no arguments to obtain compiled defaults. This is a convenience for simple scripting — production callers should construct and reuse a config explicitly.
 4. The target is classified as file or directory per [§4.6](#46-entry-point-routing) and dispatched to `build_file_entry()` or `build_directory_entry()`.
-5. For directory targets, `progress_callback` and `cancel_event` are forwarded to `build_directory_entry()`, which checks the cancellation flag and invokes the callback at each item boundary during the child-processing loop. For single-file targets, neither parameter has any effect.
-6. The returned `IndexEntry` is complete and ready for serialization via `serialize_entry()`, inspection via attribute access, or further programmatic processing.
+5. For directory targets, `progress_callback`, `cancel_event`, and `session_id` are forwarded to `build_directory_entry()`, which checks the cancellation flag, invokes the callback at each item boundary during the child-processing loop, and threads the session ID through to all child entries. For single-file targets, only `session_id` has an effect (it populates the entry's `session_id` field).
+6. If `session_id` is `None`, the function generates a new UUID4 before dispatching. This ensures all entries produced by the call share the same session identifier, even when the caller does not explicitly manage sessions.
+7. The returned `IndexEntry` is complete and ready for serialization via `serialize_entry()`, inspection via attribute access, or further programmatic processing.
 
 **Default config convenience:** The `config=None` default is a deliberate API usability decision. The most common programmatic use case — "index this path with default settings" — should require exactly one function call, not two. The config object is still constructed properly through the full `load_config()` pipeline, including user config file resolution. Callers who need non-default settings must construct a config explicitly.
 
@@ -4981,6 +5094,7 @@ def build_file_entry(
     *,
     siblings: list[Path] | None = None,
     delete_queue: list[Path] | None = None,
+    session_id: str | None = None,
 ) -> IndexEntry:
     """Build a complete IndexEntry for a single file.
 
@@ -4999,6 +5113,9 @@ def build_file_entry(
                       by the caller. When None, no paths are
                       collected (MetaMergeDelete is inactive or
                       the caller manages deletion separately).
+        session_id: Optional session UUID to attach to this entry.
+                    When provided, populates the entry's session_id
+                    field. No auto-generation at this level.
 
     Returns:
         A fully populated IndexEntry with type="file" and items=null.
@@ -5031,6 +5148,7 @@ def build_directory_entry(
     delete_queue: list[Path] | None = None,
     progress_callback: Callable[[ProgressEvent], None] | None = None,
     cancel_event: threading.Event | None = None,
+    session_id: str | None = None,
 ) -> IndexEntry:
     """Build a complete IndexEntry for a directory.
 
@@ -5063,6 +5181,10 @@ def build_directory_entry(
                 returned). When this function calls itself
                 recursively, it forwards the same Event so that
                 cancellation is effective at any depth.
+        session_id: Optional session UUID. Threaded through to all
+                child entries during recursive construction so that
+                all entries in the tree share the same session
+                identifier.
 
     Returns:
         A fully populated IndexEntry with type="directory" and
@@ -5708,7 +5830,17 @@ The threading contract:
 
 The GUI persists user session settings — window geometry, last-used operation tab, per-tab input values, and settings panel preferences — to a JSON file in the platform-appropriate application data directory. This ensures the GUI reopens in the state the user left it.
 
-**Session file location:**
+> **Updated 2026-02-25:** Session file paths moved to the shared `shruggie-tech` ecosystem namespace. Legacy paths are read via automatic fallback and auto-migrated on the next write.
+
+**Session file location (v0.1.1+):**
+
+| Platform | Path |
+|----------|------|
+| Windows | `%APPDATA%\shruggie-tech\shruggie-indexer\gui-session.json` |
+| Linux | `~/.config/shruggie-tech/shruggie-indexer/gui-session.json` |
+| macOS | `~/Library/Application Support/shruggie-tech/shruggie-indexer/gui-session.json` |
+
+**Legacy paths (v0.1.0):**
 
 | Platform | Path |
 |----------|------|
@@ -5716,7 +5848,9 @@ The GUI persists user session settings — window geometry, last-used operation 
 | Linux | `~/.config/shruggie-indexer/gui-session.json` |
 | macOS | `~/Library/Application Support/shruggie-indexer/gui-session.json` |
 
-This uses the same platform directory resolution as the indexer's TOML configuration file ([§3.3](#33-configuration-file-locations)), under the same `shruggie-indexer` application directory. The session file is a separate file from the TOML configuration — it stores GUI-specific presentation state, not indexing configuration. The TOML file governs indexing behavior; the session file governs window preferences.
+**Migration behavior.** On read, the `SessionManager` checks the new namespaced path first. If the file is not found there, it falls back to the legacy v0.1.0 path and logs an `INFO`-level message indicating that the file will be migrated on the next save. Writes always target the new namespaced path, creating parent directories as needed — this constitutes auto-migration on write. After the first write, subsequent reads resolve to the new path and the legacy file is no longer consulted. The legacy file is not deleted; users may remove it manually.
+
+This uses the same ecosystem namespace structure as the indexer's TOML configuration file ([§3.3](#33-configuration-file-locations)), under `shruggie-tech/shruggie-indexer/`. The session file is a separate file from the TOML configuration — it stores GUI-specific presentation state, not indexing configuration. The TOML file governs indexing behavior; the session file governs window preferences.
 
 **Session file format:** Plain JSON with a `session_version` discriminator for forward compatibility. The file is written on application exit (window close) and on each successful operation completion. It is read once at startup. If the file does not exist, is unreadable, or has an unrecognized `session_version`, the GUI starts with default values and does not produce an error — the file is purely a convenience optimization.
 
@@ -6129,7 +6263,29 @@ Settings values are saved to the session file ([§10.1](#101-gui-framework-and-a
 
 **Reset to Defaults.** Resets all Settings fields to their compiled default values. Does NOT reset Operations page input state — only the Settings page's own fields. Presents a confirmation dialog before proceeding: _"Reset all settings to their default values?"_
 
-**Open Config Folder.** Opens the platform-specific application data directory (`%APPDATA%\shruggie-indexer\` on Windows, `~/.config/shruggie-indexer/` on Linux, `~/Library/Application Support/shruggie-indexer/` on macOS) in the system file manager. This is a convenience for users who want to edit the TOML configuration file directly. If the directory does not exist, it is created before opening.
+**Open Config Folder.** Opens the platform-specific application data directory (`%APPDATA%\shruggie-tech\shruggie-indexer\` on Windows, `~/.config/shruggie-tech/shruggie-indexer/` on Linux, `~/Library/Application Support/shruggie-tech/shruggie-indexer/` on macOS) in the system file manager. This is a convenience for users who want to edit the TOML configuration file directly or inspect the session file. If the directory does not exist, it is created before opening. The path is derived from `SessionManager._resolve_path().parent`, ensuring consistency with the session persistence layer.
+
+> **Updated 2026-02-25:** Paths updated to reflect the shared ecosystem namespace ([§3.3](#33-configuration-file-locations)).
+
+<a id="advanced-configuration-scaffold"></a>
+#### Advanced Configuration scaffold
+
+> **Added 2026-02-25.** The Advanced Configuration section was scaffolded as part of the v0.1.1 GUI work. Full editing, data binding, and persistence are deferred to a post-v0.1.1 release.
+
+Below the utility buttons, the Settings page includes an **Advanced Configuration** collapsible section. In v0.1.1, this section is **read-only** — it displays the compiled default values from `config/defaults.py` for inspection, but does not support editing.
+
+The Advanced section is collapsed by default. A toggle header labeled "▸ Advanced Configuration" expands the section; clicking again ("▾ Advanced Configuration") collapses it. When expanded, the section displays the following groups:
+
+| Group | Contents | Source |
+|-------|----------|--------|
+| Filesystem Exclusions | Excluded directory names and glob patterns. | `DEFAULT_FILESYSTEM_EXCLUDES`, `DEFAULT_FILESYSTEM_EXCLUDE_GLOBS` |
+| Metadata Identification | Sidecar regex identification patterns and their per-type attributes. | `DEFAULT_METADATA_IDENTIFY_STRINGS`, `DEFAULT_METADATA_ATTRIBUTES` |
+| Metadata Exclusion | Regex patterns for excluding non-sidecar files. | `DEFAULT_METADATA_EXCLUDE_PATTERN_STRINGS` |
+| ExifTool | Default arguments, key exclusion list, and extension exclusion list. | `DEFAULT_EXIFTOOL_ARGS`, `DEFAULT_EXIFTOOL_EXCLUDE_KEYS`, `DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS` |
+| Extension Groups | Extension-to-group classification mappings. | `DEFAULT_EXTENSION_GROUPS` |
+| Extension Validation | Regex pattern for valid file extensions. | `DEFAULT_EXTENSION_VALIDATION_PATTERN` |
+
+Each group renders its values in a read-only `CTkTextbox` widget. When full editing is implemented (targeted for v0.2.0), the read-only textboxes will be replaced with editable list widgets supporting add/remove/reorder operations, real-time regex validation (compile-on-keystroke with visual error feedback), and per-group "Reset to Defaults" buttons.
 
 ---
 
@@ -6930,11 +7086,13 @@ The session ID is generated once, at the start of the invocation, before any pro
 <a id="purpose-10"></a>
 #### Purpose
 
+> **Updated 2026-02-25:** The session ID is now included in JSON output as the `session_id` field on each `IndexEntry`, in addition to its logging role. See [§5.4](#54-identity-fields) for field semantics.
+
 The session ID serves two functions:
 
 1. **Log correlation.** When multiple invocations run concurrently (e.g., parallel indexing jobs in a CI pipeline), or when log output from multiple invocations is aggregated into a shared sink, the session ID uniquely identifies which log lines belong to which invocation. This is the same role served by the original's `$LibSessionID` (a GUID generated once per pslib session).
 
-2. **Output provenance.** The session ID MAY be included in the JSON output metadata in future schema versions (post-MVP) to link an index entry back to the invocation that produced it. For the MVP, the session ID is logging-only.
+2. **Output provenance.** The session ID is included in the JSON output as the `session_id` field on each `IndexEntry` ([§5.4](#54-identity-fields)). This links every index entry back to the invocation that produced it, enabling downstream consumers (particularly `shruggie-catalog`) to correlate entries by run, detect staleness, verify batch integrity, and trace provenance.
 
 <a id="injection-mechanism"></a>
 #### Injection mechanism
@@ -6963,9 +7121,9 @@ The filter is attached to the handler (not to individual loggers), so it applies
 
 | Entry point | Where generated | How injected |
 |-------------|----------------|--------------|
-| CLI | In `main()`, before `configure_logging()` is called. | Passed to `SessionFilter` constructor, which is attached to the stderr handler. |
-| GUI | In `ShruggiIndexerApp.__init__()`, once at application startup. A new session ID is generated for each indexing operation (not per-application-launch), matching the semantics of "one session = one invocation." | Attached to the GUI's queue-based log handler via the same `SessionFilter`. The session ID is updated when a new indexing job starts. |
-| API | Not generated by the library. API consumers are responsible for their own logging configuration. If a consumer wants session IDs, they configure their own `SessionFilter`. The library's `core/` modules never read or depend on the session ID — it is purely a logging-layer concern. |
+| CLI | In `main()`, before `configure_logging()` is called. | Passed to `SessionFilter` constructor (attached to the stderr handler) and to `index_path(session_id=...)` for inclusion in JSON output. |
+| GUI | In the background thread handler, once per indexing operation (per "START" button press). | Attached to the GUI's queue-based log handler via `SessionFilter`. Passed to `index_path(session_id=...)`. A new session ID is generated for each indexing operation, not per-application-launch, matching the semantics of "one session = one invocation." |
+| API | Auto-generated by `index_path()` when the caller does not provide one. If a consumer calls `build_file_entry()` or `build_directory_entry()` directly, they manage their own `session_id` parameter. The library's `core/` modules never read or depend on the session ID for logging — it remains a logging-layer concern for log correlation, but is also passed through to `IndexEntry` construction for output provenance. |
 
 <a id="115-log-output-destinations"></a>
 ### 11.5. Log Output Destinations
@@ -9835,15 +9993,15 @@ The documentation site infrastructure — MkDocs with Material for MkDocs, the `
 <a id="18114-session-id-in-json-output"></a>
 #### 18.1.14. Session ID in JSON Output
 
-**Originating references:** [§11.4](#114-session-identifiers) (Session Identifiers).
+**Status: IMPLEMENTED in v0.1.1.** The `session_id` field is now a top-level optional field on `IndexEntry` ([§5.4](#54-identity-fields)), populated with a UUID4 string identifying the indexing session. All entries produced by a single CLI or GUI invocation share the same session ID. The `indexed_at` field ([§5.4](#54-identity-fields)) was also added as a companion field, recording the moment each individual entry was constructed.
 
-The session ID (a UUID4 generated per invocation) currently appears only in log output. A future schema version could include it in the JSON output metadata to link an index entry back to the invocation that produced it. This would support provenance tracking — given an index file, a user could correlate it with the log output from the run that created it.
+The `index_path()` function auto-generates a UUID4 when the caller does not provide one ([§9.2](#92-core-functions)). The `build_file_entry()` and `build_directory_entry()` functions accept `session_id` as an explicit parameter and thread it through to all child entries during recursive construction ([§6.8](#68-index-entry-construction)). The CLI generates the UUID once at startup; the GUI generates it per operation execution.
 
-This item is deliberately listed as a feature addition rather than a schema evolution item ([§18.2](#182-schema-evolution)) because it is a purely additive field that does not change existing semantics. It could be added as a new top-level field (e.g., `session_id`) in the v2 schema without breaking backward compatibility, or it could be deferred to a v3 schema if it accompanies other breaking changes.
+**Originating references:** [§11.4](#114-session-identifiers) (Session Identifiers), [§5.4](#54-identity-fields) (Identity Fields).
 
-**Preconditions:** Confirmation that the session ID is useful to downstream consumers. The field adds bytes to every output file for a benefit that may be niche.
+~~**Preconditions:** Confirmation that the session ID is useful to downstream consumers. The field adds bytes to every output file for a benefit that may be niche.~~ Precondition satisfied: `shruggie-catalog` is the immediate next component in the ecosystem and will consume `session_id` for run correlation, staleness detection, provenance tracking, and batch integrity verification.
 
-**Architectural impact:** Minimal. A new field on the `IndexEntry` dataclass, populated by the orchestrator from the session context.
+**Architectural impact:** Minimal. A new field on the `IndexEntry` dataclass, populated by the orchestrator from the session context. The `session_id` parameter was added to `index_path()`, `build_file_entry()`, and `build_directory_entry()`. A helper function `_make_indexed_at()` generates the `TimestampPair` for `indexed_at`.
 
 <a id="182-schema-evolution"></a>
 ### 18.2. Schema Evolution
@@ -9868,7 +10026,7 @@ The following fields have been identified during specification development as ca
 
 **`timestamps.created_source`** ([§15.5](#155-creation-time-portability)). A string field on `TimestampsObject` indicating the provenance of the creation timestamp — `"birthtime"` when derived from `st_birthtime` (macOS, Windows) or `"ctime_fallback"` when derived from `st_ctime` (Linux, where `ctime` represents the last inode change, not creation). This field would resolve the ambiguity documented in [§15.5](#155-creation-time-portability) about what `timestamps.created` actually represents on different platforms.
 
-**`session_id`** ([§18.1.14](#18114-session-id-in-json-output)). A UUID4 string linking the index entry to the invocation that produced it. See [§18.1.14](#18114-session-id-in-json-output) for the full description. This is additive and could be added to v2 without a version bump.
+**~~`session_id`~~** ([§18.1.14](#18114-session-id-in-json-output)). ~~A UUID4 string linking the index entry to the invocation that produced it. See [§18.1.14](#18114-session-id-in-json-output) for the full description. This is additive and could be added to v2 without a version bump.~~ **Implemented in v0.1.1** as a v2-additive optional field on `IndexEntry` ([§5.4](#54-identity-fields)). The companion field `indexed_at` was also added. Both fields are omitted from the output when `None`, preserving backward compatibility with existing v2 consumers. No version bump was required.
 
 **`encoding`** ([§5.11](#511-dropped-and-restructured-fields)). If encoding detection becomes a requirement, a new field with a Python-native structure (not the .NET-specific `System.Text.Encoding` serialization from v1) would be added. The structure might include `bom` (detected BOM, if any), `detected_encoding` (best-guess encoding name from `chardet` or similar), and `confidence` (detection confidence score). This would be a new top-level field — not a restoration of the v1 `Encoding` field, which is explicitly dropped without replacement.
 
