@@ -2063,16 +2063,29 @@
 </thead>
 <tbody>
 <tr>
-<td>Linux / macOS</td>
-<td><code>~/.config/shruggie-indexer/config.toml</code></td>
+<td>Linux</td>
+<td><code>~/.config/shruggie-tech/shruggie-indexer/config.toml</code></td>
+</tr>
+<tr>
+<td>macOS</td>
+<td><code>~/Library/Application Support/shruggie-tech/shruggie-indexer/config.toml</code></td>
 </tr>
 <tr>
 <td>Windows</td>
-<td><code>%APPDATA%\shruggie-indexer\config.toml</code></td>
+<td><code>%APPDATA%\shruggie-tech\shruggie-indexer\config.toml</code></td>
 </tr>
 </tbody>
 </table>
 <p>Project-local config files (<code>.shruggie-indexer.toml</code>) are searched starting from the target directory and walking up to the filesystem root.</p>
+<div class="admonition info">
+<p class="admonition-title">Migration from v0.1.0</p>
+<p>Prior to v0.1.1, configuration files were stored directly under
+<code>&lt;base&gt;/shruggie-indexer/</code> (without the <code>shruggie-tech/</code> parent directory).
+The tool checks the new path first and falls back to the legacy path
+transparently. An INFO-level log message is emitted when the legacy path
+is used, recommending relocation to the new path. No files are deleted
+during migration.</p>
+</div>
 <p>To specify a config file explicitly from the command line:</p>
 <div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>--config<span class="w"> </span>my-config.toml
 </code></pre></div>

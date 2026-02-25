@@ -2381,7 +2381,7 @@ exists. Resolve any red error messages before running.</p>
 <hr />
 <h2 id="session-persistence">Session Persistence</h2>
 <p>The application automatically saves your window size, position, selected tab, operation settings, and output panel height when you close it. The next time you open the application, everything is restored to where you left off.</p>
-<p>Session data is stored in your operating system's standard configuration directory:</p>
+<p>Session data is stored in your operating system's standard configuration directory under the shared ShruggieTech ecosystem namespace:</p>
 <table>
 <thead>
 <tr>
@@ -2392,19 +2392,27 @@ exists. Resolve any red error messages before running.</p>
 <tbody>
 <tr>
 <td>Windows</td>
-<td><code>%APPDATA%\shruggie-indexer\gui-session.json</code></td>
+<td><code>%APPDATA%\shruggie-tech\shruggie-indexer\gui-session.json</code></td>
 </tr>
 <tr>
 <td>macOS</td>
-<td><code>~/Library/Application Support/shruggie-indexer/gui-session.json</code></td>
+<td><code>~/Library/Application Support/shruggie-tech/shruggie-indexer/gui-session.json</code></td>
 </tr>
 <tr>
 <td>Linux</td>
-<td><code>~/.config/shruggie-indexer/gui-session.json</code></td>
+<td><code>~/.config/shruggie-tech/shruggie-indexer/gui-session.json</code></td>
 </tr>
 </tbody>
 </table>
 <p>If the session file is missing or becomes corrupted, the application starts with default settings.</p>
+<div class="admonition info">
+<p class="admonition-title">Migration from v0.1.0</p>
+<p>If you are upgrading from v0.1.0, existing session data at the old path
+(e.g., <code>%APPDATA%\shruggie-indexer\gui-session.json</code>) is read automatically.
+On the next save (application exit or operation completion), the session file
+is written to the new location. The old file is preserved — it is safe to
+delete manually after confirming the new file has been created.</p>
+</div>
 <hr />
 <h2 id="tips-and-troubleshooting">Tips and Troubleshooting</h2>
 <h3 id="exiftool-is-not-detected">ExifTool Is Not Detected</h3>
