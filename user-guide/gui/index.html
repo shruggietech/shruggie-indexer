@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
     
     
       
@@ -2194,19 +2194,27 @@ published on the GitHub release page.</p>
 <li><strong>Extract EXIF metadata</strong> — When checked, embedded metadata (camera settings, GPS coordinates, creation dates, etc.) is extracted from media files using ExifTool. Requires ExifTool to be installed. Automatically forced on for Meta Merge and Meta Merge Delete operations.</li>
 <li><strong>Rename files</strong> — When checked, files are renamed to unique, content-based names ("storage names") after indexing. This feature can be combined with any operation type. Enabling rename makes the operation destructive (the indicator dot turns red) unless dry-run is also enabled.</li>
 <li><strong>Dry run</strong> — Only shown when "Rename files" is checked. When enabled, previews what files <em>would</em> be renamed without actually changing anything. This is on by default as a safety measure.</li>
-<li><strong>Write in-place</strong> — Writes output as sidecar JSON files alongside the originals. Automatically forced on when rename is active. Disabled with an explanation for Meta Merge Delete (which always writes in-place).</li>
 </ul>
 <h3 id="output-section">Output Section</h3>
-<p>Output controls are always visible. For Meta Merge Delete, the output mode is locked to "Save to file" with an explanatory note, and the file field is required.</p>
+<p>The Output section uses a dropdown menu to select where results are written:</p>
 <ul>
-<li><strong>Output mode:</strong><ul>
-<li><strong>View only</strong> — Results are displayed in the output panel at the bottom of the window. Nothing is written to disk.</li>
-<li><strong>Save to file</strong> — Results are written to a file on disk. A brief confirmation message appears in the output panel.</li>
-<li><strong>Both</strong> — Results are both displayed and saved to a file.</li>
+<li><strong>Output mode</strong> (dropdown):<ul>
+<li><strong>Single file</strong> — All results are written to one aggregate JSON file. The file path is shown in a read-only display below the dropdown.</li>
+<li><strong>Multi-file</strong> — Results are written as individual sidecar JSON files alongside each processed file (e.g., <code>photo.jpg_meta2.json</code>). Only available when the target is a directory.</li>
+<li><strong>View only</strong> — Results are displayed in the output panel at the bottom of the window. Nothing is written to disk. Not available for Meta Merge Delete operations.</li>
 </ul>
 </li>
-<li><strong>Output file</strong> — When saving to a file, this field shows the destination path. It is automatically filled in with a suggested name based on your target (e.g., <code>my-folder_directorymeta2.json</code>), but you can change it to anything you like.</li>
+<li><strong>Output path</strong> — A read-only field showing the auto-computed output path based on your target. For "View only" mode, this displays "(displayed in viewer)". For "Multi-file" mode, a note explains that sidecar files are written alongside originals.</li>
 </ul>
+<div class="admonition tip">
+<p class="admonition-title">Output mode constraints</p>
+<p>The available modes adjust automatically based on your target and operation type:</p>
+<ul>
+<li><strong>Multi-file</strong> requires a directory target (not available for single files).</li>
+<li><strong>View only</strong> is not available for Meta Merge Delete (which must write output to preserve data before deleting sidecars).</li>
+<li><strong>Rename</strong> forces Multi-file mode (renamed files need per-item sidecar output).</li>
+</ul>
+</div>
 <h3 id="running-an-operation">Running an Operation</h3>
 <p>Once everything is configured, click the green <strong>▶  START</strong> button at the bottom of the Operations area. The button is centered and uses a distinct green color to differentiate it from other controls.</p>
 <div class="admonition note">
@@ -2393,7 +2401,7 @@ exists. Resolve any red error messages before running.</p>
 <h3 id="large-directories-are-slow">Large Directories Are Slow</h3>
 <p>When indexing directories with thousands of files, the initial discovery phase may take a moment. The progress bar will be indeterminate (animated) during discovery, then switch to a percentage-based bar once processing begins. You can cancel at any time.</p>
 <h3 id="output-is-too-large-to-display">Output Is Too Large to Display</h3>
-<p>If the JSON output exceeds 10 MB, the output panel will show a "too large to display" message and prompt you to save the results to a file instead. Use the <strong>Save</strong> button or switch the output mode to "Save to file" before running.</p>
+<p>If the JSON output exceeds 10 MB, the output panel will show a "too large to display" message and prompt you to save the results to a file instead. Use the <strong>Save</strong> button or switch the output mode to "Single file" before running.</p>
 <h3 id="application-appears-frozen">Application Appears Frozen</h3>
 <p>Long-running operations process files one at a time in the background. The interface should remain responsive. If you see no progress updates, check the log view for error messages. You can always cancel with ++escape++ or the Cancel button.</p>
 <hr />
