@@ -8,6 +8,11 @@ The rename operation is destructive — the original filename is replaced on
 disk — but the original name is preserved in the ``IndexEntry.name.text``
 field of the in-place sidecar file that is always written alongside a rename.
 
+When in-place sidecar output is active, the rename phase also renames the
+previously-written ``_meta2.json`` sidecar from ``{original}_meta2.json``
+to ``{storage_name}_meta2.json`` (Batch 6, Section 4).  This ensures the
+sidecar sits alongside the renamed file and is discoverable by consumers.
+
 See spec section 6.10 for full behavioral guidance.
 """
 
@@ -28,6 +33,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "rename_item",
+    "rename_inplace_sidecar",
 ]
 
 logger = logging.getLogger(__name__)
@@ -146,3 +152,54 @@ def _same_inode(a: os.stat_result, b: os.stat_result) -> bool:
 
     # Windows fallback: both zero means we cannot determine sameness.
     return False
+
+
+def rename_inplace_sidecar(
+    original_path: Path,
+    entry: IndexEntry,
+) -> Path | None:
+    """Rename the in-place ``_meta2.json`` sidecar to match the storage name.
+
+    After a file is renamed from ``photo.jpg`` to ``yABC123.jpg``, the
+    previously-written sidecar ``photo.jpg_meta2.json`` must be renamed
+    to ``yABC123.jpg_meta2.json`` so that it is discoverable next to the
+    renamed file.  (Batch 6, Section 4.)
+
+    The sidecar's JSON content is not modified — it still contains the
+    original filename in ``name.text`` for reversibility.
+
+    Args:
+        original_path: The **pre-rename** absolute path to the file.
+        entry: The completed ``IndexEntry`` with ``attributes.storage_name``.
+
+    Returns:
+        The new sidecar path if renamed, or ``None`` if the original
+        sidecar did not exist on disk.
+    """
+    storage_name = entry.attributes.storage_name
+    old_sidecar = original_path.parent / f"{original_path.name}_meta2.json"
+    new_sidecar = original_path.parent / f"{storage_name}_meta2.json"
+
+    if not old_sidecar.exists():
+        return None
+
+    if old_sidecar == new_sidecar:
+        # Already correct (e.g., re-run after a previous successful rename).
+        return new_sidecar
+
+    try:
+        renamed = old_sidecar.rename(new_sidecar)
+        logger.debug(
+            "Inplace sidecar renamed: %s → %s",
+            old_sidecar.name,
+            new_sidecar.name,
+        )
+        return renamed
+    except OSError as exc:
+        logger.warning(
+            "Inplace sidecar rename FAILED: %s → %s: %s",
+            old_sidecar,
+            new_sidecar,
+            exc,
+        )
+        return None

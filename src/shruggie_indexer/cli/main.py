@@ -207,16 +207,17 @@ def _close_progress(callback: Any) -> None:
 def _drain_delete_queue(queue: list[Path]) -> int:
     """Delete all sidecar files accumulated in the MetaMergeDelete queue.
 
-    Returns the count of files successfully deleted.
+    Returns the count of files successfully deleted.  Failed deletions
+    do not abort the loop — remaining files are still attempted.
     """
     deleted = 0
     for path in queue:
         try:
             path.unlink()
-            logger.debug("Deleted merged sidecar: %s", path)
+            logger.info("Sidecar deleted: %s", path)
             deleted += 1
         except OSError as exc:
-            logger.warning("Failed to delete sidecar %s: %s", path, exc)
+            logger.error("Sidecar delete FAILED: %s: %s", path, exc)
     return deleted
 
 
@@ -502,15 +503,21 @@ def main(
             cancel_event=cancel_event,
         )
 
+        # ── In-place output ─────────────────────────────────────────────
+        # Written BEFORE rename so the rename phase can also rename
+        # the sidecar file from {original}_meta2.json to
+        # {storage_name}_meta2.json.  (Batch 6, §4.)
+        if config.output_inplace:
+            _write_inplace_tree(entry, target_path, write_inplace)
+
         # ── Rename (spec section 6.10) ──────────────────────────────────
         if config.rename and entry.type == "file":
             rename_item(target_path, entry, dry_run=config.dry_run)
+            if not config.dry_run and config.output_inplace:
+                from shruggie_indexer.core.rename import rename_inplace_sidecar
+                rename_inplace_sidecar(target_path, entry)
         elif config.rename and entry.items is not None:
             _rename_tree(entry, target_path, config)
-
-        # ── In-place output (during processing, per-item) ──────────────
-        if config.output_inplace:
-            _write_inplace_tree(entry, target_path, write_inplace)
 
         # ── Aggregate output (stdout + outfile) ─────────────────────────
         write_output(entry, config)
@@ -595,11 +602,30 @@ def _rename_tree(
     for child in entry.items:
         if child.type == "file":
             child_path = root_path.parent / child.file_system.relative
+            storage_name = child.attributes.storage_name
+            logger.debug(
+                "Rename candidate: %s (type=%s, storage_name=%s)",
+                child_path, child.type, storage_name,
+            )
             try:
                 rename_item(child_path, child, dry_run=config.dry_run)
+                # Rename the in-place sidecar to match (Batch 6, §4).
+                if not config.dry_run and config.output_inplace:
+                    from shruggie_indexer.core.rename import rename_inplace_sidecar
+                    rename_inplace_sidecar(child_path, child)
             except Exception:
                 logger.warning(
                     "Rename failed for %s", child_path, exc_info=True,
                 )
-        elif child.type == "directory" and child.items:
-            _rename_tree(child, root_path, config)
+        elif child.type == "directory":
+            if child.items:
+                logger.debug(
+                    "Rename candidate: %s (type=directory, descending, %d items)",
+                    child.name.text, len(child.items),
+                )
+                _rename_tree(child, root_path, config)
+            else:
+                logger.debug(
+                    "Rename candidate: %s (type=directory, skip_reason=no items)",
+                    child.name.text,
+                )

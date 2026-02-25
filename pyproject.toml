@@ -64,6 +64,10 @@ markers = [
     "platform_linux: marks tests that only run on Linux",
     "platform_macos: marks tests that only run on macOS",
     "requires_exiftool: marks tests that require exiftool on PATH",
+    "sidecar: Tests for sidecar discovery, exclusion, and merge behavior",
+    "mmd: Tests for MetaMergeDelete pipeline",
+    "integration: Full pipeline integration tests (slower)",
+    "destructive: Tests that modify the filesystem (use tmp copies)",
 ]
 
 # ─── Ruff ──────────────────────────────────────────────────────────────────

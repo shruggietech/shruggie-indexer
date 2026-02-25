@@ -391,11 +391,38 @@ def build_directory_entry(
     logger.info("Discovery phase started for: %s", path)
     _discovery_start = time.monotonic()
     files, directories = list_children(path, config)
-    total_items = len(files) + len(directories)
+
+    # ── Layer 2: Sidecar-pattern exclusion from entry building ─────────
+    # When MetaMerge is active, files matching metadata_identify patterns
+    # are sidecar companions.  They must remain in the full `files` list
+    # (used as ``siblings`` for sidecar discovery) but must NOT be built
+    # as standalone index entries.  We keep the unfiltered list as
+    # ``siblings`` and iterate ``entry_files`` for child construction.
+    siblings = files
+    if config.meta_merge and config.metadata_identify:
+        from shruggie_indexer.core.traversal import _matches_any_identify_pattern
+
+        entry_files = [
+            f for f in files
+            if not _matches_any_identify_pattern(
+                f.name, config.metadata_identify,
+            )
+        ]
+        _excluded = len(files) - len(entry_files)
+        if _excluded:
+            logger.debug(
+                "Excluded %d sidecar file(s) from entry building in %s",
+                _excluded,
+                path,
+            )
+    else:
+        entry_files = files
+
+    total_items = len(entry_files) + len(directories)
     _discovery_elapsed = time.monotonic() - _discovery_start
     logger.info(
         "Discovery complete: %d items found in %.3fs (%d files, %d directories)",
-        total_items, _discovery_elapsed, len(files), len(directories),
+        total_items, _discovery_elapsed, len(entry_files), len(directories),
     )
 
     # Progress: discovery phase
@@ -427,7 +454,7 @@ def build_directory_entry(
 
     # Process file children first
     logger.info("Processing phase started: %d items", total_items)
-    for child_path in files:
+    for child_path in entry_files:
         if cancel_event is not None and cancel_event.is_set():
             raise IndexerCancellationError("Indexing cancelled")
 
@@ -436,7 +463,7 @@ def build_directory_entry(
             child_entry = build_file_entry(
                 child_path,
                 config,
-                siblings=files,
+                siblings=siblings,
                 delete_queue=delete_queue,
                 cancel_event=cancel_event,
                 _index_root=index_root,
