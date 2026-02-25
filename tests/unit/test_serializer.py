@@ -190,12 +190,12 @@ class TestWriteInplace:
         assert parsed["schema_version"] == 2
 
     def test_inplace_directory_naming(self, tmp_path: Path) -> None:
-        """Directory sidecar is written inside the directory as _directorymeta2.json."""
+        """Directory sidecar is written inside the directory as {dirname}_directorymeta2.json."""
         entry = _make_entry(type="directory", hashes=None, extension=None)
         dir_path = tmp_path / "mydir"
         dir_path.mkdir()
 
         write_inplace(entry, dir_path, "directory")
 
-        sidecar = dir_path / "_directorymeta2.json"
+        sidecar = dir_path / "mydir_directorymeta2.json"
         assert sidecar.exists()

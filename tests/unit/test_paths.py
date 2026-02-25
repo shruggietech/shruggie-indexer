@@ -140,10 +140,10 @@ class TestBuildSidecarPath:
         assert result == Path("/photos/sunset.jpg_meta2.json")
 
     def test_sidecar_path_directory(self) -> None:
-        """Directory sidecar: vacation/ -> vacation/_directorymeta2.json."""
+        """Directory sidecar: vacation/ -> vacation/vacation_directorymeta2.json."""
         p = Path("/photos/vacation")
         result = build_sidecar_path(p, "directory")
-        assert result == Path("/photos/vacation/_directorymeta2.json")
+        assert result == Path("/photos/vacation/vacation_directorymeta2.json")
 
 
 # ---------------------------------------------------------------------------

@@ -154,7 +154,7 @@ def build_sidecar_path(item_path: Path, item_type: str) -> Path:
     """Construct the path for an in-place sidecar output file.
 
     For files: ``<item_path>_meta2.json``
-    For directories: ``<item_path>/_directorymeta2.json``
+    For directories: ``<item_path>/<dirname>_directorymeta2.json``
 
     Args:
         item_path: Absolute path to the indexed item.
@@ -164,7 +164,7 @@ def build_sidecar_path(item_path: Path, item_type: str) -> Path:
         The sidecar output :class:`~pathlib.Path`.
     """
     if item_type == "directory":
-        return item_path / "_directorymeta2.json"
+        return item_path / f"{item_path.name}_directorymeta2.json"
     return item_path.parent / f"{item_path.name}_meta2.json"
 
 
