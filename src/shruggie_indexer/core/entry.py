@@ -400,6 +400,19 @@ def build_directory_entry(
     child_entries: list[IndexEntry] = []
     items_completed = 0
 
+    # Signal transition from discovery to processing so the GUI can
+    # switch the progress bar to determinate mode immediately, before
+    # the first (potentially slow) build_file_entry call.
+    if progress_callback is not None and total_items > 0:
+        progress_callback(ProgressEvent(
+            phase="processing",
+            items_total=total_items,
+            items_completed=0,
+            current_path=path,
+            message=None,
+            level="info",
+        ))
+
     # Process file children first
     for child_path in files:
         if cancel_event is not None and cancel_event.is_set():

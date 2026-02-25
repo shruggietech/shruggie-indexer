@@ -828,6 +828,9 @@ class ProgressPanel(ctk.CTkFrame):
         super().__init__(master, fg_color="transparent", **kwargs)
         self._start_time: float = 0.0
         self._has_started_processing: bool = False
+        self._elapsed_after_id: str | None = None
+        self._global_total: int = 0
+        self._global_completed: int = 0
         self._build_widgets()
 
     def _build_widgets(self) -> None:
@@ -853,6 +856,8 @@ class ProgressPanel(ctk.CTkFrame):
     def start(self) -> None:
         self._start_time = time.monotonic()
         self._has_started_processing = False
+        self._global_total = 0
+        self._global_completed = 0
         self.progress_bar.configure(mode="indeterminate")
         self.progress_bar.start()
         self.status_label.configure(
@@ -860,31 +865,34 @@ class ProgressPanel(ctk.CTkFrame):
             text_color=ctk.ThemeManager.theme["CTkLabel"]["text_color"],
         )
         self.current_label.configure(text="")
+        self._tick_elapsed()
 
     def update_progress(self, event: ProgressEvent) -> None:
-        elapsed = time.monotonic() - self._start_time
-        mins, secs = divmod(int(elapsed), 60)
-        self.elapsed_label.configure(text=f"{mins}:{secs:02d}")
-
         if event.phase == "discovery":
             if not self._has_started_processing:
                 # First discovery event — show indeterminate bar.
                 self.progress_bar.configure(mode="indeterminate")
                 self.status_label.configure(text="Discovering items...")
-            # Nested subdirectory discovery during processing — keep the
-            # progress bar in determinate mode but update the path label
-            # to show which subdirectory is being scanned.
-        elif event.items_total and event.items_total > 0:
+            # Accumulate discovered totals from each directory.
+            if event.items_total is not None and event.items_total > 0:
+                self._global_total += event.items_total
+        elif event.phase == "processing":
             if not self._has_started_processing:
                 self._has_started_processing = True
                 self.progress_bar.stop()
                 self.progress_bar.configure(mode="determinate")
-            fraction = event.items_completed / event.items_total
-            self.progress_bar.set(fraction)
-            pct = int(fraction * 100)
-            self.status_label.configure(
-                text=f"Processing: {event.items_completed}/{event.items_total} ({pct}%)",
-            )
+            # Track global completed count across all subdirectories.
+            # Only increment when an item was actually processed
+            # (items_completed=0 is a mode-transition signal).
+            if event.items_completed and event.items_completed > 0:
+                self._global_completed += 1
+            if self._global_total > 0:
+                fraction = min(self._global_completed / self._global_total, 1.0)
+                self.progress_bar.set(fraction)
+                pct = int(fraction * 100)
+                self.status_label.configure(
+                    text=f"Processing: {self._global_completed}/{self._global_total} ({pct}%)",
+                )
 
         if event.current_path is not None:
             display_path = str(event.current_path)
@@ -892,7 +900,17 @@ class ProgressPanel(ctk.CTkFrame):
                 display_path = "..." + display_path[-77:]
             self.current_label.configure(text=display_path)
 
+    def _tick_elapsed(self) -> None:
+        """Update the elapsed timer independently of progress events."""
+        elapsed = time.monotonic() - self._start_time
+        mins, secs = divmod(int(elapsed), 60)
+        self.elapsed_label.configure(text=f"{mins}:{secs:02d}")
+        self._elapsed_after_id = self.after(1000, self._tick_elapsed)
+
     def stop(self) -> None:
+        if self._elapsed_after_id is not None:
+            self.after_cancel(self._elapsed_after_id)
+            self._elapsed_after_id = None
         self.progress_bar.stop()
         self.progress_bar.configure(mode="determinate")
         self.progress_bar.set(1.0)
@@ -2077,6 +2095,7 @@ class ShruggiIndexerApp(ctk.CTk):
         self._job_running = False
         self._cancel_event = threading.Event()
         self._result_queue: queue.Queue[dict[str, Any]] = queue.Queue()
+        self._progress_queue: queue.Queue[ProgressEvent] = queue.Queue()
         self._log_queue: queue.Queue[str] = queue.Queue()
         self._active_tab_id: str = _TAB_OPERATIONS
         self._tabs: dict[str, ctk.CTkFrame] = {}
@@ -2458,20 +2477,34 @@ class ShruggiIndexerApp(ctk.CTk):
                     ShruggiIndexerApp._write_inplace_tree(child, root_path)
 
     def _on_progress(self, event: ProgressEvent) -> None:
-        self.after(0, lambda: self._handle_progress(event))
+        # Thread-safe: put on queue instead of calling self.after() from
+        # the background thread.  Drained by _poll_results on the main
+        # thread every _POLL_INTERVAL_MS.
+        self._progress_queue.put_nowait(event)
 
-    def _handle_progress(self, event: ProgressEvent) -> None:
-        self._ops_page._progress_panel.update_progress(event)
-        if event.message:
-            ts = time.strftime("%H:%M:%S")
-            self._output_panel.append_log(f"{ts}  INFO     {event.message}")
+    def _drain_progress_queue(self) -> None:
+        """Drain pending progress events (main thread only)."""
+        for _ in range(200):
+            try:
+                event = self._progress_queue.get_nowait()
+            except queue.Empty:
+                break
+            self._ops_page._progress_panel.update_progress(event)
+            if event.message:
+                ts = time.strftime("%H:%M:%S")
+                self._output_panel.append_log(f"{ts}  INFO     {event.message}")
 
     def _poll_results(self) -> None:
+        # Drain progress events first (main-thread safe).
+        self._drain_progress_queue()
+
         try:
             result = self._result_queue.get_nowait()
         except queue.Empty:
             self.after(_POLL_INTERVAL_MS, self._poll_results)
             return
+        # Final drain to capture any trailing progress events.
+        self._drain_progress_queue()
         self.after(_COMPLETION_DELAY_MS, lambda: self._on_job_complete(result))
 
     def _on_job_complete(self, result: dict[str, Any]) -> None:
