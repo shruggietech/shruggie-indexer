@@ -2168,6 +2168,17 @@ published on the GitHub release page.</p>
 </tr>
 </tbody>
 </table>
+<div class="admonition info">
+<p class="admonition-title">Pipeline execution order</p>
+<p>When Meta Merge Delete runs, the pipeline proceeds in a fixed order:</p>
+<ol>
+<li><strong>Index</strong> — Discover and process all items; sidecar files are identified, parsed, and queued for deletion.</li>
+<li><strong>Write sidecars</strong> — In-place <code>_meta2.json</code> and <code>_directorymeta2.json</code> output files are written alongside each item (if multi-file output is selected).</li>
+<li><strong>Rename</strong> — Files are renamed to their <code>storage_name</code> values (if rename is enabled). In-place sidecar files are renamed alongside their content files.</li>
+<li><strong>Delete</strong> — Consumed sidecar files are removed from disk. Each deletion is logged.</li>
+</ol>
+<p>If the operation is cancelled, steps that have not yet started are skipped. In particular, the delete step is never reached if the operation is interrupted — no sidecar files are deleted until all preceding steps complete successfully.</p>
+</div>
 <p>A small colored dot next to the dropdown indicates whether the current configuration is <strong>destructive</strong> (red) or <strong>non-destructive</strong> (green). This indicator updates in real time as you change settings — including when the rename feature is toggled (see Options Section below).</p>
 <h3 id="target-section">Target Section</h3>
 <p>This is where you tell the application what to process.</p>

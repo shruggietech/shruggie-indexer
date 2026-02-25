@@ -861,6 +861,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#metadata-exclusion-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metadata exclusion patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#filesystem-exclusion-defaults" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1789,6 +1800,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#metadata-exclusion-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metadata exclusion patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#filesystem-exclusion-defaults" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2258,6 +2280,31 @@
 <div class="highlight"><pre><span></span><code>2026-02-23 14:30:02  abc123  INFO      shruggie_indexer.core.hasher  Hashing file: photo.jpg
 </code></pre></div>
 <p>The CLI equivalent is the <code>--log-file</code> flag. In the GUI, enable "Write log files" in Settings.</p>
+<h3 id="metadata-exclusion-patterns">Metadata exclusion patterns</h3>
+<p>The <code>metadata_exclude.patterns</code> setting controls which files are unconditionally excluded from indexing as standalone items. This prevents indexer output artifacts from being re-indexed on subsequent runs.</p>
+<p>The default pattern list:</p>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Matches</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_(meta2?\|directorymeta2?)\.json$</code></td>
+<td>Indexer output sidecars: <code>_meta.json</code>, <code>_meta2.json</code>, <code>images_directorymeta2.json</code>, etc.</td>
+</tr>
+</tbody>
+</table>
+<p>These patterns are end-anchored, so they match both bare filenames (e.g., <code>_meta2.json</code>) and prefixed filenames (e.g., <code>video.mp4_meta2.json</code>, <code>images_directorymeta2.json</code>).</p>
+<div class="admonition info">
+<p class="admonition-title">Two-layer exclusion mechanism</p>
+<p>shruggie-indexer applies two layers of file exclusion during traversal:</p>
+<p><strong>Layer 1 — Metadata exclude patterns</strong> (always active): Files matching <code>metadata_exclude.patterns</code> are removed from the item list during initial directory scanning. This prevents indexer output artifacts from being indexed as regular items.</p>
+<p><strong>Layer 2 — Sidecar identification patterns</strong> (active when MetaMerge is enabled): When MetaMerge or MetaMergeDelete is active, files matching recognized sidecar patterns (<code>.info.json</code>, <code>.description</code>, thumbnails, subtitles, etc.) are additionally excluded from the item list. These files are still available to the sidecar discovery system for merging into parent entries, but they are not indexed as standalone items.</p>
+<p>Both layers work together to ensure sidecar files appear exclusively through the metadata merge system and never as inflated item counts in the output.</p>
+</div>
 <h3 id="filesystem-exclusion-defaults">Filesystem exclusion defaults</h3>
 <p>The default exclusion set covers system artifacts across all supported platforms:</p>
 <table>

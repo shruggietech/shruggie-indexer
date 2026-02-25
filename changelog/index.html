@@ -1380,6 +1380,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1470,6 +1492,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1524,12 +1568,31 @@
 
 
 <h1 id="changelog">Changelog</h1>
-<p>All notable changes to <code>shruggie-indexer</code> are documented in this file.</p>
-<p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>, and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
+<p>All notable changes to this project are documented in this file.</p>
+<p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
+and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <h2 id="unreleased"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.0...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
-<li>Placeholder for upcoming unreleased changes.</li>
+<li><strong>Tests: Sidecar handling and MetaMergeDelete test infrastructure</strong> — Created three permanent test files covering sidecar exclusion, MetaMergeDelete pipeline, and full integration scenarios: <code>tests/test_sidecar_exclusion.py</code> (14 tests across 3 classes), <code>tests/test_meta_merge_delete.py</code> (7 tests across 2 classes), and <code>tests/test_integration_mmd_pipeline.py</code> (9 tests across 3 classes). Tests exercise Layer 1 (metadata_exclude_patterns) and Layer 2 (metadata_identify sidecar) filtering, delete queue population/execution, full MMD pipeline, MMD+rename pipeline, in-place sidecar naming, and idempotency. Added 4 new pytest markers: <code>sidecar</code>, <code>mmd</code>, <code>integration</code>, <code>destructive</code>.</li>
+<li><strong>Tests: <code>sidecar-testbed</code> fixture</strong> — Created <code>tests/fixtures/sidecar-testbed/</code> directory tree with 19 files across 3 subdirectories, exercising all sidecar exclusion, merge, delete, and rename scenarios. Includes content files, sidecar variants (json_metadata, description, screenshot, hash, yaml), prior-run indexer output artifacts, and false-positive candidates (<code>standalone_notes.txt</code>).</li>
+<li><strong>Core: <code>rename_inplace_sidecar()</code> function</strong> — New public function in <code>core/rename.py</code> that renames an in-place <code>_meta2.json</code> sidecar file from <code>{original_name}_meta2.json</code> to <code>{storage_name}_meta2.json</code> after a content file is renamed. Prevents orphaned sidecars and incorrect sidecar naming when rename is active. Exported via <code>shruggie_indexer.__init__</code>.</li>
+<li><strong>Core: Rename phase diagnostic logging</strong> — Added comprehensive <code>DEBUG</code>-level logging to <code>_rename_tree()</code> in both GUI and CLI. Each rename candidate now logs its type and storage_name. Directory entries log item count on descent and skip reason when empty.</li>
+</ul>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li><strong>Core: In-place directory sidecar naming</strong> — <code>build_sidecar_path()</code> in <code>core/paths.py</code> constructed directory sidecar paths as <code>&lt;dir&gt;/_directorymeta2.json</code> (bare name with no identifying prefix). Every directory in the tree received an identically named file, making them indistinguishable in file managers and inconsistent with both the aggregate output naming (<code>{dirname}_directorymeta2.json</code>) and file sidecar naming (<code>{filename}_meta2.json</code>). Fixed to produce <code>&lt;dir&gt;/{dirname}_directorymeta2.json</code>. The <code>metadata_exclude_patterns</code> regex continues to match the corrected filenames because the pattern is end-anchored.</li>
+<li><strong>Core: Sidecar files indexed as standalone items</strong> — <code>list_children()</code> in <code>traversal.py</code> was not applying <code>metadata_exclude_patterns</code> during item enumeration. Indexer output artifacts (<code>_meta.json</code>, <code>_meta2.json</code>, <code>_directorymeta2.json</code>) were being treated as regular files — fully indexed, hashed, EXIF-checked, renamed, and given their own sidecar output (creating absurd filenames like <code>file_meta.json_meta2.json</code>). Fixed by adding Layer 1 filtering: files matching <code>metadata_exclude_patterns</code> are now unconditionally excluded during traversal.</li>
+<li><strong>Core: Sidecar companion files indexed as standalone items when MetaMerge active</strong> — When MetaMerge was enabled, files matching <code>metadata_identify</code> sidecar patterns (e.g., <code>.info.json</code>, <code>.description</code>, <code>_screen.jpg</code>, <code>.md5</code>, <code>.yaml</code>) appeared as both standalone index entries AND sidecar metadata sources. Fixed by adding Layer 2 filtering in <code>build_directory_entry()</code>: recognized sidecar files are excluded from the entry-building iteration while remaining in the full <code>siblings</code> list for sidecar discovery. This ensures sidecars are consumed exclusively through the merge system without breaking sidecar discovery's sibling enumeration.</li>
+<li><strong>GUI/CLI: MetaMergeDelete log levels incorrect</strong> — <code>_drain_delete_queue()</code> in both GUI and CLI used <code>logger.debug</code> for successful deletions and <code>logger.warning</code> for failures. Per spec, successful deletions must be logged at <code>INFO</code> (<code>Sidecar deleted: {path}</code>) and failures at <code>ERROR</code> (<code>Sidecar delete FAILED: {path}: {exception}</code>). Fixed in both entry points.</li>
+<li><strong>GUI/CLI: In-place sidecar files named using pre-rename filename</strong> — When both rename and in-place output were active, <code>_meta2.json</code> sidecar files were written using the original filename (e.g., <code>photo.jpg_meta2.json</code>) instead of the post-rename storage name (e.g., <code>yABC123.jpg_meta2.json</code>). This created orphaned sidecars with no on-disk association to the renamed content file. Fixed by wiring <code>rename_inplace_sidecar()</code> into the rename phase of both GUI and CLI, renaming the sidecar file alongside its content file.</li>
+<li><strong>GUI/CLI: Pipeline ordering for rename + in-place output</strong> — In-place sidecar writes were happening independently of the rename phase. Swapped ordering so in-place writes occur before rename, and the rename phase handles both the content file and its sidecar atomically. This preserves partial-result survival for non-rename cases while ensuring correct sidecar naming when rename is active.</li>
+<li><strong>Core: Rename collision logging</strong> — When multiple files share an identical content hash and the rename target already exists on disk, the collision was previously either raised as a <code>RenameError</code> (caught silently by callers) or skipped with no log output. <code>rename_item()</code> now logs a <code>WARNING</code>-level message (<code>Rename SKIPPED (collision): {original_name} → {storage_name} (target already exists)</code>) and returns the original path without raising. Callers in both GUI and CLI now check the return value to skip in-place sidecar rename for collision-skipped files, preserving the original filename as the sidecar base.</li>
+</ul>
+<h3 id="changed">Changed</h3>
+<ul>
+<li><strong>Core: <code>build_directory_entry()</code> Layer 2 sidecar filtering</strong> — Moved sidecar-pattern exclusion (Layer 2) from <code>list_children()</code> into <code>build_directory_entry()</code>. The full file list from <code>list_children()</code> is preserved as <code>siblings</code> for sidecar discovery, while a filtered <code>entry_files</code> list (excluding recognized sidecar patterns) is used for child entry construction. This architectural change ensures sidecar discovery can find companion files while preventing them from being indexed as standalone items.</li>
+<li><strong>Core: <code>list_children()</code> now applies Layer 1 filtering</strong> — <code>list_children()</code> in <code>traversal.py</code> now applies <code>metadata_exclude_patterns</code> (compiled regexes) against all filenames after the scandir loop, before sorting. This is a new filtering step that was previously absent from the traversal module.</li>
 </ul>
 <h2 id="010-2026-02-20"><a href="https://github.com/shruggietech/shruggie-indexer/releases/tag/v0.1.0">0.1.0</a> - 2026-02-20</h2>
 <h3 id="added_1">Added</h3>
