@@ -40,7 +40,10 @@ from shruggie_indexer import (
     __version__,
     index_path,
     load_config,
+    rename_item,
     serialize_entry,
+    shutdown_exiftool,
+    write_inplace,
 )
 
 __all__ = ["ShruggiIndexerApp", "main"]
@@ -105,6 +108,20 @@ _OP_KEY_MAP: dict[str, str] = {
     _OP_META_MERGE_DELETE: "meta_merge_delete",
 }
 _OP_LABEL_MAP: dict[str, str] = {v: k for k, v in _OP_KEY_MAP.items()}
+
+# Output mode labels for the new three-mode selector
+_OUT_SINGLE = "Single file"
+_OUT_MULTI = "Multi-file"
+_OUT_VIEW = "View only"
+_OUTPUT_MODE_LABELS: list[str] = [_OUT_SINGLE, _OUT_MULTI, _OUT_VIEW]
+
+# Output mode internal key mapping for session persistence
+_OUT_KEY_MAP: dict[str, str] = {
+    _OUT_SINGLE: "single",
+    _OUT_MULTI: "multi",
+    _OUT_VIEW: "view",
+}
+_OUT_LABEL_MAP: dict[str, str] = {v: k for k, v in _OUT_KEY_MAP.items()}
 
 _TAB_LABELS: dict[str, str] = {
     _TAB_OPERATIONS: "Operations",
@@ -568,14 +585,46 @@ class OutputPanel(ctk.CTkFrame):
         self.textbox._textbox.bind("<ButtonRelease-1>", self._on_scroll)
 
     def set_json(self, text: str) -> None:
-        """Set the JSON result text and switch to output view."""
+        """Set the JSON result text.  Does NOT force-switch to output view.
+
+        If the user is currently viewing the log, they remain on the log
+        tab.  A subtle indicator on the Output button signals new content.
+        """
         self._json_text = text
-        self._showing_json = True
-        self._update_toggle_style()
-        self._refresh_view()
+        if self._showing_json:
+            # Already viewing output — refresh in place.
+            self._refresh_view()
+        else:
+            # User is on the log tab — highlight the Output button to
+            # indicate new output is available without switching.
+            self._highlight_output_button()
         state = "normal" if text else "disabled"
         self.copy_btn.configure(state=state)
         self.save_btn.configure(state=state)
+
+    def _highlight_output_button(self) -> None:
+        """Flash the Output button to signal new content is available."""
+        self.output_btn.configure(
+            fg_color=("#228822", "#2d5a2d"),
+            text_color="white",
+        )
+        self.after(
+            _TOAST_DURATION_MS,
+            lambda: self._reset_output_button_style(),
+        )
+
+    def _reset_output_button_style(self) -> None:
+        """Restore Output button to its default style."""
+        if self._showing_json:
+            self.output_btn.configure(
+                fg_color=ctk.ThemeManager.theme["CTkButton"]["fg_color"],
+                text_color=ctk.ThemeManager.theme["CTkButton"]["text_color"],
+            )
+        else:
+            self.output_btn.configure(
+                fg_color="transparent",
+                text_color=("gray50", "gray70"),
+            )
 
     def set_status_message(self, message: str) -> None:
         """Display a brief status message in the output view."""
@@ -848,30 +897,6 @@ class ProgressPanel(ctk.CTkFrame):
 # ---------------------------------------------------------------------------
 
 
-def _suggest_output_path(target_path: str, target_type: str) -> str:
-    """Generate conventional output file path from target (item 2.5)."""
-    if not target_path:
-        return ""
-
-    p = Path(target_path.rstrip("/\\"))
-
-    is_dir = False
-    if target_type == "directory":
-        is_dir = True
-    elif target_type == "file":
-        is_dir = False
-    else:
-        is_dir = p.is_dir() if p.exists() else False
-
-    if is_dir:
-        normalized = str(p).rstrip("/\\")
-        if not normalized or normalized == "/":
-            # Unix root -- fall back to home directory
-            return str(Path.home() / "root_directorymeta2.json")
-        return normalized + "_directorymeta2.json"
-    return str(p) + "_meta2.json"
-
-
 class OperationsPage(ctk.CTkFrame):
     """Consolidated operations view with inline operation type selector.
 
@@ -887,7 +912,6 @@ class OperationsPage(ctk.CTkFrame):
     def __init__(self, master: Any, app: ShruggiIndexerApp, **kwargs: Any) -> None:
         super().__init__(master, fg_color="transparent", **kwargs)
         self._app = app
-        self._last_auto_suggested = ""
         self._target_validation_error: str | None = None
         self._build_widgets()
         # Apply initial control state
@@ -1159,77 +1183,37 @@ class OperationsPage(ctk.CTkFrame):
         )
         self._rename_info_label.pack(anchor="w", padx=(26, 0))
 
-        # Row 5: Dry run (enabled only when rename is active)
-        dry_run_row = ctk.CTkFrame(c, fg_color="transparent")
-        dry_run_row.pack(fill="x", pady=(2, 0))
-        self._dry_run_var = ctk.BooleanVar(value=True)
-        self._dry_run_cb = _CtkCheckBox(
-            dry_run_row, text="Dry run (preview only)",
-            variable=self._dry_run_var,
-            command=self._on_dry_run_changed,
-        )
-        self._dry_run_cb.pack(anchor="w")
-        _Tooltip(self._dry_run_cb, "Preview renames without modifying files on disk.")
-
-        self._dry_run_info_label = ctk.CTkLabel(
-            dry_run_row, text="",
-            font=ctk.CTkFont(size=10),
-            text_color=("gray40", "gray60"),
-            anchor="w",
-        )
-        self._dry_run_info_label.pack(anchor="w", padx=(26, 0))
-
-        # Row 6: In-place sidecar (enabled only for Meta Merge Delete)
-        inplace_row = ctk.CTkFrame(c, fg_color="transparent")
-        inplace_row.pack(fill="x", pady=(2, 0))
-        self._inplace_var = ctk.BooleanVar(value=True)
-        self._inplace_cb = _CtkCheckBox(
-            inplace_row, text="Write in-place sidecar files",
-            variable=self._inplace_var,
-        )
-        self._inplace_cb.pack(anchor="w")
-        _Tooltip(self._inplace_cb, "Write individual sidecar JSON files next to each indexed file.")
-
-        self._inplace_info_label = ctk.CTkLabel(
-            inplace_row, text="",
-            font=ctk.CTkFont(size=10),
-            text_color=("gray40", "gray60"),
-            anchor="w",
-        )
-        self._inplace_info_label.pack(anchor="w", padx=(26, 0))
-
     def _build_output_group(self) -> None:
         self._output_group = _LabeledGroup(
             self._scroll.content, "Output",
-            "Control where results are written.  Leave blank to use defaults.",
+            "Control how results are produced.",
         )
         self._output_group.pack(fill="x", pady=(0, 6))
         c = self._output_group.content
 
-        # Output mode radios (always visible, disabled when not applicable)
-        self._output_mode_frame = ctk.CTkFrame(c, fg_color="transparent")
-        self._output_mode_frame.pack(fill="x", pady=(0, 4))
+        # Output mode selector (three-mode: Single file / Multi-file / View only)
+        mode_row = ctk.CTkFrame(c, fg_color="transparent")
+        mode_row.pack(fill="x", pady=(0, 4))
 
-        ctk.CTkLabel(self._output_mode_frame, text="Mode:", anchor="w").pack(
-            side="left", padx=(0, 6),
+        ctk.CTkLabel(mode_row, text="Mode:", anchor="w").pack(
+            side="left", padx=(0, 8),
         )
-        self._output_mode_var = ctk.StringVar(value="view")
-        self._output_mode_radios: dict[str, ctk.CTkRadioButton] = {}
-        for label, val in [("View only", "view"), ("Save to file", "save"), ("Both", "both")]:
-            rb = _CtkRadioButton(
-                self._output_mode_frame, text=label,
-                variable=self._output_mode_var, value=val,
-                command=self._on_output_mode_changed,
-            )
-            rb.pack(side="left", padx=(0, 10))
-            self._output_mode_radios[val] = rb
-            _Tooltip(rb, {
-                "view": "Display results in the output panel only — no files written to disk.",
-                "save": "Write results to a file without displaying.",
-                "both": "Display results and save to a file.",
-            }[val])
+        self._output_mode_var = ctk.StringVar(value=_OUT_SINGLE)
+        self._output_mode_menu = _CtkOptionMenu(
+            mode_row, variable=self._output_mode_var,
+            values=_OUTPUT_MODE_LABELS,
+            command=self._on_output_mode_changed,
+            width=180,
+        )
+        self._output_mode_menu.pack(side="left", padx=(0, 16))
+        _Tooltip(
+            self._output_mode_menu,
+            "Single file: one output file, no sidecars.\n"
+            "Multi-file: summary file + per-file sidecar files.\n"
+            "View only: display in viewer, nothing written to disk.",
+        )
 
-        # Output mode info label (fine-print, explains why disabled)
+        # Output mode info label (constraint explanation)
         self._output_mode_info_label = ctk.CTkLabel(
             c, text="",
             font=ctk.CTkFont(size=10),
@@ -1238,39 +1222,21 @@ class OperationsPage(ctk.CTkFrame):
         )
         self._output_mode_info_label.pack(fill="x", padx=(4, 0), pady=(0, 2))
 
-        # Output file field (always visible, disabled when not applicable)
-        self._outfile_frame = ctk.CTkFrame(c, fg_color="transparent")
-        self._outfile_frame.pack(fill="x", pady=(4, 0))
+        # Read-only output path display
+        self._outpath_display = _CtkEntry(
+            c, state="disabled",
+            placeholder_text="Select a target to see the output path.",
+        )
+        self._outpath_display.pack(fill="x", pady=(2, 0))
 
-        ctk.CTkLabel(self._outfile_frame, text="File:", anchor="w").pack(
-            side="left", padx=(0, 6),
-        )
-        self._outfile_entry = _CtkEntry(
-            self._outfile_frame,
-            placeholder_text="Default: sidecar files alongside input",
-        )
-        self._outfile_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
-        _Tooltip(
-            self._outfile_entry,
-            "Optional: specify a custom output file path.\n"
-            "Leave blank to use default sidecar naming.",
-        )
-
-        self._outfile_browse_btn = _CtkButton(
-            self._outfile_frame, text="Browse", width=80,
-            command=self._browse_outfile,
-        )
-        self._outfile_browse_btn.pack(side="right")
-        _Tooltip(self._outfile_browse_btn, "Choose where to save the output file.")
-
-        # Output file info label
-        self._outfile_info_label = ctk.CTkLabel(
+        # Output path note (small font, e.g. sidecar info)
+        self._outpath_note = ctk.CTkLabel(
             c, text="",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
         )
-        self._outfile_info_label.pack(fill="x", padx=(4, 0), pady=(0, 2))
+        self._outpath_note.pack(fill="x", padx=(4, 0), pady=(0, 2))
 
     # -- Browse helpers -----------------------------------------------------
 
@@ -1310,32 +1276,24 @@ class OperationsPage(ctk.CTkFrame):
         self._path_entry.insert(0, path)
         self._on_target_or_type_change()
 
-    def _browse_outfile(self) -> None:
-        path = filedialog.asksaveasfilename(
-            title="Save Output File",
-            defaultextension=".json",
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-        )
-        if path:
-            self._outfile_entry.delete(0, "end")
-            self._outfile_entry.insert(0, path)
-            self._last_auto_suggested = ""  # User manually chose
-
     # -- Auto-suggest output path (item 2.5) --------------------------------
 
-    def _try_auto_suggest(self) -> None:
-        """Auto-populate output file path if it hasn't been manually edited."""
-        current_outfile = self._outfile_entry.get().strip()
-        if current_outfile and current_outfile != self._last_auto_suggested:
-            return  # User has manually edited it; don't overwrite
-
+    def _compute_output_path(self) -> str:
+        """Compute the output file path based on current target and mode."""
         target_path = self._path_entry.get().strip()
-        target_type = self._type_var.get()
-        suggested = _suggest_output_path(target_path, target_type)
-        if suggested:
-            self._outfile_entry.delete(0, "end")
-            self._outfile_entry.insert(0, suggested)
-            self._last_auto_suggested = suggested
+        if not target_path:
+            return ""
+        mode = self._output_mode_var.get()
+        if mode == _OUT_VIEW:
+            return ""
+        target_kind = self._detect_target_kind()
+        p = Path(target_path.rstrip("/\\"))
+        if target_kind == "directory":
+            normalized = str(p).rstrip("/\\")
+            if not normalized or normalized == "/":
+                return str(Path.home() / "root_directorymeta2.json")
+            return normalized + "_directorymeta2.json"
+        return str(p) + "_meta2.json"
 
     # -- Target / Type validation -------------------------------------------
 
@@ -1393,21 +1351,15 @@ class OperationsPage(ctk.CTkFrame):
         self._on_target_or_type_change()
 
     def _on_target_or_type_change(self) -> None:
-        """Re-validate target/type combo, update auto-suggest, refresh."""
-        self._try_auto_suggest()
+        """Re-validate target/type combo, refresh controls."""
         self._reconcile_controls()
 
-    def _on_output_mode_changed(self) -> None:
-        """Update output file field state based on mode."""
+    def _on_output_mode_changed(self, _choice: str = "") -> None:
+        """Update output path display based on mode."""
         self._reconcile_controls()
-        self._try_auto_suggest()
 
     def _on_rename_changed(self) -> None:
         """Rename checkbox toggled — refresh dependent controls."""
-        self._reconcile_controls()
-
-    def _on_dry_run_changed(self) -> None:
-        """Dry-run checkbox toggled — update destructive indicator."""
         self._reconcile_controls()
 
     @staticmethod
@@ -1437,7 +1389,8 @@ class OperationsPage(ctk.CTkFrame):
 
         Reads all control values and sets the enabled/disabled state, default
         values, placeholder text, and info labels for every dependent control.
-        Implements the full dependency matrix from §3.2 of the updates doc.
+        Implements the output mode constraint matrix from the output system
+        overhaul specification.
 
         Called on initial construction, whenever any input changes, and after
         restoring session state.
@@ -1457,14 +1410,11 @@ class OperationsPage(ctk.CTkFrame):
 
         # -- Recursive toggle (§3.2.1) --
         if selected_type == "directory":
-            # Directory type → default ON, user can toggle
             self._enable_cb(self._recursive_cb)
             if not target_path:
-                # No path yet; set default
                 self._recursive_var.set(True)
             self._recursive_info_label.configure(text="")
         elif selected_type == "file":
-            # File type → OFF, disabled
             self._recursive_var.set(False)
             self._disable_cb(self._recursive_cb)
             self._recursive_info_label.configure(
@@ -1472,18 +1422,15 @@ class OperationsPage(ctk.CTkFrame):
             )
         elif selected_type == "auto":
             if target_kind == "file":
-                # Auto resolves to file → OFF, disabled
                 self._recursive_var.set(False)
                 self._disable_cb(self._recursive_cb)
                 self._recursive_info_label.configure(
                     text="Recursive is not applicable to single-file targets.",
                 )
             elif target_kind == "directory":
-                # Auto resolves to directory → OFF default, user can toggle
                 self._enable_cb(self._recursive_cb)
                 self._recursive_info_label.configure(text="")
             else:
-                # Auto, not yet selected → OFF default, user can toggle
                 self._enable_cb(self._recursive_cb)
                 self._recursive_info_label.configure(text="")
 
@@ -1498,69 +1445,53 @@ class OperationsPage(ctk.CTkFrame):
         self._enable_cb(self._rename_cb)
         self._rename_info_label.configure(text="")
 
-        # -- Dry run --
-        if rename_on:
-            self._enable_cb(self._dry_run_cb)
-            self._dry_run_info_label.configure(text="")
-        else:
-            self._disable_cb(self._dry_run_cb)
-            self._dry_run_info_label.configure(
-                text="Enable \"Rename files\" to configure dry-run mode.",
-            )
+        # -- Output mode constraint matrix --
+        # Determine effective target type for constraint evaluation.
+        effective_type = selected_type
+        if effective_type == "auto":
+            effective_type = target_kind or "unknown"
 
-        # -- In-place sidecar (§3.2.3) --
-        if op == _OP_META_MERGE_DELETE:
-            # Meta Merge Delete → forced ON, disabled
-            self._inplace_var.set(True)
-            self._disable_cb(self._inplace_cb, select=True)
-            self._inplace_info_label.configure(
-                text="In-place output is required for Meta Merge Delete "
-                     "because original sidecar files are deleted after merging.",
-            )
-        elif op in (_OP_INDEX, _OP_META_MERGE):
-            # Index / Meta Merge → available, default ON for directories
-            self._enable_cb(self._inplace_cb)
-            effective_type = selected_type
-            if effective_type == "auto":
-                effective_type = target_kind or "unknown"
-            if effective_type == "directory":
-                self._inplace_info_label.configure(
-                    text="Per-file sidecar JSON files written alongside indexed files.",
-                )
-            else:
-                self._inplace_info_label.configure(text="")
-        else:
-            self._enable_cb(self._inplace_cb)
-            self._inplace_info_label.configure(text="")
-
-        # -- Output mode + file (§3.2.2) --
+        is_dir = effective_type == "directory"
+        is_mmd = op == _OP_META_MERGE_DELETE
         mode = self._output_mode_var.get()
 
-        # All operations allow all output modes
-        for rb in self._output_mode_radios.values():
-            rb.configure(state="normal")
-        self._output_mode_info_label.configure(text="")
+        # Build list of available modes for this combination.
+        available_modes = [_OUT_SINGLE]
+        if is_dir:
+            available_modes.append(_OUT_MULTI)
+        if not is_mmd:
+            available_modes.append(_OUT_VIEW)
 
-        if mode in ("save", "both"):
-            self._outfile_entry.configure(state="normal")
-            self._outfile_browse_btn.configure(state="normal")
-            self._outfile_info_label.configure(text="")
-        else:
-            self._outfile_entry.configure(state="disabled")
-            self._outfile_browse_btn.configure(state="disabled")
-            self._outfile_info_label.configure(
-                text="Select \"Save to file\" or \"Both\" to specify an output file.",
+        # Enforce fallback if current mode is no longer valid.
+        if mode not in available_modes:
+            # Determine default: Multi-file for directories, Single for files.
+            if is_dir and _OUT_MULTI in available_modes:
+                mode = _OUT_MULTI
+            else:
+                mode = _OUT_SINGLE
+            self._output_mode_var.set(mode)
+
+        # Update the selector to show only available modes.
+        self._output_mode_menu.configure(values=available_modes)
+
+        # Info label for constraint explanation.
+        info_parts = []
+        if not is_dir:
+            info_parts.append("Multi-file is only available for directory targets.")
+        if is_mmd:
+            info_parts.append(
+                "View only is not available for Meta Merge Delete "
+                "(destructive operations require a persistent output record).",
             )
+        self._output_mode_info_label.configure(
+            text="  ".join(info_parts),
+        )
 
-        # -- Output placeholder text (§3.2.2: communicate default behavior) --
-        self._update_output_placeholder()
+        # -- Output path display --
+        self._update_output_path_display()
 
         # -- Destructive indicator --
-        destructive = False
-        if op == _OP_META_MERGE_DELETE:
-            destructive = True
-        elif rename_on and not self._dry_run_var.get():
-            destructive = True
+        destructive = op == _OP_META_MERGE_DELETE or rename_on
         self._indicator.set_destructive(destructive)
 
         # -- Action button enabled state --
@@ -1569,30 +1500,45 @@ class OperationsPage(ctk.CTkFrame):
         else:
             self.action_btn.configure(state="normal")
 
-    def _update_output_placeholder(self) -> None:
-        """Set the output file entry's placeholder based on current context."""
+    def _update_output_path_display(self) -> None:
+        """Set the read-only output path display and note label."""
         target_path = self._path_entry.get().strip()
-        selected_type = self._type_var.get()
+        mode = self._output_mode_var.get()
         target_kind = self._detect_target_kind()
 
-        effective_type = selected_type
-        if effective_type == "auto":
-            effective_type = target_kind or "unknown"
+        # Temporarily enable the entry to update its contents.
+        self._outpath_display.configure(state="normal")
+        self._outpath_display.delete(0, "end")
 
-        if target_path:
-            name = Path(target_path).name
-            if effective_type == "directory":
-                placeholder = f"Default: {name}_directorymeta2.json + per-file sidecars"
-            else:
-                placeholder = f"Default: {name}_meta2.json alongside input"
-        elif effective_type == "directory":
-            placeholder = "Default: <dirname>_directorymeta2.json + per-file sidecars"
-        elif effective_type == "file":
-            placeholder = "Default: <filename>_meta2.json alongside input"
+        if mode == _OUT_VIEW:
+            self._outpath_display.insert(
+                0, "Output will be displayed in the viewer panel.",
+            )
+            self._outpath_note.configure(text="")
+        elif not target_path:
+            self._outpath_display.insert(0, "")
+            self._outpath_display.configure(
+                placeholder_text="Select a target to see the output path.",
+            )
+            self._outpath_note.configure(text="")
         else:
-            placeholder = "Default: sidecar files alongside input"
+            computed = self._compute_output_path()
+            self._outpath_display.insert(0, computed)
+            # Set note based on mode and target kind.
+            if target_kind == "directory":
+                if mode == _OUT_MULTI:
+                    self._outpath_note.configure(
+                        text="Summary output file. Per-file sidecar files "
+                             "will also be written within the directory tree.",
+                    )
+                else:
+                    self._outpath_note.configure(
+                        text="Summary output file. No sidecar files will be written.",
+                    )
+            else:
+                self._outpath_note.configure(text="")
 
-        self._outfile_entry.configure(placeholder_text=placeholder)
+        self._outpath_display.configure(state="disabled")
 
     def _sync_sha512_from_settings(self) -> None:
         """Force-enable SHA-512 checkbox if Settings says 'always compute'."""
@@ -1624,46 +1570,39 @@ class OperationsPage(ctk.CTkFrame):
         """Construct the final IndexerConfig for the current operation."""
         op = self._op_type_var.get()
         rename_on = self._rename_var.get()
+        mode = self._output_mode_var.get()
         overrides: dict[str, Any] = {
             "id_algorithm": self._id_algo_var.get(),
             "compute_sha512": self._sha512_var.get(),
             "recursive": self._recursive_var.get(),
+            "extract_exif": self._exif_var.get(),
             "output_stdout": False,
         }
 
         # Rename feature (applies to any operation)
         if rename_on:
             overrides["rename"] = True
-            overrides["dry_run"] = self._dry_run_var.get()
 
-        if op == _OP_INDEX:
-            overrides["extract_exif"] = self._exif_var.get()
-            overrides["output_inplace"] = False
-            mode = self._output_mode_var.get()
-            if mode in ("save", "both"):
-                outfile = self._outfile_entry.get().strip()
-                overrides["output_file"] = Path(outfile) if outfile else None
-            else:
-                overrides["output_file"] = None
-
-        elif op == _OP_META_MERGE:
-            overrides["extract_exif"] = self._exif_var.get()
+        # Operation-specific flags
+        if op == _OP_META_MERGE:
             overrides["meta_merge"] = True
-            overrides["output_inplace"] = False
-            mode = self._output_mode_var.get()
-            if mode in ("save", "both"):
-                outfile = self._outfile_entry.get().strip()
-                overrides["output_file"] = Path(outfile) if outfile else None
-            else:
-                overrides["output_file"] = None
-
         elif op == _OP_META_MERGE_DELETE:
-            overrides["extract_exif"] = self._exif_var.get()
             overrides["meta_merge"] = True
             overrides["meta_merge_delete"] = True
-            overrides["output_inplace"] = self._inplace_var.get()
-            outfile = self._outfile_entry.get().strip()
-            overrides["output_file"] = Path(outfile) if outfile else None
+
+        # Output mode → config mapping
+        if mode == _OUT_VIEW:
+            overrides["output_file"] = None
+            overrides["output_inplace"] = False
+        elif mode == _OUT_MULTI:
+            computed_path = self._compute_output_path()
+            overrides["output_file"] = Path(computed_path) if computed_path else None
+            overrides["output_inplace"] = True
+        else:
+            # _OUT_SINGLE (default)
+            computed_path = self._compute_output_path()
+            overrides["output_file"] = Path(computed_path) if computed_path else None
+            overrides["output_inplace"] = False
 
         return replace(base, **overrides)
 
@@ -1675,7 +1614,8 @@ class OperationsPage(ctk.CTkFrame):
         return self._output_mode_var.get()
 
     def get_output_file(self) -> str:
-        return self._outfile_entry.get().strip()
+        """Return the computed output file path."""
+        return self._compute_output_path()
 
     def validate(self) -> str | None:
         """Return error message if invalid, else ``None``."""
@@ -1720,10 +1660,9 @@ class OperationsPage(ctk.CTkFrame):
             "sha512": self._sha512_var.get(),
             "extract_exif": self._exif_var.get(),
             "rename": self._rename_var.get(),
-            "dry_run": self._dry_run_var.get(),
-            "inplace": self._inplace_var.get(),
-            "output_mode": self._output_mode_var.get(),
-            "output_file": self._outfile_entry.get(),
+            "output_mode": _OUT_KEY_MAP.get(
+                self._output_mode_var.get(), "single",
+            ),
         }
 
     def restore_state(self, state: dict[str, Any]) -> None:
@@ -1750,16 +1689,13 @@ class OperationsPage(ctk.CTkFrame):
             self._exif_var.set(state["extract_exif"])
         if "rename" in state:
             self._rename_var.set(state["rename"])
-        if "dry_run" in state:
-            self._dry_run_var.set(state["dry_run"])
-        if "inplace" in state:
-            self._inplace_var.set(state["inplace"])
         if "output_mode" in state:
-            self._output_mode_var.set(state["output_mode"])
-        if "output_file" in state:
-            self._outfile_entry.delete(0, "end")
-            self._outfile_entry.insert(0, state["output_file"])
-            self._last_auto_suggested = state["output_file"]
+            # Backward compat: map old "view"/"save"/"both" to new modes.
+            mode_val = state["output_mode"]
+            mode_label = _OUT_LABEL_MAP.get(mode_val, mode_val)
+            if mode_label not in _OUTPUT_MODE_LABELS:
+                mode_label = _OUT_SINGLE
+            self._output_mode_var.set(mode_label)
         # Update controls for the restored state
         self._update_browse_buttons()
         self._reconcile_controls()
@@ -1790,15 +1726,6 @@ class OperationsPage(ctk.CTkFrame):
             self._sha512_var.set(old_state["sha512"])
         if "extract_exif" in old_state:
             self._exif_var.set(old_state["extract_exif"])
-        if "dry_run" in old_state:
-            self._dry_run_var.set(old_state["dry_run"])
-        if "inplace" in old_state:
-            self._inplace_var.set(old_state["inplace"])
-        if "output_mode" in old_state:
-            self._output_mode_var.set(old_state["output_mode"])
-        if "outfile" in old_state:
-            self._outfile_entry.delete(0, "end")
-            self._outfile_entry.insert(0, old_state["outfile"])
 
         self._update_browse_buttons()
         self._reconcile_controls()
@@ -2425,19 +2352,59 @@ class ShruggiIndexerApp(ctk.CTk):
         self._poll_results()
 
     def _background_job(self, target: Path, config: IndexerConfig) -> None:
-        """Run the indexing operation in a background thread."""
+        """Run the indexing operation in a background thread.
+
+        Executes the full pipeline including Stage 6 post-processing:
+        rename, in-place sidecar writes, and sidecar deletion for
+        MetaMergeDelete.
+        """
         result: dict[str, Any] = {"status": "error", "message": "Unknown error"}
         try:
+            # ── Prepare delete queue for MetaMergeDelete ────────────────
+            delete_queue: list[Path] | None = (
+                [] if config.meta_merge_delete else None
+            )
+
+            # ── Execute indexing ────────────────────────────────────────
             entry = index_path(
                 target,
                 config,
+                delete_queue=delete_queue,
                 progress_callback=self._on_progress,
                 cancel_event=self._cancel_event,
             )
+
+            # ── Stage 6: Rename (spec §6.10) ───────────────────────────
+            if config.rename:
+                if entry.type == "file":
+                    rename_item(target, entry)
+                elif entry.items is not None:
+                    for child in entry.items:
+                        if child.type == "file":
+                            child_path = target / child.file_system.relative
+                            try:
+                                rename_item(child_path, child)
+                            except Exception:
+                                logger.warning(
+                                    "Rename failed for %s",
+                                    child_path,
+                                    exc_info=True,
+                                )
+
+            # ── In-place sidecar output ─────────────────────────────────
+            if config.output_inplace:
+                self._write_inplace_tree(entry, target)
+
+            # ── Aggregate output ────────────────────────────────────────
             json_str = serialize_entry(entry)
 
             if config.output_file is not None:
                 config.output_file.write_text(json_str + "\n", encoding="utf-8")
+
+            # ── MetaMergeDelete: drain deletion queue (Stage 6) ─────────
+            if delete_queue:
+                deleted = self._drain_delete_queue(delete_queue)
+                logger.info("Deleted %d merged sidecar files", deleted)
 
             result = {"status": "success", "json": json_str}
 
@@ -2451,6 +2418,35 @@ class ShruggiIndexerApp(ctk.CTk):
             result = {"status": "error", "message": f"Unexpected error: {exc}"}
 
         self._result_queue.put(result)
+
+    @staticmethod
+    def _drain_delete_queue(queue: list[Path]) -> int:
+        """Delete all sidecar files accumulated in the MetaMergeDelete queue.
+
+        Returns the count of files successfully deleted.
+        """
+        deleted = 0
+        for path in queue:
+            try:
+                path.unlink()
+                logger.debug("Deleted merged sidecar: %s", path)
+                deleted += 1
+            except OSError as exc:
+                logger.warning("Failed to delete sidecar %s: %s", path, exc)
+        return deleted
+
+    @staticmethod
+    def _write_inplace_tree(entry: Any, root_path: Path) -> None:
+        """Recursively write in-place sidecar files for an entry tree."""
+        if entry.type == "file":
+            item_path = root_path.parent / entry.file_system.relative
+            write_inplace(entry, item_path, "file")
+        elif entry.type == "directory":
+            dir_path = root_path.parent / entry.file_system.relative
+            write_inplace(entry, dir_path, "directory")
+            if entry.items:
+                for child in entry.items:
+                    ShruggiIndexerApp._write_inplace_tree(child, root_path)
 
     def _on_progress(self, event: ProgressEvent) -> None:
         self.after(0, lambda: self._handle_progress(event))
@@ -2470,7 +2466,13 @@ class ShruggiIndexerApp(ctk.CTk):
         self.after(_COMPLETION_DELAY_MS, lambda: self._on_job_complete(result))
 
     def _on_job_complete(self, result: dict[str, Any]) -> None:
-        """Handle completion of a background job (item 2.8)."""
+        """Handle completion of a background job.
+
+        Does NOT force-switch the active panel tab.  Output content is
+        loaded into the Output view in the background; if the user is on
+        the Log tab, a subtle indicator on the Output button signals
+        that new content is available.
+        """
         progress = self._ops_page._progress_panel
         progress.stop()
         self._stop_log_capture()
@@ -2484,13 +2486,17 @@ class ShruggiIndexerApp(ctk.CTk):
             )
             json_text = result.get("json", "")
 
-            # Item 2.8: respect output mode for post-job display
-            if output_mode == "save":
+            # Route based on output mode
+            if output_mode == _OUT_VIEW:
+                # View only → display in viewer panel
+                self._output_panel.set_json(json_text)
+            elif output_mode in (_OUT_SINGLE, _OUT_MULTI):
+                # File output — show save confirmation
                 outfile = self._last_output_file
                 msg = f"Output saved to: {outfile}" if outfile else "Output saved."
                 self._output_panel.set_status_message(msg)
             else:
-                # "view" or "both" -- display the output
+                # Fallback (should not happen)
                 self._output_panel.set_json(json_text)
 
         elif status == "cancelled":
@@ -2589,6 +2595,10 @@ class ShruggiIndexerApp(ctk.CTk):
                 return
             self._cancel_event.set()
         self._save_session()
+        # Explicitly terminate the persistent ExifTool process to prevent
+        # orphaned child processes (the atexit handler is a safety net but
+        # explicit cleanup is preferred on graceful exit).
+        shutdown_exiftool()
         self.destroy()
 
 

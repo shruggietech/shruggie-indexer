@@ -20,6 +20,7 @@ See spec §6.6 for full behavioral guidance.
 
 from __future__ import annotations
 
+import atexit
 import contextlib
 import json
 import logging
@@ -39,6 +40,7 @@ __all__ = [
     "_base_key",
     "_filter_keys",
     "extract_exif",
+    "shutdown_exiftool",
 ]
 
 logger = logging.getLogger(__name__)
@@ -131,6 +133,25 @@ _backend: str | None | object = _NOT_PROBED
 
 # pyexiftool helper instance managed by the batch backend.
 _batch_helper: Any = None
+
+
+def shutdown_exiftool() -> None:
+    """Terminate the persistent ExifTool batch process, if running.
+
+    Safe to call multiple times.  Registered as an ``atexit`` handler
+    automatically and should also be called explicitly during application
+    shutdown sequences (e.g., GUI ``on_closing()``).
+    """
+    global _batch_helper
+    if _batch_helper is not None:
+        with contextlib.suppress(Exception):
+            _batch_helper.__exit__(None, None, None)
+        _batch_helper = None
+        logger.debug("ExifTool batch process shut down.")
+
+
+# Register atexit handler as a safety net for abnormal termination.
+atexit.register(shutdown_exiftool)
 
 
 def _probe_exiftool() -> None:
@@ -254,7 +275,17 @@ def _recover_metadata_from_error(
     """
     # Check if this is an ExifToolExecuteError with stdout data.
     stdout = getattr(exc, "stdout", None)
-    if not stdout or not isinstance(stdout, str):
+    if not stdout:
+        return None
+
+    # pyexiftool may provide stdout as bytes depending on version;
+    # decode to str before attempting JSON parse.
+    if isinstance(stdout, bytes):
+        try:
+            stdout = stdout.decode("utf-8", errors="replace")
+        except Exception:  # noqa: BLE001
+            return None
+    if not isinstance(stdout, str):
         return None
 
     # Attempt to parse the stdout as JSON.

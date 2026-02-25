@@ -5629,9 +5629,7 @@ This uses the same platform directory resolution as the indexer's TOML configura
     "extract_exif": false,
     "rename": false,
     "dry_run": true,
-    "inplace": true,
-    "output_mode": "view",
-    "output_file": ""
+    "output_mode": "single"
   },
   "settings": {
     "id_algorithm": "md5",
@@ -5705,7 +5703,8 @@ The window uses a two-panel layout: a narrow left sidebar for page navigation an
 │  │ About  │ │  │  [ ] Extract EXIF metadata                  │  │
 │  └────────┘ │  └────────────────────────────────────────────┘  │
 │             │  ┌ Output ─────────────────────────────────────┐  │
-│             │  │  Mode: (●) View only  ( ) Save  ( ) Both    │  │
+│             │  │  Mode: [Single file ▾]                       │  │
+│             │  │  Path: target_directorymeta2.json (read-only)│  │
 │  v0.1.0    │  └────────────────────────────────────────────┘  │
 │             │  ┌──────────────────────────────────────────────┐  │
 │             │  │              ▶  START                        │  │
@@ -5790,8 +5789,8 @@ All controls are organized into four labeled groups, displayed in order from top
 |-------|-------|-------------|----------|
 | 1 | Operation | Select the indexing operation to perform. | Operation type dropdown and destructive operation indicator ([§10.8.1](#1081-destructive-operation-indicator)). |
 | 2 | Target | Choose the file or directory to index. | Path entry, browse buttons, type radio group, recursive checkbox. |
-| 3 | Options | Configure indexing parameters. | ID algorithm, SHA-512, EXIF, rename toggle, dry run, in-place — all always visible, disabled when not applicable with explanatory fine-print labels. |
-| 4 | Output | Control where results are written. | Output mode radios and output file path field — always visible, disabled with explanation when not applicable. |
+| 3 | Options | Configure indexing parameters. | ID algorithm, SHA-512, EXIF, rename toggle, dry run — all always visible, disabled when not applicable with explanatory fine-print labels. |
+| 4 | Output | Control where results are written. | Output mode dropdown (`CTkOptionMenu`: Single file / Multi-file / View only) and read-only computed output path display — always visible, constrained by target type and operation. |
 
 Each group uses consistent padding and alignment. Section headers are bold with an optional one-line description in a muted font beneath. **All controls are always visible** — controls that do not apply to the current operation or target configuration are *disabled* (greyed-out) with small explanatory labels beneath them, never hidden.
 
@@ -5875,7 +5874,6 @@ The Options group contains all operation-related controls, always visible. Contr
 | Extract EXIF metadata | Index (always for Meta Merge / Meta Merge Delete) | *"EXIF extraction is always enabled for Meta Merge operations."* | `CTkCheckBox` | Unchecked | `IndexerConfig.extract_exif` |
 | Rename files | Always | — | `CTkCheckBox` | Unchecked | `IndexerConfig.rename` |
 | Dry run (preview only) | Rename files is checked | *"Enable 'Rename files' to configure dry-run mode."* | `CTkCheckBox` | **Checked** | `IndexerConfig.dry_run` |
-| Write in-place sidecar files | Index, Meta Merge (user-controlled); Meta Merge Delete (forced ON, disabled) | *"In-place output is required for Meta Merge Delete because original sidecar files are deleted after merging."* | `CTkCheckBox` | Checked | `IndexerConfig.output_inplace` |
 
 **SHA-512 settings synchronization:**
 
@@ -5890,21 +5888,34 @@ Rename is an optional feature that can be combined with any of the three core op
 <a id="output-controls"></a>
 #### Output controls
 
-> **Updated 2026-02-23:** Output controls are always visible. Controls that do not apply are disabled with explanatory fine-print labels.
+> **Updated 2026-02-25:** Replaced output mode radio buttons and editable output file entry with a 3-mode `CTkOptionMenu` dropdown and read-only computed output path display.
 
-All output controls are always visible. Controls that are not applicable to the current operation are disabled with fine-print explanation labels:
+The Output group contains two controls:
 
-| Operation | Output mode radios | Output file field | Info text |
-|-----------|--------------------|-------------------|-----------|
-| **Index**, **Meta Merge** | Enabled (all three modes) | Enabled when mode is "Save to file" or "Both"; disabled otherwise with: *"Select 'Save to file' or 'Both' to specify an output file."* | — |
-| **Meta Merge Delete** | Disabled (locked to "Save to file") | Enabled (mandatory) | *"Meta Merge Delete always saves to a file (output file required)."* |
+1. **Output mode dropdown** (`CTkOptionMenu`) — Three modes:
 
-<a id="output-file-auto-suggest"></a>
-#### Output file auto-suggest
+| Label | Internal key | Behavior |
+|-------|-------------|----------|
+| Single file | `single` | Writes all output to one aggregate JSON file at the computed path. |
+| Multi-file | `multi` | Writes per-item in-place sidecar JSON files alongside each processed item (`_meta2.json` / `_directorymeta2.json`). |
+| View only | `view` | Results are displayed in the output panel only. Nothing is written to disk. |
 
-> **Added 2026-02-23:** Output file auto-suggestion based on the target path and the application's naming conventions.
+2. **Output path display** (read-only `CTkEntry`) — Shows the auto-computed output path based on the target and selected mode. For `View only`, displays *"(displayed in viewer)"*. For `Multi-file`, displays the target directory path with a supplemental note: *"Sidecar files written alongside originals."*
 
-When the output file field is visible. the GUI auto-populates it with a conventional output filename whenever the target path changes (on focus-out or after browse selection). The auto-suggested value is editable — it is a default, not a constraint.
+**Constraint matrix:**
+
+| Condition | Effect |
+|-----------|--------|
+| Target is a single file | Multi-file unavailable; falls back to Single file if selected. |
+| Operation is Meta Merge Delete | View only unavailable; falls back to Single file if selected. |
+| Rename is enabled | Multi-file is forced (rename requires in-place output per [§8.4](#84-rename-and-in-place-output-interaction)). |
+
+<a id="output-path-auto-compute"></a>
+#### Output path auto-compute
+
+> **Updated 2026-02-25:** Output path is now auto-computed and read-only, replacing the editable field with browse button.
+
+The output path is computed automatically from the target path and is not user-editable. The path updates whenever the target path or output mode changes.
 
 **Naming convention rules** (from [§6.5](#65-filesystem-timestamps-and-date-conversion) and [§6.9](#69-json-serialization-and-output-routing)):
 
@@ -5920,8 +5931,6 @@ When the output file field is visible. the GUI auto-populates it with a conventi
 | `C:/` | Strip trailing separator, produce `C:/_directorymeta2.json`. |
 | `/` (Unix root) | Fall back to user's home directory: `~/root_directorymeta2.json`. |
 
-The auto-suggest respects manual edits. If the user has manually changed the output field to a value different from the last auto-generated path, subsequent target changes do not overwrite the manual edit.
-
 <a id="centralized-state-reconciliation"></a>
 #### Centralized state reconciliation
 
@@ -5929,11 +5938,12 @@ The auto-suggest respects manual edits. If the user has manually changed the out
 
 All control dependency logic is centralized in a single method, `_reconcile_controls()`, on the `OperationsPage` class. This method:
 
-1. Reads the current values of all controls (operation type, target type, target path, recursive, output mode, dry-run, rename, in-place).
+1. Reads the current values of all controls (operation type, target type, target path, recursive, output mode, dry-run, rename).
 2. Evaluates the dependency rules defined in the context-sensitive options, recursive toggle, and output controls subsections above.
 3. Sets the enabled/disabled/visible state, default value, and info-label text of every dependent control.
-4. Updates the destructive operation indicator ([§10.8.1](#1081-destructive-operation-indicator)).
-5. Updates the output file placeholder text based on the current target and operation configuration.
+4. Applies the output mode constraint matrix (Multi-file unavailable for file targets, View only unavailable for Meta Merge Delete).
+5. Updates the destructive operation indicator ([§10.8.1](#1081-destructive-operation-indicator)).
+6. Updates the computed output path display based on the current target and output mode.
 
 `_reconcile_controls()` is called:
 
@@ -6174,12 +6184,25 @@ When the background thread finishes (successfully, with error, or by cancellatio
 
 For the success and partial-failure cases, the progress display is replaced by the JSON output in the output panel after a brief delay (500ms) to allow the user to see the completion status. The user can toggle back to the progress/log view via a tab or toggle button at the top of the output panel (see [§10.6](#106-output-display-and-export)).
 
+<a id="application-close-handler"></a>
+#### Application close handler
+
+> **Added 2026-02-25.**
+
+The application binds `WM_DELETE_WINDOW` to `_on_close()`, which executes the following shutdown sequence:
+
+1. **Running-job check.** If an operation is in progress, a confirmation dialog asks the user whether to quit. If declined, the close is cancelled.
+2. **Job cancellation.** If confirmed (or no job is running), the cancellation event is set to signal any background thread to stop.
+3. **Session save.** Current GUI state is written to the session file ([§10.1](#101-gui-framework-and-architecture)).
+4. **ExifTool shutdown.** `shutdown_exiftool()` is called to explicitly terminate the persistent ExifTool batch-mode process. This prevents orphaned `exiftool` processes from remaining after the application exits. An `atexit` registration provides a fallback for non-GUI exit paths.
+5. **Window destruction.** `self.destroy()` terminates the main loop.
+
 ---
 
 <a id="106-output-display-and-export"></a>
 ### 10.6. Output Display and Export
 
-> **Updated 2026-02-23:** Updated to document the Clear button, copy visual feedback, resizable output panel, auto-clear on new job, and corrected post-job display behavior for save-to-file mode.
+> **Updated 2026-02-25:** Updated to document the 3-mode output system, tab-aware completion behavior (no forced tab switch, green flash indicator), Clear button, copy visual feedback, resizable output panel, and auto-clear on new job.
 
 <a id="output-panel"></a>
 #### Output panel
@@ -6190,7 +6213,19 @@ The output panel occupies the lower portion of the working area on the Operation
   [Output]  [Log]                         [Save] [Copy] [Clear]
 ```
 
-The "Output" button shows the JSON viewer. The "Log" button shows the log stream from the most recent operation (preserved after completion so the user can review warnings and timing information). The toggle defaults to "Output" after a successful operation and to "Log" after an error or cancellation. All toolbar buttons have hover tooltips ([§10.8.3](#1083-tooltips)).
+The "Output" button shows the JSON viewer. The "Log" button shows the log stream from the most recent operation (preserved after completion so the user can review warnings and timing information). All toolbar buttons have hover tooltips ([§10.8.3](#1083-tooltips)).
+
+<a id="tab-aware-completion"></a>
+#### Tab-aware completion behavior
+
+> **Added 2026-02-25.**
+
+When an operation completes and `set_json()` is called with new output, the output panel does NOT force-switch the active view tab. Instead:
+
+- **If the Output tab is already active:** The content is refreshed in place.
+- **If the Log tab is active:** The Output button flashes green for 3 seconds (`_TOAST_DURATION_MS`) to signal that new output is available. The user's current Log view is not interrupted.
+
+This prevents the disorienting experience of the panel switching tabs while the user is reviewing log output from the operation.
 
 <a id="output-auto-clear"></a>
 #### Auto-clear on new job
@@ -6265,13 +6300,12 @@ The output panel is a single widget instance on the Operations page. It displays
 
 | Output mode | Display behavior |
 |-------------|-----------------|
-| View only | JSON output is loaded into the output panel via `set_json()`. |
-| Save to file | A status message is displayed: _"Output saved to: {filename}"_. The JSON is not loaded into the viewer. Copy and Save buttons act on the active view — they are enabled for the Log tab if log content exists. |
-| Both | JSON output is loaded into the output panel AND written to the output file. |
-| _(Meta Merge Delete)_ | Same as "Save to file" — mandatory output file, status message displayed. |
+| View only | JSON output is loaded into the output panel via `set_json()`. Tab-aware completion applies ([§10.6](#106-output-display-and-export), tab-aware completion). |
+| Single file | Output is written to the computed file path. A status message is displayed: _"Output saved to: {filename}"_. The JSON is not loaded into the viewer. |
+| Multi-file | Per-item sidecar files are written alongside originals. A status message is displayed: _"Sidecar files written to: {directory}"_. The JSON is not loaded into the viewer. |
 | _(Rename active)_ | JSON preview is loaded into the output panel (same as "View only"). The rename feature is a toggle that can be active with any operation type. |
 
-This distinction ensures that users who selected "Save to file" mode see confirmation of the save rather than a confusing blank panel or redundant JSON display.
+This distinction ensures that users who selected a file-writing mode see confirmation of the save rather than a confusing blank panel or redundant JSON display.
 
 ---
 
@@ -6516,8 +6550,8 @@ See also [§10.9.7](#1097-progress-and-feedback-area-allocation) for the specifi
 
 **Standard:** The user MUST always understand where output will go before pressing START. Output destination MUST be communicated through explicit labeling, not implied by control combinations. The following rules apply:
 
-1. **Default output behavior** MUST be displayed in the UI as descriptive text (e.g., "Output: `<filename>_meta2.json` alongside input file").
-2. **Optional output override** (the Output path selector) MUST be clearly labeled as optional, with placeholder text explaining the default.
+1. **Default output behavior** MUST be displayed in the UI as descriptive text in the read-only output path display (e.g., the computed path `target_directorymeta2.json` or `"(displayed in viewer)"` for View only mode).
+2. **Output mode selection** (the Output mode dropdown) MUST make all available modes immediately visible and selectable, with unavailable modes filtered by `_reconcile_controls()`.
 3. **No-output mode** (view in output panel only, decide later) MUST be an explicit, selectable option.
 
 See [§10.6](#106-output-display-and-export) for output panel behavior and [§10.3](#103-target-selection-and-input) for target/output path conventions.

@@ -13,8 +13,10 @@ from shruggie_indexer.core.entry import (
     build_file_entry,
     index_path,
 )
+from shruggie_indexer.core.exif import shutdown_exiftool
 from shruggie_indexer.core.progress import ProgressEvent
-from shruggie_indexer.core.serializer import serialize_entry
+from shruggie_indexer.core.rename import rename_item
+from shruggie_indexer.core.serializer import serialize_entry, write_inplace
 from shruggie_indexer.exceptions import (
     IndexerCancellationError,
     IndexerConfigError,
@@ -63,5 +65,8 @@ __all__ = [
     "build_file_entry",
     "index_path",
     "load_config",
+    "rename_item",
     "serialize_entry",
+    "shutdown_exiftool",
+    "write_inplace",
 ]

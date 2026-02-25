@@ -96,17 +96,23 @@ All option controls are always visible regardless of the selected operation type
 - **Extract EXIF metadata** — When checked, embedded metadata (camera settings, GPS coordinates, creation dates, etc.) is extracted from media files using ExifTool. Requires ExifTool to be installed. Automatically forced on for Meta Merge and Meta Merge Delete operations.
 - **Rename files** — When checked, files are renamed to unique, content-based names ("storage names") after indexing. This feature can be combined with any operation type. Enabling rename makes the operation destructive (the indicator dot turns red) unless dry-run is also enabled.
 - **Dry run** — Only shown when "Rename files" is checked. When enabled, previews what files *would* be renamed without actually changing anything. This is on by default as a safety measure.
-- **Write in-place** — Writes output as sidecar JSON files alongside the originals. Automatically forced on when rename is active. Disabled with an explanation for Meta Merge Delete (which always writes in-place).
 
 ### Output Section
 
-Output controls are always visible. For Meta Merge Delete, the output mode is locked to "Save to file" with an explanatory note, and the file field is required.
+The Output section uses a dropdown menu to select where results are written:
 
-- **Output mode:**
-    - **View only** — Results are displayed in the output panel at the bottom of the window. Nothing is written to disk.
-    - **Save to file** — Results are written to a file on disk. A brief confirmation message appears in the output panel.
-    - **Both** — Results are both displayed and saved to a file.
-- **Output file** — When saving to a file, this field shows the destination path. It is automatically filled in with a suggested name based on your target (e.g., `my-folder_directorymeta2.json`), but you can change it to anything you like.
+- **Output mode** (dropdown):
+    - **Single file** — All results are written to one aggregate JSON file. The file path is shown in a read-only display below the dropdown.
+    - **Multi-file** — Results are written as individual sidecar JSON files alongside each processed file (e.g., `photo.jpg_meta2.json`). Only available when the target is a directory.
+    - **View only** — Results are displayed in the output panel at the bottom of the window. Nothing is written to disk. Not available for Meta Merge Delete operations.
+- **Output path** — A read-only field showing the auto-computed output path based on your target. For "View only" mode, this displays "(displayed in viewer)". For "Multi-file" mode, a note explains that sidecar files are written alongside originals.
+
+!!! tip "Output mode constraints"
+    The available modes adjust automatically based on your target and operation type:
+
+    - **Multi-file** requires a directory target (not available for single files).
+    - **View only** is not available for Meta Merge Delete (which must write output to preserve data before deleting sidecars).
+    - **Rename** forces Multi-file mode (renamed files need per-item sidecar output).
 
 ### Running an Operation
 
@@ -246,7 +252,7 @@ When indexing directories with thousands of files, the initial discovery phase m
 
 ### Output Is Too Large to Display
 
-If the JSON output exceeds 10 MB, the output panel will show a "too large to display" message and prompt you to save the results to a file instead. Use the **Save** button or switch the output mode to "Save to file" before running.
+If the JSON output exceeds 10 MB, the output panel will show a "too large to display" message and prompt you to save the results to a file instead. Use the **Save** button or switch the output mode to "Single file" before running.
 
 ### Application Appears Frozen
 
