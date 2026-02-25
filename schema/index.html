@@ -2073,12 +2073,25 @@
 <td>No</td>
 <td>Metadata records (file) or <code>null</code> (directory).</td>
 </tr>
+<tr>
+<td><code>session_id</code></td>
+<td><code>string</code> (UUID4)</td>
+<td>No</td>
+<td>Identifies the indexing invocation that produced this entry. All entries within a single CLI/GUI/API invocation share the same value.</td>
+</tr>
+<tr>
+<td><code>indexed_at</code></td>
+<td><code>TimestampPair</code></td>
+<td>No</td>
+<td>The moment this IndexEntry was constructed. Distinct from file timestamps — records the indexer's observation time.</td>
+</tr>
 </tbody>
 </table>
 <p><code>additionalProperties</code> is <code>false</code>. The <code>required</code> set:</p>
 <div class="highlight"><pre><span></span><code><span class="p">[</span><span class="s2">&quot;schema_version&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;id&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;id_algorithm&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="p">,</span>
 <span class="w"> </span><span class="s2">&quot;extension&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;size&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;hashes&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;file_system&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;timestamps&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;attributes&quot;</span><span class="p">]</span>
 </code></pre></div>
+<p><code>session_id</code> and <code>indexed_at</code> are declared properties but are <strong>not</strong> in the <code>required</code> array. They are present when the indexer is invoked through the standard CLI, GUI, or API entry points. Entries constructed directly (e.g., in tests) may omit them.</p>
 <h3 id="field-behavior-by-type">Field behavior by type</h3>
 <table>
 <thead>
