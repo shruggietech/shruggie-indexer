@@ -311,7 +311,7 @@ The following documents inform this specification. All repository paths are rela
 
 | Document | Path | Description |
 |----------|------|-------------|
-| Implementation Plan | [`.archive/shruggie-indexer-plan.md`](.archive/shruggie-indexer-plan.md) | Sprint-based implementation plan that guided initial construction through Sprints 1.1–3.3 and the v0.1.0 release. All sprints complete. Archived — retained for historical reference only. |
+| Implementation Plan | [`.archive/20260219-002-shruggie-indexer-plan.md`](.archive/20260219-002-shruggie-indexer-plan.md) | Sprint-based implementation plan that guided initial construction through Sprints 1.1–3.3 and the v0.1.0 release. All sprints complete. Archived — retained for historical reference only. |
 
 <a id="output-schema"></a>
 #### Output Schema
@@ -642,9 +642,7 @@ shruggie-indexer/
 ├── README.md
 ├── shruggie-indexer-cli.spec
 ├── shruggie-indexer-gui.spec
-├── shruggie-indexer-spec.html
 ├── shruggie-indexer-spec.md
-├── shruggie-indexer-spec.pdf
 └── shruggie-indexer.code-workspace
 ```
 
@@ -665,9 +663,7 @@ shruggie-indexer/
 | `README.md` | File | Project overview, installation instructions, quick-start usage examples, and links to full documentation. |
 | `shruggie-indexer-cli.spec` | File | PyInstaller build specification for the CLI executable. Defines packaging configuration, runtime hooks, and binary bundling rules for producing the standalone `shruggie-indexer` command-line binary. See [§13](#13-packaging-and-distribution). |
 | `shruggie-indexer-gui.spec` | File | PyInstaller build specification for the GUI executable. Defines packaging configuration, runtime hooks, and binary bundling rules for producing the standalone desktop application binary. See [§13](#13-packaging-and-distribution). |
-| `shruggie-indexer-spec.html` | File | HTML rendering of this technical specification, generated via VS Code plugin (Markdown Preview Enhanced or similar). Generated artifact — not manually edited. |
-| `shruggie-indexer-spec.md` | File | This technical specification. Lives at the repository root for top-level visibility. |
-| `shruggie-indexer-spec.pdf` | File | PDF rendering of this technical specification, generated via VS Code plugin. Generated artifact — not manually edited. |
+| `shruggie-indexer-spec.md` | File | This technical specification. Lives at the repository root for top-level visibility. HTML and PDF renderings are generated via VS Code plugin and archived in `.archive/` as `20260224-001-shruggie-indexer-spec.html` and `20260224-001-shruggie-indexer-spec.pdf`. |
 | `shruggie-indexer.code-workspace` | File | VS Code multi-root workspace configuration. Defines workspace-level editor settings, recommended extensions, and folder mappings for development. |
 
 The `src`-layout (source code under `src/shruggie_indexer/` rather than a bare `shruggie_indexer/` at the root) is a deliberate choice inherited from `shruggie-feedtools`. It prevents accidental imports of the development source tree during testing — `import shruggie_indexer` in tests always resolves to the installed package, not the working directory. This is the layout recommended by the Python Packaging Authority and enforced by `hatchling` by default.
