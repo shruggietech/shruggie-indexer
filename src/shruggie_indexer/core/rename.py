@@ -73,7 +73,7 @@ def rename_item(
 
     if dry_run:
         logger.info(
-            "Dry-run rename: %s → %s", original_path.name, storage_name,
+            "Dry run — would rename: %s → %s", original_path.name, storage_name,
         )
         return target_path
 
@@ -106,18 +106,31 @@ def rename_item(
     # Perform the rename
     try:
         renamed = original_path.rename(target_path)
-        logger.info("Renamed: %s → %s", original_path.name, storage_name)
+        logger.info("File renamed: %s → %s", original_path.name, storage_name)
         return renamed
     except OSError:
         # Cross-filesystem fallback
-        logger.debug(
+        logger.warning(
             "Path.rename() failed, falling back to shutil.move: %s → %s",
             original_path,
             target_path,
         )
-        result = shutil.move(str(original_path), str(target_path))
-        logger.info("Moved: %s → %s", original_path.name, storage_name)
-        return type(original_path)(result)
+        try:
+            result = shutil.move(str(original_path), str(target_path))
+            logger.info(
+                "File renamed (fallback): %s → %s",
+                original_path.name, storage_name,
+            )
+            return type(original_path)(result)
+        except Exception as move_exc:
+            logger.error(
+                "File rename FAILED: %s → %s: %s",
+                original_path, target_path, move_exc,
+            )
+            raise RenameError(
+                f"Both Path.rename() and shutil.move() failed: "
+                f"{original_path} → {target_path}: {move_exc}"
+            ) from move_exc
 
 
 def _same_inode(a: os.stat_result, b: os.stat_result) -> bool:

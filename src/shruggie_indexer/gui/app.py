@@ -2480,19 +2480,9 @@ class ShruggiIndexerApp(ctk.CTk):
             if config.rename:
                 logger.info("Rename phase started")
                 if entry.type == "file":
-                    rename_item(target, entry)
+                    rename_item(target, entry, dry_run=config.dry_run)
                 elif entry.items is not None:
-                    for child in entry.items:
-                        if child.type == "file":
-                            child_path = target / child.file_system.relative
-                            try:
-                                rename_item(child_path, child)
-                            except Exception:
-                                logger.warning(
-                                    "Rename failed for %s",
-                                    child_path,
-                                    exc_info=True,
-                                )
+                    self._rename_tree(entry, target, config)
 
             # ── In-place sidecar output ─────────────────────────────────
             if config.output_inplace:
@@ -2561,6 +2551,37 @@ class ShruggiIndexerApp(ctk.CTk):
             if entry.items:
                 for child in entry.items:
                     ShruggiIndexerApp._write_inplace_tree(child, root_path)
+
+    @staticmethod
+    def _rename_tree(
+        entry: Any, root_path: Path, config: Any,
+    ) -> None:
+        """Recursively rename all file entries in the tree.
+
+        Mirrors the recursive traversal of ``_write_inplace_tree`` but
+        performs rename operations instead of sidecar writes.  Directories
+        are not renamed (spec §6.10).
+
+        Path reconstruction uses ``root_path.parent / relative`` — the
+        same formula used by ``_write_inplace_tree`` — because
+        ``file_system.relative`` is computed relative to the *parent*
+        of the target directory (the ``index_root``).
+        """
+        if entry.items is None:
+            return
+        for child in entry.items:
+            if child.type == "file":
+                child_path = root_path.parent / child.file_system.relative
+                try:
+                    rename_item(child_path, child, dry_run=config.dry_run)
+                except Exception:
+                    logger.warning(
+                        "Rename failed for %s",
+                        child_path,
+                        exc_info=True,
+                    )
+            elif child.type == "directory" and child.items:
+                ShruggiIndexerApp._rename_tree(child, root_path, config)
 
     def _on_progress(self, event: ProgressEvent) -> None:
         # Thread-safe: put on queue instead of calling self.after() from
