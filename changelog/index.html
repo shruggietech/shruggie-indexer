@@ -1381,6 +1381,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1392,7 +1403,29 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1493,6 +1526,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1504,7 +1548,29 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1574,7 +1640,23 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.0...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
-<li><strong>Tests: Sidecar handling and MetaMergeDelete test infrastructure</strong> — Created three permanent test files covering sidecar exclusion, MetaMergeDelete pipeline, and full integration scenarios: <code>tests/test_sidecar_exclusion.py</code> (14 tests across 3 classes), <code>tests/test_meta_merge_delete.py</code> (7 tests across 2 classes), and <code>tests/test_integration_mmd_pipeline.py</code> (9 tests across 3 classes). Tests exercise Layer 1 (metadata_exclude_patterns) and Layer 2 (metadata_identify sidecar) filtering, delete queue population/execution, full MMD pipeline, MMD+rename pipeline, in-place sidecar naming, and idempotency. Added 4 new pytest markers: <code>sidecar</code>, <code>mmd</code>, <code>integration</code>, <code>destructive</code>.</li>
+<li><strong>Schema: <code>session_id</code> field on IndexEntry</strong> — New optional <code>session_id</code> field (UUID4 string) identifies the indexing invocation that produced each entry. All entries within a single CLI, GUI, or API invocation share the same value. Enables downstream consumers (primarily <code>shruggie-catalog</code>) to perform run correlation, staleness detection, provenance linking, and batch integrity verification. The field is optional and absent from the <code>required</code> array; <code>schema_version</code> remains <code>2</code>. When <code>index_path()</code> is called without an explicit <code>session_id</code>, one is auto-generated. Ref: spec §18.1.14.</li>
+<li><strong>Schema: <code>indexed_at</code> field on IndexEntry</strong> — New optional <code>indexed_at</code> field (TimestampPair) records the UTC moment each IndexEntry was constructed by the indexer. Distinct from the file's own filesystem timestamps — records the indexer's observation time. Each entry receives its own unique <code>indexed_at</code> value. Supports ordering, TTL/freshness policies, and debugging for downstream consumers.</li>
+<li><strong>Tests: Catalog readiness conformance tests</strong> — Added <code>TestSessionIdAndIndexedAt</code> test class (7 cases) to <code>tests/conformance/test_v2_schema.py</code> validating schema conformance for entries with/without <code>session_id</code> and <code>indexed_at</code>, UUID4 pattern enforcement, real-file entry population, and session_id threading through directory children.</li>
+<li><strong>Tests: Entry builder unit tests</strong> — Added <code>TestSessionIdThreading</code> (3 cases) and <code>TestIndexedAtTimestamp</code> (4 cases) to <code>tests/unit/test_entry.py</code> verifying <code>session_id</code> propagation through <code>build_file_entry()</code> and <code>build_directory_entry()</code>, <code>indexed_at</code> population, and default <code>None</code> values for directly constructed entries.</li>
+<li><strong>GUI: Advanced configuration scaffold</strong> — The Settings tab now includes a collapsed "Advanced Configuration" section below existing settings. Expanding the section reveals five labeled groups — Filesystem Exclusion, ExifTool, Extension Validation, Sidecar Identification, and Metadata Exclusion — each displaying compiled default values in read-only monospace textboxes. Includes a cosmetic "Shared Settings" / "Indexer-Specific Settings" separator preparing for future cross-tool configuration. Each group has a disabled "Reset to Defaults" button placeholder. Full editing, data binding, and persistence are deferred to a post-v0.1.1 release. The section's expanded/collapsed state is persisted across sessions.</li>
+</ul>
+<h3 id="changed">Changed</h3>
+<ul>
+<li><strong>Infra: Shared configuration namespace</strong> — Configuration and session storage paths now use a shared ShruggieTech ecosystem directory (<code>&lt;base&gt;/shruggie-tech/shruggie-indexer/</code>) instead of the tool-specific <code>&lt;base&gt;/shruggie-indexer/</code> path used in v0.1.0. Both the TOML config loader and GUI <code>SessionManager</code> check the new path first, fall back to the legacy path with an INFO-level migration recommendation, and always write to the new path. Old files are never deleted. Prepares the directory structure for future ecosystem tools (<code>shruggie-catalog</code>, <code>shruggie-vault</code>, <code>shruggie-sync</code>).</li>
+<li><strong>Archive: Normalized naming convention</strong> — All files in <code>.archive/</code> now follow a <code>&lt;YYYYmmdd&gt;-&lt;ZZZ&gt;-&lt;title&gt;.&lt;ext&gt;</code> naming convention. Renamed <code>shruggie-indexer-spec.pdf</code> → <code>20260224-001-shruggie-indexer-spec.pdf</code>, <code>shruggie-indexer-spec.html</code> → <code>20260224-001-shruggie-indexer-spec.html</code>, and <code>shruggie-indexer-plan.md</code> → <code>20260219-002-shruggie-indexer-plan.md</code>. Updated all spec references (§1.5, §3.1) to the new filenames.</li>
+<li><strong>Docs: Spec download link</strong> — Documentation site Quick Links now includes both a Markdown (GitHub) link and a raw PDF download link for the technical specification.</li>
+<li><strong>Core: <code>index_path()</code> accepts optional <code>session_id</code> keyword argument</strong> — The public API function <code>index_path()</code> now accepts an optional <code>session_id: str | None</code> parameter. When omitted, a UUID4 is auto-generated per call. CLI and GUI entry points generate and pass their own session IDs.</li>
+<li><strong>Core: <code>build_file_entry()</code> and <code>build_directory_entry()</code> accept <code>session_id</code></strong> — Both builder functions now accept a <code>session_id</code> keyword argument and thread it into all recursive child entries. Both functions generate an <code>indexed_at</code> timestamp at construction time.</li>
+<li><strong>Schema: v2 JSON Schema updated</strong> — Added <code>session_id</code> (with UUID4 pattern validation) and <code>indexed_at</code> (TimestampPair <code>$ref</code>) property definitions to the root IndexEntry schema. Neither field is added to the <code>required</code> array. <code>additionalProperties</code> remains <code>false</code>.</li>
+<li><strong>Docs: Schema reference updated</strong> — <code>docs/schema/index.md</code> updated to document <code>session_id</code> and <code>indexed_at</code> in the top-level fields table with a note on their optional status.- <strong>Docs: Changelog auto-sync</strong> — <code>docs/changelog.md</code> is now auto-copied from the repository root <code>CHANGELOG.md</code> during CI build, eliminating manual synchronization drift. The docs CI workflow (<code>docs.yml</code>) copies the root changelog before <code>mkdocs build</code> and triggers on <code>CHANGELOG.md</code> changes. A header comment in <code>docs/changelog.md</code> warns against direct edits.</li>
+<li><strong>Docs: Python API reference updated</strong> — Updated <code>docs/user-guide/python-api.md</code> to reflect the new <code>session_id</code> parameter on <code>index_path()</code>, <code>build_file_entry()</code>, and <code>build_directory_entry()</code>, and the new <code>session_id</code> and <code>indexed_at</code> fields on <code>IndexEntry</code>.</li>
+<li><strong>Docs: GUI guide updated</strong> — Added Advanced Configuration section documentation to <code>docs/user-guide/gui.md</code> describing the collapsed settings scaffold, its five configuration groups, and the deferred editing note.</li>
 <li><strong>Tests: <code>sidecar-testbed</code> fixture</strong> — Created <code>tests/fixtures/sidecar-testbed/</code> directory tree with 19 files across 3 subdirectories, exercising all sidecar exclusion, merge, delete, and rename scenarios. Includes content files, sidecar variants (json_metadata, description, screenshot, hash, yaml), prior-run indexer output artifacts, and false-positive candidates (<code>standalone_notes.txt</code>).</li>
 <li><strong>Core: <code>rename_inplace_sidecar()</code> function</strong> — New public function in <code>core/rename.py</code> that renames an in-place <code>_meta2.json</code> sidecar file from <code>{original_name}_meta2.json</code> to <code>{storage_name}_meta2.json</code> after a content file is renamed. Prevents orphaned sidecars and incorrect sidecar naming when rename is active. Exported via <code>shruggie_indexer.__init__</code>.</li>
 <li><strong>Core: Rename phase diagnostic logging</strong> — Added comprehensive <code>DEBUG</code>-level logging to <code>_rename_tree()</code> in both GUI and CLI. Each rename candidate now logs its type and storage_name. Directory entries log item count on descent and skip reason when empty.</li>
@@ -1589,11 +1671,91 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>GUI/CLI: In-place sidecar files named using pre-rename filename</strong> — When both rename and in-place output were active, <code>_meta2.json</code> sidecar files were written using the original filename (e.g., <code>photo.jpg_meta2.json</code>) instead of the post-rename storage name (e.g., <code>yABC123.jpg_meta2.json</code>). This created orphaned sidecars with no on-disk association to the renamed content file. Fixed by wiring <code>rename_inplace_sidecar()</code> into the rename phase of both GUI and CLI, renaming the sidecar file alongside its content file.</li>
 <li><strong>GUI/CLI: Pipeline ordering for rename + in-place output</strong> — In-place sidecar writes were happening independently of the rename phase. Swapped ordering so in-place writes occur before rename, and the rename phase handles both the content file and its sidecar atomically. This preserves partial-result survival for non-rename cases while ensuring correct sidecar naming when rename is active.</li>
 <li><strong>Core: Rename collision logging</strong> — When multiple files share an identical content hash and the rename target already exists on disk, the collision was previously either raised as a <code>RenameError</code> (caught silently by callers) or skipped with no log output. <code>rename_item()</code> now logs a <code>WARNING</code>-level message (<code>Rename SKIPPED (collision): {original_name} → {storage_name} (target already exists)</code>) and returns the original path without raising. Callers in both GUI and CLI now check the return value to skip in-place sidecar rename for collision-skipped files, preserving the original filename as the sidecar base.</li>
+<li><strong>GUI: Session debug logging referenced non-existent attribute</strong> — <code>_save_session()</code> and <code>_restore_session()</code> referenced <code>SessionManager._path</code> which does not exist after the namespace migration. Fixed to use <code>_write_path</code> and <code>_read_path</code> respectively.</li>
 </ul>
-<h3 id="changed">Changed</h3>
+<h3 id="changed_1">Changed</h3>
 <ul>
 <li><strong>Core: <code>build_directory_entry()</code> Layer 2 sidecar filtering</strong> — Moved sidecar-pattern exclusion (Layer 2) from <code>list_children()</code> into <code>build_directory_entry()</code>. The full file list from <code>list_children()</code> is preserved as <code>siblings</code> for sidecar discovery, while a filtered <code>entry_files</code> list (excluding recognized sidecar patterns) is used for child entry construction. This architectural change ensures sidecar discovery can find companion files while preventing them from being indexed as standalone items.</li>
-<li><strong>Core: <code>list_children()</code> now applies Layer 1 filtering</strong> — <code>list_children()</code> in <code>traversal.py</code> now applies <code>metadata_exclude_patterns</code> (compiled regexes) against all filenames after the scandir loop, before sorting. This is a new filtering step that was previously absent from the traversal module.</li>
+<li>
+<p><strong>Core: <code>list_children()</code> now applies Layer 1 filtering</strong> — <code>list_children()</code> in <code>traversal.py</code> now applies <code>metadata_exclude_patterns</code> (compiled regexes) against all filenames after the scandir loop, before sorting. This is a new filtering step that was previously absent from the traversal module.</p>
+</li>
+<li>
+<p><strong>Core: <code>shutdown_exiftool()</code> API</strong> — New public function (<code>shruggie_indexer.shutdown_exiftool()</code>) that explicitly terminates the persistent ExifTool batch-mode process. Registered via <code>atexit</code> for automatic cleanup and called explicitly by the GUI's <code>_on_close()</code> handler.</p>
+</li>
+<li><strong>Docs: GUI screenshot infrastructure</strong> — Created <code>docs/assets/images/gui/</code> directory for storing annotated GUI screenshots. Added a "To Do" section to the GUI documentation page (<code>docs/user-guide/gui.md</code>) listing the required screenshots.</li>
+<li><strong>Config: User-customizable ExifTool key exclusions</strong> — Added <code>exiftool.exclude_keys</code> (replace) and <code>exiftool.exclude_keys_append</code> (extend) configuration keys for controlling which metadata keys are filtered from ExifTool output. The compiled default set is unchanged; users can now extend or replace it via TOML configuration files or API overrides without modifying source code. Added <code>exiftool_exclude_keys</code> field to <code>IndexerConfig</code>, <code>DEFAULT_EXIFTOOL_EXCLUDE_KEYS</code> to compiled defaults, and TOML merge logic for both replace and append modes. Includes eight new unit tests covering replace mode, append mode, TOML loading, config loader round-tripping, and end-to-end extraction with custom sets.</li>
+<li><strong>Tests: Non-zero exit metadata recovery</strong> — Added <code>TestNonZeroExitMetadataRecovery</code> test class with five cases covering batch recovery, subprocess recovery, empty-stdout fallback, helper reset on unrecoverable errors, and <code>Error</code> key exclusion.</li>
+<li><strong>CLI: <code>--log-file</code> flag</strong> — New option to write log output to a persistent file. <code>--log-file</code> (no argument) writes to the default platform-specific app data directory; <code>--log-file &lt;path&gt;</code> writes to a custom location. Log files are named <code>YYYY-MM-DD_HHMMSS.log</code> and include timestamps, session ID, and logger name.</li>
+<li><strong>TOML: <code>[logging]</code> configuration section</strong> — Added <code>logging.file_enabled</code> and <code>logging.file_path</code> keys to enable persistent log file output via configuration files.</li>
+<li><strong>GUI: "Write log files" settings toggle</strong> — New checkbox in the Settings page Logging section. When enabled, each operation writes a timestamped log file to the app data directory. Toggle state is persisted across sessions.</li>
+</ul>
+<h3 id="fixed_1">Fixed</h3>
+<ul>
+<li><strong>GUI: Rename operation silently failing</strong> — The GUI's <code>_background_job()</code> was missing the Stage 6 post-processing that the CLI performs: after indexing, each completed entry must be passed through <code>rename_item()</code> to execute the rename. The GUI skipped this step entirely, so rename operations appeared to succeed but never moved any files. Fixed by adding a rename loop matching the CLI's Stage 6 implementation.</li>
+<li><strong>GUI: Meta Merge Delete not deleting sidecar files</strong> — Two bugs prevented sidecar deletion in the GUI: (1) no <code>delete_queue</code> list was created or passed to <code>index_path()</code>, so sidecar paths were never collected; (2) no drain call was made to <code>os.unlink()</code> the queued paths after indexing. Fixed by creating the queue, threading it through <code>index_path()</code>, and draining it at the end of the background job.</li>
+<li><strong>GUI: In-place sidecar writes not firing</strong> — When Multi-file (in-place) output mode was selected, the background job never called <code>write_inplace()</code> to write per-item sidecar JSON files alongside originals. Fixed by adding <code>_write_inplace_tree()</code> to the post-processing sequence.</li>
+<li><strong>ExifTool: WARNING regression for unknown file types</strong> — <code>_recover_metadata_from_error()</code> failed to recover valid metadata from <code>ExifToolExecuteError</code> because pyexiftool ≥ 0.5 provides <code>stdout</code> as <code>bytes</code>, not <code>str</code>. The <code>isinstance(stdout, str)</code> guard always failed, causing every non-zero exit to fall through to a WARNING log. Fixed by adding a <code>bytes</code> → <code>str</code> decode step before JSON parsing.</li>
+<li><strong>GUI: Output panel forced tab switch</strong> — <code>OutputPanel.set_json()</code> unconditionally switched the active view to the Output tab on every operation completion, interrupting users reviewing the Log tab. Fixed: if the Output tab is already active, content is refreshed in place; if the Log tab is active, the Output button flashes green for 3 seconds to signal new content without switching.</li>
+<li><strong>GUI: Progress bar layout stability</strong> — Replaced the swappable progress/output panel arrangement with a fixed-height progress region embedded directly within the Operations page. The region uses <code>pack_propagate(False)</code> to maintain a constant 120 px allocation, toggling between idle (START button) and running (progress bar + cancel) sub-frames without reflowing surrounding controls.</li>
+<li><strong>ExifTool: Metadata recovery on non-zero exit</strong> — ExifTool invocations that exit with a non-zero status (e.g. unsupported file types producing partial JSON on stdout) now attempt to recover valid metadata from the output before falling back. Previously, any non-zero exit discarded all data. Added <code>_recover_metadata_from_error()</code> and <code>_log_exiftool_error_field()</code> helpers; "Unknown file type" warnings are now logged at INFO instead of WARNING. Added <code>"Error"</code> to <code>EXIFTOOL_EXCLUDED_KEYS</code>.</li>
+<li><strong>GUI: Log capture pipeline</strong> — Core library log messages and progress event messages now both appear in the output panel's log view with timestamps. Previously, most diagnostic output was silently dropped or consumed by the progress panel without forwarding to the log stream.</li>
+<li><strong>GUI: Log entry timestamps and formatting</strong> — Log entries in the GUI log panel now use the <code>HH:MM:SS  LEVEL  message</code> format with color coding: red for ERROR/CRITICAL, amber for WARNING, muted gray for DEBUG, and default text color for INFO.</li>
+<li><strong>GUI: Log auto-scroll behavior</strong> — The log panel now auto-scrolls to the bottom when new content arrives, pauses auto-scroll when the user scrolls upward, and resumes when scrolled back to the bottom.</li>
+<li><strong>GUI: Log panel Save and Copy buttons</strong> — Save and Copy buttons are now enabled whenever the active view (Output or Log) contains content. Previously they were permanently disabled in the log view. Save in log view opens a save-as dialog for <code>.log</code> files.</li>
+<li>ExifTool key filtering now correctly handles group-prefixed keys (e.g. <code>System:FileName</code>) by matching on the base key name after the last <code>:</code> separator. Previously, the <code>-G3:1</code> flag caused all keys to carry group prefixes, which bypassed the exact-match exclusion check and leaked sensitive filesystem details into output.</li>
+</ul>
+<h3 id="changed_2">Changed</h3>
+<ul>
+<li><strong>GUI: 3-mode output system</strong> — Replaced the dry-run checkbox, in-place checkbox, output mode radio buttons (<code>View only</code> / <code>Save to file</code> / <code>Both</code>), and editable output file entry with a single <code>CTkOptionMenu</code> dropdown offering three modes: <strong>Single file</strong> (one aggregate JSON), <strong>Multi-file</strong> (per-item in-place sidecars), and <strong>View only</strong> (display in output panel, nothing written to disk). The output path is now auto-computed and displayed in a read-only entry. Multi-file mode is only available for directory targets; View only is unavailable for Meta Merge Delete. Constraint enforcement and fallback logic are handled by <code>_reconcile_controls()</code>.</li>
+<li><strong>GUI: ExifTool process cleanup on exit</strong> — The <code>_on_close()</code> handler now explicitly calls <code>shutdown_exiftool()</code> before <code>self.destroy()</code>, ensuring the persistent ExifTool batch-mode process is terminated cleanly on window close. An <code>atexit</code> fallback is also registered for non-GUI exit paths.</li>
+<li><strong>GUI: Output panel tab-aware completion</strong> — Operation completion no longer force-switches the output panel to the Output tab. If the user is viewing the Log tab, the Output button flashes green for 3 seconds to signal new content availability; if already on the Output tab, content refreshes in place.</li>
+<li><strong>GUI: Stage 6 post-processing in background job</strong> — <code>_background_job()</code> now executes the full CLI-equivalent Stage 6 pipeline: rename loop (<code>rename_item()</code>), in-place sidecar writes (<code>write_inplace()</code>), and sidecar delete queue drain — matching the backend behavior of the CLI entry point.</li>
+<li><strong>Spec SS10.3: Output system documentation</strong> — Updated §10.3 output controls table, visual grouping description, context-sensitive options, output file auto-suggest section, and ASCII wireframe to reflect the 3-mode dropdown model replacing radio buttons and editable path fields.</li>
+<li><strong>Spec SS10.6: Post-job display and tab behavior</strong> — Updated post-job display behavior table to use <code>Single file</code> / <code>Multi-file</code> / <code>View only</code> modes. Added documentation for <code>set_json()</code> tab-aware behavior (no forced switch, green flash indicator).</li>
+<li><strong>Spec SS10.1: Session JSON</strong> — Removed <code>inplace</code> and <code>output_file</code> from the session format example; <code>output_mode</code> now uses <code>single</code> / <code>multi</code> / <code>view</code> keys with <code>single</code> as default.</li>
+<li><strong>Spec SS10.5: Application close handler</strong> — Added documentation for the <code>_on_close()</code> lifecycle (running-job confirmation dialog, <code>shutdown_exiftool()</code> call, session save, <code>destroy()</code>).</li>
+<li><strong>Spec SS10.9.5: Output handling clarity</strong> — Updated "Output path selector" references to "Output mode dropdown" and "computed path display."</li>
+<li><strong>Spec SS10–SS18: Technical specification tone overhaul (Phases D–E)</strong> — Completed the full tone rewrite across Sections 10 through 18. All remaining "The port", "Deviation from original", and "Improvement over original" phrasing is replaced with authoritative present-tense voice and "Historical note (DEV-XX):" callouts. The entire specification now reads as a standalone tool reference with zero porting-era language.</li>
+<li><strong>Spec Phase F: Cross-reference audit and docs-spec sync</strong> — Validated all 634 SS X.Y cross-references and 186 section headings. Fixed two broken anchor links (<code>#108-about-tab</code> → <code>#1082-about-tab</code>). Reconciled four behavioral contradictions between the documentation site and the spec: corrected in-place sidecar naming in §8.3, fixed exception module location in §9.4, added <code>exceptions.py</code> to §3.2 layout tree and package files table.</li>
+<li><strong>Spec SS6.6: ExifTool error recovery</strong> — Rewrote the error handling section to document metadata recovery from non-zero exits. ExifTool exit code 1 (e.g., "Unknown file type") now triggers JSON inspection and metadata preservation rather than discarding all output. Updated the error handling table, added <code>ExifToolExecuteError</code> recovery documentation, documented process reset policy (only on true process failure), and <code>ExifTool:Error</code> INFO-level logging.</li>
+<li><strong>Spec SS17.5: Batch mode error isolation</strong> — Rewrote the error isolation paragraph to distinguish recoverable per-file errors (non-zero exit with valid JSON) from true process failures (crash, broken pipe). Only true failures trigger persistent process reset.</li>
+<li><strong>Spec SS6.6+SS7.4: Configurable key exclusion</strong> — Updated the key exclusion paragraph in §6.6 from "not currently configurable" to document the <code>exiftool.exclude_keys</code> (replace) and <code>exiftool.exclude_keys_append</code> (append) configuration keys. Added key exclusion configuration subsection to §7.4, added <code>exclude_keys</code> entries to the §7.7 collection field table, and added commented examples to the §7.6 TOML example.</li>
+<li><strong>Spec SS11.1+SS11.5+SS8.7: Log file support</strong> — Documented optional persistent log file output across all three delivery surfaces: CLI <code>--log-file</code> flag, TOML <code>[logging]</code> section, and GUI settings toggle. Added platform directory table, file naming convention, and FileHandler lifecycle documentation.</li>
+<li><strong>Spec SS10.3: Control dependency matrix</strong> — Updated the in-place sidecar checkbox states (available for all operations, forced ON for Meta Merge Delete). Added centralized state reconciliation subsection documenting <code>_reconcile_controls()</code>.</li>
+<li><strong>Spec SS10.5: Progress area and log forwarding</strong> — Added notes on fixed-height progress area per §10.9.7 and progress-to-log forwarding.</li>
+<li><strong>Spec Batch 7 amendments (A–J)</strong> — Applied 10 amendments to the technical specification reflecting Batch 6 and Batch 7 behavioral changes. (A) §6.1: Documented two-layer sidecar exclusion mechanism in <code>list_children()</code> with Layer 1 (<code>metadata_exclude_patterns</code>) and Layer 2 (<code>metadata_identify</code> union). (B) §6.2: Corrected <code>build_sidecar_path()</code> documentation from <code>&lt;item_path&gt;/_directorymeta2.json</code> to <code>&lt;item_path&gt;/&lt;dirname&gt;_directorymeta2.json</code>. (C) §6.9: Documented <code>{dirname}_directorymeta2.json</code> in-place naming convention and aggregate vs. in-place distinction. (D) §6.9: Documented in-place sidecar rename coordination (write-then-rename). (E) §6.10: Updated collision detection from <code>RenameError</code> to skip-and-warn with <code>WARNING</code>-level logging. (F) §6.10: Documented sidecar rename during file rename phase. (G) §6.10: Documented MetaMergeDelete execution loop with <code>INFO</code>/<code>ERROR</code> logging and pipeline ordering. (H) §7.5: Clarified <code>metadata_exclude_patterns</code> end-anchored regex matching. (I) §8.4: Documented <code>delete_queue</code> orchestrator wiring. (J) §14.2: Added test specifications for <code>test_sidecar_exclusion.py</code>, <code>test_meta_merge_delete.py</code>, <code>test_integration_mmd_pipeline.py</code> with pytest markers. Updated spec date from 2026-02-24 to 2026-02-25.</li>
+<li><strong>Spec SS10.6: Save/Copy button enablement</strong> — Updated enablement rules to per-view semantics (Output tab vs Log tab).</li>
+<li><strong>Spec SS1–SS9: Technical specification tone overhaul (Phases A–C)</strong> — Rewrote Sections 1 through 9 of the technical specification to shift the document's voice from a porting diary to an authoritative standalone tool specification. All "Deviation from original" and "Improvement over original" callouts are relabeled to "Historical note" blockquotes. References to "the port" are replaced with "the tool" or "shruggie-indexer"; references to "the original" are demoted into Historical note callouts or rephrased as "the legacy implementation." Body text now leads with what the tool does, not how it differs from the PowerShell predecessor. DEV-XX codes and SS X.Y cross-references are preserved throughout.</li>
+<li><strong>ExifTool: <code>_filter_keys()</code> accepts configurable exclusion set</strong> — <code>_filter_keys()</code> now takes an <code>exclude_keys</code> parameter instead of referencing the module-level constant. The exclusion set is resolved from <code>IndexerConfig.exiftool_exclude_keys</code> and threaded through all backend call paths (<code>_extract_batch</code>, <code>_extract_subprocess</code>, <code>_parse_json_output</code>, <code>_recover_metadata_from_error</code>). The module-level <code>EXIFTOOL_EXCLUDED_KEYS</code> constant is retained for backward compatibility and reference.</li>
+<li><strong>GUI: Centralized control reconciliation</strong> — Replaced <code>_update_controls()</code> with <code>_reconcile_controls()</code>, a single method implementing the full dependency matrix for all Operations page controls. Manages recursive toggle state across five target scenarios, in-place sidecar forcing for Meta Merge Delete, SHA-512 settings sync, output placeholder text, and destructive indicator updates. All control-change callbacks now route through this method.</li>
+<li>Expanded <code>EXIFTOOL_EXCLUDED_KEYS</code> from 8 to 24 entries. Added <code>SourceFile</code>, redundant timestamp/size keys already captured in IndexEntry fields, OS-specific filesystem attributes (<code>FileAttributes</code>, <code>FileDeviceNumber</code>, <code>FileInodeNumber</code>, etc.), and ExifTool operational keys (<code>Now</code>, <code>ProcessingTime</code>).</li>
+<li><strong>GUI: Consolidated tab layout</strong> — Replaced four separate operation tabs (Index, Meta Merge, Meta Merge Delete, Rename) with a single Operations page using an operation-type selector dropdown. Sidebar now contains three tabs: Operations, Settings, and About.</li>
+<li><strong>GUI: Destructive-operation indicator</strong> — Added a real-time visual indicator (green/red dot) that reflects whether the selected operation and dry-run state combination is destructive.</li>
+<li><strong>GUI: Labeled control groups</strong> — Reorganized controls into bordered, labeled groups (Operation, Target, Options, Output) with contextual descriptions. Controls show or hide dynamically based on the selected operation type.</li>
+<li><strong>GUI: Always-visible controls with enable/disable</strong> — All input controls (Target, Options, Output) are now always visible regardless of the selected operation type. Controls that do not apply to the current operation are disabled with a brief explanatory label instead of being hidden. This makes the full option space discoverable at all times.</li>
+<li><strong>GUI: Rename as feature toggle</strong> — Rename is no longer a standalone operation type. It is now a "Rename files" checkbox in the Options group that can be combined with any of the three operation types (Index, Meta Merge, Meta Merge Delete). The operation type dropdown has been reduced from four entries to three.</li>
+<li><strong>GUI: Target/Type validation</strong> — The application now detects file-vs-directory conflicts between the target path and the selected type. A red inline error message appears below the type selector, and the START button is disabled until the conflict is resolved. The Recursive checkbox is automatically disabled when the target is a single file.</li>
+<li><strong>GUI: SHA-512 settings sync</strong> — When "Compute SHA-512 by default" is enabled in Settings, the SHA-512 checkbox on the Operations page is forced on and cannot be unchecked, with a "(Enabled in Settings)" explanation label. Changing the setting syncs immediately.</li>
+<li><strong>GUI: Green START button</strong> — The action button now always displays "▶  START" (green) regardless of operation type, centered with a max width of 50% of the window. During execution it changes to "■ Cancel" (red). The label no longer varies by operation.</li>
+<li><strong>GUI: Removed static scrollbar</strong> — The Operations page input area now uses a plain frame instead of a scrollable frame, eliminating a persistent scrollbar that appeared even when content fit without scrolling.</li>
+<li><strong>GUI: Dual browse buttons</strong> — Target input now shows separate "File…" and "Folder…" browse buttons when the target type is "auto", and a single context-appropriate button otherwise.</li>
+<li><strong>GUI: Persistent output file entry</strong> — Output file path field is always visible with auto-suggested paths that update as target and operation change, while preserving manual user edits.</li>
+<li><strong>GUI: Auto-clear output on run</strong> — Output panel is automatically cleared when starting a new operation.</li>
+<li><strong>GUI: Output panel clear button</strong> — Added a "Clear" toolbar button alongside the existing Save and Copy buttons.</li>
+<li><strong>GUI: Save-mode completion message</strong> — When output mode is "save", the completion panel now shows a status message instead of attempting to render an empty JSON result.</li>
+<li><strong>GUI: About tab</strong> — New About tab displaying project description, version, Python and ExifTool info, documentation and website links, and attribution.</li>
+<li><strong>GUI: Sidebar version label</strong> — Application version displayed at the bottom of the sidebar in a muted font.</li>
+<li><strong>GUI: Library log capture</strong> — Core library log messages are now captured via a queue handler attached to the <code>shruggie_indexer</code> logger and streamed to both the progress and output panels. Verbosity level is controlled from Settings.</li>
+<li><strong>GUI: Copy button feedback</strong> — Copy button briefly changes to "Copied ✓" with a green highlight for 1.5 seconds after clicking.</li>
+<li><strong>GUI: Resizable output panel</strong> — Output panel includes a drag handle for vertical resizing (100–600 px range). Panel height is persisted across sessions.</li>
+<li><strong>GUI: Tooltips</strong> — Descriptive hover tooltips added to all interactive controls, with a global enable/disable toggle in Settings.</li>
+<li><strong>Documentation: GUI usage guide</strong> — Added a dedicated desktop application guide (<code>docs/user-guide/gui.md</code>) covering launch, interface navigation, all operation types, output panel usage, keyboard shortcuts, session persistence, and troubleshooting. Includes Windows SmartScreen unblocking instructions. Placed prominently in the MkDocs navigation under User Guide.</li>
+<li><strong>Spec SS3.1: Repository layout sync</strong> — Updated the top-level layout tree diagram and table to reflect the current repository state. Added entries for <code>.archive/</code>, <code>CHANGELOG.md</code>, PyInstaller spec files, generated spec renderings (<code>.html</code>/<code>.pdf</code>), and VS Code workspace file. Corrected <code>docs/</code> subdirectory names (<code>user/</code> → <code>user-guide/</code>, added <code>getting-started/</code>). Broadened <code>.github/</code> entry to cover <code>copilot-instructions.md</code>.</li>
+<li><strong>Spec SS1.5: Archived implementation plan</strong> — Updated the reference documents table to point to the archived location (<code>.archive/shruggie-indexer-plan.md</code>) and note that all sprints are complete.</li>
+<li><strong>Spec SS3.7: Documentation site nav</strong> — Updated the <code>nav</code> YAML example to match the current <code>mkdocs.yml</code> structure: added Getting Started section, Desktop Application under User Guide, corrected doc paths, and promoted Changelog to top-level nav item.</li>
+<li><strong>Spec SS10: GUI Application</strong> — Comprehensive spec update to reflect the consolidated GUI architecture implemented in Sections 1–5. Rewrote SS10 introduction, SS10.1 session persistence (v2 format), SS10.2 window layout (3-tab sidebar, version label), SS10.3 target selection (consolidated operations page, dual browse, auto-suggest output, context-sensitive controls), SS10.4 configuration panel (removed embedded About, added Interface/tooltips section), SS10.5 action button and job exclusivity (single Operations page model), SS10.6 output display (Clear button, copy feedback, resizable panel, auto-clear, post-job display modes), SS10.7 keyboard shortcuts (Ctrl+1–3 for pages, Ctrl+Shift+C for copy). Added new SS10.8 supplemental components subsection covering destructive indicator, About tab, tooltips, labeled group frames, and debug logging. Updated to reflect rename as feature toggle (not standalone operation), always-visible controls with enable/disable paradigm, green START button, target/type validation, and SHA-512 settings sync.</li>
+<li><strong>Spec SS10.9: GUI Design Standards</strong> — Added new subsection to the technical specification codifying GUI design governance. Adopts Jakob Nielsen's 10 Usability Heuristics by reference as the baseline evaluation framework. Defines seven project-specific UI standards: layout stability, state-driven control visibility, control interdependency transparency, output handling clarity, destructive operation safeguards, progress/feedback area allocation, and log/output panel behavior. Includes a directive requiring all GUI implementation work (including AI agent sessions) to comply with these standards.</li>
+<li><strong>Deprecated <code>shruggie-indexer-plan.md</code></strong> — Moved the completed implementation plan from the repository root to <code>.archive/</code>. Added <code>.archive/</code>, <code>shruggie-indexer-spec.html</code>, and <code>shruggie-indexer-spec.pdf</code> to <code>.gitignore</code>.</li>
 </ul>
 <h2 id="010-2026-02-20"><a href="https://github.com/shruggietech/shruggie-indexer/releases/tag/v0.1.0">0.1.0</a> - 2026-02-20</h2>
 <h3 id="added_1">Added</h3>

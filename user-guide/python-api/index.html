@@ -1972,6 +1972,7 @@
     <span class="o">*</span><span class="p">,</span>
     <span class="n">progress_callback</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">ProgressEvent</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">cancel_event</span><span class="p">:</span> <span class="n">threading</span><span class="o">.</span><span class="n">Event</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">session_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IndexEntry</span><span class="p">:</span> <span class="o">...</span>
 </code></pre></div>
 <table>
@@ -2002,6 +2003,11 @@
 <td><code>cancel_event</code></td>
 <td><code>threading.Event \| None</code></td>
 <td>Checked between items during directory traversal. When set, raises <code>IndexerCancellationError</code>. Ignored for single-file targets.</td>
+</tr>
+<tr>
+<td><code>session_id</code></td>
+<td><code>str \| None</code></td>
+<td>UUID4 identifying this indexing session. When <code>None</code>, a new UUID4 is auto-generated. All entries produced by a single call share the same session ID.</td>
 </tr>
 </tbody>
 </table>
@@ -2041,6 +2047,7 @@
     <span class="o">*</span><span class="p">,</span>
     <span class="n">siblings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">delete_queue</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">session_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IndexEntry</span><span class="p">:</span> <span class="o">...</span>
 </code></pre></div>
 <table>
@@ -2072,6 +2079,11 @@
 <td><code>list[Path] \| None</code></td>
 <td>When MetaMergeDelete is active, sidecar paths are appended here for deferred deletion by the caller.</td>
 </tr>
+<tr>
+<td><code>session_id</code></td>
+<td><code>str \| None</code></td>
+<td>UUID4 session identifier. Threaded into the constructed entry's <code>session_id</code> field.</td>
+</tr>
 </tbody>
 </table>
 <h3 id="build_directory_entry"><code>build_directory_entry()</code></h3>
@@ -2084,6 +2096,7 @@
     <span class="n">delete_queue</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">progress_callback</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">ProgressEvent</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">cancel_event</span><span class="p">:</span> <span class="n">threading</span><span class="o">.</span><span class="n">Event</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">session_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IndexEntry</span><span class="p">:</span> <span class="o">...</span>
 </code></pre></div>
 <table>
@@ -2124,6 +2137,11 @@
 <td><code>cancel_event</code></td>
 <td><code>threading.Event \| None</code></td>
 <td>Cancellation event forwarded through recursive calls.</td>
+</tr>
+<tr>
+<td><code>session_id</code></td>
+<td><code>str \| None</code></td>
+<td>UUID4 session identifier. Threaded into all child entries during recursive construction.</td>
 </tr>
 </tbody>
 </table>
@@ -2256,6 +2274,8 @@
     <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">IndexEntry</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">metadata</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">MetadataEntry</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">mime_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">session_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>    <span class="c1"># UUID4 identifying the indexing session</span>
+    <span class="n">indexed_at</span><span class="p">:</span> <span class="n">TimestampPair</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># When this entry was constructed</span>
 </code></pre></div>
 <h3 id="reusable-types">Reusable types</h3>
 <table>

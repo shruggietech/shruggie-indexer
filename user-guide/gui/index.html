@@ -931,6 +931,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#advanced-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1964,6 +1975,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#advanced-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2315,6 +2337,45 @@ exists. Resolve any red error messages before running.</p>
 <li><strong>Reset to Defaults</strong> — Resets all settings to their factory values (asks for confirmation first).</li>
 <li><strong>Open Config Folder</strong> — Opens the folder where the application stores its session data.</li>
 </ul>
+<h3 id="advanced-configuration">Advanced Configuration</h3>
+<p>Below the standard settings, a collapsed <strong>Advanced Configuration</strong> section provides visibility into the full set of TOML-configurable behaviors. Expanding the section reveals five labeled groups:</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Filesystem Exclusion</strong></td>
+<td>Default <code>filesystem_excludes.names</code> and <code>filesystem_excludes.globs</code> values.</td>
+</tr>
+<tr>
+<td><strong>ExifTool</strong></td>
+<td>Default <code>exiftool.exclude_extensions</code>, <code>exiftool.exclude_keys</code>, and <code>exiftool.base_args</code> values.</td>
+</tr>
+<tr>
+<td><strong>Extension Validation</strong></td>
+<td>Default <code>extension_validation_pattern</code> regex.</td>
+</tr>
+<tr>
+<td><strong>Sidecar Identification</strong></td>
+<td>Default <code>metadata_identify</code> per-type regex lists.</td>
+</tr>
+<tr>
+<td><strong>Metadata Exclusion</strong></td>
+<td>Default <code>metadata_exclude.patterns</code> regex list.</td>
+</tr>
+</tbody>
+</table>
+<p>Each group displays its compiled default values in read-only monospace textboxes. The section includes a cosmetic "Shared Settings" / "Indexer-Specific Settings" separator preparing for future cross-tool configuration via <code>shared.toml</code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Editing Deferred</p>
+<p>The Advanced Configuration section is read-only in this release. Full editing,
+data binding, and persistence will be added in a future version. Each group
+includes a disabled "Reset to Defaults" button placeholder.</p>
+</div>
 <hr />
 <h2 id="about-tab">About Tab</h2>
 <p>The About tab displays:</p>
