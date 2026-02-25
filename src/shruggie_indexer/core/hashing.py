@@ -15,6 +15,7 @@ See spec §6.3 for full behavioral guidance.
 from __future__ import annotations
 
 import hashlib
+import threading
 import unicodedata
 from typing import TYPE_CHECKING
 
@@ -84,6 +85,8 @@ Computed once at module import time rather than hardcoded (DEV-09).
 def hash_file(
     path: Path,
     algorithms: tuple[str, ...] = _DEFAULT_ALGORITHMS,
+    *,
+    cancel_event: threading.Event | None = None,
 ) -> HashSet:
     """Compute content hashes of a file.
 
@@ -94,15 +97,24 @@ def hash_file(
         path: Absolute path to the file.
         algorithms: Hash algorithm names to compute.  Defaults to
             ``("md5", "sha256")``.
+        cancel_event: Optional ``threading.Event`` checked every chunk.
+            When set, raises ``IndexerCancellationError``.
 
     Returns:
         A :class:`~shruggie_indexer.models.schema.HashSet` with the computed
         digests in uppercase hexadecimal.
+
+    Raises:
+        IndexerCancellationError: ``cancel_event`` was set during hashing.
     """
+    from shruggie_indexer.exceptions import IndexerCancellationError
+
     hashers = {alg: hashlib.new(alg) for alg in algorithms}
 
     with open(path, "rb") as fh:
         while chunk := fh.read(CHUNK_SIZE):
+            if cancel_event is not None and cancel_event.is_set():
+                raise IndexerCancellationError("Hashing cancelled")
             for h in hashers.values():
                 h.update(chunk)
 

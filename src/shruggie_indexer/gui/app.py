@@ -827,6 +827,7 @@ class ProgressPanel(ctk.CTkFrame):
     def __init__(self, master: Any, **kwargs: Any) -> None:
         super().__init__(master, fg_color="transparent", **kwargs)
         self._start_time: float = 0.0
+        self._has_started_processing: bool = False
         self._build_widgets()
 
     def _build_widgets(self) -> None:
@@ -851,6 +852,7 @@ class ProgressPanel(ctk.CTkFrame):
 
     def start(self) -> None:
         self._start_time = time.monotonic()
+        self._has_started_processing = False
         self.progress_bar.configure(mode="indeterminate")
         self.progress_bar.start()
         self.status_label.configure(
@@ -865,11 +867,18 @@ class ProgressPanel(ctk.CTkFrame):
         self.elapsed_label.configure(text=f"{mins}:{secs:02d}")
 
         if event.phase == "discovery":
-            self.progress_bar.configure(mode="indeterminate")
-            self.status_label.configure(text="Discovering items...")
+            if not self._has_started_processing:
+                # First discovery event — show indeterminate bar.
+                self.progress_bar.configure(mode="indeterminate")
+                self.status_label.configure(text="Discovering items...")
+            # Nested subdirectory discovery during processing — keep the
+            # progress bar in determinate mode but update the path label
+            # to show which subdirectory is being scanned.
         elif event.items_total and event.items_total > 0:
-            self.progress_bar.stop()
-            self.progress_bar.configure(mode="determinate")
+            if not self._has_started_processing:
+                self._has_started_processing = True
+                self.progress_bar.stop()
+                self.progress_bar.configure(mode="determinate")
             fraction = event.items_completed / event.items_total
             self.progress_bar.set(fraction)
             pct = int(fraction * 100)
@@ -2600,6 +2609,12 @@ class ShruggiIndexerApp(ctk.CTk):
         # explicit cleanup is preferred on graceful exit).
         shutdown_exiftool()
         self.destroy()
+        # Force-terminate the process.  When a background job is blocked in
+        # an uncancellable operation (large file hashing, exiftool IPC), the
+        # daemon thread keeps the process alive even after the Tk mainloop
+        # ends.  os._exit() bypasses normal cleanup but is the only reliable
+        # way to prevent zombie processes visible in Task Manager.
+        os._exit(0)
 
 
 # ---------------------------------------------------------------------------

@@ -145,6 +145,20 @@ class TestCancellation:
                 cancel_event=cancel,
             )
 
+    def test_cancel_during_file_hashing(
+        self, tmp_path: Path, mock_exiftool: None,
+    ) -> None:
+        """Pre-set cancel_event raises from build_file_entry (via hash_file)."""
+        # Create a file larger than one chunk so the cancel check triggers.
+        f = tmp_path / "big.bin"
+        f.write_bytes(b"A" * (128 * 1024))
+        config = _cfg()
+        cancel = threading.Event()
+        cancel.set()
+
+        with pytest.raises(IndexerCancellationError):
+            build_file_entry(f, config, cancel_event=cancel)
+
 
 class TestProgressCallback:
     """Tests for progress callback invocation."""

@@ -7,7 +7,10 @@ from __future__ import annotations
 
 import hashlib
 import re
+import threading
 from pathlib import Path
+
+import pytest
 
 from shruggie_indexer.core.hashing import (
     NULL_HASHES,
@@ -16,6 +19,7 @@ from shruggie_indexer.core.hashing import (
     hash_string,
     select_id,
 )
+from shruggie_indexer.exceptions import IndexerCancellationError
 from shruggie_indexer.models.schema import HashSet
 
 # ---------------------------------------------------------------------------
@@ -85,6 +89,18 @@ class TestHashFile:
         """Explicit (md5, sha256) -> sha512 is None."""
         result = hash_file(sample_file, algorithms=("md5", "sha256"))
         assert result.sha512 is None
+
+    def test_cancel_event_raises(self, large_file: Path) -> None:
+        """Pre-set cancel_event raises IndexerCancellationError."""
+        cancel = threading.Event()
+        cancel.set()
+        with pytest.raises(IndexerCancellationError):
+            hash_file(large_file, cancel_event=cancel)
+
+    def test_cancel_event_none_no_effect(self, sample_file: Path) -> None:
+        """Default cancel_event=None does not interfere with hashing."""
+        result = hash_file(sample_file, cancel_event=None)
+        assert result.md5 == _HELLO_MD5
 
 
 class TestHashString:

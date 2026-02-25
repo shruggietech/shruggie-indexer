@@ -181,6 +181,7 @@ def build_file_entry(
     siblings: list[Path] | None = None,
     delete_queue: list[Path] | None = None,
     *,
+    cancel_event: threading.Event | None = None,
     _index_root: Path | None = None,
 ) -> IndexEntry:
     """Build a complete ``IndexEntry`` for a single file.
@@ -194,11 +195,17 @@ def build_file_entry(
             (for sidecar discovery).  If ``None``, the module will
             enumerate the parent directory.
         delete_queue: MetaMergeDelete accumulator (see spec section 6.7).
+        cancel_event: Optional ``threading.Event`` checked before expensive
+            operations (hashing, EXIF extraction).  When set, raises
+            ``IndexerCancellationError``.
         _index_root: Internal parameter — root directory for relative path
             computation.  Defaults to ``path.parent`` when not supplied.
 
     Returns:
         A fully populated ``IndexEntry`` conforming to the v2 schema.
+
+    Raises:
+        IndexerCancellationError: ``cancel_event`` was set during processing.
     """
     algorithms = _get_algorithms(config)
     index_root = _index_root if _index_root is not None else path.parent
@@ -220,7 +227,11 @@ def build_file_entry(
         )
     else:
         try:
-            content_hashes = hash_file(path, algorithms)
+            content_hashes = hash_file(
+                path, algorithms, cancel_event=cancel_event,
+            )
+        except IndexerCancellationError:
+            raise
         except OSError:
             logger.warning(
                 "Content hashing failed for %s — hashes set to null", path,
@@ -246,6 +257,8 @@ def build_file_entry(
     )
 
     # Step 8 — EXIF metadata
+    if cancel_event is not None and cancel_event.is_set():
+        raise IndexerCancellationError("Indexing cancelled")
     exif_entry: MetadataEntry | None = None
     mime_type: str | None = None
     if config.extract_exif and not is_symlink:
@@ -398,9 +411,12 @@ def build_directory_entry(
                 config,
                 siblings=files,
                 delete_queue=delete_queue,
+                cancel_event=cancel_event,
                 _index_root=index_root,
             )
             child_entries.append(child_entry)
+        except IndexerCancellationError:
+            raise
         except Exception:
             logger.warning(
                 "Failed to build entry for %s — skipping",
@@ -572,6 +588,7 @@ def index_path(
     if resolved.is_file():
         return build_file_entry(
             resolved, config, delete_queue=delete_queue,
+            cancel_event=cancel_event,
         )
 
     if resolved.is_dir():
