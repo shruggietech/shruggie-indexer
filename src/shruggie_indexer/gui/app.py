@@ -2488,8 +2488,8 @@ class ShruggiIndexerApp(ctk.CTk):
             if config.rename:
                 logger.info("Rename phase started")
                 if entry.type == "file":
-                    rename_item(target, entry, dry_run=config.dry_run)
-                    if not config.dry_run and config.output_inplace:
+                    result_path = rename_item(target, entry, dry_run=config.dry_run)
+                    if not config.dry_run and config.output_inplace and result_path != target:
                         rename_inplace_sidecar(target, entry)
                 elif entry.items is not None:
                     self._rename_tree(entry, target, config)
@@ -2585,9 +2585,10 @@ class ShruggiIndexerApp(ctk.CTk):
                     child_path, child.type, storage_name,
                 )
                 try:
-                    rename_item(child_path, child, dry_run=config.dry_run)
+                    result_path = rename_item(child_path, child, dry_run=config.dry_run)
                     # Rename the in-place sidecar to match (Batch 6, §4).
-                    if not config.dry_run and config.output_inplace:
+                    # Skip sidecar rename when the content file was collision-skipped.
+                    if not config.dry_run and config.output_inplace and result_path != child_path:
                         rename_inplace_sidecar(child_path, child)
                 except Exception:
                     logger.warning(

@@ -51,8 +51,12 @@ def rename_item(
     the would-be new path without performing the rename.
 
     Collision detection:
-      - If the target path exists and is a **different** inode, raises
-        ``RenameError`` to prevent data loss.
+      - If the target path exists and is a **different** inode, the rename
+        is skipped with a ``WARNING``-level log message and the original
+        path is returned unchanged.  This covers the case where two or
+        more content files share an identical hash (identical
+        ``storage_name``): the first file renames successfully, and
+        subsequent files are safely skipped.
       - If the target path exists and is the **same** inode (already
         renamed in a previous run), the rename is a no-op.
 
@@ -67,12 +71,14 @@ def rename_item(
             performing the rename.
 
     Returns:
-        The new :class:`~pathlib.Path` after renaming (or the would-be path
-        in dry-run mode).
+        The new :class:`~pathlib.Path` after renaming, the would-be path
+        in dry-run mode, or ``original_path`` if the rename was skipped
+        due to a collision.
 
     Raises:
-        RenameError: If the target path already exists and is not the same
-            file (collision detected).
+        RenameError: If stat calls fail during collision detection or if
+            both rename strategies (``Path.rename()`` and ``shutil.move()``)
+            fail.
     """
     storage_name = entry.attributes.storage_name
     target_path = build_storage_path(original_path, storage_name)
@@ -103,11 +109,13 @@ def rename_item(
             )
             return target_path
 
-        # Different inode = collision
-        raise RenameError(
-            f"Rename collision: target {target_path} already exists "
-            f"and is a different file than {original_path}"
+        # Different inode = collision — skip and warn
+        logger.warning(
+            "Rename SKIPPED (collision): %s \u2192 %s (target already exists)",
+            original_path.name,
+            storage_name,
         )
+        return original_path
 
     # Perform the rename
     try:

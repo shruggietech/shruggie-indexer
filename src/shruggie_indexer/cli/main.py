@@ -512,8 +512,8 @@ def main(
 
         # ── Rename (spec section 6.10) ──────────────────────────────────
         if config.rename and entry.type == "file":
-            rename_item(target_path, entry, dry_run=config.dry_run)
-            if not config.dry_run and config.output_inplace:
+            result_path = rename_item(target_path, entry, dry_run=config.dry_run)
+            if not config.dry_run and config.output_inplace and result_path != target_path:
                 from shruggie_indexer.core.rename import rename_inplace_sidecar
                 rename_inplace_sidecar(target_path, entry)
         elif config.rename and entry.items is not None:
@@ -608,9 +608,10 @@ def _rename_tree(
                 child_path, child.type, storage_name,
             )
             try:
-                rename_item(child_path, child, dry_run=config.dry_run)
+                result_path = rename_item(child_path, child, dry_run=config.dry_run)
                 # Rename the in-place sidecar to match (Batch 6, §4).
-                if not config.dry_run and config.output_inplace:
+                # Skip sidecar rename when the content file was collision-skipped.
+                if not config.dry_run and config.output_inplace and result_path != child_path:
                     from shruggie_indexer.core.rename import rename_inplace_sidecar
                     rename_inplace_sidecar(child_path, child)
             except Exception:

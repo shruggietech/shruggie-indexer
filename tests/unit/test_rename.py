@@ -11,7 +11,6 @@ from typing import Any
 import pytest
 
 from shruggie_indexer.core.rename import rename_item
-from shruggie_indexer.exceptions import RenameError
 from shruggie_indexer.models.schema import (
     AttributesObject,
     FileSystemObject,
@@ -102,8 +101,8 @@ class TestDryRun:
 class TestCollisionDetection:
     """Tests for collision detection."""
 
-    def test_collision_raises_rename_error(self, tmp_path: Path) -> None:
-        """Renaming when a different file occupies the target raises RenameError."""
+    def test_collision_skips_with_warning(self, tmp_path: Path) -> None:
+        """Renaming when a different file occupies the target logs WARNING and returns original path."""
         original = tmp_path / "original.txt"
         original.write_text("original content", encoding="utf-8")
 
@@ -112,8 +111,13 @@ class TestCollisionDetection:
         target.write_text("different content", encoding="utf-8")
 
         entry = _make_entry()
-        with pytest.raises(RenameError, match="collision"):
-            rename_item(original, entry)
+        result = rename_item(original, entry)
+
+        # Original file is untouched, target is untouched.
+        assert result == original
+        assert original.exists()
+        assert original.read_text(encoding="utf-8") == "original content"
+        assert target.read_text(encoding="utf-8") == "different content"
 
 
 class TestStorageNameDerivation:
