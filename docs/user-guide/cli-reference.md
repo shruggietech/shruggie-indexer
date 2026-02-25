@@ -80,12 +80,12 @@ Write individual sidecar JSON files alongside each indexed item.
 shruggie-indexer path/to/directory/ --inplace
 ```
 
-For files, the sidecar is named `<filename>_meta2.json`. For directories, the sidecar is named `_directorymeta2.json` and placed inside the directory.
+For files, the sidecar is named `<filename>_meta2.json`. For directories, the sidecar is named `<dirname>_directorymeta2.json` and placed inside the directory.
 
 | Item | Sidecar path |
 |------|-------------|
 | `photos/sunset.jpg` | `photos/sunset.jpg_meta2.json` |
-| `photos/vacation/` | `photos/vacation/_directorymeta2.json` |
+| `photos/vacation/` | `photos/vacation/vacation_directorymeta2.json` |
 
 Disables stdout output by default (use `--stdout` to re-enable).
 
@@ -123,7 +123,7 @@ Sidecar files (`.info.json`, `.description`, thumbnails, subtitles, etc.) are id
 
 ### `--meta-merge-delete`
 
-Merge sidecar metadata into parent entries and queue the original sidecar files for deletion after successful merging. Implies `--meta-merge` (and therefore `--meta`).
+Merge sidecar metadata into parent entries and delete the original sidecar files from disk after indexing completes. Implies `--meta-merge` (and therefore `--meta`).
 
 ```bash
 shruggie-indexer path/to/directory/ --meta-merge-delete --outfile index.json
@@ -133,6 +133,8 @@ shruggie-indexer path/to/directory/ --meta-merge-delete --outfile index.json
     `--meta-merge-delete` requires at least one of `--outfile` or `--inplace` to be active. Without a persistent output destination, the merged metadata would be lost when the sidecar files are deleted. Violating this constraint produces a fatal error (exit code 2).
 
 Each merged sidecar entry carries full filesystem provenance — path, size, timestamps, and content hashes — sufficient to reverse the deletion if needed.
+
+The pipeline executes in a fixed order: **index → write sidecars → rename → delete**. Sidecar deletion occurs only after all other phases complete successfully. Each successful deletion is logged at `INFO` level; failures are logged at `ERROR` level and do not abort the remaining deletions.
 
 ## Rename Options
 

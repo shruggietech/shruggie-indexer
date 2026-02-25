@@ -172,6 +172,27 @@ Log files are named by date and session: `YYYY-MM-DD_HHMMSS.log`. The log file f
 
 The CLI equivalent is the `--log-file` flag. In the GUI, enable "Write log files" in Settings.
 
+### Metadata exclusion patterns
+
+The `metadata_exclude.patterns` setting controls which files are unconditionally excluded from indexing as standalone items. This prevents indexer output artifacts from being re-indexed on subsequent runs.
+
+The default pattern list:
+
+| Pattern | Matches |
+|---------|---------|
+| `_(meta2?\|directorymeta2?)\.json$` | Indexer output sidecars: `_meta.json`, `_meta2.json`, `images_directorymeta2.json`, etc. |
+
+These patterns are end-anchored, so they match both bare filenames (e.g., `_meta2.json`) and prefixed filenames (e.g., `video.mp4_meta2.json`, `images_directorymeta2.json`).
+
+!!! info "Two-layer exclusion mechanism"
+    shruggie-indexer applies two layers of file exclusion during traversal:
+
+    **Layer 1 — Metadata exclude patterns** (always active): Files matching `metadata_exclude.patterns` are removed from the item list during initial directory scanning. This prevents indexer output artifacts from being indexed as regular items.
+
+    **Layer 2 — Sidecar identification patterns** (active when MetaMerge is enabled): When MetaMerge or MetaMergeDelete is active, files matching recognized sidecar patterns (`.info.json`, `.description`, thumbnails, subtitles, etc.) are additionally excluded from the item list. These files are still available to the sidecar discovery system for merging into parent entries, but they are not indexed as standalone items.
+
+    Both layers work together to ensure sidecar files appear exclusively through the metadata merge system and never as inflated item counts in the output.
+
 ### Filesystem exclusion defaults
 
 The default exclusion set covers system artifacts across all supported platforms:

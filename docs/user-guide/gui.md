@@ -70,6 +70,16 @@ At the top of the Operations tab, a dropdown lets you choose one of three operat
 | **Meta Merge** | Same as Index, but also discovers sidecar files (small companion files that sit alongside your media) and merges their contents into the report. Original files are untouched. | No |
 | **Meta Merge Delete** | Same as Meta Merge, but **deletes the sidecar files** from disk after merging them into the report. The merged data is preserved in the output file. | **Yes** |
 
+!!! info "Pipeline execution order"
+    When Meta Merge Delete runs, the pipeline proceeds in a fixed order:
+
+    1. **Index** — Discover and process all items; sidecar files are identified, parsed, and queued for deletion.
+    2. **Write sidecars** — In-place `_meta2.json` and `_directorymeta2.json` output files are written alongside each item (if multi-file output is selected).
+    3. **Rename** — Files are renamed to their `storage_name` values (if rename is enabled). In-place sidecar files are renamed alongside their content files.
+    4. **Delete** — Consumed sidecar files are removed from disk. Each deletion is logged.
+
+    If the operation is cancelled, steps that have not yet started are skipped. In particular, the delete step is never reached if the operation is interrupted — no sidecar files are deleted until all preceding steps complete successfully.
+
 A small colored dot next to the dropdown indicates whether the current configuration is **destructive** (red) or **non-destructive** (green). This indicator updates in real time as you change settings — including when the rename feature is toggled (see Options Section below).
 
 ### Target Section
