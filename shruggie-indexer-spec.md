@@ -6,7 +6,7 @@
 - **License:** Apache 2.0 ([full text](https://www.apache.org/licenses/LICENSE-2.0))
 - **Version:** 0.1.0 (MVP)
 - **Author:** William Thompson (ShruggieTech LLC)
-- **Date:** 2026-02-24
+- **Date:** 2026-02-25
 - **Status:** AMENDED
 - **Audience:** AI-first, Human-second
 
@@ -2176,6 +2176,26 @@ If an individual `DirEntry` raises an exception during `.is_file()` or `.is_dir(
 
 When the target is a single file ([§4.6](#46-entry-point-routing)), the traversal module is not called. The entry builder processes the file directly without enumeration. The `list_children()` function is only invoked for directory targets.
 
+#### Sidecar exclusion during traversal
+
+> **Updated 2026-02-25:** Documents the two-layer sidecar exclusion mechanism implemented during discovery.
+
+`list_children()` applies a two-layer exclusion mechanism to prevent indexer output artifacts and recognized sidecar files from being indexed as standalone items:
+
+**Layer 1 — `metadata_exclude_patterns` (always active).** Before returning, `list_children()` removes any file whose name matches one of the compiled regex patterns in `config.metadata_exclude_patterns` ([§7.5](#75-sidecar-suffix-patterns-and-type-identification)). This layer excludes indexer output artifacts (v1 and v2 sidecar files) and thumbnail databases across all operating modes. When files are excluded by this layer, a `DEBUG`-level log message is emitted:
+
+```
+Excluded {n} file(s) by metadata_exclude_patterns in {directory}
+```
+
+**Layer 2 — `metadata_identify` union (when MetaMerge is active).** When `config.meta_merge` is `True`, `list_children()` additionally removes any file whose name matches a pattern in the `metadata_identify` configuration for the current directory's children. These files are recognized sidecar metadata files that will be processed during sidecar discovery ([§6.7](#67-sidecar-metadata-file-handling)) rather than indexed as standalone items. When files are excluded by this layer, a `DEBUG`-level log message is emitted:
+
+```
+Excluded {n} sidecar file(s) from entry building in {directory}
+```
+
+The two layers are complementary: Layer 1 catches indexer artifacts regardless of operating mode; Layer 2 catches recognized sidecar files only when MetaMerge is active (since without MetaMerge, sidecar files should appear as normal items in the index).
+
 ---
 
 <a id="62-path-resolution-and-manipulation"></a>
@@ -2224,7 +2244,7 @@ def build_sidecar_path(item_path: Path, item_type: str) -> Path:
     """Construct the path for an in-place sidecar output file.
 
     For files: <item_path>_meta2.json
-    For directories: <item_path>/_directorymeta2.json
+    For directories: <item_path>/<dirname>_directorymeta2.json
     """
 
 def build_storage_path(
@@ -2284,10 +2304,12 @@ When validation fails, the extension is treated as absent — the entry's `exten
 
 `build_sidecar_path()` constructs the in-place output path using the v2 naming convention:
 
+> **Updated 2026-02-25:** Corrected directory sidecar path to include the directory name prefix, matching the `{name}_suffix.json` convention used by file sidecars.
+
 | Item type | Sidecar path pattern | Example |
 |-----------|---------------------|---------|
 | File | `{parent_dir}/{filename}_meta2.json` | `photos/sunset.jpg` → `photos/sunset.jpg_meta2.json` |
-| Directory | `{directory}/_directorymeta2.json` | `photos/vacation/` → `photos/vacation/_directorymeta2.json` |
+| Directory | `{directory}/{dirname}_directorymeta2.json` | `photos/vacation/` → `photos/vacation/vacation_directorymeta2.json` |
 
 The `2` suffix in `_meta2.json` and `_directorymeta2.json` prevents collision with existing v1 sidecar files (`_meta.json`, `_directorymeta.json`) during a migration period. See [§5.13](#513-backward-compatibility-considerations).
 
@@ -3238,6 +3260,31 @@ The in-place write timing is a deliberate design choice preserved from the origi
 
 All output files are written as UTF-8 without a BOM, using `Path.write_text(json_string, encoding="utf-8")`. The original uses `Out-File -Encoding UTF8` on Windows, which also produces UTF-8 (with or without BOM depending on PowerShell version). The tool normalizes to UTF-8-no-BOM across all platforms.
 
+#### In-place directory sidecar naming
+
+> **Updated 2026-02-25:** Documents the `{dirname}_directorymeta2.json` naming convention for in-place directory sidecars.
+
+The `write_inplace()` function writes directory sidecars using the `{dirname}_directorymeta2.json` convention inside the directory itself (via `paths.build_sidecar_path()`). For example, the directory `photos/vacation/` receives a sidecar at `photos/vacation/vacation_directorymeta2.json`.
+
+The aggregate output file written alongside the target directory (via `--outfile`) also uses the `{dirname}_directorymeta2.json` naming convention. Both the aggregate and in-place directory sidecars use the same filename — they differ only in location:
+
+| Output type | Location | Example |
+|-------------|----------|--------|
+| Aggregate (`--outfile`) | Alongside the target directory | `photos/vacation_directorymeta2.json` |
+| In-place (`--inplace`) | Inside each directory | `photos/vacation/vacation_directorymeta2.json` |
+
+#### In-place sidecar rename coordination
+
+> **Updated 2026-02-25:** Documents the sidecar rename coordination when the rename phase is active.
+
+When the `--rename` flag is active, in-place `_meta2.json` sidecar files are initially written during traversal using the original filename (e.g., `sunset.jpg_meta2.json`). During the rename phase ([§6.10](#610-file-rename-and-in-place-write-operations)), the sidecar is renamed alongside the content file to match the new `storage_name` (e.g., `yA8A8C089A6A8583B24C85F5A4A41F5AC.jpg_meta2.json`). A `DEBUG`-level log message is emitted for each sidecar rename:
+
+```
+Inplace sidecar renamed: {original_sidecar} → {renamed_sidecar}
+```
+
+This write-then-rename approach ensures that partial results survive process interruption: if the indexer is killed between the sidecar write and the rename phase, the sidecar file exists with the original filename and contains valid data.
+
 ---
 
 <a id="610-file-rename-and-in-place-write-operations"></a>
@@ -3282,7 +3329,15 @@ The rename operation constructs the target path via `paths.build_storage_path(or
 <a id="collision-detection"></a>
 #### Collision detection
 
-Before renaming, the module checks whether the target path already exists. If it does, and it is not the same inode as the source (checked via `os.stat()` comparison), a `RenameError` is raised. This prevents data loss from two files that happen to produce the same `storage_name` (which would require an identity hash collision — astronomically unlikely, but the guard is cheap and worth having).
+> **Updated 2026-02-25:** Collision behavior updated to skip-and-warn instead of raising `RenameError`. When multiple files share identical content hashes and therefore identical `storage_name` values, the first file is renamed successfully; subsequent files targeting the same name are skipped with a `WARNING`-level log.
+
+Before renaming, the module checks whether the target path already exists. If it does, and it is not the same inode as the source, the rename is **skipped** and a `WARNING`-level log message is emitted:
+
+```
+Rename SKIPPED (collision): {original_name} → {storage_name} (target already exists)
+```
+
+The collision does not raise an exception or abort the rename loop. Files that would collide retain their original names on disk, and their in-place sidecars retain the original filename as their base. This skip-and-warn behavior is a deliberate safety improvement over the original's `Move-Item -Force`, which would silently overwrite the existing file.
 
 If the target path exists and is the same inode as the source (meaning the file was already renamed in a previous run), the rename is a no-op and the existing path is returned.
 
@@ -3310,6 +3365,40 @@ If MetaMergeDelete is requested with no output mechanism, the configuration load
 The `dry_run` parameter causes the function to compute and return the target path without performing the actual rename. The serializer still writes the sidecar file (using the would-be new path), and the `IndexEntry` still contains the `storage_name`. Dry-run mode allows users to preview what a rename operation would do before committing to it.
 
 > **Historical note:** The original does not support dry-run for renames. This capability is a safety feature, particularly useful for users running rename operations on large directory trees for the first time.
+
+#### In-place sidecar rename during file rename
+
+> **Updated 2026-02-25:** Documents sidecar rename behavior during the file rename phase.
+
+When the rename phase renames a content file from its original name to its `storage_name`, it also renames the file's in-place `_meta2.json` sidecar from `{original_name}_meta2.json` to `{storage_name}_meta2.json`. This preserves the file-sidecar association on disk — after rename, each content file is still paired with its corresponding sidecar.
+
+For example, when `sunset.jpg` is renamed to `yA8A8C089A6A8583B24C85F5A4A41F5AC.jpg`, the sidecar `sunset.jpg_meta2.json` is renamed to `yA8A8C089A6A8583B24C85F5A4A41F5AC.jpg_meta2.json`.
+
+If a rename collision causes the content file rename to be skipped ([collision detection](#collision-detection)), the sidecar rename is also skipped — the sidecar retains the original filename as its base.
+
+#### MetaMergeDelete execution loop
+
+> **Updated 2026-02-25:** Documents the post-processing delete loop and pipeline ordering.
+
+When MetaMergeDelete is active, the post-processing phase (Stage 6, [§4.1](#41-high-level-processing-pipeline)) iterates the `delete_queue` — an append-only `list[Path]` populated during sidecar discovery ([§6.7](#67-sidecar-metadata-file-handling)) — and deletes each queued sidecar file from disk.
+
+The delete loop executes as follows:
+
+```python
+for sidecar_path in delete_queue:
+    try:
+        sidecar_path.unlink()
+        logger.info("Sidecar deleted: %s", sidecar_path)
+    except OSError as exc:
+        logger.error("Sidecar delete FAILED: %s: %s", sidecar_path, exc)
+```
+
+Key behaviors:
+
+- Each successful deletion produces an `INFO`-level log message: `Sidecar deleted: {path}`.
+- Each failed deletion produces an `ERROR`-level log message: `Sidecar delete FAILED: {path}: {exception}`.
+- A failed deletion does not abort the loop — remaining sidecar files are still processed.
+- The delete phase runs **after** the rename phase. The full post-processing pipeline ordering is: indexing → in-place sidecar write → rename → delete.
 
 <a id="revert-capability"></a>
 #### Revert capability
@@ -3888,6 +3977,8 @@ Independently from sidecar identification, the traversal module ([§6.1](#61-fil
 
 The distinction is important: `metadata_identify` determines *type classification* of sidecars. `metadata_exclude_patterns` determines which files to *skip entirely* during traversal. The two systems are complementary but serve different purposes.
 
+> **Updated 2026-02-25:** The regex `_(meta2?|directorymeta2?)\.json$` in `metadata_exclude_patterns` is end-anchored with no start anchor, which means it matches both bare filenames (e.g., `_directorymeta2.json`) and prefixed filenames (e.g., `images_directorymeta2.json`, `video.mp4_meta2.json`). This is the correct behavior — both the legacy bare-name convention and the current `{name}_suffix.json` convention produce filenames that end with the matched suffix.
+
 <a id="pattern-compilation-and-caching"></a>
 #### Pattern compilation and caching
 
@@ -4321,6 +4412,25 @@ Extends `--meta-merge` by queuing the original sidecar files for deletion after 
 This flag carries a safety requirement: at least one persistent output mechanism (`--outfile` or `--inplace`) MUST be active when `--meta-merge-delete` is specified. Without a persistent output, the sidecar file content would be captured only in stdout — which is volatile and cannot be reliably recovered. If this safety condition is not met, the CLI exits with a fatal configuration error before any processing begins ([§7.1](#71-configuration-architecture), validation rules).
 
 > **Historical note:** The original silently disables MetaMergeDelete when the safety condition is not met (`$MetaMergeDelete = $false`) and continues processing. The tool treats this as a fatal error. The rationale: silently disabling a destructive flag is surprising behavior that could lead a user to believe their sidecar files are safe for manual deletion when they are not. An explicit error forces the user to acknowledge the safety requirement.
+
+#### `delete_queue` wiring
+
+> **Updated 2026-02-25:** Documents the orchestrator-level wiring for the MetaMergeDelete delete queue.
+
+When `config.meta_merge_delete` is `True`, the orchestrator (GUI `app.py` or CLI `commands.py`) creates a `list[Path]` and passes it as the `delete_queue` parameter through the call chain: `index_path()` → `build_directory_entry()` → `sidecar.discover_and_parse()`. During sidecar discovery, each successfully parsed sidecar's absolute path is appended to the queue ([§6.7](#67-sidecar-metadata-file-handling)).
+
+After indexing completes, the orchestrator iterates the queue and performs deletions:
+
+```python
+for sidecar_path in delete_queue:
+    try:
+        sidecar_path.unlink()
+        logger.info("Sidecar deleted: %s", sidecar_path)
+    except OSError as exc:
+        logger.error("Sidecar delete FAILED: %s: %s", sidecar_path, exc)
+```
+
+The delete loop runs at the orchestrator level (not inside `core/`) because the deletion is a post-processing action (Stage 6) that must occur after all indexing, output writing, and rename operations are complete. This ensures that if the process is interrupted mid-indexing, no sidecar files have been deleted.
 
 <a id="85-rename-option"></a>
 ### 8.5. Rename Option
@@ -8133,7 +8243,7 @@ Exercises `core/paths.py` functions ([§6.2](#62-path-resolution-and-manipulatio
 | Extension validation fail | `"thisextensionistoolong"` against the default regex | Validation fails; returns `None`. |
 | Root-level parent | `/file.txt` on Unix, `C:\file.txt` on Windows | `parent_name` is empty string. |
 | Sidecar path construction (file) | `Path("/photos/sunset.jpg")` | Returns `/photos/sunset.jpg_meta2.json`. |
-| Sidecar path construction (dir) | `Path("/photos/vacation")` | Returns `/photos/vacation/_directorymeta2.json`. |
+| Sidecar path construction (dir) | `Path("/photos/vacation")` | Returns `/photos/vacation/vacation_directorymeta2.json`. |
 
 <a id="test_hashingpy"></a>
 #### test_hashing.py
@@ -8273,6 +8383,53 @@ Exercises `config/loader.py` and `config/types.py` ([§7](#7-configuration)).
 | Frozen immutability | Attempting to set a field on a constructed `IndexerConfig` | `FrozenInstanceError` raised. |
 | Sidecar pattern configuration | A TOML file adding a new sidecar type regex | New pattern appears in `config.sidecar_include_patterns`. |
 | Exiftool exclusion extension | A TOML file adding `.xyz` to the exclusion list | `.xyz` present in `config.exiftool_exclude_extensions`. |
+
+#### test_sidecar_exclusion.py
+
+> **Updated 2026-02-25:** Added test specification for sidecar exclusion during traversal.
+
+Exercises the two-layer sidecar exclusion mechanism in `core/traversal.list_children()` ([§6.1](#61-filesystem-traversal-and-discovery)).
+
+| Test case | Input | Expected behavior |
+|-----------|-------|-------------------|
+| Exclude v2 file sidecar | Directory containing `photo.jpg` and `photo.jpg_meta2.json` | `_meta2.json` file excluded from returned file list. |
+| Exclude v2 directory sidecar | Directory containing `vacation_directorymeta2.json` | Excluded from returned file list. |
+| Exclude v1 legacy sidecar | Directory containing `photo.jpg_meta.json` | Excluded from returned file list (v1/v2 coexistence). |
+| Layer 2 sidecar exclusion (MetaMerge active) | Directory with recognized sidecar files, `config.meta_merge=True` | Sidecar files excluded from item list; processed via sidecar discovery instead. |
+| Layer 2 inactive without MetaMerge | Same directory, `config.meta_merge=False` | Sidecar files included in item list as normal items. |
+| Exclusion log messages | Directory with excludable files | `DEBUG`-level log messages emitted with correct counts. |
+
+**Pytest marker:** `@pytest.mark.sidecar`
+
+#### test_meta_merge_delete.py
+
+> **Updated 2026-02-25:** Added test specification for MetaMergeDelete deletion behavior.
+
+Exercises the MetaMergeDelete pipeline: sidecar discovery, queue population, and post-processing deletion.
+
+| Test case | Input | Expected behavior |
+|-----------|-------|-------------------|
+| Sidecar queued for deletion | A file with a recognized sidecar, `config.meta_merge_delete=True` | Sidecar path appended to `delete_queue`. |
+| Sidecar deleted post-indexing | Populated `delete_queue` iterated after indexing | All queued sidecar files removed from disk. |
+| Deletion logged at INFO | Successful deletion | `INFO`-level log message: `Sidecar deleted: {path}`. |
+| Failed deletion logged at ERROR | Sidecar file not deletable (e.g., permission error) | `ERROR`-level log message: `Sidecar delete FAILED: {path}: {exception}`. Loop continues. |
+| Delete queue empty without MetaMergeDelete | `config.meta_merge_delete=False` | No `delete_queue` created; no deletions attempted. |
+
+**Pytest marker:** `@pytest.mark.mmd`
+
+#### test_integration_mmd_pipeline.py
+
+> **Updated 2026-02-25:** Added integration test specification for the full MetaMergeDelete pipeline.
+
+Exercises the end-to-end MetaMergeDelete pipeline: indexing with sidecar discovery, sidecar exclusion from item list, rename coordination, and post-processing deletion.
+
+| Test case | Input | Expected behavior |
+|-----------|-------|-------------------|
+| Full MMD pipeline | Directory with content files and recognized sidecars, all flags active | Sidecars merged into parent entries, excluded from item list, deleted from disk after indexing and rename complete. |
+| MMD with rename | Same directory with `--rename` active | Content files renamed, sidecars renamed alongside, consumed sidecars deleted. |
+| Cancellation prevents deletion | MMD pipeline cancelled mid-indexing | No sidecar files deleted; delete queue discarded. |
+
+**Pytest markers:** `@pytest.mark.integration`, `@pytest.mark.mmd`, `@pytest.mark.destructive`
 
 <a id="143-integration-tests"></a>
 ### 14.3. Integration Tests
