@@ -1,0 +1,1051 @@
+{
+  "tree": {
+    "type": "directory",
+    "name": "data",
+    "extension": null,
+    "path": "A:\\Code\\shruggie-indexer-testing\\data",
+    "timestamps": {
+      "create_unixtime": 1771910920,
+      "create_humantime": "2026-02-23T19:28:39.797-05:00",
+      "modify_unixtime": 1771912037,
+      "modify_humantime": "2026-02-23T19:47:16.589-05:00"
+    },
+    "size": {
+      "bytes": 748381461,
+      "words": 31836,
+      "lines": 8414,
+      "note": null
+    },
+    "children": [
+      {
+        "type": "directory",
+        "name": "empty",
+        "extension": null,
+        "path": "A:\\Code\\shruggie-indexer-testing\\data\\empty",
+        "timestamps": {
+          "create_unixtime": 1771910920,
+          "create_humantime": "2026-02-23T19:28:39.798-05:00",
+          "modify_unixtime": 1771905601,
+          "modify_humantime": "2026-02-23T18:00:00.902-05:00"
+        },
+        "size": {
+          "bytes": 0,
+          "words": 0,
+          "lines": 0,
+          "note": null
+        },
+        "children": [
+          {
+            "type": "directory",
+            "name": "pdf",
+            "extension": null,
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\empty\\pdf",
+            "timestamps": {
+              "create_unixtime": 1771910920,
+              "create_humantime": "2026-02-23T19:28:39.798-05:00",
+              "modify_unixtime": 1771911580,
+              "modify_humantime": "2026-02-23T19:39:40.439-05:00"
+            },
+            "size": {
+              "bytes": 0,
+              "words": 0,
+              "lines": 0,
+              "note": null
+            },
+            "children": [
+              {
+                "type": "directory",
+                "name": "pdf",
+                "extension": null,
+                "path": "A:\\Code\\shruggie-indexer-testing\\data\\empty\\pdf\\pdf",
+                "timestamps": {
+                  "create_unixtime": 1771911578,
+                  "create_humantime": "2026-02-23T19:39:37.888-05:00",
+                  "modify_unixtime": 1771911578,
+                  "modify_humantime": "2026-02-23T19:39:37.888-05:00"
+                },
+                "size": {
+                  "bytes": 0,
+                  "words": 0,
+                  "lines": 0,
+                  "note": null
+                },
+                "children": [],
+                "depth": 3
+              }
+            ],
+            "depth": 2
+          }
+        ],
+        "depth": 1
+      },
+      {
+        "type": "directory",
+        "name": "images",
+        "extension": null,
+        "path": "A:\\Code\\shruggie-indexer-testing\\data\\images",
+        "timestamps": {
+          "create_unixtime": 1771911439,
+          "create_humantime": "2026-02-23T19:37:19.507-05:00",
+          "modify_unixtime": 1771911563,
+          "modify_humantime": "2026-02-23T19:39:22.746-05:00"
+        },
+        "size": {
+          "bytes": 2949489,
+          "words": 0,
+          "lines": 0,
+          "note": null
+        },
+        "children": [
+          {
+            "type": "file",
+            "name": "slippers_01.gif",
+            "extension": "gif",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\images\\slippers_01.gif",
+            "timestamps": {
+              "create_unixtime": 1771911506,
+              "create_humantime": "2026-02-23T19:38:25.987-05:00",
+              "modify_unixtime": 1769055517,
+              "modify_humantime": "2026-01-21T18:18:36.718-05:00"
+            },
+            "size": {
+              "bytes": 454475,
+              "words": 0,
+              "lines": 0,
+              "note": "binary"
+            },
+            "children": null,
+            "depth": 2
+          },
+          {
+            "type": "file",
+            "name": "slippers_01.png",
+            "extension": "png",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\images\\slippers_01.png",
+            "timestamps": {
+              "create_unixtime": 1771911514,
+              "create_humantime": "2026-02-23T19:38:33.756-05:00",
+              "modify_unixtime": 1769055508,
+              "modify_humantime": "2026-01-21T18:18:28.449-05:00"
+            },
+            "size": {
+              "bytes": 454475,
+              "words": 0,
+              "lines": 0,
+              "note": "binary"
+            },
+            "children": null,
+            "depth": 2
+          },
+          {
+            "type": "file",
+            "name": "slippers_01.webm",
+            "extension": "webm",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\images\\slippers_01.webm",
+            "timestamps": {
+              "create_unixtime": 1771911460,
+              "create_humantime": "2026-02-23T19:37:39.845-05:00",
+              "modify_unixtime": 1769055731,
+              "modify_humantime": "2026-01-21T18:22:10.768-05:00"
+            },
+            "size": {
+              "bytes": 74213,
+              "words": 0,
+              "lines": 0,
+              "note": "binary"
+            },
+            "children": null,
+            "depth": 2
+          },
+          {
+            "type": "file",
+            "name": "slippers_02.gif",
+            "extension": "gif",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\images\\slippers_02.gif",
+            "timestamps": {
+              "create_unixtime": 1771911509,
+              "create_humantime": "2026-02-23T19:38:28.851-05:00",
+              "modify_unixtime": 1769055517,
+              "modify_humantime": "2026-01-21T18:18:36.718-05:00"
+            },
+            "size": {
+              "bytes": 454475,
+              "words": 0,
+              "lines": 0,
+              "note": "binary"
+            },
+            "children": null,
+            "depth": 2
+          },
+          {
+            "type": "file",
+            "name": "slippers_02.png",
+            "extension": "png",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\images\\slippers_02.png",
+            "timestamps": {
+              "create_unixtime": 1771911515,
+              "create_humantime": "2026-02-23T19:38:35.039-05:00",
+              "modify_unixtime": 1769055508,
+              "modify_humantime": "2026-01-21T18:18:28.449-05:00"
+            },
+            "size": {
+              "bytes": 454475,
+              "words": 0,
+              "lines": 0,
+              "note": "binary"
+            },
+            "children": null,
+            "depth": 2
+          },
+          {
+            "type": "file",
+            "name": "slippers_02.webm",
+            "extension": "webm",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\images\\slippers_02.webm",
+            "timestamps": {
+              "create_unixtime": 1771911478,
+              "create_humantime": "2026-02-23T19:37:58.038-05:00",
+              "modify_unixtime": 1769055731,
+              "modify_humantime": "2026-01-21T18:22:10.768-05:00"
+            },
+            "size": {
+              "bytes": 74213,
+              "words": 0,
+              "lines": 0,
+              "note": "binary"
+            },
+            "children": null,
+            "depth": 2
+          },
+          {
+            "type": "file",
+            "name": "slippers.gif",
+            "extension": "gif",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\images\\slippers.gif",
+            "timestamps": {
+              "create_unixtime": 1771910920,
+              "create_humantime": "2026-02-23T19:28:40.553-05:00",
+              "modify_unixtime": 1769055517,
+              "modify_humantime": "2026-01-21T18:18:36.718-05:00"
+            },
+            "size": {
+              "bytes": 454475,
+              "words": 0,
+              "lines": 0,
+              "note": "binary"
+            },
+            "children": null,
+            "depth": 2
+          },
+          {
+            "type": "file",
+            "name": "slippers.png",
+            "extension": "png",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\images\\slippers.png",
+            "timestamps": {
+              "create_unixtime": 1771910920,
+              "create_humantime": "2026-02-23T19:28:40.554-05:00",
+              "modify_unixtime": 1769055508,
+              "modify_humantime": "2026-01-21T18:18:28.449-05:00"
+            },
+            "size": {
+              "bytes": 454475,
+              "words": 0,
+              "lines": 0,
+              "note": "binary"
+            },
+            "children": null,
+            "depth": 2
+          },
+          {
+            "type": "file",
+            "name": "slippers.webm",
+            "extension": "webm",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\images\\slippers.webm",
+            "timestamps": {
+              "create_unixtime": 1771910920,
+              "create_humantime": "2026-02-23T19:28:40.555-05:00",
+              "modify_unixtime": 1769055731,
+              "modify_humantime": "2026-01-21T18:22:10.768-05:00"
+            },
+            "size": {
+              "bytes": 74213,
+              "words": 0,
+              "lines": 0,
+              "note": "binary"
+            },
+            "children": null,
+            "depth": 2
+          }
+        ],
+        "depth": 1
+      },
+      {
+        "type": "directory",
+        "name": "not-empty",
+        "extension": null,
+        "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty",
+        "timestamps": {
+          "create_unixtime": 1771910920,
+          "create_humantime": "2026-02-23T19:28:39.798-05:00",
+          "modify_unixtime": 1771911014,
+          "modify_humantime": "2026-02-23T19:30:14.063-05:00"
+        },
+        "size": {
+          "bytes": 742750947,
+          "words": 28884,
+          "lines": 7271,
+          "note": null
+        },
+        "children": [
+          {
+            "type": "directory",
+            "name": "pdf",
+            "extension": null,
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\pdf",
+            "timestamps": {
+              "create_unixtime": 1771910920,
+              "create_humantime": "2026-02-23T19:28:39.798-05:00",
+              "modify_unixtime": 1771905592,
+              "modify_humantime": "2026-02-23T17:59:51.896-05:00"
+            },
+            "size": {
+              "bytes": 1964615,
+              "words": 1106,
+              "lines": 567,
+              "note": null
+            },
+            "children": [
+              {
+                "type": "directory",
+                "name": "pdf",
+                "extension": null,
+                "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\pdf\\pdf",
+                "timestamps": {
+                  "create_unixtime": 1771910920,
+                  "create_humantime": "2026-02-23T19:28:39.798-05:00",
+                  "modify_unixtime": 1771911173,
+                  "modify_humantime": "2026-02-23T19:32:52.692-05:00"
+                },
+                "size": {
+                  "bytes": 1964615,
+                  "words": 1106,
+                  "lines": 567,
+                  "note": null
+                },
+                "children": [
+                  {
+                    "type": "file",
+                    "name": "[a] {b} (c)_1.pdf",
+                    "extension": "pdf",
+                    "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\pdf\\pdf\\[a] {b} (c)_1.pdf",
+                    "timestamps": {
+                      "create_unixtime": 1771910920,
+                      "create_humantime": "2026-02-23T19:28:40.543-05:00",
+                      "modify_unixtime": 1605843059,
+                      "modify_humantime": "2020-11-19T17:30:59.209-05:00"
+                    },
+                    "size": {
+                      "bytes": 296473,
+                      "words": 0,
+                      "lines": 0,
+                      "note": "binary"
+                    },
+                    "children": null,
+                    "depth": 4
+                  },
+                  {
+                    "type": "file",
+                    "name": "[a] {b} (c)_1.pdf_meta.json",
+                    "extension": "json",
+                    "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\pdf\\pdf\\[a] {b} (c)_1.pdf_meta.json",
+                    "timestamps": {
+                      "create_unixtime": 1771911172,
+                      "create_humantime": "2026-02-23T19:32:52.310-05:00",
+                      "modify_unixtime": 1771911172,
+                      "modify_humantime": "2026-02-23T19:32:52.310-05:00"
+                    },
+                    "size": {
+                      "bytes": 7010,
+                      "words": 385,
+                      "lines": 190,
+                      "note": null
+                    },
+                    "children": null,
+                    "depth": 4
+                  },
+                  {
+                    "type": "file",
+                    "name": "[a] {b} (c)_1.pdf_meta2.json",
+                    "extension": "json",
+                    "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\pdf\\pdf\\[a] {b} (c)_1.pdf_meta2.json",
+                    "timestamps": {
+                      "create_unixtime": 1771910920,
+                      "create_humantime": "2026-02-23T19:28:40.543-05:00",
+                      "modify_unixtime": 1771905293,
+                      "modify_humantime": "2026-02-23T17:54:53.437-05:00"
+                    },
+                    "size": {
+                      "bytes": 3084,
+                      "words": 177,
+                      "lines": 92,
+                      "note": null
+                    },
+                    "children": null,
+                    "depth": 4
+                  },
+                  {
+                    "type": "file",
+                    "name": "[a] {b} (c)_2.pdf",
+                    "extension": "pdf",
+                    "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\pdf\\pdf\\[a] {b} (c)_2.pdf",
+                    "timestamps": {
+                      "create_unixtime": 1771910920,
+                      "create_humantime": "2026-02-23T19:28:40.543-05:00",
+                      "modify_unixtime": 1637608418,
+                      "modify_humantime": "2021-11-22T09:13:37.693-05:00"
+                    },
+                    "size": {
+                      "bytes": 1648107,
+                      "words": 0,
+                      "lines": 0,
+                      "note": "binary"
+                    },
+                    "children": null,
+                    "depth": 4
+                  },
+                  {
+                    "type": "file",
+                    "name": "[a] {b} (c)_2.pdf_meta.json",
+                    "extension": "json",
+                    "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\pdf\\pdf\\[a] {b} (c)_2.pdf_meta.json",
+                    "timestamps": {
+                      "create_unixtime": 1771911173,
+                      "create_humantime": "2026-02-23T19:32:52.678-05:00",
+                      "modify_unixtime": 1771911173,
+                      "modify_humantime": "2026-02-23T19:32:52.692-05:00"
+                    },
+                    "size": {
+                      "bytes": 6911,
+                      "words": 373,
+                      "lines": 192,
+                      "note": null
+                    },
+                    "children": null,
+                    "depth": 4
+                  },
+                  {
+                    "type": "file",
+                    "name": "[a] {b} (c)_2.pdf_meta2.json",
+                    "extension": "json",
+                    "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\pdf\\pdf\\[a] {b} (c)_2.pdf_meta2.json",
+                    "timestamps": {
+                      "create_unixtime": 1771910920,
+                      "create_humantime": "2026-02-23T19:28:40.544-05:00",
+                      "modify_unixtime": 1771905214,
+                      "modify_humantime": "2026-02-23T17:53:33.819-05:00"
+                    },
+                    "size": {
+                      "bytes": 3030,
+                      "words": 171,
+                      "lines": 93,
+                      "note": null
+                    },
+                    "children": null,
+                    "depth": 4
+                  }
+                ],
+                "depth": 3
+              }
+            ],
+            "depth": 2
+          },
+          {
+            "type": "directory",
+            "name": "unicode-file-names",
+            "extension": null,
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\unicode-file-names",
+            "timestamps": {
+              "create_unixtime": 1771910920,
+              "create_humantime": "2026-02-23T19:28:39.798-05:00",
+              "modify_unixtime": 1771911094,
+              "modify_humantime": "2026-02-23T19:31:34.009-05:00"
+            },
+            "size": {
+              "bytes": 41177,
+              "words": 0,
+              "lines": 0,
+              "note": null
+            },
+            "children": [
+              {
+                "type": "file",
+                "name": "💀💀💀.png",
+                "extension": "png",
+                "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\unicode-file-names\\💀💀💀.png",
+                "timestamps": {
+                  "create_unixtime": 1771910920,
+                  "create_humantime": "2026-02-23T19:28:40.544-05:00",
+                  "modify_unixtime": 1717639618,
+                  "modify_humantime": "2024-06-05T17:06:58.558-04:00"
+                },
+                "size": {
+                  "bytes": 23373,
+                  "words": 0,
+                  "lines": 0,
+                  "note": "binary"
+                },
+                "children": null,
+                "depth": 3
+              },
+              {
+                "type": "file",
+                "name": "💀💀💀.webp",
+                "extension": "webp",
+                "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\unicode-file-names\\💀💀💀.webp",
+                "timestamps": {
+                  "create_unixtime": 1771910920,
+                  "create_humantime": "2026-02-23T19:28:40.544-05:00",
+                  "modify_unixtime": 1727827850,
+                  "modify_humantime": "2024-10-01T15:10:49.909-04:00"
+                },
+                "size": {
+                  "bytes": 17804,
+                  "words": 0,
+                  "lines": 0,
+                  "note": "binary"
+                },
+                "children": null,
+                "depth": 3
+              }
+            ],
+            "depth": 2
+          },
+          {
+            "type": "directory",
+            "name": "yt-dlp",
+            "extension": null,
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\yt-dlp",
+            "timestamps": {
+              "create_unixtime": 1771910920,
+              "create_humantime": "2026-02-23T19:28:39.798-05:00",
+              "modify_unixtime": 1771905925,
+              "modify_humantime": "2026-02-23T18:05:25.062-05:00"
+            },
+            "size": {
+              "bytes": 11964736,
+              "words": 16166,
+              "lines": 82,
+              "note": null
+            },
+            "children": [
+              {
+                "type": "file",
+                "name": "How_the_DNS_works-[2ZUxoi7YNgs]_screen.jpg",
+                "extension": "jpg",
+                "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\yt-dlp\\How_the_DNS_works-[2ZUxoi7YNgs]_screen.jpg",
+                "timestamps": {
+                  "create_unixtime": 1771910920,
+                  "create_humantime": "2026-02-23T19:28:40.553-05:00",
+                  "modify_unixtime": 1748818699,
+                  "modify_humantime": "2025-06-01T13:58:19.597-04:00"
+                },
+                "size": {
+                  "bytes": 22636,
+                  "words": 0,
+                  "lines": 0,
+                  "note": "binary"
+                },
+                "children": null,
+                "depth": 3
+              },
+              {
+                "type": "file",
+                "name": "How_the_DNS_works-[2ZUxoi7YNgs].description",
+                "extension": "description",
+                "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\yt-dlp\\How_the_DNS_works-[2ZUxoi7YNgs].description",
+                "timestamps": {
+                  "create_unixtime": 1771910920,
+                  "create_humantime": "2026-02-23T19:28:40.544-05:00",
+                  "modify_unixtime": 1748818689,
+                  "modify_humantime": "2025-06-01T13:58:09.231-04:00"
+                },
+                "size": {
+                  "bytes": 74,
+                  "words": 12,
+                  "lines": 1,
+                  "note": null
+                },
+                "children": null,
+                "depth": 3
+              },
+              {
+                "type": "file",
+                "name": "How_the_DNS_works-[2ZUxoi7YNgs].en-en.vtt",
+                "extension": "vtt",
+                "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\yt-dlp\\How_the_DNS_works-[2ZUxoi7YNgs].en-en.vtt",
+                "timestamps": {
+                  "create_unixtime": 1771910920,
+                  "create_humantime": "2026-02-23T19:28:40.544-05:00",
+                  "modify_unixtime": 1748818689,
+                  "modify_humantime": "2025-06-01T13:58:09.330-04:00"
+                },
+                "size": {
+                  "bytes": 83,
+                  "words": 11,
+                  "lines": 7,
+                  "note": null
+                },
+                "children": null,
+                "depth": 3
+              },
+              {
+                "type": "file",
+                "name": "How_the_DNS_works-[2ZUxoi7YNgs].en-orig.vtt",
+                "extension": "vtt",
+                "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\yt-dlp\\How_the_DNS_works-[2ZUxoi7YNgs].en-orig.vtt",
+                "timestamps": {
+                  "create_unixtime": 1771910920,
+                  "create_humantime": "2026-02-23T19:28:40.545-05:00",
+                  "modify_unixtime": 1748818689,
+                  "modify_humantime": "2025-06-01T13:58:09.370-04:00"
+                },
+                "size": {
+                  "bytes": 960,
+                  "words": 88,
+                  "lines": 64,
+                  "note": null
+                },
+                "children": null,
+                "depth": 3
+              },
+              {
+                "type": "file",
+                "name": "How_the_DNS_works-[2ZUxoi7YNgs].en.vtt",
+                "extension": "vtt",
+                "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\yt-dlp\\How_the_DNS_works-[2ZUxoi7YNgs].en.vtt",
+                "timestamps": {
+                  "create_unixtime": 1771910920,
+                  "create_humantime": "2026-02-23T19:28:40.545-05:00",
+                  "modify_unixtime": 1748818689,
+                  "modify_humantime": "2025-06-01T13:58:09.287-04:00"
+                },
+                "size": {
+                  "bytes": 83,
+                  "words": 11,
+                  "lines": 7,
+                  "note": null
+                },
+                "children": null,
+                "depth": 3
+              },
+              {
+                "type": "file",
+                "name": "How_the_DNS_works-[2ZUxoi7YNgs].info.json",
+                "extension": "json",
+                "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\yt-dlp\\How_the_DNS_works-[2ZUxoi7YNgs].info.json",
+                "timestamps": {
+                  "create_unixtime": 1771910920,
+                  "create_humantime": "2026-02-23T19:28:40.545-05:00",
+                  "modify_unixtime": 1748818699,
+                  "modify_humantime": "2025-06-01T13:58:19.613-04:00"
+                },
+                "size": {
+                  "bytes": 805289,
+                  "words": 16042,
+                  "lines": 1,
+                  "note": null
+                },
+                "children": null,
+                "depth": 3
+              },
+              {
+                "type": "file",
+                "name": "How_the_DNS_works-[2ZUxoi7YNgs].mp4",
+                "extension": "mp4",
+                "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\yt-dlp\\How_the_DNS_works-[2ZUxoi7YNgs].mp4",
+                "timestamps": {
+                  "create_unixtime": 1771910920,
+                  "create_humantime": "2026-02-23T19:28:40.545-05:00",
+                  "modify_unixtime": 1710577977,
+                  "modify_humantime": "2024-03-15T23:32:57.000-04:00"
+                },
+                "size": {
+                  "bytes": 11135542,
+                  "words": 0,
+                  "lines": 0,
+                  "note": "binary"
+                },
+                "children": null,
+                "depth": 3
+              },
+              {
+                "type": "file",
+                "name": "How_the_DNS_works-[2ZUxoi7YNgs].url",
+                "extension": "url",
+                "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\yt-dlp\\How_the_DNS_works-[2ZUxoi7YNgs].url",
+                "timestamps": {
+                  "create_unixtime": 1771910920,
+                  "create_humantime": "2026-02-23T19:28:40.552-05:00",
+                  "modify_unixtime": 1748818699,
+                  "modify_humantime": "2025-06-01T13:58:19.615-04:00"
+                },
+                "size": {
+                  "bytes": 69,
+                  "words": 2,
+                  "lines": 2,
+                  "note": null
+                },
+                "children": null,
+                "depth": 3
+              }
+            ],
+            "depth": 2
+          },
+          {
+            "type": "file",
+            "name": "FeedsExport_info.json",
+            "extension": "json",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\FeedsExport_info.json",
+            "timestamps": {
+              "create_unixtime": 1771910920,
+              "create_humantime": "2026-02-23T19:28:40.515-05:00",
+              "modify_unixtime": 1770687763,
+              "modify_humantime": "2026-02-09T15:42:43.000-05:00"
+            },
+            "size": {
+              "bytes": 47102,
+              "words": 1758,
+              "lines": 1006,
+              "note": null
+            },
+            "children": null,
+            "depth": 2
+          },
+          {
+            "type": "file",
+            "name": "FeedsExport_meta.json",
+            "extension": "json",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\FeedsExport_meta.json",
+            "timestamps": {
+              "create_unixtime": 1771910920,
+              "create_humantime": "2026-02-23T19:28:40.517-05:00",
+              "modify_unixtime": 1771911394,
+              "modify_humantime": "2026-02-23T19:36:34.476-05:00"
+            },
+            "size": {
+              "bytes": 114557,
+              "words": 3944,
+              "lines": 2246,
+              "note": null
+            },
+            "children": null,
+            "depth": 2
+          },
+          {
+            "type": "file",
+            "name": "FeedsExport_meta2.json",
+            "extension": "json",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\FeedsExport_meta2.json",
+            "timestamps": {
+              "create_unixtime": 1771910920,
+              "create_humantime": "2026-02-23T19:28:40.542-05:00",
+              "modify_unixtime": 1771911052,
+              "modify_humantime": "2026-02-23T19:30:51.910-05:00"
+            },
+            "size": {
+              "bytes": 1892,
+              "words": 104,
+              "lines": 59,
+              "note": null
+            },
+            "children": null,
+            "depth": 2
+          },
+          {
+            "type": "file",
+            "name": "FeedsExport.7z",
+            "extension": "7z",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\FeedsExport.7z",
+            "timestamps": {
+              "create_unixtime": 1771910920,
+              "create_humantime": "2026-02-23T19:28:39.986-05:00",
+              "modify_unixtime": 1770689662,
+              "modify_humantime": "2026-02-09T16:14:22.000-05:00"
+            },
+            "size": {
+              "bytes": 728453317,
+              "words": 0,
+              "lines": 0,
+              "note": "binary"
+            },
+            "children": null,
+            "depth": 2
+          },
+          {
+            "type": "file",
+            "name": "FeedsExport.7z_info.json",
+            "extension": "json",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\FeedsExport.7z_info.json",
+            "timestamps": {
+              "create_unixtime": 1771910970,
+              "create_humantime": "2026-02-23T19:29:30.184-05:00",
+              "modify_unixtime": 1770687763,
+              "modify_humantime": "2026-02-09T15:42:43.000-05:00"
+            },
+            "size": {
+              "bytes": 47102,
+              "words": 1758,
+              "lines": 1006,
+              "note": null
+            },
+            "children": null,
+            "depth": 2
+          },
+          {
+            "type": "file",
+            "name": "FeedsExport.7z_meta.json",
+            "extension": "json",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\FeedsExport.7z_meta.json",
+            "timestamps": {
+              "create_unixtime": 1771911000,
+              "create_humantime": "2026-02-23T19:29:59.463-05:00",
+              "modify_unixtime": 1771911313,
+              "modify_humantime": "2026-02-23T19:35:12.291-05:00"
+            },
+            "size": {
+              "bytes": 114557,
+              "words": 3944,
+              "lines": 2246,
+              "note": null
+            },
+            "children": null,
+            "depth": 2
+          },
+          {
+            "type": "file",
+            "name": "FeedsExport.7z_meta2.json",
+            "extension": "json",
+            "path": "A:\\Code\\shruggie-indexer-testing\\data\\not-empty\\FeedsExport.7z_meta2.json",
+            "timestamps": {
+              "create_unixtime": 1771910921,
+              "create_humantime": "2026-02-23T19:28:40.515-05:00",
+              "modify_unixtime": 1771905482,
+              "modify_humantime": "2026-02-23T17:58:01.629-05:00"
+            },
+            "size": {
+              "bytes": 1892,
+              "words": 104,
+              "lines": 59,
+              "note": null
+            },
+            "children": null,
+            "depth": 2
+          }
+        ],
+        "depth": 1
+      },
+      {
+        "type": "file",
+        "name": "123.nfo",
+        "extension": "nfo",
+        "path": "A:\\Code\\shruggie-indexer-testing\\data\\123.nfo",
+        "timestamps": {
+          "create_unixtime": 1771910920,
+          "create_humantime": "2026-02-23T19:28:39.984-05:00",
+          "modify_unixtime": 1726113603,
+          "modify_humantime": "2024-09-11T19:00:02.650-04:00"
+        },
+        "size": {
+          "bytes": 2618786,
+          "words": 0,
+          "lines": 0,
+          "note": "binary"
+        },
+        "children": null,
+        "depth": 1
+      },
+      {
+        "type": "file",
+        "name": "123.nfo_meta.json",
+        "extension": "json",
+        "path": "A:\\Code\\shruggie-indexer-testing\\data\\123.nfo_meta.json",
+        "timestamps": {
+          "create_unixtime": 1771911644,
+          "create_humantime": "2026-02-23T19:40:43.900-05:00",
+          "modify_unixtime": 1771911644,
+          "modify_humantime": "2026-02-23T19:40:43.900-05:00"
+        },
+        "size": {
+          "bytes": 28363,
+          "words": 1338,
+          "lines": 482,
+          "note": null
+        },
+        "children": null,
+        "depth": 1
+      },
+      {
+        "type": "file",
+        "name": "123.nfo_meta2.json",
+        "extension": "json",
+        "path": "A:\\Code\\shruggie-indexer-testing\\data\\123.nfo_meta2.json",
+        "timestamps": {
+          "create_unixtime": 1771910920,
+          "create_humantime": "2026-02-23T19:28:39.986-05:00",
+          "modify_unixtime": 1771905332,
+          "modify_humantime": "2026-02-23T17:55:32.104-05:00"
+        },
+        "size": {
+          "bytes": 13277,
+          "words": 638,
+          "lines": 238,
+          "note": null
+        },
+        "children": null,
+        "depth": 1
+      },
+      {
+        "type": "file",
+        "name": "123.txt",
+        "extension": "txt",
+        "path": "A:\\Code\\shruggie-indexer-testing\\data\\123.txt",
+        "timestamps": {
+          "create_unixtime": 1771910920,
+          "create_humantime": "2026-02-23T19:28:39.986-05:00",
+          "modify_unixtime": 1771904491,
+          "modify_humantime": "2026-02-23T17:41:30.366-05:00"
+        },
+        "size": {
+          "bytes": 13,
+          "words": 1,
+          "lines": 1,
+          "note": null
+        },
+        "children": null,
+        "depth": 1
+      },
+      {
+        "type": "file",
+        "name": "123.txt_meta.json",
+        "extension": "json",
+        "path": "A:\\Code\\shruggie-indexer-testing\\data\\123.txt_meta.json",
+        "timestamps": {
+          "create_unixtime": 1771911665,
+          "create_humantime": "2026-02-23T19:41:05.291-05:00",
+          "modify_unixtime": 1771911665,
+          "modify_humantime": "2026-02-23T19:41:05.291-05:00"
+        },
+        "size": {
+          "bytes": 17790,
+          "words": 820,
+          "lines": 333,
+          "note": null
+        },
+        "children": null,
+        "depth": 1
+      },
+      {
+        "type": "file",
+        "name": "123.txt_meta2.json",
+        "extension": "json",
+        "path": "A:\\Code\\shruggie-indexer-testing\\data\\123.txt_meta2.json",
+        "timestamps": {
+          "create_unixtime": 1771912037,
+          "create_humantime": "2026-02-23T19:47:16.589-05:00",
+          "modify_unixtime": 1771912037,
+          "modify_humantime": "2026-02-23T19:47:16.590-05:00"
+        },
+        "size": {
+          "bytes": 2796,
+          "words": 155,
+          "lines": 89,
+          "note": null
+        },
+        "children": null,
+        "depth": 1
+      }
+    ],
+    "depth": 0
+  },
+  "summary": {
+    "bytes": 748381461,
+    "words": 31836,
+    "lines": 8414,
+    "files": {
+      "extensions_count": 14,
+      "count": 38,
+      "extensions": [
+        {
+          "string": "7z",
+          "count": 1
+        },
+        {
+          "string": "description",
+          "count": 1
+        },
+        {
+          "string": "gif",
+          "count": 3
+        },
+        {
+          "string": "jpg",
+          "count": 1
+        },
+        {
+          "string": "json",
+          "count": 15
+        },
+        {
+          "string": "mp4",
+          "count": 1
+        },
+        {
+          "string": "nfo",
+          "count": 1
+        },
+        {
+          "string": "pdf",
+          "count": 2
+        },
+        {
+          "string": "png",
+          "count": 4
+        },
+        {
+          "string": "txt",
+          "count": 1
+        },
+        {
+          "string": "url",
+          "count": 1
+        },
+        {
+          "string": "vtt",
+          "count": 3
+        },
+        {
+          "string": "webm",
+          "count": 3
+        },
+        {
+          "string": "webp",
+          "count": 1
+        }
+      ]
+    },
+    "directories": {
+      "count": 10,
+      "max_depth": 4
+    }
+  },
+  "runtime": {
+    "uuid": "aaff5da9-0356-4bf7-b991-cd8c7bdb76c9",
+    "target": "A:\\Code\\shruggie-indexer-testing\\data",
+    "runtime_seconds": 0.759,
+    "start_unixtime": 1771914325,
+    "start_humantime": "2026-02-23T20:25:25.047-05:00",
+    "end_unixtime": 1771914326,
+    "end_humantime": "2026-02-23T20:25:25.806-05:00"
+  }
+}
