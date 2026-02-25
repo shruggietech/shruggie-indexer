@@ -114,6 +114,15 @@ This handles group-prefixed output from ``-G`` flags (e.g.
 _EXIFTOOL_TIMEOUT: int = 30
 """Subprocess timeout in seconds."""
 
+_EXIFTOOL_LARGE_FILE_BYTES: int = 100 * 1024 * 1024
+"""Files above this size (100 MB) use subprocess backend for timeout safety.
+
+The batch backend (pyexiftool) does not support per-call timeouts.  ExifTool
+with ``-extractEmbedded`` can hang indefinitely on large archive files.
+Routing large files through the subprocess fallback — which enforces a
+``_EXIFTOOL_TIMEOUT`` second deadline — prevents this hang.
+"""
+
 
 # ---------------------------------------------------------------------------
 # Module-level state — backend selection and availability
@@ -486,6 +495,20 @@ def extract_exif(
     if path.is_symlink():
         logger.debug("EXIF extraction skipped — symlink: %s", path)
         return None
+
+    # Large-file gate: route through subprocess backend which has timeout
+    # protection.  The batch backend (pyexiftool) can hang on large files
+    # (e.g. 728 MB .7z with -extractEmbedded).
+    try:
+        file_size = path.stat().st_size
+        if file_size > _EXIFTOOL_LARGE_FILE_BYTES:
+            logger.info(
+                "ExifTool: using subprocess for large file (%d bytes): %s",
+                file_size, path.name,
+            )
+            return _extract_subprocess(path, config)
+    except OSError:
+        pass
 
     # Dispatch to selected backend.
     if _backend == "batch":

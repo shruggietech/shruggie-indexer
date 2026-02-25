@@ -1289,16 +1289,25 @@ class OperationsPage(ctk.CTkFrame):
             self._browse_file()
 
     def _browse_file(self) -> None:
+        logger.debug("Browse dialog opened for: file")
         path = filedialog.askopenfilename(title="Select File")
         if path:
+            logger.debug("Browse result: %s", path)
             self._set_target_path(path)
+        else:
+            logger.debug("Browse result: cancelled")
 
     def _browse_dir(self) -> None:
+        logger.debug("Browse dialog opened for: folder")
         path = filedialog.askdirectory(title="Select Directory")
         if path:
+            logger.debug("Browse result: %s", path)
             self._set_target_path(path)
+        else:
+            logger.debug("Browse result: cancelled")
 
     def _set_target_path(self, path: str) -> None:
+        logger.debug("Target path set to: %s", path)
         self._path_entry.delete(0, "end")
         self._path_entry.insert(0, path)
         self._on_target_or_type_change()
@@ -1370,10 +1379,12 @@ class OperationsPage(ctk.CTkFrame):
 
     def _on_operation_changed(self, _choice: str) -> None:
         """Update control state for the selected operation."""
+        logger.debug("Operation type changed to: %s", self._op_type_var.get())
         self._reconcile_controls()
 
     def _on_type_changed(self) -> None:
         """Handle target type radio change."""
+        logger.debug("Target type changed to: %s", self._type_var.get())
         self._update_browse_buttons()
         self._on_target_or_type_change()
 
@@ -1383,10 +1394,12 @@ class OperationsPage(ctk.CTkFrame):
 
     def _on_output_mode_changed(self, _choice: str = "") -> None:
         """Update output path display based on mode."""
+        logger.debug("Output mode changed to: %s", self._output_mode_var.get())
         self._reconcile_controls()
 
     def _on_rename_changed(self) -> None:
         """Rename checkbox toggled — refresh dependent controls."""
+        logger.debug("Option changed: Rename files = %s", self._rename_var.get())
         self._reconcile_controls()
 
     @staticmethod
@@ -1910,6 +1923,7 @@ class SettingsTab(ctk.CTkFrame):
 
     def _on_sha512_changed(self) -> None:
         """Notify Operations page to sync SHA-512 override state."""
+        logger.debug("Setting changed: sha512 = %s", self.sha512_var.get())
         if hasattr(self._app, "_ops_page"):
             self._app._ops_page._sync_sha512_from_settings()
 
@@ -2104,7 +2118,7 @@ class ShruggiIndexerApp(ctk.CTk):
         self._output_height = _DEFAULT_OUTPUT_HEIGHT
         self._last_output_mode = "view"  # Track for post-job display
 
-        # Logging handler (item 2.11)
+        # Logging handler — GUI panel (item 2.11)
         self._log_handler = _LogQueueHandler(self._log_queue)
         self._log_handler.setFormatter(
             logging.Formatter(
@@ -2112,6 +2126,13 @@ class ShruggiIndexerApp(ctk.CTk):
                 datefmt="%H:%M:%S",
             ),
         )
+
+        # Worker thread reference for health checks
+        self._worker_thread: threading.Thread | None = None
+
+        # Persistent DEBUG-level file handler — always on (Issue 3)
+        self._persistent_file_handler: logging.FileHandler | None = None
+        self._setup_file_logging()
 
         # Window setup
         self.title(_WINDOW_TITLE)
@@ -2125,6 +2146,36 @@ class ShruggiIndexerApp(ctk.CTk):
         self._restore_session()
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    # -- Persistent file logging (Issue 3) ----------------------------------
+
+    def _setup_file_logging(self) -> None:
+        """Set up a persistent DEBUG-level log file on every GUI launch.
+
+        The file handler always runs at DEBUG regardless of the Settings
+        tab Verbosity control (which only affects the GUI log panel).
+        """
+        try:
+            from shruggie_indexer.cli.log_file import make_file_handler
+
+            self._persistent_file_handler = make_file_handler()
+            self._persistent_file_handler.setLevel(logging.DEBUG)
+            lib_logger = logging.getLogger("shruggie_indexer")
+            lib_logger.setLevel(logging.DEBUG)
+            lib_logger.addHandler(self._persistent_file_handler)
+            logger.info("Shruggie Indexer GUI v%s started", __version__)
+            logger.info(
+                "Platform: %s %s, Python %s",
+                platform.system(),
+                platform.release(),
+                f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+            )
+            logger.debug(
+                "Log file: %s",
+                self._persistent_file_handler.baseFilename,
+            )
+        except Exception:
+            logger.warning("Failed to set up persistent file logging", exc_info=True)
 
     # -- Layout construction ------------------------------------------------
 
@@ -2224,6 +2275,7 @@ class ShruggiIndexerApp(ctk.CTk):
 
         self._tabs[tab_id].pack(fill="both", expand=True)
         self._active_tab_id = tab_id
+        logger.debug("Tab selected: %s", _TAB_LABELS.get(tab_id, tab_id))
 
         # Show/hide output panel
         if tab_id in (_TAB_SETTINGS, _TAB_ABOUT):
@@ -2267,7 +2319,12 @@ class ShruggiIndexerApp(ctk.CTk):
     # -- Logging setup (item 2.11) ------------------------------------------
 
     def _start_log_capture(self) -> None:
-        """Attach the queue-based handler to the library logger."""
+        """Attach the queue-based handler to the library logger.
+
+        The GUI panel handler level is controlled by Settings Verbosity.
+        The persistent file handler (set up at startup) always runs at
+        DEBUG — it is not affected by this method.
+        """
         settings = self._settings_tab
         verbosity = settings.verbosity_var.get()
         level = {
@@ -2277,32 +2334,28 @@ class ShruggiIndexerApp(ctk.CTk):
         }.get(verbosity, logging.WARNING)
 
         lib_logger = logging.getLogger("shruggie_indexer")
-        lib_logger.setLevel(level)
+        # Keep logger at DEBUG so the persistent file handler receives
+        # everything.  The GUI panel handler filters by its own level.
+        lib_logger.setLevel(logging.DEBUG)
         self._log_handler.setLevel(level)
         lib_logger.addHandler(self._log_handler)
 
-        # Persistent log file (SS11.1)
-        self._file_handler: logging.FileHandler | None = None
-        if settings.log_to_file_var.get():
-            from shruggie_indexer.cli.log_file import make_file_handler
-
-            self._file_handler = make_file_handler()
-            self._file_handler.setLevel(level)
-            lib_logger.addHandler(self._file_handler)
+        logger.debug("Log capture started (GUI panel level: %s)", verbosity)
 
         # Start polling log queue
         self._poll_log_messages()
 
     def _stop_log_capture(self) -> None:
-        """Remove the queue-based handler from the library logger."""
+        """Remove the GUI queue handler from the library logger.
+
+        The persistent file handler is NOT removed — it stays active for
+        the lifetime of the application.
+        """
         lib_logger = logging.getLogger("shruggie_indexer")
         lib_logger.removeHandler(self._log_handler)
-        if self._file_handler is not None:
-            lib_logger.removeHandler(self._file_handler)
-            self._file_handler.close()
-            self._file_handler = None
         # Drain any remaining messages
         self._drain_log_queue()
+        logger.debug("Log capture stopped")
 
     def _poll_log_messages(self) -> None:
         """Poll the log queue and forward messages to the output panel."""
@@ -2331,16 +2384,19 @@ class ShruggiIndexerApp(ctk.CTk):
         """Validate inputs, construct config, and launch the background job."""
         target_path_str = ops.get_target_path()
         if not target_path_str:
+            logger.warning("Validation: no target path provided")
             messagebox.showwarning("Missing Target", "Please select a target path.")
             return
 
         target = Path(target_path_str)
         if not target.exists():
+            logger.warning("Validation: path does not exist: %s", target)
             messagebox.showerror("Invalid Target", f"Path does not exist:\n{target}")
             return
 
         err = ops.validate()
         if err:
+            logger.warning("Validation: %s", err)
             messagebox.showwarning("Validation Error", err)
             return
 
@@ -2348,8 +2404,19 @@ class ShruggiIndexerApp(ctk.CTk):
             base_config = load_config()
             config = ops.build_config(base_config)
         except IndexerError as exc:
+            logger.error("Configuration error: %s", exc)
             messagebox.showerror("Configuration Error", str(exc))
             return
+
+        op_label = ops._op_type_var.get()
+        logger.info(
+            "Operation started: %s on %s (%s%s)",
+            op_label,
+            target_path_str,
+            ops._type_var.get(),
+            ", recursive" if ops._recursive_var.get() else "",
+        )
+        logger.debug("IndexerConfig: %s", config)
 
         # Store output mode for post-job display logic (item 2.8)
         self._last_output_mode = ops.get_output_mode()
@@ -2375,8 +2442,12 @@ class ShruggiIndexerApp(ctk.CTk):
             target=self._background_job,
             args=(target, config),
             daemon=True,
+            name="shruggie-worker",
         )
+        self._worker_thread = thread
+        logger.debug("Background thread created: %s", thread.name)
         thread.start()
+        logger.debug("Background thread started")
         self._poll_results()
 
     def _background_job(self, target: Path, config: IndexerConfig) -> None:
@@ -2387,6 +2458,8 @@ class ShruggiIndexerApp(ctk.CTk):
         MetaMergeDelete.
         """
         result: dict[str, Any] = {"status": "error", "message": "Unknown error"}
+        logger.debug("Background thread entry: target=%s", target)
+        _job_start = time.monotonic()
         try:
             # ── Prepare delete queue for MetaMergeDelete ────────────────
             delete_queue: list[Path] | None = (
@@ -2394,6 +2467,7 @@ class ShruggiIndexerApp(ctk.CTk):
             )
 
             # ── Execute indexing ────────────────────────────────────────
+            logger.info("Indexing started for: %s", target)
             entry = index_path(
                 target,
                 config,
@@ -2404,6 +2478,7 @@ class ShruggiIndexerApp(ctk.CTk):
 
             # ── Stage 6: Rename (spec §6.10) ───────────────────────────
             if config.rename:
+                logger.info("Rename phase started")
                 if entry.type == "file":
                     rename_item(target, entry)
                 elif entry.items is not None:
@@ -2428,6 +2503,7 @@ class ShruggiIndexerApp(ctk.CTk):
 
             if config.output_file is not None:
                 config.output_file.write_text(json_str + "\n", encoding="utf-8")
+                logger.info("Output written to: %s", config.output_file)
 
             # ── MetaMergeDelete: drain deletion queue (Stage 6) ─────────
             if delete_queue:
@@ -2435,16 +2511,26 @@ class ShruggiIndexerApp(ctk.CTk):
                 logger.info("Deleted %d merged sidecar files", deleted)
 
             result = {"status": "success", "json": json_str}
+            _job_elapsed = time.monotonic() - _job_start
+            logger.info("Operation completed in %.1fs", _job_elapsed)
 
         except IndexerCancellationError:
+            logger.info("Operation cancelled by user")
             result = {"status": "cancelled", "message": "Operation cancelled by user."}
 
         except IndexerError as exc:
+            logger.error("Operation failed: %s", exc)
             result = {"status": "error", "message": str(exc)}
 
         except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "Unhandled exception in background thread: %s",
+                exc,
+                exc_info=True,
+            )
             result = {"status": "error", "message": f"Unexpected error: {exc}"}
 
+        logger.debug("Background thread exited")
         self._result_queue.put(result)
 
     @staticmethod
@@ -2501,6 +2587,25 @@ class ShruggiIndexerApp(ctk.CTk):
         try:
             result = self._result_queue.get_nowait()
         except queue.Empty:
+            # Safety net: if the worker thread died without posting a
+            # result, detect and force-complete with an error.
+            if (
+                self._worker_thread is not None
+                and not self._worker_thread.is_alive()
+            ):
+                logger.error(
+                    "Background thread died without posting a result"
+                )
+                result = {
+                    "status": "error",
+                    "message": "Background thread terminated unexpectedly.",
+                }
+                self._drain_progress_queue()
+                self.after(
+                    _COMPLETION_DELAY_MS,
+                    lambda: self._on_job_complete(result),
+                )
+                return
             self.after(_POLL_INTERVAL_MS, self._poll_results)
             return
         # Final drain to capture any trailing progress events.
@@ -2526,6 +2631,7 @@ class ShruggiIndexerApp(ctk.CTk):
             progress.status_label.configure(
                 text="Complete", text_color=("green", "#00cc00"),
             )
+            logger.info("Operation completed successfully")
             json_text = result.get("json", "")
 
             # Route based on output mode
@@ -2545,12 +2651,14 @@ class ShruggiIndexerApp(ctk.CTk):
             progress.status_label.configure(
                 text="Cancelled", text_color=("#cc8800", "#ffaa00"),
             )
+            logger.info("Operation cancelled")
             self._output_panel.append_log(result.get("message", "Cancelled."))
 
         else:
             progress.status_label.configure(
                 text="Error", text_color=("#cc3333", "#ff4444"),
             )
+            logger.error("Operation failed: %s", result.get("message", "Unknown error"))
             self._output_panel.append_log(
                 f"ERROR: {result.get('message', 'Unknown error')}",
             )
@@ -2564,8 +2672,25 @@ class ShruggiIndexerApp(ctk.CTk):
         self._save_session()
 
     def request_cancel(self) -> None:
-        if self._job_running:
-            self._cancel_event.set()
+        if not self._job_running:
+            return
+        logger.info("Cancel requested by user")
+        self._cancel_event.set()
+        logger.debug("cancel_event.set() called")
+        # Safety net: if the worker thread already died, force-reset the
+        # GUI to idle immediately.
+        if (
+            self._worker_thread is not None
+            and not self._worker_thread.is_alive()
+        ):
+            logger.warning(
+                "Worker thread already dead — forcing GUI to idle"
+            )
+            result = {
+                "status": "error",
+                "message": "Background thread terminated unexpectedly.",
+            }
+            self._on_job_complete(result)
 
     def _set_sidebar_enabled(self, enabled: bool) -> None:
         for tab_id, btn in self._sidebar_buttons.items():
@@ -2584,11 +2709,14 @@ class ShruggiIndexerApp(ctk.CTk):
             "output_panel_height": self._output_height,
         }
         self._session.save(data)
+        logger.debug("Session saved to: %s", self._session._path)
 
     def _restore_session(self) -> None:
         data = self._session.load()
         if not data:
+            logger.debug("No session to restore")
             return
+        logger.debug("Session restored from: %s", self._session._path)
 
         # Geometry
         if "geometry" in data:
@@ -2636,12 +2764,16 @@ class ShruggiIndexerApp(ctk.CTk):
             ):
                 return
             self._cancel_event.set()
+        logger.info("Application exiting")
         self._save_session()
         # Explicitly terminate the persistent ExifTool process to prevent
         # orphaned child processes (the atexit handler is a safety net but
         # explicit cleanup is preferred on graceful exit).
         shutdown_exiftool()
         self.destroy()
+        # Close persistent file handler before exit.
+        if self._persistent_file_handler is not None:
+            self._persistent_file_handler.close()
         # Force-terminate the process.  When a background job is blocked in
         # an uncancellable operation (large file hashing, exiftool IPC), the
         # daemon thread keeps the process alive even after the Tk mainloop

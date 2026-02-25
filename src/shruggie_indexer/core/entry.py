@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from typing import TYPE_CHECKING, Any
 
 from shruggie_indexer.core._formatting import human_readable_size
@@ -262,6 +263,7 @@ def build_file_entry(
     exif_entry: MetadataEntry | None = None
     mime_type: str | None = None
     if config.extract_exif and not is_symlink:
+        logger.debug("ExifTool invoked for: %s", path)
         try:
             exif_data = extract_exif(path, config)
             if exif_data is not None:
@@ -383,8 +385,18 @@ def build_directory_entry(
     )
 
     # --- Child enumeration and construction ---
+    # Check cancellation before discovery (Issue 2).
+    if cancel_event is not None and cancel_event.is_set():
+        raise IndexerCancellationError("Indexing cancelled")
+    logger.info("Discovery phase started for: %s", path)
+    _discovery_start = time.monotonic()
     files, directories = list_children(path, config)
     total_items = len(files) + len(directories)
+    _discovery_elapsed = time.monotonic() - _discovery_start
+    logger.info(
+        "Discovery complete: %d items found in %.3fs (%d files, %d directories)",
+        total_items, _discovery_elapsed, len(files), len(directories),
+    )
 
     # Progress: discovery phase
     if progress_callback is not None:
@@ -414,11 +426,13 @@ def build_directory_entry(
         ))
 
     # Process file children first
+    logger.info("Processing phase started: %d items", total_items)
     for child_path in files:
         if cancel_event is not None and cancel_event.is_set():
             raise IndexerCancellationError("Indexing cancelled")
 
         try:
+            _item_start = time.monotonic()
             child_entry = build_file_entry(
                 child_path,
                 config,
@@ -428,6 +442,11 @@ def build_directory_entry(
                 _index_root=index_root,
             )
             child_entries.append(child_entry)
+            _item_elapsed = time.monotonic() - _item_start
+            logger.debug(
+                "Completed [%d/%d]: %s in %.3fs",
+                items_completed + 1, total_items, child_path.name, _item_elapsed,
+            )
         except IndexerCancellationError:
             raise
         except Exception:
@@ -597,6 +616,7 @@ def index_path(
     are ignored for single-file targets.
     """
     resolved = resolve_path(target)
+    logger.info("index_path: target=%s, type=%s", resolved, "file" if resolved.is_file() else "directory" if resolved.is_dir() else "unknown")
 
     if resolved.is_file():
         return build_file_entry(
