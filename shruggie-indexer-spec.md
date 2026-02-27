@@ -6784,6 +6784,8 @@ The following table summarizes each heuristic and its application to `shruggie-i
 
 **Enforcement:** Use fixed-height frames or `grid` geometry with explicit row/column weights. Never use `pack()` with dynamically created widgets that alter the geometry of sibling widgets. If a widget is hidden during certain states, reserve its space with a placeholder or use `grid_remove()` / `grid()` (which preserves geometry) rather than `pack_forget()` / `pack()` (which does not).
 
+**Region boundary clarity:** Wherever an anchored (non-scrollable) region borders a scrollable or background-matched content area, a uniform 1px separator line (`CTkFrame`, `height=1`, `fg_color="gray50"`) MUST be placed at the boundary edge to visually delineate the regions. This treatment is applied at the bottom edge of the Operations page title, the top edge of the Operations page bottom anchored region (progress/action area), and the bottom edge of the Settings page title. All occurrences MUST use the identical visual style. Mixing different boundary treatments (e.g., shadows for titles but lines for bottom regions) is prohibited.
+
 See also [§10.9.7](#1097-progress-and-feedback-area-allocation) for the specific application of this standard to the progress/feedback region.
 
 <a id="1093-state-driven-control-visibility"></a>

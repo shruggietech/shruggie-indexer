@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **GUI: Region boundary separators** — Added uniform 1px separator lines (`gray50`) at the boundary edges of anchored (non-scrollable) regions on both the Operations and Settings pages. Separators appear at the bottom of the Operations page title, the top of the Operations page bottom anchored region (progress/action area), and the bottom of the Settings page title. Provides clear visual delineation between fixed header regions and scrollable content areas at all window sizes.
+- **Spec SS10.9.2: Region boundary clarity** — Added "Region boundary clarity" paragraph to the Layout stability standard documenting the uniform 1px separator convention for anchored-region boundaries.
+
 ## [0.1.1] - 2026-02-25
 
 ### Added

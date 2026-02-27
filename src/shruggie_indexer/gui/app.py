@@ -1020,6 +1020,9 @@ class OperationsPage(ctk.CTkFrame):
             anchor="w",
         ).pack(fill="x", pady=(0, 8))
 
+        # Region boundary separator — bottom edge of Operations title
+        ctk.CTkFrame(self, height=1, fg_color="gray50").pack(fill="x")
+
         # Fixed-height progress/action region pinned at bottom (SS10.9 1.3.6).
         # Packed before the scroll area so it claims space first.
         self._progress_region = ctk.CTkFrame(
@@ -1027,6 +1030,11 @@ class OperationsPage(ctk.CTkFrame):
         )
         self._progress_region.pack(fill="x", side="bottom", pady=(8, 0))
         self._progress_region.pack_propagate(False)
+
+        # Region boundary separator — top edge of bottom anchored region
+        ctk.CTkFrame(self, height=1, fg_color="gray50").pack(
+            fill="x", side="bottom",
+        )
 
         # -- Idle sub-frame (START button, centered) --
         self._idle_frame = ctk.CTkFrame(
@@ -1852,6 +1860,9 @@ class SettingsTab(ctk.CTkFrame):
             self, text="Settings",
             font=ctk.CTkFont(size=18, weight="bold"), anchor="w",
         ).pack(fill="x", pady=(0, 16))
+
+        # Region boundary separator — bottom edge of Settings title
+        ctk.CTkFrame(self, height=1, fg_color="gray50").pack(fill="x")
 
         self._scroll = _AutoScrollFrame(self, fg_color="transparent")
         self._scroll.pack(fill="both", expand=True)
