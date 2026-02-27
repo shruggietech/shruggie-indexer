@@ -83,6 +83,102 @@ Download the appropriate binary, place it in a directory on your `PATH`, and run
 !!! tip "GUI executables"
     Standalone GUI executables (`shruggie-indexer-gui`) are also available on the Releases page for each platform.
 
+## Building Standalone Executables
+
+To build standalone executables from source, you need [PyInstaller](https://pyinstaller.org/) and — optionally — [UPX](https://upx.github.io/) for executable compression.
+
+### Prerequisites
+
+Install PyInstaller into the active virtual environment:
+
+```bash
+pip install pyinstaller
+```
+
+### Build Commands
+
+From the repository root, with the virtual environment active:
+
+```bash
+# Windows
+.\scripts\build.ps1
+
+# Linux / macOS
+./scripts/build.sh
+```
+
+Both scripts accept a target argument (`cli`, `gui`, or `all`) and a `--clean` / `-Clean` flag to remove previous build artifacts. The resulting executables are written to the `dist/` directory.
+
+### UPX (Optional — Executable Compression)
+
+[UPX](https://upx.github.io/) (Ultimate Packer for eXecutables) compresses the standalone executables by 30–50% with minimal startup time impact. Both PyInstaller spec files already enable UPX compression (`upx=True`). If UPX is installed and on `PATH`, it is used automatically — no configuration changes are needed.
+
+If UPX is not installed, the build succeeds normally with larger executables. The build scripts log the result either way.
+
+#### Installing UPX
+
+**Windows:**
+
+Option 1 — Chocolatey:
+
+```
+choco install upx
+```
+
+Option 2 — winget:
+
+```
+winget install upx.upx
+```
+
+Option 3 — Manual download:
+
+1. Download the latest Windows release from [https://github.com/upx/upx/releases](https://github.com/upx/upx/releases).
+2. Extract the archive.
+3. Place `upx.exe` in a directory on your system `PATH`.
+
+**macOS:**
+
+```bash
+brew install upx
+```
+
+**Linux:**
+
+Debian / Ubuntu:
+
+```bash
+sudo apt install upx-ucl
+```
+
+Fedora / RHEL:
+
+```bash
+sudo dnf install upx
+```
+
+Arch Linux:
+
+```bash
+sudo pacman -S upx
+```
+
+#### Verifying UPX
+
+```bash
+upx --version
+```
+
+This should print a version string (e.g., `upx 4.2.4`). Once verified, re-run the build script — the output will confirm compression is active:
+
+```
+[build] UPX found: upx 4.2.4
+[build] Executables will be UPX-compressed.
+```
+
+!!! tip "Size comparison"
+    A typical shruggie-indexer CLI build is ~15 MB without UPX and ~8–10 MB with UPX compression enabled. GUI builds see similar relative reductions.
+
 ## Verification
 
 After installation, verify the tool is accessible:
