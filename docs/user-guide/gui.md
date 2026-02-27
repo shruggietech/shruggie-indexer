@@ -50,7 +50,7 @@ shruggie-indexer-gui
 
 The application window is divided into three areas:
 
-1. **Sidebar** (left) — Navigation between the three main tabs: **Operations**, **Settings**, and **About**. The application version is displayed at the bottom of the sidebar.
+1. **Sidebar** (left) — Navigation between the three main tabs: **Operations**, **Settings**, and **About**. An **Exit** button (red accent color) is positioned near the bottom of the sidebar, above the version label. Clicking it triggers the same close/cleanup sequence as the window's close button. The application version is displayed at the very bottom of the sidebar.
 2. **Main content area** (center/right) — Changes depending on which sidebar tab is selected.
 3. **Output panel** (bottom) — Displays results and log messages after an operation finishes. This panel is only visible on the Operations tab.
 
@@ -140,7 +140,7 @@ While the operation runs:
     - A progress bar
     - The file currently being processed
     - A scrolling log of activity
-- The action button changes to a red **■ Cancel** button. Click it (or press ++escape++) to stop the operation after the current file finishes.
+- The action button changes to a red **■ Cancel** button with the same dimensions as the START button. Click it (or press ++escape++) to stop the operation after the current file finishes.
 - All input controls on the Operations tab are disabled during execution.
 
 When the operation completes, the progress panel disappears and the output panel shows the results.

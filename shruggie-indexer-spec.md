@@ -5995,7 +5995,11 @@ Each sidebar button is a `CTkButton` styled as a navigation element — the acti
 
 > **Updated 2026-02-23:** The previous sidebar layout contained five operation buttons (Index, Meta Merge, Meta Merge Delete, Rename, plus a separator, plus Settings). The consolidated layout replaces all four operation buttons with a single "Operations" button and adds an "About" button, reducing sidebar clutter and better reflecting the underlying architecture — the four operations are four preset configurations of the same `index_path()` pipeline, not four independent features.
 
-**Version label.** Below all sidebar buttons, a small, muted-font label displays the application version string (from `shruggie_indexer.__version__`). This provides at-a-glance version identification without consuming valuable UI space.
+**Exit button.** Below the navigation buttons, at the bottom of the sidebar (above the version label), an "Exit" button provides an explicit application-level close action. The button uses a red accent color (`#c0392b` / `#a93226` for light/dark themes) to visually distinguish it from the blue/teal navigation buttons. Clicking the Exit button triggers the same close and cleanup sequence as the window's close button (`WM_DELETE_WINDOW`), including the cancellation confirmation dialog when an indexing operation is in progress.
+
+> **Updated 2026-02-27:** Added Exit button to the sidebar. Provides a visible, discoverable close action alongside the window's native close button.
+
+**Version label.** Below all sidebar buttons and the Exit button, a small, muted-font label displays the application version string (from `shruggie_indexer.__version__`). This provides at-a-glance version identification without consuming valuable UI space.
 
 <a id="working-area"></a>
 #### Working area
@@ -6310,15 +6314,17 @@ This subsection defines how the GUI executes indexing operations, displays progr
 <a id="action-button-behavior"></a>
 #### Action button behavior
 
-> **Updated 2026-02-23:** The action button now always displays "▶ START" (green, max 50% window width) regardless of the selected operation type. During execution, it changes to "■ Cancel" (red). The button label no longer reflects the operation type — the operation type is already visible in the Operation group's dropdown. This simplification reduces visual complexity and provides a clear, consistent call-to-action.
+> **Updated 2026-02-23:** The action button now always displays "▶ START" (green, max 25% window width) regardless of the selected operation type. During execution, it changes to "■ Cancel" (red). The button label no longer reflects the operation type — the operation type is already visible in the Operation group's dropdown. This simplification reduces visual complexity and provides a clear, consistent call-to-action.
 
-The Operations page has a single action button at the bottom of its input section, centered, with a maximum width of 50% of the application window (or 350 px, whichever is smaller). The button uses a distinct green color (`#1b8a1b` / `#22882a` for light/dark themes) to visually differentiate it from all other buttons in the application.
+> **Updated 2026-02-27:** Reduced maximum action button width from 50%/350px to ~25%/175px. The Cancel button now uses the same height, font, and dynamic width constraint as the START button, ensuring identical pixel dimensions across both states.
 
-| State | Button label | Color |
-|-------|-------------|-------|
-| Idle | ▶ START | Green (`#1b8a1b` / `#22882a`) |
-| Running | ■ Cancel | Red (`#cc3333`) |
-| Validation error | ▶ START (disabled) | Grey (disabled state) |
+The Operations page has a single action button at the bottom of its input section, centered, with a maximum width of approximately 25% of the application window (or 175 px, whichever is smaller, minimum 120 px). The button uses a distinct green color (`#1b8a1b` / `#22882a` for light/dark themes) to visually differentiate it from all other buttons in the application.
+
+| State | Button label | Color | Dimensions |
+|-------|-------------|-------|------------|
+| Idle | ▶ START | Green (`#1b8a1b` / `#22882a`) | Height 36px, width ~25% of parent (120–175px) |
+| Running | ■ Cancel | Red (`#cc3333`) | Identical to START (height 36px, width ~25% of parent) |
+| Validation error | ▶ START (disabled) | Grey (disabled state) | Same as Idle |
 
 When clicked, the action button:
 

@@ -1142,11 +1142,11 @@ class OperationsPage(ctk.CTkFrame):
         )
         self.action_btn.pack(anchor="center", expand=True)
         _Tooltip(self.action_btn, "Start the selected operation on the target path.")
-        # Constrain width to 50 % of parent on resize
+        # Constrain width to ~25 % of parent on resize (≈175px max)
         self._idle_frame.bind(
             "<Configure>",
             lambda e: self.action_btn.configure(
-                width=min(350, max(180, int(e.width * 0.45))),
+                width=min(175, max(120, int(e.width * 0.25))),
             ),
         )
 
@@ -1157,13 +1157,20 @@ class OperationsPage(ctk.CTkFrame):
         self._progress_panel = ProgressPanel(self._running_frame)
         self._progress_panel.pack(fill="x", pady=(4, 2))
         self._cancel_btn = _CtkButton(
-            self._running_frame, text=_ACTION_LABEL_RUNNING, height=32,
-            font=ctk.CTkFont(size=12, weight="bold"),
+            self._running_frame, text=_ACTION_LABEL_RUNNING, height=36,
+            font=ctk.CTkFont(size=14, weight="bold"),
             fg_color=("#cc3333", "#cc3333"),
             hover_color=("#aa2222", "#aa2222"),
             command=self._on_action,
         )
         self._cancel_btn.pack(anchor="center", pady=(2, 4))
+        # Match Cancel button width to START button dimensions
+        self._running_frame.bind(
+            "<Configure>",
+            lambda e: self._cancel_btn.configure(
+                width=min(175, max(120, int(e.width * 0.25))),
+            ),
+        )
 
         # Start in idle state
         self._idle_frame.pack(fill="both", expand=True)
@@ -2639,9 +2646,23 @@ class ShruggiIndexerApp(ctk.CTk):
             self._sidebar_buttons[tab_id] = btn
 
         # Version label at bottom of sidebar (item 2.10)
-        # Spacer to push version to the bottom
+        # Spacer to push version and exit button to the bottom
         spacer = ctk.CTkFrame(self._sidebar, fg_color="transparent")
         spacer.pack(fill="both", expand=True)
+
+        # Exit button — calls the same close handler as the window X button
+        self._exit_btn = _CtkButton(
+            self._sidebar,
+            text="Exit",
+            width=_SIDEBAR_WIDTH - 16,
+            height=32,
+            corner_radius=6,
+            fg_color=("#c0392b", "#a93226"),
+            hover_color=("#a93226", "#922b21"),
+            text_color=("#ffffff", "#ffffff"),
+            command=self._on_close,
+        )
+        self._exit_btn.pack(pady=(0, 6), padx=8)
 
         ctk.CTkLabel(
             self._sidebar,

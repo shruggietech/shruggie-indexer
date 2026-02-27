@@ -8,8 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **GUI: Exit button** — Added an "Exit" button to the bottom of the sidebar, positioned above the version label. The button uses a red accent color (`#c0392b` / `#a93226`) to visually distinguish it from navigation buttons. Clicking it triggers the same close/cleanup sequence as the window's close button (`WM_DELETE_WINDOW`), including the cancellation confirmation dialog when an operation is in progress.
+
 ### Changed
 
+- **GUI: START button width reduced** — The START button maximum width is now ~25% of the parent width (capped at 175px, minimum 120px), reduced from the previous ~45%/350px. This brings the button into better visual proportion with the surrounding controls.
+- **GUI: Cancel button dimensions matched to START** — The Cancel (STOP) button now uses the same height (36px), font size (14pt bold), and dynamic width constraint (25%/175px max) as the START button, ensuring identical pixel dimensions across both states.
 - **GUI: Output mode constraint expansion** — "View only" is no longer removed from the output mode dropdown when constrained. Instead, it always appears in the list; selecting it while a constraint is active triggers an immediate snap-back to the appropriate default (Single file for file targets, Multi-file for directory targets) with an explanatory info-label message. Two constraint conditions now apply: (1) Operation is Meta Merge Delete — destructive operations require a persistent output record. (2) Rename is active — rename requires writing files to disk, which is incompatible with view-only mode. When both conditions apply simultaneously, the Meta Merge Delete message takes priority. The info-label clears when no constraint is active.
 - **GUI: Collapsible operations cards** — The Target, Options, and Output cards on the Operations page are now collapsible. Each card header displays a disclosure caret (▶ collapsed / ▼ expanded) and the entire header row is clickable (`cursor="hand2"`). Collapsed/expanded state for each card persists across application sessions via the session file. All three cards default to expanded on first launch.
 - **GUI: Drag handle grip indicator** — The drag handle between the configuration area and the output/log panel now displays a centered three-dot grip indicator (• • •) in a muted color, visually communicating that it is interactive. Handle height increased from 6px to 8px and background color slightly differentiated from the default frame color for improved visibility as a secondary region boundary cue.
