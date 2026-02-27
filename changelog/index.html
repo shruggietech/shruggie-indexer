@@ -1370,6 +1370,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1398,7 +1409,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
+  <a href="#added_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1448,7 +1459,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_1" class="md-nav__link">
+  <a href="#added_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1510,6 +1521,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1538,7 +1560,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
+  <a href="#added_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1588,7 +1610,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_1" class="md-nav__link">
+  <a href="#added_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1628,8 +1650,14 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <h2 id="unreleased"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.1...HEAD">Unreleased</a></h2>
+<h3 id="added">Added</h3>
+<ul>
+<li><strong>GUI: Exit button</strong> — Added an "Exit" button to the bottom of the sidebar, positioned above the version label. The button uses a red accent color (<code>#c0392b</code> / <code>#a93226</code>) to visually distinguish it from navigation buttons. Clicking it triggers the same close/cleanup sequence as the window's close button (<code>WM_DELETE_WINDOW</code>), including the cancellation confirmation dialog when an operation is in progress.</li>
+</ul>
 <h3 id="changed">Changed</h3>
 <ul>
+<li><strong>GUI: START button width reduced</strong> — The START button maximum width is now ~25% of the parent width (capped at 175px, minimum 120px), reduced from the previous ~45%/350px. This brings the button into better visual proportion with the surrounding controls.</li>
+<li><strong>GUI: Cancel button dimensions matched to START</strong> — The Cancel (STOP) button now uses the same height (36px), font size (14pt bold), and dynamic width constraint (25%/175px max) as the START button, ensuring identical pixel dimensions across both states.</li>
 <li><strong>GUI: Output mode constraint expansion</strong> — "View only" is no longer removed from the output mode dropdown when constrained. Instead, it always appears in the list; selecting it while a constraint is active triggers an immediate snap-back to the appropriate default (Single file for file targets, Multi-file for directory targets) with an explanatory info-label message. Two constraint conditions now apply: (1) Operation is Meta Merge Delete — destructive operations require a persistent output record. (2) Rename is active — rename requires writing files to disk, which is incompatible with view-only mode. When both conditions apply simultaneously, the Meta Merge Delete message takes priority. The info-label clears when no constraint is active.</li>
 <li><strong>GUI: Collapsible operations cards</strong> — The Target, Options, and Output cards on the Operations page are now collapsible. Each card header displays a disclosure caret (▶ collapsed / ▼ expanded) and the entire header row is clickable (<code>cursor="hand2"</code>). Collapsed/expanded state for each card persists across application sessions via the session file. All three cards default to expanded on first launch.</li>
 <li><strong>GUI: Drag handle grip indicator</strong> — The drag handle between the configuration area and the output/log panel now displays a centered three-dot grip indicator (• • •) in a muted color, visually communicating that it is interactive. Handle height increased from 6px to 8px and background color slightly differentiated from the default frame color for improved visibility as a secondary region boundary cue.</li>
@@ -1637,7 +1665,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Spec SS10.9.2: Region boundary clarity</strong> — Added "Region boundary clarity" paragraph to the Layout stability standard documenting the uniform 1px separator convention for anchored-region boundaries.</li>
 </ul>
 <h2 id="011-2026-02-25"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.0...v0.1.1">0.1.1</a> - 2026-02-25</h2>
-<h3 id="added">Added</h3>
+<h3 id="added_1">Added</h3>
 <ul>
 <li><strong>Schema: <code>session_id</code> field on IndexEntry</strong> — New optional <code>session_id</code> field (UUID4 string) identifies the indexing invocation that produced each entry. All entries within a single CLI, GUI, or API invocation share the same value. Enables downstream consumers (primarily <code>shruggie-catalog</code>) to perform run correlation, staleness detection, provenance linking, and batch integrity verification. The field is optional and absent from the <code>required</code> array; <code>schema_version</code> remains <code>2</code>. When <code>index_path()</code> is called without an explicit <code>session_id</code>, one is auto-generated. Ref: spec §18.1.14.</li>
 <li><strong>Schema: <code>indexed_at</code> field on IndexEntry</strong> — New optional <code>indexed_at</code> field (TimestampPair) records the UTC moment each IndexEntry was constructed by the indexer. Distinct from the file's own filesystem timestamps — records the indexer's observation time. Each entry receives its own unique <code>indexed_at</code> value. Supports ordering, TTL/freshness policies, and debugging for downstream consumers.</li>
@@ -1746,7 +1774,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>ExifTool key filtering now correctly handles group-prefixed keys (e.g. <code>System:FileName</code>) by matching on the base key name after the last <code>:</code> separator. Previously, the <code>-G3:1</code> flag caused all keys to carry group prefixes, which bypassed the exact-match exclusion check and leaked sensitive filesystem details into output.</li>
 </ul>
 <h2 id="010-2026-02-20"><a href="https://github.com/shruggietech/shruggie-indexer/releases/tag/v0.1.0">0.1.0</a> - 2026-02-20</h2>
-<h3 id="added_1">Added</h3>
+<h3 id="added_2">Added</h3>
 <ul>
 <li>Initial <code>shruggie-indexer</code> release with CLI, GUI, and Python API delivery surfaces.</li>
 <li>Deterministic v2 schema output with hash-based IDs, timestamp capture, and storage names.</li>
