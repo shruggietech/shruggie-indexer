@@ -2245,7 +2245,6 @@ published on the GitHub release page.</p>
 <ul>
 <li><strong>Multi-file</strong> requires a directory target (not available for single files).</li>
 <li><strong>View only</strong> is not available for Meta Merge Delete (destructive operations require a persistent output record) or when Rename is active (rename requires writing files to disk). The option remains visible in the dropdown but selecting it snaps back to the appropriate default with an explanatory message.</li>
-<li><strong>Rename</strong> forces Multi-file mode (renamed files need per-item sidecar output).</li>
 </ul>
 </div>
 <h3 id="running-an-operation">Running an Operation</h3>
@@ -2268,7 +2267,7 @@ exists. Resolve any red error messages before running.</p>
 <li>The action button changes to a red <strong>■ Cancel</strong> button with the same dimensions as the START button. Click it (or press ++escape++) to stop the operation after the current file finishes.</li>
 <li>All input controls on the Operations tab are disabled during execution.</li>
 </ul>
-<p>When the operation completes, the progress panel disappears and the output panel shows the results.</p>
+<p>When the operation completes, the progress panel disappears and the result data is populated. The active Output/Log tab is preserved — if you were viewing the Log tab during the operation, the Log tab remains active. The Output button briefly highlights green to signal that new content is available.</p>
 <hr />
 <h2 id="output-panel">Output Panel</h2>
 <p>The output panel appears at the bottom of the Operations tab after a job finishes. It has two views, switchable via toggle buttons in the toolbar:</p>
@@ -2450,7 +2449,7 @@ includes a disabled "Reset to Defaults" button placeholder.</p>
 </table>
 <hr />
 <h2 id="session-persistence">Session Persistence</h2>
-<p>The application automatically saves your window size, position, selected tab, operation settings, and output panel height when you close it. The next time you open the application, everything is restored to where you left off.</p>
+<p>The application automatically saves your window size, position, selected tab, operation settings, card collapsed/expanded states, Advanced Configuration section states, and output panel height when you close it. The next time you open the application, everything is restored to where you left off.</p>
 <p>Session data is stored in your operating system's standard configuration directory under the shared ShruggieTech ecosystem namespace:</p>
 <table>
 <thead>
