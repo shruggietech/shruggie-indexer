@@ -115,6 +115,10 @@ Both scripts accept a target argument (`cli`, `gui`, or `all`) and a `--clean` /
 
 If UPX is not installed, the build succeeds normally with larger executables. The build scripts log the result either way.
 
+Windows builds sanitize `PATH` during PyInstaller execution to avoid environment-specific DLL capture (for example, Windows Performance Toolkit paths). This keeps packaged binaries deterministic across developer machines.
+
+Build scripts also parse PyInstaller warning files and fail on unknown warnings. Known benign warnings are allowlisted in `scripts/build.ps1`.
+
 #### Installing UPX
 
 **Windows:**

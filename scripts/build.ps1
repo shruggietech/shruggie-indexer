@@ -130,6 +130,109 @@ function Test-UPXAvailability {
     }
 }
 
+function Get-SanitizedPath {
+    <#
+    .SYNOPSIS
+        Returns a deterministic PATH for PyInstaller execution.
+    #>
+    param(
+        [string]$OriginalPath
+    )
+
+    $entries = $OriginalPath -split ';' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    $filtered = foreach ($entry in $entries) {
+        if ($entry -match 'Windows Performance Toolkit') {
+            continue
+        }
+        $entry
+    }
+
+    return ($filtered -join ';')
+}
+
+function Get-BuildWarningAllowlist {
+    <#
+    .SYNOPSIS
+        Returns regex patterns for warnings considered non-fatal.
+    #>
+    return @(
+        '^missing module named _frozen_importlib_external\b',
+        '^missing module named pyimod02_importers\b',
+        '^missing module named multiprocessing\.',
+        '^missing module named asyncio\.DefaultEventLoopPolicy\b',
+        '^missing module named resource\b'
+    )
+}
+
+function Test-PyInstallerWarnings {
+    <#
+    .SYNOPSIS
+        Fails the build on unknown PyInstaller warnings.
+    #>
+    param(
+        [string]$WorkPath,
+        [string]$Label
+    )
+
+    $warningFiles = Get-ChildItem -Path $WorkPath -Recurse -File -Filter 'warn-*.txt' -ErrorAction SilentlyContinue
+    if (-not $warningFiles) {
+        Write-Host "[build] No PyInstaller warning files found for $Label." -ForegroundColor DarkGray
+        return
+    }
+
+    $allowlist = Get-BuildWarningAllowlist
+    $unknownWarnings = @()
+
+    foreach ($warningFile in $warningFiles) {
+        $lines = Get-Content -Path $warningFile.FullName -ErrorAction SilentlyContinue
+        foreach ($line in $lines) {
+            $trimmed = $line.Trim()
+            if ([string]::IsNullOrWhiteSpace($trimmed)) {
+                continue
+            }
+
+            if ($trimmed -notmatch '^(missing module named|excluded module named)') {
+                continue
+            }
+
+            if ($trimmed -match '^excluded module named') {
+                continue
+            }
+
+            $importType = ''
+            if ($trimmed -match '\((?<types>[^\)]*)\)\s*$') {
+                $importType = $Matches['types']
+            }
+
+            if ($importType -and $importType -notmatch 'top-level') {
+                continue
+            }
+
+            $isAllowed = $false
+            foreach ($pattern in $allowlist) {
+                if ($trimmed -match $pattern) {
+                    $isAllowed = $true
+                    break
+                }
+            }
+
+            if (-not $isAllowed) {
+                $unknownWarnings += "${trimmed} (file: $($warningFile.FullName))"
+            }
+        }
+    }
+
+    if ($unknownWarnings.Count -gt 0) {
+        Write-Host "[build] Unknown PyInstaller warnings detected for ${Label}:" -ForegroundColor Red
+        foreach ($warning in $unknownWarnings) {
+            Write-Host "    $warning" -ForegroundColor Red
+        }
+        Write-Error "Build failed due to unknown PyInstaller warnings."
+    }
+
+    Write-Host "[build] PyInstaller warnings for $Label are allowlisted." -ForegroundColor Green
+}
+
 function Invoke-PyInstallerBuild {
     <#
     .SYNOPSIS
@@ -143,10 +246,20 @@ function Invoke-PyInstallerBuild {
 
     Write-Host ""
     Write-Host "[build] Building $Label executable..." -ForegroundColor Cyan
-    & pyinstaller $SpecFile --distpath $DistDir --workpath $WorkPath --clean --noconfirm
+    $originalPath = $env:PATH
+    try {
+        $env:PATH = Get-SanitizedPath -OriginalPath $originalPath
+        & pyinstaller $SpecFile --distpath $DistDir --workpath $WorkPath --clean --noconfirm
+    }
+    finally {
+        $env:PATH = $originalPath
+    }
+
     if ($LASTEXITCODE -ne 0) {
         Write-Error "PyInstaller build failed for $Label ($SpecFile)."
     }
+
+    Test-PyInstallerWarnings -WorkPath $WorkPath -Label $Label
     Write-Host "[build] $Label build completed." -ForegroundColor Green
 }
 
