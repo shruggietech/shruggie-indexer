@@ -2342,38 +2342,43 @@ exists. Resolve any red error messages before running.</p>
 <li><strong>Open Config Folder</strong> — Opens the folder where the application stores its session data.</li>
 </ul>
 <h3 id="advanced-configuration">Advanced Configuration</h3>
-<p>Below the standard settings, a collapsed <strong>Advanced Configuration</strong> section provides visibility into the full set of TOML-configurable behaviors. Expanding the section reveals five labeled groups:</p>
+<p>Below the standard settings, a collapsed <strong>Advanced Configuration</strong> section provides visibility into the full set of TOML-configurable behaviors. Expanding the section reveals six independently collapsible subsections, each with a disclosure caret and a brief description:</p>
 <table>
 <thead>
 <tr>
 <th>Group</th>
-<th>Contents</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Filesystem Exclusion</strong></td>
-<td>Default <code>filesystem_excludes.names</code> and <code>filesystem_excludes.globs</code> values.</td>
+<td><strong>Filesystem Exclusions</strong></td>
+<td>Directories and file patterns skipped during traversal.</td>
 </tr>
 <tr>
-<td><strong>ExifTool</strong></td>
-<td>Default <code>exiftool.exclude_extensions</code>, <code>exiftool.exclude_keys</code>, and <code>exiftool.base_args</code> values.</td>
-</tr>
-<tr>
-<td><strong>Extension Validation</strong></td>
-<td>Default <code>extension_validation_pattern</code> regex.</td>
-</tr>
-<tr>
-<td><strong>Sidecar Identification</strong></td>
-<td>Default <code>metadata_identify</code> per-type regex lists.</td>
+<td><strong>Metadata Identification</strong></td>
+<td>Regex patterns used to identify sidecar metadata files.</td>
 </tr>
 <tr>
 <td><strong>Metadata Exclusion</strong></td>
-<td>Default <code>metadata_exclude.patterns</code> regex list.</td>
+<td>Regex patterns for excluding non-sidecar files from indexing.</td>
+</tr>
+<tr>
+<td><strong>ExifTool</strong></td>
+<td>ExifTool arguments, excluded keys, and excluded extensions.</td>
+</tr>
+<tr>
+<td><strong>Extension Groups</strong></td>
+<td>File extension to logical group mappings (e.g., image, video).</td>
+</tr>
+<tr>
+<td><strong>Extension Validation</strong></td>
+<td>Regex pattern defining valid file extensions.</td>
 </tr>
 </tbody>
 </table>
-<p>Each group displays its compiled default values in read-only monospace textboxes. The section includes a cosmetic "Shared Settings" / "Indexer-Specific Settings" separator preparing for future cross-tool configuration via <code>shared.toml</code>.</p>
+<p>Each subsection displays the complete, untruncated compiled default values in read-only monospace textboxes. Subsections are individually collapsible — clicking a subsection header toggles only that subsection. The parent "Advanced Configuration" toggle controls overall visibility. All subsections default to collapsed and their states persist across sessions.</p>
+<p>The section includes a cosmetic "Shared Settings" / "Indexer-Specific Settings" separator preparing for future cross-tool configuration via <code>shared.toml</code>.</p>
 <div class="admonition note">
 <p class="admonition-title">Editing Deferred</p>
 <p>The Advanced Configuration section is read-only in this release. Full editing,
