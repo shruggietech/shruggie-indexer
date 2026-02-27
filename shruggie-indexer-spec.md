@@ -30,6 +30,7 @@
   - [2.6. Intentional Deviations from the Original](#26-intentional-deviations-from-the-original)
 - [3. Repository Structure](#3-repository-structure)
   - [3.1. Top-Level Layout](#31-top-level-layout)
+    - [3.1.1. Archive Naming Convention](#311-archive-naming-convention)
   - [3.2. Source Package Layout](#32-source-package-layout)
   - [3.3. Configuration File Locations](#33-configuration-file-locations)
   - [3.4. Test Directory Layout](#34-test-directory-layout)
@@ -648,7 +649,7 @@ shruggie-indexer/
 
 | Path | Type | Description |
 |------|------|-------------|
-| `.archive/` | Directory | Human-only workspace for project notes, prompt files, and historical planning artifacts. AI agents should not parse or modify contents of this directory unless explicitly instructed. Not tracked in source control. |
+| `.archive/` | Directory | Human-only workspace for project notes, prompt files, and historical planning artifacts. AI agents should not parse or modify contents of this directory unless explicitly instructed. Not tracked in source control. Files follow the naming convention defined in [§3.1.1](#311-archive-naming-convention). |
 | `.github/` | Directory | GitHub-specific repository configuration. Contains `copilot-instructions.md` (project-level AI coding guidelines) and `workflows/` with CI/CD pipeline definitions: `release.yml` for the release build pipeline (see [§13](#13-packaging-and-distribution)) and `docs.yml` for automated documentation site deployment to GitHub Pages (see [§3.7](#37-documentation-site)). |
 | `docs/` | Directory | All project documentation beyond the top-level specification files. Subdivided into `getting-started/` (installation and quick-start guides), `schema/` (canonical v2 JSON Schema and validation examples), `porting-reference/` (historical reference materials from the original implementation), `user-guide/` (end-user documentation including CLI, GUI, configuration, and API reference), and `assets/` (images and media for documentation). See [§3.6](#36-documentation-artifacts) and [§3.7](#37-documentation-site). |
 | `scripts/` | Directory | Platform-paired shell scripts for development environment setup, build automation, and test execution. See [§3.5](#35-scripts-and-build-tooling). |
@@ -667,6 +668,35 @@ shruggie-indexer/
 | `shruggie-indexer.code-workspace` | File | VS Code multi-root workspace configuration. Defines workspace-level editor settings, recommended extensions, and folder mappings for development. |
 
 The `src`-layout (source code under `src/shruggie_indexer/` rather than a bare `shruggie_indexer/` at the root) is a deliberate choice inherited from `shruggie-feedtools`. It prevents accidental imports of the development source tree during testing — `import shruggie_indexer` in tests always resolves to the installed package, not the working directory. This is the layout recommended by the Python Packaging Authority and enforced by `hatchling` by default.
+
+<a id="311-archive-naming-convention"></a>
+#### 3.1.1. Archive Naming Convention
+
+> **Updated 2026-02-27:** Added sub-section codifying the `.archive/` file naming convention. The convention was established in practice during the v0.1.1 development cycle but was not previously documented in the spec.
+
+All files stored in `.archive/` follow a date-scoped naming convention:
+
+```
+<YYYYmmdd>-<ZeroPaddedIncrement>-<title>.<ext>
+```
+
+| Component | Description |
+|-----------|-------------|
+| `YYYYmmdd` | The date the document was created, or for generated artifacts, the date of the source content. |
+| `ZeroPaddedIncrement` | A three-digit zero-padded sequence number (`001`, `002`, etc.) for ordering documents created on the same date. **Resets to `001` on each new date.** Related clusters of documents (e.g., an update document and its prompt template) MAY share the same increment. |
+| `title` | A lowercase-hyphenated descriptive title. |
+| `ext` | The file extension. |
+
+**Batch label convention.** Update documents use a "Batch N" label in their title header (e.g., *"Pending Updates (2026-02-27, Batch 1)"*). The batch number corresponds to the date-scoped increment: the first update document on a given date is Batch 1 (`001`), the second is Batch 2 (`002`), and so on. The batch number resets to 1 on each new date, matching the increment reset.
+
+**Examples:**
+
+| Filename | Explanation |
+|----------|-------------|
+| `20260219-002-shruggie-indexer-plan.md` | Implementation plan created on 2026-02-19, second document of that date. |
+| `20260224-001-shruggie-indexer-spec.pdf` | PDF rendering of the spec, source content dated 2026-02-24, first document of that date. |
+| `20260227-001-Updates.md` | First update document (Batch 1) on 2026-02-27. |
+| `20260227-002-Updates.md` | Second update document (Batch 2) on the same date. |
 
 <a id="32-source-package-layout"></a>
 ### 3.2. Source Package Layout
