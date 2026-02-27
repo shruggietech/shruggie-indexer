@@ -594,6 +594,84 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#building-standalone-executables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Building Standalone Executables
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Building Standalone Executables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#upx-optional-executable-compression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UPX (Optional — Executable Compression)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="UPX (Optional — Executable Compression)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#installing-upx" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installing UPX
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verifying-upx" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying UPX
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verification" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1554,6 +1632,84 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#building-standalone-executables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Building Standalone Executables
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Building Standalone Executables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#upx-optional-executable-compression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UPX (Optional — Executable Compression)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="UPX (Optional — Executable Compression)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#installing-upx" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installing UPX
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verifying-upx" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying UPX
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verification" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1700,6 +1856,62 @@ python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </s
 <div class="admonition tip">
 <p class="admonition-title">GUI executables</p>
 <p>Standalone GUI executables (<code>shruggie-indexer-gui</code>) are also available on the Releases page for each platform.</p>
+</div>
+<h2 id="building-standalone-executables">Building Standalone Executables</h2>
+<p>To build standalone executables from source, you need <a href="https://pyinstaller.org/">PyInstaller</a> and — optionally — <a href="https://upx.github.io/">UPX</a> for executable compression.</p>
+<h3 id="prerequisites">Prerequisites</h3>
+<p>Install PyInstaller into the active virtual environment:</p>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>pyinstaller
+</code></pre></div>
+<h3 id="build-commands">Build Commands</h3>
+<p>From the repository root, with the virtual environment active:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Windows</span>
+.<span class="se">\s</span>cripts<span class="se">\b</span>uild.ps1
+
+<span class="c1"># Linux / macOS</span>
+./scripts/build.sh
+</code></pre></div>
+<p>Both scripts accept a target argument (<code>cli</code>, <code>gui</code>, or <code>all</code>) and a <code>--clean</code> / <code>-Clean</code> flag to remove previous build artifacts. The resulting executables are written to the <code>dist/</code> directory.</p>
+<h3 id="upx-optional-executable-compression">UPX (Optional — Executable Compression)</h3>
+<p><a href="https://upx.github.io/">UPX</a> (Ultimate Packer for eXecutables) compresses the standalone executables by 30–50% with minimal startup time impact. Both PyInstaller spec files already enable UPX compression (<code>upx=True</code>). If UPX is installed and on <code>PATH</code>, it is used automatically — no configuration changes are needed.</p>
+<p>If UPX is not installed, the build succeeds normally with larger executables. The build scripts log the result either way.</p>
+<h4 id="installing-upx">Installing UPX</h4>
+<p><strong>Windows:</strong></p>
+<p>Option 1 — Chocolatey:</p>
+<div class="highlight"><pre><span></span><code>choco install upx
+</code></pre></div>
+<p>Option 2 — winget:</p>
+<div class="highlight"><pre><span></span><code>winget install upx.upx
+</code></pre></div>
+<p>Option 3 — Manual download:</p>
+<ol>
+<li>Download the latest Windows release from <a href="https://github.com/upx/upx/releases">https://github.com/upx/upx/releases</a>.</li>
+<li>Extract the archive.</li>
+<li>Place <code>upx.exe</code> in a directory on your system <code>PATH</code>.</li>
+</ol>
+<p><strong>macOS:</strong></p>
+<div class="highlight"><pre><span></span><code>brew<span class="w"> </span>install<span class="w"> </span>upx
+</code></pre></div>
+<p><strong>Linux:</strong></p>
+<p>Debian / Ubuntu:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>upx-ucl
+</code></pre></div>
+<p>Fedora / RHEL:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>dnf<span class="w"> </span>install<span class="w"> </span>upx
+</code></pre></div>
+<p>Arch Linux:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>pacman<span class="w"> </span>-S<span class="w"> </span>upx
+</code></pre></div>
+<h4 id="verifying-upx">Verifying UPX</h4>
+<div class="highlight"><pre><span></span><code>upx<span class="w"> </span>--version
+</code></pre></div>
+<p>This should print a version string (e.g., <code>upx 4.2.4</code>). Once verified, re-run the build script — the output will confirm compression is active:</p>
+<div class="highlight"><pre><span></span><code>[build] UPX found: upx 4.2.4
+[build] Executables will be UPX-compressed.
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Size comparison</p>
+<p>A typical shruggie-indexer CLI build is ~15 MB without UPX and ~8–10 MB with UPX compression enabled. GUI builds see similar relative reductions.</p>
 </div>
 <h2 id="verification">Verification</h2>
 <p>After installation, verify the tool is accessible:</p>
