@@ -763,6 +763,10 @@ class OutputPanel(ctk.CTkFrame):
         self.textbox._textbox.bind("<Button-5>", self._on_scroll)
         self.textbox._textbox.bind("<ButtonRelease-1>", self._on_scroll)
 
+        # Periodic button state refresh — ensures Save/Copy converge to
+        # the correct state regardless of event ordering (SS10.6).
+        self._poll_button_state()
+
     def set_json(self, text: str) -> None:
         """Set the JSON result text.  Does NOT force-switch to output view.
 
@@ -777,9 +781,9 @@ class OutputPanel(ctk.CTkFrame):
             # User is on the log tab — highlight the Output button to
             # indicate new output is available without switching.
             self._highlight_output_button()
-        state = "normal" if text else "disabled"
-        self.copy_btn.configure(state=state)
-        self.save_btn.configure(state=state)
+        # Delegate to _update_button_state so buttons always reflect
+        # the *active* view's content, not the most recently set JSON.
+        self._update_button_state()
 
     def _highlight_output_button(self) -> None:
         """Flash the Output button to signal new content is available."""
@@ -821,8 +825,9 @@ class OutputPanel(ctk.CTkFrame):
         else:
             # User is on the log tab — highlight Output button.
             self._highlight_output_button()
-        self.copy_btn.configure(state="disabled")
-        self.save_btn.configure(state="disabled")
+        # Delegate to _update_button_state so buttons always reflect
+        # the active view's content state.
+        self._update_button_state()
 
     def append_log(self, line: str) -> None:
         """Append a single line to the log buffer."""
@@ -883,6 +888,16 @@ class OutputPanel(ctk.CTkFrame):
         self.textbox.configure(state="disabled")
         self.copy_btn.configure(state="disabled")
         self.save_btn.configure(state="disabled")
+
+    def _poll_button_state(self) -> None:
+        """Periodically refresh button state to ensure convergence.
+
+        Runs every 1 second.  Guarantees that Save/Copy buttons
+        reflect the active view's content regardless of what event
+        sequence led to the current state (SS10.6).
+        """
+        self._update_button_state()
+        self.after(1000, self._poll_button_state)
 
     def _update_button_state(self) -> None:
         """Enable Save/Copy when the active view has content."""
@@ -2070,7 +2085,7 @@ class SettingsTab(ctk.CTkFrame):
             }[val])
 
         # 2. Write log files (before log level — user decides WHETHER first)
-        self.log_to_file_var = ctk.BooleanVar(value=False)
+        self.log_to_file_var = ctk.BooleanVar(value=True)
         log_file_cb = _CtkCheckBox(
             ol, text="Write log files",
             variable=self.log_to_file_var,
@@ -2775,9 +2790,8 @@ class ShruggiIndexerApp(ctk.CTk):
         # Worker thread reference for health checks
         self._worker_thread: threading.Thread | None = None
 
-        # Persistent DEBUG-level file handler — always on (Issue 3)
+        # Persistent DEBUG-level file handler (Issue 3)
         self._persistent_file_handler: logging.FileHandler | None = None
-        self._setup_file_logging()
 
         # Window setup
         self.title(_WINDOW_TITLE)
@@ -2790,6 +2804,13 @@ class ShruggiIndexerApp(ctk.CTk):
         self._bind_shortcuts()
         self._restore_session()
 
+        # Set up file logging AFTER session restore so the user's
+        # persisted preference (log_to_file, verbosity) gates handler
+        # creation.  This avoids creating empty 0-byte log files that
+        # would be immediately abandoned when session restore detaches
+        # the handler.
+        self._setup_file_logging()
+
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
     # -- Persistent file logging (Issue 3) ----------------------------------
@@ -2801,13 +2822,14 @@ class ShruggiIndexerApp(ctk.CTk):
         - "Write log files" is checked in Settings, AND
         - Log level is not "None".
 
-        On initial startup (before Settings is built), logging is
-        enabled unconditionally.  Once Settings is available, the
-        controls gate file handler creation.
+        Called after ``_restore_session()`` so the user's persisted
+        preferences gate handler creation.  Also called with
+        ``force_rotate=True`` before each job to start a fresh log
+        file.
         """
         lib_logger = logging.getLogger("shruggie_indexer")
 
-        # If Settings tab is available, respect its controls
+        # Respect Settings controls when available
         if hasattr(self, "_settings_tab"):
             settings = self._settings_tab
             verbosity = _normalize_verbosity(settings.verbosity_var.get())

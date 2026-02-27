@@ -157,8 +157,8 @@ The output panel appears at the bottom of the Operations tab after a job finishe
 
 | Button | What it does |
 |--------|-------------|
-| **Save** | Opens a file picker to save the current JSON output to disk. |
-| **Copy** | Copies the currently visible content (output or log) to the clipboard. The button briefly turns green and shows "Copied ✓" to confirm. |
+| **Save** | Opens a file picker to save the current view content (JSON output or log) to disk. Enabled when the active view has content. |
+| **Copy** | Copies the currently visible content (output or log) to the clipboard. The button briefly turns green and shows "Copied ✓" to confirm. Enabled when the active view has content. |
 | **Clear** | Clears both the output and log content. |
 
 ### Resizing
@@ -184,7 +184,7 @@ The **Reset to Defaults** and **Open Config Folder** buttons are anchored in a f
     - **2 spaces** — Compact but readable (default).
     - **4 spaces** — More spacious, easier to scan visually.
     - **Compact** — No extra whitespace. Smaller file sizes but harder to read.
-- **Write log files** — When checked, each operation writes a timestamped log file to the platform-specific app data directory. No log file is written when Log Level is "None", even if this checkbox is checked.
+- **Write log files** — When checked (default: on), each operation writes a timestamped log file to the platform-specific app data directory. Startup messages are also captured. No log file is written when Log Level is "None", even if this checkbox is checked.
 - **Log Level** — A dropdown controlling how much detail appears in the log view:
     - **None** — Suppresses all logging. The log panel displays a static notice instead of log messages. No log file is written.
     - **Normal** — Shows only warnings and errors (default).

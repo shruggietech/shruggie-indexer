@@ -6602,6 +6602,8 @@ Copies the full content of the current view (JSON output or log) to the system c
 
 The Copy button is disabled when the active view (Output or Log) is empty. When viewing the Log tab, Copy is enabled if the log contains any entries, even if no JSON output exists. When viewing the Output tab, Copy is enabled if JSON output is present.
 
+> **Updated 2026-02-27:** Save and Copy button state is maintained by `_update_button_state()`, which evaluates the *active view's* content (`_json_text` for the Output tab, `_log_lines` for the Log tab). All content-setting methods (`set_json()`, `set_status_message()`, `append_logs()`) delegate to `_update_button_state()` rather than setting button state directly. A periodic polling mechanism (`_poll_button_state()`, 1-second interval) ensures button state converges to the correct value regardless of event ordering or high-frequency updates during log streaming. This guarantees that Save/Copy become available within ~1 second of content arriving, without requiring a manual tab switch.
+
 <a id="clear-button"></a>
 #### Clear button
 
@@ -6946,6 +6948,8 @@ The logging system follows four principles that govern all implementation decisi
 1. **CLI flag:** `--log-file` (no argument) writes to the platform-specific default directory; `--log-file <path>` writes to the specified path.
 2. **TOML configuration:** `[logging] file_enabled = true` enables file logging to the default directory; `file_path` overrides the location.
 3. **GUI toggle:** A "Write log files" checkbox on the Settings page enables per-operation log file output.
+
+> **Updated 2026-02-27:** The GUI's "Write log files" checkbox now defaults to **on** (enabled). File handler creation (`_setup_file_logging()`) is deferred until after `_restore_session()` completes, so the user's persisted preference gates whether a `FileHandler` is attached. This resolved a bug where the handler was created unconditionally during `__init__` (before session restore), then immediately detached by `_sync_file_logging()` during restore — leaving 0-byte orphan log files and no actual logging output.
 
 When enabled, log files are written to the platform-appropriate application data directory:
 
