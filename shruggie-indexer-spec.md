@@ -6,7 +6,7 @@
 - **License:** Apache 2.0 ([full text](https://www.apache.org/licenses/LICENSE-2.0))
 - **Version:** 0.1.0 (MVP)
 - **Author:** William Thompson (ShruggieTech LLC)
-- **Date:** 2026-02-25
+- **Date:** 2026-02-27
 - **Status:** AMENDED
 - **Audience:** AI-first, Human-second
 
@@ -5871,7 +5871,12 @@ This uses the same ecosystem namespace structure as the indexer's TOML configura
     "extract_exif": false,
     "rename": false,
     "dry_run": true,
-    "output_mode": "single"
+    "output_mode": "single",
+    "card_states": {
+      "target_expanded": true,
+      "options_expanded": true,
+      "output_expanded": true
+    }
   },
   "settings": {
     "id_algorithm": "md5",
@@ -5886,6 +5891,8 @@ This uses the same ecosystem namespace structure as the indexer's TOML configura
 ```
 
 > **Updated 2026-02-23:** The session format was revised from `session_version: "1"` (per-tab state with separate `tabs` dictionary) to `session_version: "2"` (single `operations` state object) to reflect the tab consolidation. The application performs backward-compatible migration when encountering a version 1 session file. The `output_panel_height` field was added to persist the resizable output panel height.
+
+> **Updated 2026-02-27:** The `operations` object now includes a `card_states` sub-object that persists the expanded/collapsed state of the three collapsible cards (Target, Options, Output) on the Operations page. All three default to `true` (expanded) when absent from the session file.
 
 **Session state:** Unlike the previous per-tab design, the consolidated Operations page maintains a single set of input state. The selected operation type is stored in the `operations.operation_type` field. Switching operation types within the Operations page updates the visible controls but the shared fields (target path, type, recursive, ID algorithm, SHA-512) persist across operation type changes.
 
@@ -5997,9 +6004,9 @@ The working area occupies the remaining space to the right of the sidebar. It co
 
 The Operations page uses a vertical layout structure:
 
-1. **Input section** (top, scrollable) — Operation type selector, target path, operation-specific options, and output configuration, organized into labeled group frames ([§10.3](#103-target-selection-and-input)).
+1. **Input section** (top, scrollable) — Operation type selector, target path, operation-specific options, and output configuration, organized into labeled group frames ([§10.3](#103-target-selection-and-input)). Groups 2–4 (Target, Options, Output) are collapsible via clickable headers with disclosure carets.
 2. **Action button** (pinned below input section) — A single prominently-styled button to execute the selected operation.
-3. **Drag handle** — A thin horizontal bar for resizing the output panel ([§10.6](#106-output-display-and-export)).
+3. **Drag handle** — A horizontal bar with a centered grip indicator (three dots) for resizing the output panel ([§10.6](#106-output-display-and-export)).
 4. **Output section** (bottom, resizable) — The JSON viewer, log stream, and toolbar (Clear, Copy, Save buttons).
 
 The Settings page has its own layout ([§10.4](#104-configuration-panel)) and does not include an action button or output section. The About page has a static informational layout ([§10.8.2](#1082-about-tab)).
@@ -6020,21 +6027,23 @@ The output panel is a single shared `OutputPanel` widget instance that is always
 
 > **Updated 2026-02-23:** Rewritten to reflect the consolidated Operations page model. The previous version described per-tab input forms for four separate operation tabs. The current implementation uses a single Operations page with an inline operation type selector, shared target input, and context-sensitive option controls.
 
-The Operations page presents all input controls in a single scrollable area, organized into labeled group frames (`_LabeledGroup` — a `CTkFrame` with a bold header label, optional description, and content area). Controls that are not relevant to the currently selected operation type are hidden or disabled rather than shown in a flat list.
+The Operations page presents all input controls in a single scrollable area, organized into labeled group frames (`_LabeledGroup` — a `CTkFrame` with a bold header label, optional description, and content area; see [§10.8.4](#1084-labeled-group-frames)). Controls that are not relevant to the currently selected operation type are hidden or disabled rather than shown in a flat list.
 
 <a id="visual-grouping"></a>
 #### Visual grouping
 
 All controls are organized into four labeled groups, displayed in order from top to bottom:
 
-| Group | Label | Description | Contents |
-|-------|-------|-------------|----------|
-| 1 | Operation | Select the indexing operation to perform. | Operation type dropdown and destructive operation indicator ([§10.8.1](#1081-destructive-operation-indicator)). |
-| 2 | Target | Choose the file or directory to index. | Path entry, browse buttons, type radio group, recursive checkbox. |
-| 3 | Options | Configure indexing parameters. | ID algorithm, SHA-512, EXIF, rename toggle, dry run — all always visible, disabled when not applicable with explanatory fine-print labels. |
-| 4 | Output | Control where results are written. | Output mode dropdown (`CTkOptionMenu`: Single file / Multi-file / View only) and read-only computed output path display — always visible, constrained by target type and operation. |
+| Group | Label | Description | Collapsible | Contents |
+|-------|-------|-------------|:-----------:|----------|
+| 1 | Operation | Select the indexing operation to perform. | No | Operation type dropdown and destructive operation indicator ([§10.8.1](#1081-destructive-operation-indicator)). |
+| 2 | Target | Choose the file or directory to index. | **Yes** | Path entry, browse buttons, type radio group, recursive checkbox. |
+| 3 | Options | Configure indexing parameters. | **Yes** | ID algorithm, SHA-512, EXIF, rename toggle, dry run — all always visible, disabled when not applicable with explanatory fine-print labels. |
+| 4 | Output | Control where results are written. | **Yes** | Output mode dropdown (`CTkOptionMenu`: Single file / Multi-file / View only) and read-only computed output path display — always visible, constrained by target type and operation. |
 
-Each group uses consistent padding and alignment. Section headers are bold with an optional one-line description in a muted font beneath. **All controls are always visible** — controls that do not apply to the current operation or target configuration are *disabled* (greyed-out) with small explanatory labels beneath them, never hidden.
+> **Updated 2026-02-27:** Groups 2–4 (Target, Options, Output) are now collapsible. Each card header displays a disclosure caret (▶ collapsed / ▼ expanded) and the entire header row is clickable (`cursor="hand2"`). Clicking the header toggles the content area's visibility via instant `pack()`/`pack_forget()`. Group 1 (Operation) is always expanded. All three collapsible cards default to expanded on first launch. Collapsed/expanded state for each card persists across application sessions via the `card_states` key in the session file ([§10.1](#101-gui-framework-and-architecture)). This follows the same disclosure-indicator pattern used by the Advanced Configuration section on the Settings page ([§10.4](#104-configuration-panel)).
+
+Each group uses consistent padding and alignment. Section headers are bold with an optional one-line description in a muted font beneath. **All controls are always present** — controls that do not apply to the current operation or target configuration are *disabled* (greyed-out) with small explanatory labels beneath them, never hidden. When a collapsible card is collapsed, its content area (including all child controls) is hidden, but the card header remains visible and clickable.
 
 <a id="operation-type-selector"></a>
 #### Operation type selector
@@ -6499,7 +6508,9 @@ When a new operation begins, the output panel is automatically cleared (both JSO
 <a id="resizable-output-panel"></a>
 #### Resizable output panel
 
-The output panel's height is adjustable via a drag handle (`_DragHandle`) positioned between the input controls and the output panel. The drag handle is a thin horizontal bar (6px, `sb_v_double_arrow` cursor) that the user clicks and drags vertically to resize the output panel.
+The output panel's height is adjustable via a drag handle (`_DragHandle`) positioned between the input controls and the output panel. The drag handle is a horizontal bar (8px, `sb_v_double_arrow` cursor, `fg_color=("gray70", "gray35")`) that the user clicks and drags vertically to resize the output panel.
+
+> **Updated 2026-02-27:** The drag handle height was increased from 6px to 8px and its background color differentiated from the default frame color (`("gray70", "gray35")` vs. `("gray75", "gray30")`) to provide a secondary visual boundary cue between the scrollable configuration area and the bottom anchored region. A centered grip indicator — three small dots (`• • •`) rendered as a `CTkLabel` with muted `gray50` foreground — is placed on the handle via `place(relx=0.5, rely=0.5, anchor="center")`. The grip indicator communicates interactivity and does not interfere with the drag behavior (mouse events on the grip label are forwarded to the handle's drag handlers).
 
 **Constraints:**
 
@@ -6728,6 +6739,8 @@ The `_LabeledGroup` widget is a reusable container used throughout the Operation
 | Content padding | 12px horizontal, 4–10px vertical |
 
 The `content` attribute is a transparent `CTkFrame` inside the group where child widgets are packed.
+
+> **Updated 2026-02-27:** `_LabeledGroup` now accepts optional `collapsible: bool` and `expanded: bool` constructor parameters. When `collapsible=True`, the header row includes a disclosure caret (`\u25b6` ▶ when collapsed, `\u25bc` ▼ when expanded) at the leading edge, and the entire header row (caret, title label, and header frame) is clickable with `cursor="hand2"`. Clicking toggles visibility of the description label and content frame via `pack()`/`pack_forget()`. The `expanded` property (read-only) returns the current state; `toggle()` and `set_expanded(bool)` methods control the state programmatically. Non-collapsible groups (the default) behave identically to the pre-update implementation. On the Operations page, groups 2–4 (Target, Options, Output) use `collapsible=True`; group 1 (Operation) does not. The same disclosure-indicator pattern is used by the Advanced Configuration section on the Settings page ([§10.4](#104-configuration-panel)).
 
 <a id="1085-debug-logging"></a>
 #### 10.8.5. Debug logging

@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **GUI: Collapsible operations cards** — The Target, Options, and Output cards on the Operations page are now collapsible. Each card header displays a disclosure caret (▶ collapsed / ▼ expanded) and the entire header row is clickable (`cursor="hand2"`). Collapsed/expanded state for each card persists across application sessions via the session file. All three cards default to expanded on first launch.
+- **GUI: Drag handle grip indicator** — The drag handle between the configuration area and the output/log panel now displays a centered three-dot grip indicator (• • •) in a muted color, visually communicating that it is interactive. Handle height increased from 6px to 8px and background color slightly differentiated from the default frame color for improved visibility as a secondary region boundary cue.
+- **GUI: Region boundary separators** — Added uniform 1px separator lines (`gray50`) at the boundary edges of anchored (non-scrollable) regions on both the Operations and Settings pages. Separators appear at the bottom of the Operations page title, the top of the Operations page bottom anchored region (progress/action area), and the bottom of the Settings page title. Provides clear visual delineation between fixed header regions and scrollable content areas at all window sizes.
+- **Spec SS10.9.2: Region boundary clarity** — Added "Region boundary clarity" paragraph to the Layout stability standard documenting the uniform 1px separator convention for anchored-region boundaries.
+
 ## [0.1.1] - 2026-02-25
 
 ### Added

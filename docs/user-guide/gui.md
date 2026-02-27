@@ -58,7 +58,7 @@ The application window is divided into three areas:
 
 ## Operations Tab
 
-The Operations tab is where you configure and run indexing jobs. It is organized into labeled sections.
+The Operations tab is where you configure and run indexing jobs. It is organized into labeled card sections. The **Target**, **Options**, and **Output** cards are **collapsible** — click anywhere on a card's header row to collapse or expand it. A small caret icon (▶ collapsed / ▼ expanded) on the left side of each header indicates the current state. Collapsed/expanded states are remembered between sessions. All three cards are expanded by default.
 
 ### Choosing an Operation Type
 
@@ -164,7 +164,7 @@ The output panel appears at the bottom of the Operations tab after a job finishe
 
 ### Resizing
 
-You can drag the top edge of the output panel up or down to resize it. The application remembers your preferred size between sessions.
+A **drag handle** with a centered grip indicator (three small dots) sits between the input area and the output panel. Drag it up or down to resize the panel. The application remembers your preferred size between sessions.
 
 ---
 

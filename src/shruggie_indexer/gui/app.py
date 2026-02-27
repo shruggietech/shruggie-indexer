@@ -380,13 +380,21 @@ class _Tooltip:
 
 
 class _LabeledGroup(ctk.CTkFrame):
-    """A frame with a label header, optional description, and content area."""
+    """A frame with a label header, optional description, and content area.
+
+    When *collapsible* is ``True`` the header row becomes clickable and a
+    disclosure caret (\u25b6 collapsed / \u25bc expanded) is shown at the
+    leading edge.  Clicking anywhere on the header row toggles visibility
+    of the content area.
+    """
 
     def __init__(
         self,
         master: Any,
         label: str,
         description: str = "",
+        collapsible: bool = False,
+        expanded: bool = True,
         **kwargs: Any,
     ) -> None:
         kwargs.setdefault("corner_radius", 8)
@@ -394,22 +402,90 @@ class _LabeledGroup(ctk.CTkFrame):
         kwargs.setdefault("border_color", ("gray75", "gray30"))
         super().__init__(master, **kwargs)
 
-        ctk.CTkLabel(
-            self, text=label,
-            font=ctk.CTkFont(size=13, weight="bold"),
-            anchor="w",
-        ).pack(fill="x", padx=12, pady=(6, 0))
+        self._collapsible = collapsible
+        self._expanded = expanded
+
+        # -- Header row ------------------------------------------------------
+        if collapsible:
+            hdr = ctk.CTkFrame(self, fg_color="transparent")
+            hdr.pack(fill="x", padx=12, pady=(6, 0))
+
+            self._caret = ctk.CTkLabel(
+                hdr,
+                text="\u25bc" if expanded else "\u25b6",
+                width=18,
+                anchor="w",
+                font=ctk.CTkFont(size=12),
+                cursor="hand2",
+            )
+            self._caret.pack(side="left")
+
+            self._header_label = ctk.CTkLabel(
+                hdr,
+                text=label,
+                font=ctk.CTkFont(size=13, weight="bold"),
+                anchor="w",
+                cursor="hand2",
+            )
+            self._header_label.pack(side="left", fill="x", expand=True)
+
+            # Make entire header row clickable
+            for w in (hdr, self._caret, self._header_label):
+                w.bind("<Button-1>", lambda _e: self.toggle())
+                w.configure(cursor="hand2")
+        else:
+            self._caret = None
+            self._header_label = None
+            ctk.CTkLabel(
+                self, text=label,
+                font=ctk.CTkFont(size=13, weight="bold"),
+                anchor="w",
+            ).pack(fill="x", padx=12, pady=(6, 0))
 
         if description:
-            ctk.CTkLabel(
+            self._desc_label = ctk.CTkLabel(
                 self, text=description,
                 font=ctk.CTkFont(size=11),
                 text_color=("gray40", "gray60"),
                 anchor="w",
-            ).pack(fill="x", padx=12, pady=(0, 1))
+            )
+            if not collapsible or expanded:
+                self._desc_label.pack(fill="x", padx=12, pady=(0, 1))
+        else:
+            self._desc_label = None
 
         self.content = ctk.CTkFrame(self, fg_color="transparent")
-        self.content.pack(fill="x", padx=12, pady=(2, 6))
+        if not collapsible or expanded:
+            self.content.pack(fill="x", padx=12, pady=(2, 6))
+
+    # -- Collapse / expand API -----------------------------------------------
+
+    @property
+    def expanded(self) -> bool:
+        """Return ``True`` if the content area is currently visible."""
+        return self._expanded
+
+    def toggle(self) -> None:
+        """Toggle the expanded / collapsed state."""
+        self.set_expanded(not self._expanded)
+
+    def set_expanded(self, expanded: bool) -> None:
+        """Explicitly set the expanded / collapsed state."""
+        if not self._collapsible:
+            return
+        self._expanded = expanded
+        if expanded:
+            if self._desc_label is not None:
+                self._desc_label.pack(fill="x", padx=12, pady=(0, 1))
+            self.content.pack(fill="x", padx=12, pady=(2, 6))
+            if self._caret is not None:
+                self._caret.configure(text="\u25bc")  # ▼
+        else:
+            if self._desc_label is not None:
+                self._desc_label.pack_forget()
+            self.content.pack_forget()
+            if self._caret is not None:
+                self._caret.configure(text="\u25b6")  # ▶
 
 
 # ---------------------------------------------------------------------------
@@ -452,7 +528,11 @@ class _DestructiveIndicator(ctk.CTkFrame):
 
 
 class _DragHandle(ctk.CTkFrame):
-    """Thin horizontal bar the user drags to resize the output panel."""
+    """Thin horizontal bar the user drags to resize the output panel.
+
+    Includes a centered grip indicator (three small dots) to communicate
+    interactivity.
+    """
 
     def __init__(
         self,
@@ -460,17 +540,30 @@ class _DragHandle(ctk.CTkFrame):
         on_drag: Any,
         **kwargs: Any,
     ) -> None:
-        kwargs.setdefault("height", 6)
+        kwargs.setdefault("height", 8)
         kwargs.setdefault("cursor", "sb_v_double_arrow")
-        kwargs.setdefault("fg_color", ("gray75", "gray30"))
+        kwargs.setdefault("fg_color", ("gray70", "gray35"))
         kwargs.setdefault("corner_radius", 2)
         super().__init__(master, **kwargs)
+
+        # Centered grip indicator — three small dots
+        self._grip = ctk.CTkLabel(
+            self,
+            text="\u2022 \u2022 \u2022",
+            font=ctk.CTkFont(size=8),
+            text_color=("gray50", "gray50"),
+            fg_color="transparent",
+            cursor="sb_v_double_arrow",
+        )
+        self._grip.place(relx=0.5, rely=0.5, anchor="center")
 
         self._on_drag = on_drag
         self._drag_start_y = 0
 
         self.bind("<Button-1>", self._start_drag)
         self.bind("<B1-Motion>", self._do_drag)
+        self._grip.bind("<Button-1>", self._start_drag)
+        self._grip.bind("<B1-Motion>", self._do_drag)
 
     def _start_drag(self, event: tk.Event) -> None:  # type: ignore[type-arg]
         self._drag_start_y = event.y_root
@@ -1111,12 +1204,14 @@ class OperationsPage(ctk.CTkFrame):
         self._indicator.pack(side="left")
 
     def _build_target_group(self) -> None:
-        group = _LabeledGroup(
+        self._target_group = _LabeledGroup(
             self._scroll.content, "Target",
             "Choose the file or directory to index.",
+            collapsible=True,
         )
-        group.pack(fill="x", pady=(0, 6))
-        c = group.content
+        self._target_group.pack(fill="x", pady=(0, 6))
+        c = self._target_group.content
+        group = self._target_group
 
         # Path entry row
         path_frame = ctk.CTkFrame(c, fg_color="transparent")
@@ -1207,6 +1302,7 @@ class OperationsPage(ctk.CTkFrame):
         self._opts_group = _LabeledGroup(
             self._scroll.content, "Options",
             "Configure indexing parameters.",
+            collapsible=True,
         )
         self._opts_group.pack(fill="x", pady=(0, 6))
         c = self._opts_group.content
@@ -1288,6 +1384,7 @@ class OperationsPage(ctk.CTkFrame):
         self._output_group = _LabeledGroup(
             self._scroll.content, "Output",
             "Control how results are produced.",
+            collapsible=True,
         )
         self._output_group.pack(fill="x", pady=(0, 6))
         c = self._output_group.content
@@ -1774,6 +1871,11 @@ class OperationsPage(ctk.CTkFrame):
             "output_mode": _OUT_KEY_MAP.get(
                 self._output_mode_var.get(), "single",
             ),
+            "card_states": {
+                "target_expanded": self._target_group.expanded,
+                "options_expanded": self._opts_group.expanded,
+                "output_expanded": self._output_group.expanded,
+            },
         }
 
     def restore_state(self, state: dict[str, Any]) -> None:
@@ -1807,6 +1909,16 @@ class OperationsPage(ctk.CTkFrame):
             if mode_label not in _OUTPUT_MODE_LABELS:
                 mode_label = _OUT_SINGLE
             self._output_mode_var.set(mode_label)
+
+        # Restore card expanded/collapsed states
+        card_states = state.get("card_states", {})
+        if "target_expanded" in card_states:
+            self._target_group.set_expanded(card_states["target_expanded"])
+        if "options_expanded" in card_states:
+            self._opts_group.set_expanded(card_states["options_expanded"])
+        if "output_expanded" in card_states:
+            self._output_group.set_expanded(card_states["output_expanded"])
+
         # Update controls for the restored state
         self._update_browse_buttons()
         self._reconcile_controls()
