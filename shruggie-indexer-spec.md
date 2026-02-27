@@ -6503,12 +6503,14 @@ The "Output" button shows the JSON viewer. The "Log" button shows the log stream
 
 > **Added 2026-02-25.**
 
-When an operation completes and `set_json()` is called with new output, the output panel does NOT force-switch the active view tab. Instead:
+When an operation completes, the output panel does NOT force-switch the active view tab — regardless of whether the completion path calls `set_json()` (View only mode) or `set_status_message()` (Single file / Multi-file modes). Instead:
 
 - **If the Output tab is already active:** The content is refreshed in place.
-- **If the Log tab is active:** The Output button flashes green for 3 seconds (`_TOAST_DURATION_MS`) to signal that new output is available. The user's current Log view is not interrupted.
+- **If the Log tab is active:** The Output button flashes green for 3 seconds (`_TOAST_DURATION_MS`) to signal that new content is available. The user's current Log view is not interrupted.
 
 This prevents the disorienting experience of the panel switching tabs while the user is reviewing log output from the operation.
+
+> **Updated 2026-02-27:** Extended tab-aware completion to the `set_status_message()` path (Single file and Multi-file output modes). Previously, `set_status_message()` force-switched to the Output tab on completion; it now follows the same non-intrusive pattern as `set_json()`.
 
 <a id="output-auto-clear"></a>
 #### Auto-clear on new job
@@ -6586,8 +6588,8 @@ The output panel is a single widget instance on the Operations page. It displays
 | Output mode | Display behavior |
 |-------------|-----------------|
 | View only | JSON output is loaded into the output panel via `set_json()`. Tab-aware completion applies ([§10.6](#106-output-display-and-export), tab-aware completion). |
-| Single file | Output is written to the computed file path. A status message is displayed: _"Output saved to: {filename}"_. The JSON is not loaded into the viewer. |
-| Multi-file | Per-item sidecar files are written alongside originals. A status message is displayed: _"Sidecar files written to: {directory}"_. The JSON is not loaded into the viewer. |
+| Single file | Output is written to the computed file path. A status message is displayed via `set_status_message()`: _"Output saved to: {filename}"_. Tab-aware completion applies. |
+| Multi-file | Per-item sidecar files are written alongside originals. A status message is displayed via `set_status_message()`: _"Sidecar files written to: {directory}"_. Tab-aware completion applies. |
 | _(Rename active)_ | JSON preview is loaded into the output panel (same as "View only"). The rename feature is a toggle that can be active with any operation type. |
 
 This distinction ensures that users who selected a file-writing mode see confirmation of the save rather than a confusing blank panel or redundant JSON display.

@@ -789,14 +789,21 @@ class OutputPanel(ctk.CTkFrame):
             )
 
     def set_status_message(self, message: str) -> None:
-        """Display a brief status message in the output view."""
+        """Display a brief status message in the output view.
+
+        Does NOT force-switch to the output tab.  If the user is on the
+        log tab, the Output button is highlighted to signal new content.
+        """
         self._json_text = message
-        self._showing_json = True
-        self._update_toggle_style()
-        self.textbox.configure(state="normal")
-        self.textbox.delete("1.0", "end")
-        self.textbox.insert("1.0", message)
-        self.textbox.configure(state="disabled")
+        if self._showing_json:
+            # Already viewing output — refresh in place.
+            self.textbox.configure(state="normal")
+            self.textbox.delete("1.0", "end")
+            self.textbox.insert("1.0", message)
+            self.textbox.configure(state="disabled")
+        else:
+            # User is on the log tab — highlight Output button.
+            self._highlight_output_button()
         self.copy_btn.configure(state="disabled")
         self.save_btn.configure(state="disabled")
 
