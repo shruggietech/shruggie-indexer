@@ -6155,10 +6155,14 @@ The Output group contains two controls:
 
 **Constraint matrix:**
 
+> **Updated 2026-02-27:** Expanded "View only" constraint to cover Rename and changed enforcement from item removal to post-selection validation (snap-back with info-label).
+
 | Condition | Effect |
 |-----------|--------|
 | Target is a single file | Multi-file unavailable; falls back to Single file if selected. |
-| Operation is Meta Merge Delete | View only unavailable; falls back to Single file if selected. |
+| Operation is Meta Merge Delete | View only remains visible in dropdown but constrained. Selecting it triggers snap-back to Single file (file target) or Multi-file (directory target). Info-label: *"View only is not available for Meta Merge Delete. Destructive operations require a persistent output record."* |
+| Rename is enabled (any operation) | View only remains visible in dropdown but constrained. Selecting it triggers snap-back to Single file (file target) or Multi-file (directory target). Info-label: *"View only is not available when Rename is active. Rename requires writing files to disk."* |
+| Both Meta Merge Delete and Rename | View only constrained; Meta Merge Delete message takes priority in the info-label. |
 | Rename is enabled | Multi-file is forced (rename requires in-place output per [§8.4](#84-rename-and-in-place-output-interaction)). |
 
 <a id="output-path-auto-compute"></a>
@@ -6192,7 +6196,7 @@ All control dependency logic is centralized in a single method, `_reconcile_cont
 1. Reads the current values of all controls (operation type, target type, target path, recursive, output mode, dry-run, rename).
 2. Evaluates the dependency rules defined in the context-sensitive options, recursive toggle, and output controls subsections above.
 3. Sets the enabled/disabled/visible state, default value, and info-label text of every dependent control.
-4. Applies the output mode constraint matrix (Multi-file unavailable for file targets, View only unavailable for Meta Merge Delete).
+4. Applies the output mode constraint matrix (Multi-file unavailable for file targets, View only constrained for Meta Merge Delete and when Rename is active).
 5. Updates the destructive operation indicator ([§10.8.1](#1081-destructive-operation-indicator)).
 6. Updates the computed output path display based on the current target and output mode.
 

@@ -1664,33 +1664,45 @@ class OperationsPage(ctk.CTkFrame):
 
         is_dir = effective_type == "directory"
         is_mmd = op == _OP_META_MERGE_DELETE
+        view_only_constrained = is_mmd or rename_on
         mode = self._output_mode_var.get()
 
         # Build list of available modes for this combination.
+        # "View only" is always listed; constraints are enforced via
+        # post-selection validation (snap-back) rather than removal.
         available_modes = [_OUT_SINGLE]
         if is_dir:
             available_modes.append(_OUT_MULTI)
-        if not is_mmd:
-            available_modes.append(_OUT_VIEW)
+        available_modes.append(_OUT_VIEW)
 
-        # Enforce fallback if current mode is no longer valid.
-        if mode not in available_modes:
-            # Determine default: Multi-file for directories, Single for files.
+        # Enforce fallback if current mode is constrained or unavailable.
+        if mode == _OUT_VIEW and view_only_constrained:
+            # View only is constrained — snap back to appropriate default.
+            mode = _OUT_MULTI if is_dir else _OUT_SINGLE
+            self._output_mode_var.set(mode)
+        elif mode not in available_modes:
+            # Mode no longer in available list (e.g., Multi-file on file target).
             mode = _OUT_MULTI if is_dir and _OUT_MULTI in available_modes else _OUT_SINGLE
             self._output_mode_var.set(mode)
 
-        # Update the selector to show only available modes.
+        # Update the selector to show all modes (constraints shown via info label).
         self._output_mode_menu.configure(values=available_modes)
 
         # Info label for constraint explanation.
-        info_parts = []
+        info_parts: list[str] = []
         if not is_dir:
             info_parts.append("Multi-file is only available for directory targets.")
-        if is_mmd:
-            info_parts.append(
-                "View only is not available for Meta Merge Delete "
-                "(destructive operations require a persistent output record).",
-            )
+        if view_only_constrained:
+            if is_mmd:
+                info_parts.append(
+                    "View only is not available for Meta Merge Delete. "
+                    "Destructive operations require a persistent output record.",
+                )
+            else:
+                info_parts.append(
+                    "View only is not available when Rename is active. "
+                    "Rename requires writing files to disk.",
+                )
         self._output_mode_info_label.configure(
             text="  ".join(info_parts),
         )
