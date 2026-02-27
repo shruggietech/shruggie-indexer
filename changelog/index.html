@@ -1366,6 +1366,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1392,7 +1409,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1489,6 +1506,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1515,7 +1549,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1594,6 +1628,11 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <h2 id="unreleased"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.1...HEAD">Unreleased</a></h2>
+<h3 id="changed">Changed</h3>
+<ul>
+<li><strong>GUI: Region boundary separators</strong> — Added uniform 1px separator lines (<code>gray50</code>) at the boundary edges of anchored (non-scrollable) regions on both the Operations and Settings pages. Separators appear at the bottom of the Operations page title, the top of the Operations page bottom anchored region (progress/action area), and the bottom of the Settings page title. Provides clear visual delineation between fixed header regions and scrollable content areas at all window sizes.</li>
+<li><strong>Spec SS10.9.2: Region boundary clarity</strong> — Added "Region boundary clarity" paragraph to the Layout stability standard documenting the uniform 1px separator convention for anchored-region boundaries.</li>
+</ul>
 <h2 id="011-2026-02-25"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.0...v0.1.1">0.1.1</a> - 2026-02-25</h2>
 <h3 id="added">Added</h3>
 <ul>
@@ -1603,7 +1642,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Tests: Entry builder unit tests</strong> — Added <code>TestSessionIdThreading</code> (3 cases) and <code>TestIndexedAtTimestamp</code> (4 cases) to <code>tests/unit/test_entry.py</code> verifying <code>session_id</code> propagation through <code>build_file_entry()</code> and <code>build_directory_entry()</code>, <code>indexed_at</code> population, and default <code>None</code> values for directly constructed entries.</li>
 <li><strong>GUI: Advanced configuration scaffold</strong> — The Settings tab now includes a collapsed "Advanced Configuration" section below existing settings. Expanding the section reveals five labeled groups — Filesystem Exclusion, ExifTool, Extension Validation, Sidecar Identification, and Metadata Exclusion — each displaying compiled default values in read-only monospace textboxes. Includes a cosmetic "Shared Settings" / "Indexer-Specific Settings" separator preparing for future cross-tool configuration. Each group has a disabled "Reset to Defaults" button placeholder. Full editing, data binding, and persistence are deferred to a post-v0.1.1 release. The section's expanded/collapsed state is persisted across sessions.</li>
 </ul>
-<h3 id="changed">Changed</h3>
+<h3 id="changed_1">Changed</h3>
 <ul>
 <li><strong>Infra: Shared configuration namespace</strong> — Configuration and session storage paths now use a shared ShruggieTech ecosystem directory (<code>&lt;base&gt;/shruggie-tech/shruggie-indexer/</code>) instead of the tool-specific <code>&lt;base&gt;/shruggie-indexer/</code> path used in v0.1.0. Both the TOML config loader and GUI <code>SessionManager</code> check the new path first, fall back to the legacy path with an INFO-level migration recommendation, and always write to the new path. Old files are never deleted. Prepares the directory structure for future ecosystem tools (<code>shruggie-catalog</code>, <code>shruggie-vault</code>, <code>shruggie-sync</code>).</li>
 <li><strong>Archive: Normalized naming convention</strong> — All files in <code>.archive/</code> now follow a <code>&lt;YYYYmmdd&gt;-&lt;ZZZ&gt;-&lt;title&gt;.&lt;ext&gt;</code> naming convention. Renamed <code>shruggie-indexer-spec.pdf</code> → <code>20260224-001-shruggie-indexer-spec.pdf</code>, <code>shruggie-indexer-spec.html</code> → <code>20260224-001-shruggie-indexer-spec.html</code>, and <code>shruggie-indexer-plan.md</code> → <code>20260219-002-shruggie-indexer-plan.md</code>. Updated all spec references (§1.5, §3.1) to the new filenames.</li>
