@@ -877,10 +877,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#indexing-defaults" class="md-nav__link">
+  <a href="#indexing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Indexing Defaults
+        Indexing
       
     </span>
   </a>
@@ -888,21 +888,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#output-preferences" class="md-nav__link">
+  <a href="#output-logging" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Output Preferences
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#logging" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Logging
+        Output &amp; Logging
       
     </span>
   </a>
@@ -925,6 +914,17 @@
     <span class="md-ellipsis">
       
         Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#global-action-buttons" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global Action Buttons
       
     </span>
   </a>
@@ -1921,10 +1921,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#indexing-defaults" class="md-nav__link">
+  <a href="#indexing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Indexing Defaults
+        Indexing
       
     </span>
   </a>
@@ -1932,21 +1932,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#output-preferences" class="md-nav__link">
+  <a href="#output-logging" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Output Preferences
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#logging" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Logging
+        Output &amp; Logging
       
     </span>
   </a>
@@ -1969,6 +1958,17 @@
     <span class="md-ellipsis">
       
         Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#global-action-buttons" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global Action Buttons
       
     </span>
   </a>
@@ -2303,13 +2303,14 @@ exists. Resolve any red error messages before running.</p>
 <p>A <strong>drag handle</strong> with a centered grip indicator (three small dots) sits between the input area and the output panel. Drag it up or down to resize the panel. The application remembers your preferred size between sessions.</p>
 <hr />
 <h2 id="settings-tab">Settings Tab</h2>
-<p>The Settings tab lets you customize default behavior. Changes take effect immediately and are remembered between sessions.</p>
-<h3 id="indexing-defaults">Indexing Defaults</h3>
+<p>The Settings tab lets you customize default behavior. Changes take effect immediately and are remembered between sessions. Settings are organized into four card sections, with an additional collapsible Advanced section below.</p>
+<p>The <strong>Reset to Defaults</strong> and <strong>Open Config Folder</strong> buttons are anchored in a fixed (non-scrollable) region at the bottom of the Settings page, separated from the scrollable cards by a visible divider. They remain accessible at all scroll positions.</p>
+<h3 id="indexing">Indexing</h3>
 <ul>
 <li><strong>Default ID Algorithm</strong> — Sets the default hash algorithm (<code>md5</code> or <code>sha256</code>) for new operations.</li>
 <li><strong>Compute SHA-512 by default</strong> — When checked, SHA-512 computation is enabled by default for new operations.</li>
 </ul>
-<h3 id="output-preferences">Output Preferences</h3>
+<h3 id="output-logging">Output &amp; Logging</h3>
 <ul>
 <li><strong>JSON Indentation</strong> — Controls formatting of the JSON output:<ul>
 <li><strong>2 spaces</strong> — Compact but readable (default).</li>
@@ -2317,15 +2318,15 @@ exists. Resolve any red error messages before running.</p>
 <li><strong>Compact</strong> — No extra whitespace. Smaller file sizes but harder to read.</li>
 </ul>
 </li>
-</ul>
-<h3 id="logging">Logging</h3>
-<ul>
-<li><strong>Verbosity</strong> — Controls how much detail appears in the log view:<ul>
-<li><strong>Normal</strong> — Shows only warnings and errors.</li>
+<li><strong>Write log files</strong> — When checked, each operation writes a timestamped log file to the platform-specific app data directory. No log file is written when Log Level is "None", even if this checkbox is checked.</li>
+<li><strong>Log Level</strong> — A dropdown controlling how much detail appears in the log view:<ul>
+<li><strong>None</strong> — Suppresses all logging. The log panel displays a static notice instead of log messages. No log file is written.</li>
+<li><strong>Normal</strong> — Shows only warnings and errors (default).</li>
 <li><strong>Verbose</strong> — Adds informational messages about each processing step.</li>
 <li><strong>Debug</strong> — Maximum detail, including per-file processing events, hash computation, ExifTool calls, and sidecar discovery. Useful for troubleshooting.</li>
 </ul>
 </li>
+<li><strong>Log file path</strong> — A read-only field showing the computed path where log files are written. The text appears greyed out when logging to file is disabled.</li>
 </ul>
 <h3 id="interface">Interface</h3>
 <ul>
@@ -2334,6 +2335,9 @@ exists. Resolve any red error messages before running.</p>
 <h3 id="configuration">Configuration</h3>
 <ul>
 <li><strong>Config File</strong> — Optionally specify a TOML configuration file to load custom settings. Use the Browse button to pick one.</li>
+</ul>
+<h3 id="global-action-buttons">Global Action Buttons</h3>
+<ul>
 <li><strong>Reset to Defaults</strong> — Resets all settings to their factory values (asks for confirmation first).</li>
 <li><strong>Open Config Folder</strong> — Opens the folder where the application stores its session data.</li>
 </ul>
