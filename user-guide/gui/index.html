@@ -2286,11 +2286,11 @@ exists. Resolve any red error messages before running.</p>
 <tbody>
 <tr>
 <td><strong>Save</strong></td>
-<td>Opens a file picker to save the current JSON output to disk.</td>
+<td>Opens a file picker to save the current view content (JSON output or log) to disk. Enabled when the active view has content.</td>
 </tr>
 <tr>
 <td><strong>Copy</strong></td>
-<td>Copies the currently visible content (output or log) to the clipboard. The button briefly turns green and shows "Copied ✓" to confirm.</td>
+<td>Copies the currently visible content (output or log) to the clipboard. The button briefly turns green and shows "Copied ✓" to confirm. Enabled when the active view has content.</td>
 </tr>
 <tr>
 <td><strong>Clear</strong></td>
@@ -2317,7 +2317,7 @@ exists. Resolve any red error messages before running.</p>
 <li><strong>Compact</strong> — No extra whitespace. Smaller file sizes but harder to read.</li>
 </ul>
 </li>
-<li><strong>Write log files</strong> — When checked, each operation writes a timestamped log file to the platform-specific app data directory. No log file is written when Log Level is "None", even if this checkbox is checked.</li>
+<li><strong>Write log files</strong> — When checked (default: on), each operation writes a timestamped log file to the platform-specific app data directory. Startup messages are also captured. No log file is written when Log Level is "None", even if this checkbox is checked.</li>
 <li><strong>Log Level</strong> — A dropdown controlling how much detail appears in the log view:<ul>
 <li><strong>None</strong> — Suppresses all logging. The log panel displays a static notice instead of log messages. No log file is written.</li>
 <li><strong>Normal</strong> — Shows only warnings and errors (default).</li>

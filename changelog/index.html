@@ -1391,6 +1391,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1431,7 +1442,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1542,6 +1553,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1582,7 +1604,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1672,6 +1694,11 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Spec §3.1.1: Archive naming convention</strong> — Codified the <code>.archive/</code> file naming convention (<code>&lt;YYYYmmdd&gt;-&lt;ZZZ&gt;-&lt;title&gt;.&lt;ext&gt;</code>) in the technical specification as a new §3.1.1 sub-section. Documents the date-scoped increment reset rule, field definitions, batch label convention, and examples. The <code>.archive/</code> table entry in §3.1 now cross-references the new sub-section.</li>
 <li><strong>Docs: GUI guide audit corrections</strong> — Audited <code>docs/user-guide/gui.md</code> against the running application after all Batch 1 GUI changes. Removed false claim that Rename forces Multi-file output mode (Rename constrains View only but does not force Multi-file). Added documentation for tab-preservation behavior on operation completion (active Output/Log tab is preserved; Output button briefly highlights green when new content arrives while Log tab is active). Updated session persistence section to explicitly list card collapsed/expanded states and Advanced Configuration section states. Fixed log level tooltip in <code>app.py</code> to accurately describe the mapping: Normal → warnings and errors (was incorrectly labeled "INFO-level").</li>
 </ul>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li><strong>GUI: Log file writing non-functional</strong> — The persistent file handler was created during <code>__init__()</code> before session restore, then immediately detached by <code>_sync_file_logging()</code> during session restore when the persisted <code>log_to_file</code> value was <code>False</code>. This left 0-byte orphan log files on disk and no active file logging for subsequent operations. Fixed by moving <code>_setup_file_logging()</code> to after <code>_restore_session()</code> so the handler is only created when the user's persisted preference (and default) authorizes it. Changed the default value of <code>log_to_file_var</code> from <code>False</code> to <code>True</code>, aligning with the "always on" design intent documented in §11.1. Root cause confirmed via print-based tracing of the initialization, session restore, and sync code paths.</li>
+<li><strong>GUI: Output panel Save/Copy button state staleness</strong> — The Save and Copy buttons on the output panel did not reliably reflect the active view's content state during log streaming. Buttons remained greyed out on the Log tab until the user manually toggled to Output and back. Root causes: (1) <code>set_json()</code> directly set button state based on JSON content, overriding the active-view check when the user was viewing the Log tab. (2) No periodic convergence mechanism existed to correct stale button state. Fixed by adding <code>_poll_button_state()</code> (1-second interval polling of <code>_update_button_state()</code>), and replacing direct button manipulation in <code>set_json()</code> and <code>set_status_message()</code> with delegation to <code>_update_button_state()</code>, which always evaluates the active view's content.</li>
+</ul>
 <h2 id="011-2026-02-25"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.0...v0.1.1">0.1.1</a> - 2026-02-25</h2>
 <h3 id="added_1">Added</h3>
 <ul>
@@ -1757,7 +1784,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Spec SS10.9: GUI Design Standards</strong> — Added new subsection to the technical specification codifying GUI design governance. Adopts Jakob Nielsen's 10 Usability Heuristics by reference as the baseline evaluation framework. Defines seven project-specific UI standards: layout stability, state-driven control visibility, control interdependency transparency, output handling clarity, destructive operation safeguards, progress/feedback area allocation, and log/output panel behavior. Includes a directive requiring all GUI implementation work (including AI agent sessions) to comply with these standards.</li>
 <li><strong>Deprecated <code>shruggie-indexer-plan.md</code></strong> — Moved the completed implementation plan from the repository root to <code>.archive/</code>. Added <code>.archive/</code>, <code>shruggie-indexer-spec.html</code>, and <code>shruggie-indexer-spec.pdf</code> to <code>.gitignore</code>.</li>
 </ul>
-<h3 id="fixed">Fixed</h3>
+<h3 id="fixed_1">Fixed</h3>
 <ul>
 <li><strong>GUI/CLI: Root directory in-place sidecar duplicating aggregate output</strong> — <code>_write_inplace_tree()</code> wrote an in-place sidecar for the root target directory inside the target (<code>data/data_directorymeta2.json</code>), duplicating the aggregate output file written alongside the target (<code>data_directorymeta2.json</code>). Both contained the same full entry tree with the same filename, differing only in location. Fixed by skipping the root directory entry during in-place sidecar traversal. Child directory sidecars are unaffected.</li>
 <li><strong>Core: In-place directory sidecar naming</strong> — <code>build_sidecar_path()</code> in <code>core/paths.py</code> constructed directory sidecar paths as <code>&lt;dir&gt;/_directorymeta2.json</code> (bare name with no identifying prefix). Every directory in the tree received an identically named file, making them indistinguishable in file managers and inconsistent with both the aggregate output naming (<code>{dirname}_directorymeta2.json</code>) and file sidecar naming (<code>{filename}_meta2.json</code>). Fixed to produce <code>&lt;dir&gt;/{dirname}_directorymeta2.json</code>. The <code>metadata_exclude_patterns</code> regex continues to match the corrected filenames because the pattern is end-anchored.</li>
