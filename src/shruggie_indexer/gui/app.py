@@ -2181,7 +2181,7 @@ class SettingsTab(ctk.CTkFrame):
 
     def _update_log_path_display(self) -> None:
         """Refresh the read-only log file path entry with the computed path."""
-        from shruggie_indexer.cli.log_file import get_default_log_dir
+        from shruggie_indexer.log_file import get_default_log_dir
 
         log_dir = get_default_log_dir()
         display_path = str(log_dir / "<timestamp>.log")
@@ -2792,7 +2792,7 @@ class ShruggiIndexerApp(ctk.CTk):
                 return
 
         try:
-            from shruggie_indexer.cli.log_file import make_file_handler
+            from shruggie_indexer.log_file import make_file_handler
 
             self._persistent_file_handler = make_file_handler()
             self._persistent_file_handler.setLevel(logging.DEBUG)

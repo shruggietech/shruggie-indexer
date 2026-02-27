@@ -106,7 +106,7 @@ def configure_logging(
 
     # Persistent log file (SS11.1)
     if log_file is not None:
-        from shruggie_indexer.cli.log_file import make_file_handler
+        from shruggie_indexer.log_file import make_file_handler
 
         file_path: Path | None = None
         if isinstance(log_file, (str, Path)) and str(log_file).strip():
