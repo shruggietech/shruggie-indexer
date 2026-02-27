@@ -1875,6 +1875,8 @@ python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </s
 <h3 id="upx-optional-executable-compression">UPX (Optional — Executable Compression)</h3>
 <p><a href="https://upx.github.io/">UPX</a> (Ultimate Packer for eXecutables) compresses the standalone executables by 30–50% with minimal startup time impact. Both PyInstaller spec files already enable UPX compression (<code>upx=True</code>). If UPX is installed and on <code>PATH</code>, it is used automatically — no configuration changes are needed.</p>
 <p>If UPX is not installed, the build succeeds normally with larger executables. The build scripts log the result either way.</p>
+<p>Windows builds sanitize <code>PATH</code> during PyInstaller execution to avoid environment-specific DLL capture (for example, Windows Performance Toolkit paths). This keeps packaged binaries deterministic across developer machines.</p>
+<p>Build scripts also parse PyInstaller warning files and fail on unknown warnings. Known benign warnings are allowlisted in <code>scripts/build.ps1</code>.</p>
 <h4 id="installing-upx">Installing UPX</h4>
 <p><strong>Windows:</strong></p>
 <p>Option 1 — Chocolatey:</p>
