@@ -2396,8 +2396,8 @@ class SettingsTab(ctk.CTkFrame):
         shared_lbl = ctk.CTkLabel(
             content,
             text="Shared Settings  (not yet available)",
-            font=ctk.CTkFont(size=12, slant="italic"),
-            text_color="gray60", anchor="w",
+            font=ctk.CTkFont(size=12),
+            text_color="#cc0000", anchor="w",
         )
         shared_lbl.pack(fill="x", pady=(8, 2))
         _Tooltip(
@@ -2495,7 +2495,7 @@ class SettingsTab(ctk.CTkFrame):
         """Populate the Filesystem Exclusions subsection."""
         self._adv_field_label(parent, "Excluded names")
         names = sorted(DEFAULT_FILESYSTEM_EXCLUDES)
-        self._adv_readonly_textbox(parent, "\n".join(names), height=100)
+        self._adv_readonly_textbox(parent, "\n".join(names), height=230)
 
         self._adv_field_label(parent, "Excluded globs")
         self._adv_readonly_textbox(
@@ -2506,7 +2506,7 @@ class SettingsTab(ctk.CTkFrame):
         """Populate the ExifTool subsection."""
         self._adv_field_label(parent, "Exclude extensions")
         exts = sorted(DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS)
-        self._adv_readonly_textbox(parent, "\n".join(exts), height=60)
+        self._adv_readonly_textbox(parent, "\n".join(exts), height=130)
 
         self._adv_field_label(parent, "Exclude keys")
         keys = sorted(DEFAULT_EXIFTOOL_EXCLUDE_KEYS)
@@ -2514,7 +2514,7 @@ class SettingsTab(ctk.CTkFrame):
 
         self._adv_field_label(parent, "Base arguments")
         self._adv_readonly_textbox(
-            parent, "\n".join(DEFAULT_EXIFTOOL_ARGS), height=100,
+            parent, "\n".join(DEFAULT_EXIFTOOL_ARGS), height=290,
         )
 
     def _build_adv_ext_validation_content(self, parent: ctk.CTkFrame) -> None:
@@ -2539,7 +2539,7 @@ class SettingsTab(ctk.CTkFrame):
             lines.append("")
 
         self._adv_readonly_textbox(
-            parent, "\n".join(lines).rstrip(), height=250,
+            parent, "\n".join(lines).rstrip(), height=300,
         )
 
     def _build_adv_metadata_exclude_content(self, parent: ctk.CTkFrame) -> None:
@@ -2548,7 +2548,7 @@ class SettingsTab(ctk.CTkFrame):
         self._adv_readonly_textbox(
             parent,
             "\n".join(DEFAULT_METADATA_EXCLUDE_PATTERN_STRINGS),
-            height=60,
+            height=70,
         )
 
     def _build_adv_ext_groups_content(self, parent: ctk.CTkFrame) -> None:
@@ -2561,7 +2561,7 @@ class SettingsTab(ctk.CTkFrame):
             lines.append("")
 
         self._adv_readonly_textbox(
-            parent, "\n".join(lines).rstrip(), height=200,
+            parent, "\n".join(lines).rstrip(), height=300,
         )
 
     # -- Shared helpers for the advanced scaffold -----------------------
@@ -2669,6 +2669,9 @@ class AboutTab(ctk.CTkFrame):
             self, text="About",
             font=ctk.CTkFont(size=18, weight="bold"), anchor="w",
         ).pack(fill="x", pady=(0, 16))
+
+        # Region boundary separator — bottom edge of About title
+        ctk.CTkFrame(self, height=1, fg_color="gray50").pack(fill="x")
 
         content = ctk.CTkFrame(self, fg_color="transparent")
         content.pack(fill="both", expand=True)
