@@ -6224,49 +6224,57 @@ The Settings page is accessed via the sidebar and provides a persistent configur
 
 > **Updated 2026-02-23:** The About section previously embedded at the bottom of the Settings panel has been promoted to its own sidebar tab ([§10.8.2](#1082-about-tab)). The Interface section has been added to control tooltip visibility.
 
+> **Updated 2026-02-27:** Consolidated from six flat sections to four card-based sections (Indexing, Output & Logging, Interface, Configuration). Logging controls reorganized: radio buttons replaced with a `CTkOptionMenu` dropdown; "None" log level added. Global action buttons moved to a fixed (non-scrollable) region at the bottom of the page.
+
 ```
 ┌──────────────────────────────────────────────────────┐
 │  Settings                                            │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │  ← 1px separator
 │                                                      │
-│  Indexing Defaults                                   │
-│  ─────────────────────────────────────────────       │
-│  Default ID Algorithm:    [md5 ▾]                    │
-│  Compute SHA-512:         [ ]                        │
+│  ┌ Indexing ───────────────────────────────────────┐ │
+│  │  Default ID Algorithm:    [md5 ▾]               │ │
+│  │  [  ] Compute SHA-512 by default                │ │
+│  └─────────────────────────────────────────────────┘ │
 │                                                      │
-│  Output Preferences                                  │
-│  ─────────────────────────────────────────────       │
-│  JSON Indentation:  (•) 2 spaces  ( ) 4 spaces      │
-│                     ( ) Compact                      │
+│  ┌ Output & Logging ──────────────────────────────┐  │
+│  │  JSON Indentation:  (•) 2 spaces  ( ) 4 spaces │  │
+│  │                     ( ) Compact                 │  │
+│  │  [  ] Write log files                           │  │
+│  │  Log Level:  [Normal ▾]                         │  │
+│  │  Log file path:  [C:\...\logs\<timestamp>.log]  │  │
+│  └─────────────────────────────────────────────────┘ │
 │                                                      │
-│  Logging                                             │
-│  ─────────────────────────────────────────────       │
-│  Verbosity:  (•) Normal  ( ) Verbose  ( ) Debug      │
+│  ┌ Interface ─────────────────────────────────────┐  │
+│  │  [✔] Show tooltips on hover                    │  │
+│  └─────────────────────────────────────────────────┘ │
 │                                                      │
-│  Interface                                           │
-│  ─────────────────────────────────────────────       │
-│  [✔] Show tooltips on hover                          │
+│  ┌ Configuration ─────────────────────────────────┐  │
+│  │  Config file:  [_____________________] [Browse]│  │
+│  │  (Optional. Overrides compiled defaults.)      │  │
+│  └─────────────────────────────────────────────────┘ │
 │                                                      │
-│  Configuration                                       │
-│  ─────────────────────────────────────────────       │
-│  Config file:   [_________________________] [Browse] │
-│  (Optional. Overrides compiled defaults.)            │
+│  ▸ Advanced Configuration  (collapsed by default)    │
 │                                                      │
-│  ┌────────────────────┐  ┌──────────────────────┐   │
-│  │  Reset to Defaults │  │  Open Config Folder  │   │
-│  └────────────────────┘  └──────────────────────┘   │
-│                                                      │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │  ← 1px separator
+│      ┌──────────────────┐  ┌────────────────────┐   │
+│      │ Reset to Defaults│  │ Open Config Folder │   │  ← fixed region
+│      └──────────────────┘  └────────────────────┘   │
 └──────────────────────────────────────────────────────┘
 ```
 
 <a id="settings-fields"></a>
 #### Settings fields
 
+> **Updated 2026-02-27:** Sections consolidated from six to four. Logging verbosity control changed from `CTkRadioButton` group to `CTkOptionMenu` dropdown with "None" option. Log file path display added. "Write log files" moved before Log Level in the Output & Logging card.
+
 | Section | Field | Type | Default | Behavior |
 |---------|-------|------|---------|----------|
-| Indexing Defaults | Default ID Algorithm | `CTkComboBox` | `md5` | Pre-populates the ID Algorithm selector on the Operations page. |
-| Indexing Defaults | Compute SHA-512 | `CTkCheckBox` | Unchecked | When checked, force-enables and disables the SHA-512 checkbox on the Operations page with info text: *"Forced on by Settings → 'Compute SHA-512 by default'."* The override is applied in real-time via a callback. |
-| Output Preferences | JSON Indentation | `CTkRadioButton` group (`2 spaces`, `4 spaces`, `Compact`) | `2 spaces` | Controls the `indent` parameter passed to `serialize_entry()`. Compact produces single-line JSON. Stored in session as `"2"`, `"4"`, or `"none"`. |
-| Logging | Verbosity | `CTkRadioButton` group (`Normal`, `Verbose`, `Debug`) | `Normal` | Maps to log level: Normal → WARNING, Verbose → INFO, Debug → DEBUG. Log output is directed to the progress display area ([§10.5](#105-indexing-execution-and-progress)), not to a separate console window. |
+| Indexing | Default ID Algorithm | `CTkComboBox` | `md5` | Pre-populates the ID Algorithm selector on the Operations page. |
+| Indexing | Compute SHA-512 | `CTkCheckBox` | Unchecked | When checked, force-enables and disables the SHA-512 checkbox on the Operations page with info text: *"Forced on by Settings → 'Compute SHA-512 by default'."* The override is applied in real-time via a callback. |
+| Output & Logging | JSON Indentation | `CTkRadioButton` group (`2 spaces`, `4 spaces`, `Compact`) | `2 spaces` | Controls the `indent` parameter passed to `serialize_entry()`. Compact produces single-line JSON. Stored in session as `"2"`, `"4"`, or `"none"`. |
+| Output & Logging | Write log files | `CTkCheckBox` | Unchecked | Enables or disables persistent log file output. When enabled, each operation writes a timestamped log file to the platform-specific app data directory. The file handler is suppressed when Log Level is "None". |
+| Output & Logging | Log Level | `CTkOptionMenu` (`None`, `Normal`, `Verbose`, `Debug`) | `Normal` | Maps to log level: None → all logging suppressed (GUI-only), Normal → WARNING, Verbose → INFO, Debug → DEBUG. When "None" is selected, the GUI log panel displays a static notice and no log messages are routed to the panel or to the log file. |
+| Output & Logging | Log file path | `CTkEntry` (read-only) | _(computed)_ | Displays the platform-specific log directory and `<timestamp>.log` naming pattern. Read-only; shows greyed-out/muted text when logging is disabled (unchecked or Log Level is "None"). |
 | Interface | Show tooltips on hover | `CTkCheckBox` | Checked | Globally enables or disables hover tooltips (`_Tooltip.set_enabled()`). When disabled, no tooltip popups appear anywhere in the application. |
 | Configuration | Config file | `CTkEntry` + Browse | _(empty)_ | Optional path to a TOML configuration file. When set, this path is passed to `load_config(config_file=...)` for all operations. When empty, the standard resolution chain ([§3.3](#33-configuration-file-locations)) applies. |
 
@@ -6278,11 +6286,11 @@ Settings values are saved to the session file ([§10.1](#101-gui-framework-and-a
 <a id="utility-buttons"></a>
 #### Utility buttons
 
+> **Updated 2026-02-27:** Global action buttons are now anchored to a fixed (non-scrollable) region at the bottom of the Settings page, separated from the scrollable card area by a 1px separator line. Both buttons are center-aligned within the fixed region. This mirrors the Operations page pattern where global actions live in a fixed region below scrollable content.
+
 **Reset to Defaults.** Resets all Settings fields to their compiled default values. Does NOT reset Operations page input state — only the Settings page's own fields. Presents a confirmation dialog before proceeding: _"Reset all settings to their default values?"_
 
 **Open Config Folder.** Opens the platform-specific application data directory (`%APPDATA%\shruggie-tech\shruggie-indexer\` on Windows, `~/.config/shruggie-tech/shruggie-indexer/` on Linux, `~/Library/Application Support/shruggie-tech/shruggie-indexer/` on macOS) in the system file manager. This is a convenience for users who want to edit the TOML configuration file directly or inspect the session file. If the directory does not exist, it is created before opening. The path is derived from `SessionManager._resolve_path().parent`, ensuring consistency with the session persistence layer.
-
-> **Updated 2026-02-25:** Paths updated to reflect the shared ecosystem namespace ([§3.3](#33-configuration-file-locations)).
 
 <a id="advanced-configuration-scaffold"></a>
 #### Advanced Configuration scaffold
@@ -6928,7 +6936,9 @@ Logging configuration happens exactly once per invocation, at the entry point la
 
 **CLI (`cli/main.py`).** The `main()` function calls `configure_logging()` (a private function within the CLI module) after parsing arguments but before constructing `IndexerConfig` or calling `index_path()`. The function creates a `StreamHandler` on `sys.stderr`, attaches a `Formatter` and the `SessionFilter` ([§11.4](#114-session-identifiers)), and sets the root logger level based on the `-v`/`-q` flags.
 
-**GUI (`gui/app.py`).** The application's `__init__` method configures a `logging.Handler` subclass that enqueues log records into the same `queue.Queue` used by the progress display ([§10.5](#105-indexing-execution-and-progress)). The handler formats records identically to the CLI formatter but routes them to the GUI's log stream textbox rather than stderr. The log level is controlled by the Settings panel's Verbosity combobox ([§10.4](#104-configuration-panel)).
+**GUI (`gui/app.py`).** The application's `__init__` method configures a `logging.Handler` subclass that enqueues log records into the same `queue.Queue` used by the progress display ([§10.5](#105-indexing-execution-and-progress)). The handler formats records identically to the CLI formatter but routes them to the GUI's log stream textbox rather than stderr. The log level is controlled by the Settings panel's Log Level dropdown ([§10.4](#104-configuration-panel)).
+
+> **Updated 2026-02-27:** When the Log Level is set to "None", the GUI log panel handler is not attached during operations, and a static notice is displayed: *"Logging is disabled. To enable logging, go to Settings → Output & Logging."* The persistent file handler is also suppressed when Log Level is "None", regardless of the "Write log files" checkbox state. This is a GUI-only behavior — the CLI does not support a "no logging" mode.
 
 **API consumers.** Library consumers who `import shruggie_indexer` are responsible for configuring their own logging. The library's `core/` modules emit log records through their per-module loggers ([§11.2](#112-logger-naming-hierarchy)) but do not install any handlers. If the consumer does not configure logging, Python's `logging.lastResort` handler (a `StreamHandler` on stderr with WARNING level) provides minimal output. This is the correct default behavior for a library — the library should never configure the root logger or install handlers, because doing so would interfere with the consuming application's logging setup.
 

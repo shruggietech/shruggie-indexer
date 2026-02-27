@@ -1994,6 +1994,7 @@ class SettingsTab(ctk.CTkFrame):
         self._build_widgets()
 
     def _build_widgets(self) -> None:
+        # -- Fixed title region ---
         ctk.CTkLabel(
             self, text="Settings",
             font=ctk.CTkFont(size=18, weight="bold"), anchor="w",
@@ -2002,14 +2003,17 @@ class SettingsTab(ctk.CTkFrame):
         # Region boundary separator — bottom edge of Settings title
         ctk.CTkFrame(self, height=1, fg_color="gray50").pack(fill="x")
 
+        # -- Scrollable card area ---
         self._scroll = _AutoScrollFrame(self, fg_color="transparent")
         self._scroll.pack(fill="both", expand=True)
         scroll = self._scroll.content
 
-        # -- Indexing Defaults ---
-        self._section_header(scroll, "Indexing Defaults")
+        # ── Card 1: Indexing ───────────────────────────────────────────
+        indexing_card = _LabeledGroup(scroll, label="Indexing")
+        indexing_card.pack(fill="x", pady=(8, 6))
+        idx = indexing_card.content
 
-        row = ctk.CTkFrame(scroll, fg_color="transparent")
+        row = ctk.CTkFrame(idx, fg_color="transparent")
         row.pack(fill="x", pady=(0, 8))
         ctk.CTkLabel(row, text="Default ID Algorithm:").pack(side="left", padx=(0, 6))
         self.id_algo_var = ctk.StringVar(value="md5")
@@ -2021,16 +2025,19 @@ class SettingsTab(ctk.CTkFrame):
 
         self.sha512_var = ctk.BooleanVar(value=False)
         sha512_cb = _CtkCheckBox(
-            scroll, text="Compute SHA-512 by default", variable=self.sha512_var,
+            idx, text="Compute SHA-512 by default", variable=self.sha512_var,
             command=self._on_sha512_changed,
         )
-        sha512_cb.pack(fill="x", pady=(0, 8))
+        sha512_cb.pack(fill="x", pady=(0, 4))
         _Tooltip(sha512_cb, "Enable SHA-512 computation by default for new operations.")
 
-        # -- Output Preferences ---
-        self._section_header(scroll, "Output Preferences")
+        # ── Card 2: Output & Logging ───────────────────────────────────
+        output_log_card = _LabeledGroup(scroll, label="Output & Logging")
+        output_log_card.pack(fill="x", pady=(0, 6))
+        ol = output_log_card.content
 
-        row2 = ctk.CTkFrame(scroll, fg_color="transparent")
+        # 1. JSON Indentation
+        row2 = ctk.CTkFrame(ol, fg_color="transparent")
         row2.pack(fill="x", pady=(0, 8))
         ctk.CTkLabel(row2, text="JSON Indentation:").pack(side="left", padx=(0, 6))
         self.indent_var = ctk.StringVar(value="2")
@@ -2045,28 +2052,12 @@ class SettingsTab(ctk.CTkFrame):
                 "none": "Produce compact single-line JSON.",
             }[val])
 
-        # -- Logging ---
-        self._section_header(scroll, "Logging")
-
-        row3 = ctk.CTkFrame(scroll, fg_color="transparent")
-        row3.pack(fill="x", pady=(0, 8))
-        ctk.CTkLabel(row3, text="Verbosity:").pack(side="left", padx=(0, 6))
-        self.verbosity_var = ctk.StringVar(value="normal")
-        for label, val in [("Normal", "normal"), ("Verbose", "verbose"), ("Debug", "debug")]:
-            rb = _CtkRadioButton(
-                row3, text=label, variable=self.verbosity_var, value=val,
-            )
-            rb.pack(side="left", padx=(0, 10))
-            _Tooltip(rb, {
-                "normal": "Show warnings and errors only.",
-                "verbose": "Show informational messages during processing.",
-                "debug": "Show detailed per-item processing log.",
-            }[val])
-
+        # 2. Write log files (before log level — user decides WHETHER first)
         self.log_to_file_var = ctk.BooleanVar(value=False)
         log_file_cb = _CtkCheckBox(
-            scroll, text="Write log files",
+            ol, text="Write log files",
             variable=self.log_to_file_var,
+            command=self._on_log_to_file_changed,
         )
         log_file_cb.pack(fill="x", pady=(0, 8))
         _Tooltip(
@@ -2075,23 +2066,64 @@ class SettingsTab(ctk.CTkFrame):
             "directory for later analysis.",
         )
 
-        # -- Interface ---
-        self._section_header(scroll, "Interface")
+        # 3. Log Level (dropdown replacing radio buttons)
+        row3 = ctk.CTkFrame(ol, fg_color="transparent")
+        row3.pack(fill="x", pady=(0, 8))
+        ctk.CTkLabel(row3, text="Log Level:").pack(side="left", padx=(0, 6))
+        self.verbosity_var = ctk.StringVar(value="Normal")
+        self._log_level_dropdown = ctk.CTkOptionMenu(
+            row3,
+            values=["None", "Normal", "Verbose", "Debug"],
+            variable=self.verbosity_var,
+            width=130,
+            command=self._on_log_level_changed,
+        )
+        self._log_level_dropdown.pack(side="left")
+        _Tooltip(self._log_level_dropdown, (
+            "None — suppress all logging output.\n"
+            "Normal — INFO-level and above.\n"
+            "Verbose — DEBUG-level and above.\n"
+            "Debug — full diagnostic output including trace-level details."
+        ))
+
+        # 4. Log file path (read-only display)
+        self._log_path_label = ctk.CTkLabel(
+            ol, text="Log file path:", anchor="w",
+            font=ctk.CTkFont(size=11),
+            text_color=("gray40", "gray60"),
+        )
+        self._log_path_label.pack(fill="x", pady=(0, 2))
+
+        self._log_path_entry = _CtkEntry(ol, state="disabled")
+        self._log_path_entry.pack(fill="x", pady=(0, 4))
+        _Tooltip(
+            self._log_path_entry,
+            "The computed path where log files are written. "
+            "This field is read-only.",
+        )
+        self._update_log_path_display()
+
+        # ── Card 3: Interface ──────────────────────────────────────────
+        iface_card = _LabeledGroup(scroll, label="Interface")
+        iface_card.pack(fill="x", pady=(0, 6))
+        ifc = iface_card.content
 
         self.tooltips_var = ctk.BooleanVar(value=True)
         tooltips_cb = _CtkCheckBox(
-            scroll, text="Show tooltips on hover",
+            ifc, text="Show tooltips on hover",
             variable=self.tooltips_var,
             command=self._on_tooltips_changed,
         )
-        tooltips_cb.pack(fill="x", pady=(0, 8))
+        tooltips_cb.pack(fill="x", pady=(0, 4))
         _Tooltip(tooltips_cb, "Enable or disable hover tooltips for all controls.")
 
-        # -- Configuration ---
-        self._section_header(scroll, "Configuration")
+        # ── Card 4: Configuration ──────────────────────────────────────
+        config_card = _LabeledGroup(scroll, label="Configuration")
+        config_card.pack(fill="x", pady=(0, 6))
+        cfg = config_card.content
 
-        row4 = ctk.CTkFrame(scroll, fg_color="transparent")
-        row4.pack(fill="x", pady=(0, 8))
+        row4 = ctk.CTkFrame(cfg, fg_color="transparent")
+        row4.pack(fill="x", pady=(0, 4))
         ctk.CTkLabel(row4, text="Config File:").pack(side="left", padx=(0, 6))
         self.config_entry = _CtkEntry(
             row4, placeholder_text="Optional TOML config path",
@@ -2105,24 +2137,32 @@ class SettingsTab(ctk.CTkFrame):
         config_browse.pack(side="right")
         _Tooltip(config_browse, "Select a TOML configuration file.")
 
-        btn_frame = ctk.CTkFrame(scroll, fg_color="transparent")
-        btn_frame.pack(fill="x", pady=(8, 8))
+        # -- Advanced Configuration (scaffold) ---
+        self._build_advanced_section(scroll)
+
+        # ── Fixed bottom region: global action buttons ─────────────────
+        # Separator above buttons (consistent with Section 1 boundary)
+        ctk.CTkFrame(self, height=1, fg_color="gray50").pack(fill="x")
+
+        btn_region = ctk.CTkFrame(self, fg_color="transparent")
+        btn_region.pack(fill="x", pady=(8, 4))
+
+        btn_inner = ctk.CTkFrame(btn_region, fg_color="transparent")
+        btn_inner.pack(anchor="center")
+
         reset_btn = _CtkButton(
-            btn_frame, text="Reset to Defaults", width=140,
+            btn_inner, text="Reset to Defaults", width=140,
             command=self._reset_defaults,
         )
         reset_btn.pack(side="left", padx=(0, 10))
         _Tooltip(reset_btn, "Reset all settings to factory defaults.")
 
         open_btn = _CtkButton(
-            btn_frame, text="Open Config Folder", width=140,
+            btn_inner, text="Open Config Folder", width=140,
             command=self._open_config_folder,
         )
         open_btn.pack(side="left")
         _Tooltip(open_btn, "Open the configuration directory in your file manager.")
-
-        # -- Advanced Configuration (scaffold) ---
-        self._build_advanced_section(scroll)
 
     @staticmethod
     def _section_header(
@@ -2135,6 +2175,66 @@ class SettingsTab(ctk.CTkFrame):
 
     def _on_tooltips_changed(self) -> None:
         _Tooltip.set_enabled(self.tooltips_var.get())
+
+    # -- Log path display helpers ------------------------------------------
+
+    def _update_log_path_display(self) -> None:
+        """Refresh the read-only log file path entry with the computed path."""
+        from shruggie_indexer.cli.log_file import get_default_log_dir
+
+        log_dir = get_default_log_dir()
+        display_path = str(log_dir / "<timestamp>.log")
+
+        self._log_path_entry.configure(state="normal")
+        self._log_path_entry.delete(0, "end")
+        self._log_path_entry.insert(0, display_path)
+        self._log_path_entry.configure(state="disabled")
+
+        # Grey out text when logging to file is disabled
+        is_active = self.log_to_file_var.get() and self.verbosity_var.get() != "None"
+        muted = ("gray50", "gray50")
+        normal = ("gray10", "gray90")
+        color = normal if is_active else muted
+        self._log_path_entry.configure(text_color=color)
+        self._log_path_label.configure(
+            text_color=color if not is_active else ("gray40", "gray60"),
+        )
+
+    def _on_log_to_file_changed(self) -> None:
+        """Handle toggling the 'Write log files' checkbox."""
+        self._update_log_path_display()
+        self._sync_file_logging()
+
+    def _on_log_level_changed(self, _value: str = "") -> None:
+        """Handle log level dropdown changes."""
+        self._update_log_path_display()
+        self._sync_file_logging()
+
+    def _sync_file_logging(self) -> None:
+        """Enable or disable the persistent file handler based on settings.
+
+        The file handler is suppressed when:
+        - "Write log files" is unchecked, OR
+        - Log level is "None" (all logging suppressed).
+        """
+        app = self._app
+        if not hasattr(app, "_persistent_file_handler"):
+            return
+
+        lib_logger = logging.getLogger("shruggie_indexer")
+        should_log = (
+            self.log_to_file_var.get()
+            and self.verbosity_var.get() != "None"
+        )
+
+        if should_log and app._persistent_file_handler is None:
+            # Re-attach file handler
+            app._setup_file_logging()
+        elif not should_log and app._persistent_file_handler is not None:
+            # Detach file handler
+            lib_logger.removeHandler(app._persistent_file_handler)
+            app._persistent_file_handler.close()
+            app._persistent_file_handler = None
 
     def _on_sha512_changed(self) -> None:
         """Notify Operations page to sync SHA-512 override state."""
@@ -2159,12 +2259,14 @@ class SettingsTab(ctk.CTkFrame):
             self.id_algo_var.set("md5")
             self.sha512_var.set(False)
             self.indent_var.set("2")
-            self.verbosity_var.set("normal")
+            self.verbosity_var.set("Normal")
             self.log_to_file_var.set(False)
             self.tooltips_var.set(True)
             self.config_entry.delete(0, "end")
             _Tooltip.set_enabled(True)
             self._on_sha512_changed()
+            self._update_log_path_display()
+            self._sync_file_logging()
 
     def _open_config_folder(self) -> None:
         session_path = SessionManager._resolve_path()
@@ -2420,7 +2522,13 @@ class SettingsTab(ctk.CTkFrame):
         if "indent" in state:
             self.indent_var.set(state["indent"])
         if "verbosity" in state:
-            self.verbosity_var.set(state["verbosity"])
+            # Migrate old lowercase values to new capitalized format
+            raw = state["verbosity"]
+            migrated = {
+                "normal": "Normal", "verbose": "Verbose",
+                "debug": "Debug", "none": "None",
+            }.get(raw, raw)
+            self.verbosity_var.set(migrated)
         if "log_to_file" in state:
             self.log_to_file_var.set(state["log_to_file"])
         if "tooltips" in state:
@@ -2431,6 +2539,9 @@ class SettingsTab(ctk.CTkFrame):
             self.config_entry.insert(0, state["config_file"])
         if state.get("advanced_expanded", False):
             self._toggle_advanced()
+        # Sync log path display and file handler after restoring state
+        self._update_log_path_display()
+        self._sync_file_logging()
 
 
 # ---------------------------------------------------------------------------
@@ -2591,11 +2702,25 @@ class ShruggiIndexerApp(ctk.CTk):
     # -- Persistent file logging (Issue 3) ----------------------------------
 
     def _setup_file_logging(self) -> None:
-        """Set up a persistent DEBUG-level log file on every GUI launch.
+        """Set up a persistent DEBUG-level log file.
 
-        The file handler always runs at DEBUG regardless of the Settings
-        tab Verbosity control (which only affects the GUI log panel).
+        The file handler is only created when:
+        - "Write log files" is checked in Settings, AND
+        - Log level is not "None".
+
+        On initial startup (before Settings is built), logging is
+        enabled unconditionally.  Once Settings is available, the
+        controls gate file handler creation.
         """
+        # If Settings tab is available, respect its controls
+        if hasattr(self, "_settings_tab"):
+            settings = self._settings_tab
+            if (
+                not settings.log_to_file_var.get()
+                or settings.verbosity_var.get() == "None"
+            ):
+                return
+
         try:
             from shruggie_indexer.cli.log_file import make_file_handler
 
@@ -2777,16 +2902,28 @@ class ShruggiIndexerApp(ctk.CTk):
     def _start_log_capture(self) -> None:
         """Attach the queue-based handler to the library logger.
 
-        The GUI panel handler level is controlled by Settings Verbosity.
-        The persistent file handler (set up at startup) always runs at
-        DEBUG — it is not affected by this method.
+        The GUI panel handler level is controlled by Settings Log Level.
+        When log level is "None", the handler is not attached and a
+        static disabled-logging notice is shown in the log panel.
+
+        The persistent file handler respects both the "Write log files"
+        checkbox and the "None" log level (suppressed in both cases).
         """
         settings = self._settings_tab
         verbosity = settings.verbosity_var.get()
+
+        # "None" — suppress all logging to GUI panel
+        if verbosity == "None":
+            self._output_panel.append_log(
+                "Logging is disabled. To enable logging, go to "
+                "Settings \u2192 Output & Logging.",
+            )
+            return
+
         level = {
-            "debug": logging.DEBUG,
-            "verbose": logging.INFO,
-            "normal": logging.WARNING,
+            "Debug": logging.DEBUG,
+            "Verbose": logging.INFO,
+            "Normal": logging.WARNING,
         }.get(verbosity, logging.WARNING)
 
         lib_logger = logging.getLogger("shruggie_indexer")
@@ -2804,8 +2941,9 @@ class ShruggiIndexerApp(ctk.CTk):
     def _stop_log_capture(self) -> None:
         """Remove the GUI queue handler from the library logger.
 
-        The persistent file handler is NOT removed — it stays active for
-        the lifetime of the application.
+        The persistent file handler lifecycle is managed by the Settings
+        tab's ``_sync_file_logging()`` method; this method only handles
+        the GUI panel handler.
         """
         lib_logger = logging.getLogger("shruggie_indexer")
         lib_logger.removeHandler(self._log_handler)

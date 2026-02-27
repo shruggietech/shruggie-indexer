@@ -170,26 +170,28 @@ A **drag handle** with a centered grip indicator (three small dots) sits between
 
 ## Settings Tab
 
-The Settings tab lets you customize default behavior. Changes take effect immediately and are remembered between sessions.
+The Settings tab lets you customize default behavior. Changes take effect immediately and are remembered between sessions. Settings are organized into four card sections, with an additional collapsible Advanced section below.
 
-### Indexing Defaults
+The **Reset to Defaults** and **Open Config Folder** buttons are anchored in a fixed (non-scrollable) region at the bottom of the Settings page, separated from the scrollable cards by a visible divider. They remain accessible at all scroll positions.
+
+### Indexing
 
 - **Default ID Algorithm** — Sets the default hash algorithm (`md5` or `sha256`) for new operations.
 - **Compute SHA-512 by default** — When checked, SHA-512 computation is enabled by default for new operations.
 
-### Output Preferences
+### Output & Logging
 
 - **JSON Indentation** — Controls formatting of the JSON output:
     - **2 spaces** — Compact but readable (default).
     - **4 spaces** — More spacious, easier to scan visually.
     - **Compact** — No extra whitespace. Smaller file sizes but harder to read.
-
-### Logging
-
-- **Verbosity** — Controls how much detail appears in the log view:
-    - **Normal** — Shows only warnings and errors.
+- **Write log files** — When checked, each operation writes a timestamped log file to the platform-specific app data directory. No log file is written when Log Level is "None", even if this checkbox is checked.
+- **Log Level** — A dropdown controlling how much detail appears in the log view:
+    - **None** — Suppresses all logging. The log panel displays a static notice instead of log messages. No log file is written.
+    - **Normal** — Shows only warnings and errors (default).
     - **Verbose** — Adds informational messages about each processing step.
     - **Debug** — Maximum detail, including per-file processing events, hash computation, ExifTool calls, and sidecar discovery. Useful for troubleshooting.
+- **Log file path** — A read-only field showing the computed path where log files are written. The text appears greyed out when logging to file is disabled.
 
 ### Interface
 
@@ -198,6 +200,9 @@ The Settings tab lets you customize default behavior. Changes take effect immedi
 ### Configuration
 
 - **Config File** — Optionally specify a TOML configuration file to load custom settings. Use the Browse button to pick one.
+
+### Global Action Buttons
+
 - **Reset to Defaults** — Resets all settings to their factory values (asks for confirmation first).
 - **Open Config Folder** — Opens the folder where the application stores its session data.
 
