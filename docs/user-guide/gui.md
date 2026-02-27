@@ -208,17 +208,20 @@ The **Reset to Defaults** and **Open Config Folder** buttons are anchored in a f
 
 ### Advanced Configuration
 
-Below the standard settings, a collapsed **Advanced Configuration** section provides visibility into the full set of TOML-configurable behaviors. Expanding the section reveals five labeled groups:
+Below the standard settings, a collapsed **Advanced Configuration** section provides visibility into the full set of TOML-configurable behaviors. Expanding the section reveals six independently collapsible subsections, each with a disclosure caret and a brief description:
 
-| Group | Contents |
-|-------|----------|
-| **Filesystem Exclusion** | Default `filesystem_excludes.names` and `filesystem_excludes.globs` values. |
-| **ExifTool** | Default `exiftool.exclude_extensions`, `exiftool.exclude_keys`, and `exiftool.base_args` values. |
-| **Extension Validation** | Default `extension_validation_pattern` regex. |
-| **Sidecar Identification** | Default `metadata_identify` per-type regex lists. |
-| **Metadata Exclusion** | Default `metadata_exclude.patterns` regex list. |
+| Group | Description |
+|-------|-------------|
+| **Filesystem Exclusions** | Directories and file patterns skipped during traversal. |
+| **Metadata Identification** | Regex patterns used to identify sidecar metadata files. |
+| **Metadata Exclusion** | Regex patterns for excluding non-sidecar files from indexing. |
+| **ExifTool** | ExifTool arguments, excluded keys, and excluded extensions. |
+| **Extension Groups** | File extension to logical group mappings (e.g., image, video). |
+| **Extension Validation** | Regex pattern defining valid file extensions. |
 
-Each group displays its compiled default values in read-only monospace textboxes. The section includes a cosmetic "Shared Settings" / "Indexer-Specific Settings" separator preparing for future cross-tool configuration via `shared.toml`.
+Each subsection displays the complete, untruncated compiled default values in read-only monospace textboxes. Subsections are individually collapsible — clicking a subsection header toggles only that subsection. The parent "Advanced Configuration" toggle controls overall visibility. All subsections default to collapsed and their states persist across sessions.
+
+The section includes a cosmetic "Shared Settings" / "Indexer-Specific Settings" separator preparing for future cross-tool configuration via `shared.toml`.
 
 !!! note "Editing Deferred"
     The Advanced Configuration section is read-only in this release. Full editing,

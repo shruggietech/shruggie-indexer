@@ -29,7 +29,7 @@ from dataclasses import replace
 from functools import partial
 from pathlib import Path
 from tkinter import filedialog, messagebox
-from typing import Any, ClassVar
+from typing import Any, Callable, ClassVar
 
 import customtkinter as ctk
 
@@ -51,6 +51,7 @@ from shruggie_indexer.config.defaults import (
     DEFAULT_EXIFTOOL_ARGS,
     DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS,
     DEFAULT_EXIFTOOL_EXCLUDE_KEYS,
+    DEFAULT_EXTENSION_GROUPS,
     DEFAULT_EXTENSION_VALIDATION_PATTERN,
     DEFAULT_FILESYSTEM_EXCLUDE_GLOBS,
     DEFAULT_FILESYSTEM_EXCLUDES,
@@ -2341,7 +2342,12 @@ class SettingsTab(ctk.CTkFrame):
         self._adv_expanded = not self._adv_expanded
 
     def _build_advanced_groups(self) -> None:
-        """Populate the advanced config groups with read-only defaults."""
+        """Populate the advanced config groups with read-only defaults.
+
+        Each subsection is an independently collapsible ``_LabeledGroup``
+        with a description label, full untruncated default values, and a
+        disabled per-group reset button.
+        """
         content = self._adv_content
 
         # -- Cross-utility cosmetic separator (§3.4) --
@@ -2376,84 +2382,127 @@ class SettingsTab(ctk.CTkFrame):
             "configuration is available, shared defaults will appear above.",
         )
 
-        # Group 1: Filesystem Exclusion
-        self._build_adv_fs_group(content)
-        # Group 2: ExifTool
-        self._build_adv_exiftool_group(content)
-        # Group 3: Extension Validation
-        self._build_adv_ext_validation_group(content)
-        # Group 4: Sidecar Identification
-        self._build_adv_sidecar_group(content)
-        # Group 5: Metadata Exclusion
-        self._build_adv_metadata_exclude_group(content)
+        # -- Subsection definitions --
+        # Each tuple: (key, title, description, builder)
+        subsections: list[tuple[str, str, str, Callable[[ctk.CTkFrame], None]]] = [
+            (
+                "filesystem_exclusions",
+                "Filesystem Exclusions",
+                "Directories and file patterns that are skipped during "
+                "traversal. Add entries to prevent indexing of system or "
+                "build directories.",
+                self._build_adv_fs_content,
+            ),
+            (
+                "metadata_identification",
+                "Metadata Identification",
+                "Regex patterns used to identify sidecar metadata files. "
+                "Modify these if your metadata files use non-standard "
+                "naming conventions.",
+                self._build_adv_sidecar_content,
+            ),
+            (
+                "metadata_exclusion",
+                "Metadata Exclusion",
+                "Regex patterns for files that should be excluded from "
+                "indexing but are not sidecar files. These are applied "
+                "before sidecar identification.",
+                self._build_adv_metadata_exclude_content,
+            ),
+            (
+                "exiftool",
+                "ExifTool",
+                "Arguments passed to ExifTool, keys excluded from metadata "
+                "output, and file extensions that skip ExifTool processing.",
+                self._build_adv_exiftool_content,
+            ),
+            (
+                "extension_groups",
+                "Extension Groups",
+                "Mappings from file extensions to logical groups (e.g., "
+                "'image', 'video'). Used for categorization in output "
+                "metadata.",
+                self._build_adv_ext_groups_content,
+            ),
+            (
+                "extension_validation",
+                "Extension Validation",
+                "Regex pattern defining what constitutes a valid file "
+                "extension. Files with non-matching extensions are flagged "
+                "in output.",
+                self._build_adv_ext_validation_content,
+            ),
+        ]
 
-    # -- Group builders --------------------------------------------------
+        self._adv_subsections: dict[str, _LabeledGroup] = {}
+        for key, title, desc, builder in subsections:
+            group = _LabeledGroup(
+                content,
+                label=title,
+                description=desc,
+                collapsible=True,
+                expanded=False,
+            )
+            group.pack(fill="x", pady=(6, 0))
+            builder(group.content)
+            self._adv_disabled_reset(group.content)
+            self._adv_subsections[key] = group
 
-    def _build_adv_fs_group(self, parent: ctk.CTkFrame) -> None:
-        self._section_header(parent, "Filesystem Exclusion")
+    # -- Subsection content builders ------------------------------------
 
+    def _build_adv_fs_content(self, parent: ctk.CTkFrame) -> None:
+        """Populate the Filesystem Exclusions subsection."""
         self._adv_field_label(parent, "Excluded names")
         names = sorted(DEFAULT_FILESYSTEM_EXCLUDES)
-        self._adv_readonly_textbox(parent, ", ".join(names), height=60)
+        self._adv_readonly_textbox(parent, "\n".join(names), height=100)
 
         self._adv_field_label(parent, "Excluded globs")
         self._adv_readonly_textbox(
             parent, "\n".join(DEFAULT_FILESYSTEM_EXCLUDE_GLOBS), height=30,
         )
 
-        self._adv_disabled_reset(parent)
-
-    def _build_adv_exiftool_group(self, parent: ctk.CTkFrame) -> None:
-        self._section_header(parent, "ExifTool")
-
+    def _build_adv_exiftool_content(self, parent: ctk.CTkFrame) -> None:
+        """Populate the ExifTool subsection."""
         self._adv_field_label(parent, "Exclude extensions")
         exts = sorted(DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS)
-        self._adv_readonly_textbox(parent, ", ".join(exts), height=30)
+        self._adv_readonly_textbox(parent, "\n".join(exts), height=60)
 
         self._adv_field_label(parent, "Exclude keys")
         keys = sorted(DEFAULT_EXIFTOOL_EXCLUDE_KEYS)
-        self._adv_readonly_textbox(parent, ", ".join(keys), height=80)
+        self._adv_readonly_textbox(parent, "\n".join(keys), height=160)
 
         self._adv_field_label(parent, "Base arguments")
         self._adv_readonly_textbox(
-            parent, " ".join(DEFAULT_EXIFTOOL_ARGS), height=50,
+            parent, "\n".join(DEFAULT_EXIFTOOL_ARGS), height=100,
         )
 
-        self._adv_disabled_reset(parent)
-
-    def _build_adv_ext_validation_group(self, parent: ctk.CTkFrame) -> None:
-        self._section_header(parent, "Extension Validation")
-
+    def _build_adv_ext_validation_content(self, parent: ctk.CTkFrame) -> None:
+        """Populate the Extension Validation subsection."""
         self._adv_field_label(parent, "Pattern")
         self._adv_readonly_textbox(
             parent, DEFAULT_EXTENSION_VALIDATION_PATTERN, height=30,
         )
 
-        self._adv_disabled_reset(parent)
+    def _build_adv_sidecar_content(self, parent: ctk.CTkFrame) -> None:
+        """Populate the Metadata Identification subsection.
 
-    def _build_adv_sidecar_group(self, parent: ctk.CTkFrame) -> None:
-        self._section_header(parent, "Sidecar Identification")
-
+        Displays the full, untruncated regex patterns for each sidecar
+        type — including the complete BCP 47 language-code alternation.
+        """
         lines: list[str] = []
         for type_name in sorted(DEFAULT_METADATA_IDENTIFY_STRINGS):
             patterns = DEFAULT_METADATA_IDENTIFY_STRINGS[type_name]
             lines.append(f"{type_name}:")
             for pat in patterns:
-                # Truncate extremely long patterns (e.g. BCP 47
-                # alternation) in the scaffold view for readability.
-                display = pat if len(pat) <= 120 else pat[:117] + "..."
-                lines.append(f"  {display}")
+                lines.append(f"  {pat}")
             lines.append("")
 
         self._adv_readonly_textbox(
-            parent, "\n".join(lines).rstrip(), height=200,
+            parent, "\n".join(lines).rstrip(), height=250,
         )
 
-        self._adv_disabled_reset(parent)
-
-    def _build_adv_metadata_exclude_group(self, parent: ctk.CTkFrame) -> None:
-        self._section_header(parent, "Metadata Exclusion")
-
+    def _build_adv_metadata_exclude_content(self, parent: ctk.CTkFrame) -> None:
+        """Populate the Metadata Exclusion subsection."""
         self._adv_field_label(parent, "Exclude patterns")
         self._adv_readonly_textbox(
             parent,
@@ -2461,7 +2510,18 @@ class SettingsTab(ctk.CTkFrame):
             height=60,
         )
 
-        self._adv_disabled_reset(parent)
+    def _build_adv_ext_groups_content(self, parent: ctk.CTkFrame) -> None:
+        """Populate the Extension Groups subsection."""
+        lines: list[str] = []
+        for group_name in sorted(DEFAULT_EXTENSION_GROUPS):
+            extensions = DEFAULT_EXTENSION_GROUPS[group_name]
+            lines.append(f"{group_name}:")
+            lines.append(f"  {', '.join(extensions)}")
+            lines.append("")
+
+        self._adv_readonly_textbox(
+            parent, "\n".join(lines).rstrip(), height=200,
+        )
 
     # -- Shared helpers for the advanced scaffold -----------------------
 
@@ -2503,6 +2563,10 @@ class SettingsTab(ctk.CTkFrame):
         )
 
     def get_state(self) -> dict[str, Any]:
+        adv_subsection_states = {
+            key: group.expanded
+            for key, group in self._adv_subsections.items()
+        }
         return {
             "id_algorithm": self.id_algo_var.get(),
             "sha512": self.sha512_var.get(),
@@ -2512,6 +2576,7 @@ class SettingsTab(ctk.CTkFrame):
             "tooltips": self.tooltips_var.get(),
             "config_file": self.config_entry.get(),
             "advanced_expanded": self._adv_expanded,
+            "advanced_subsections": adv_subsection_states,
         }
 
     def restore_state(self, state: dict[str, Any]) -> None:
@@ -2539,6 +2604,11 @@ class SettingsTab(ctk.CTkFrame):
             self.config_entry.insert(0, state["config_file"])
         if state.get("advanced_expanded", False):
             self._toggle_advanced()
+        # Restore individual Advanced subsection expanded/collapsed states
+        adv_sub = state.get("advanced_subsections", {})
+        for key, expanded in adv_sub.items():
+            if key in self._adv_subsections:
+                self._adv_subsections[key].set_expanded(expanded)
         # Sync log path display and file handler after restoring state
         self._update_log_path_display()
         self._sync_file_logging()

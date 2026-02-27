@@ -6297,20 +6297,24 @@ Settings values are saved to the session file ([§10.1](#101-gui-framework-and-a
 
 > **Added 2026-02-25.** The Advanced Configuration section was scaffolded as part of the v0.1.1 GUI work. Full editing, data binding, and persistence are deferred to a post-v0.1.1 release.
 
+> **Updated 2026-02-27.** Each subsection is now independently collapsible with disclosure carets, includes a descriptive subtitle, and displays fully untruncated default values. An Extension Groups subsection was added. Subsection expanded/collapsed states persist across sessions.
+
 Below the utility buttons, the Settings page includes an **Advanced Configuration** collapsible section. In v0.1.1, this section is **read-only** — it displays the compiled default values from `config/defaults.py` for inspection, but does not support editing.
 
-The Advanced section is collapsed by default. A toggle header labeled "▸ Advanced Configuration" expands the section; clicking again ("▾ Advanced Configuration") collapses it. When expanded, the section displays the following groups:
+The Advanced section is collapsed by default. A toggle header labeled "▸ Advanced Configuration" expands the section; clicking again ("▾ Advanced Configuration") collapses it. When expanded, the section displays the following groups, each rendered as an independently collapsible `_LabeledGroup` card with a disclosure caret:
 
-| Group | Contents | Source |
-|-------|----------|--------|
-| Filesystem Exclusions | Excluded directory names and glob patterns. | `DEFAULT_FILESYSTEM_EXCLUDES`, `DEFAULT_FILESYSTEM_EXCLUDE_GLOBS` |
-| Metadata Identification | Sidecar regex identification patterns and their per-type attributes. | `DEFAULT_METADATA_IDENTIFY_STRINGS`, `DEFAULT_METADATA_ATTRIBUTES` |
-| Metadata Exclusion | Regex patterns for excluding non-sidecar files. | `DEFAULT_METADATA_EXCLUDE_PATTERN_STRINGS` |
-| ExifTool | Default arguments, key exclusion list, and extension exclusion list. | `DEFAULT_EXIFTOOL_ARGS`, `DEFAULT_EXIFTOOL_EXCLUDE_KEYS`, `DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS` |
-| Extension Groups | Extension-to-group classification mappings. | `DEFAULT_EXTENSION_GROUPS` |
-| Extension Validation | Regex pattern for valid file extensions. | `DEFAULT_EXTENSION_VALIDATION_PATTERN` |
+| Group | Description | Contents | Source |
+|-------|-------------|----------|--------|
+| Filesystem Exclusions | Directories and file patterns that are skipped during traversal. Add entries to prevent indexing of system or build directories. | Excluded directory names and glob patterns. | `DEFAULT_FILESYSTEM_EXCLUDES`, `DEFAULT_FILESYSTEM_EXCLUDE_GLOBS` |
+| Metadata Identification | Regex patterns used to identify sidecar metadata files. Modify these if your metadata files use non-standard naming conventions. | Sidecar regex identification patterns per type. | `DEFAULT_METADATA_IDENTIFY_STRINGS` |
+| Metadata Exclusion | Regex patterns for files that should be excluded from indexing but are not sidecar files. These are applied before sidecar identification. | Exclude patterns. | `DEFAULT_METADATA_EXCLUDE_PATTERN_STRINGS` |
+| ExifTool | Arguments passed to ExifTool, keys excluded from metadata output, and file extensions that skip ExifTool processing. | Default arguments, key exclusion list, and extension exclusion list. | `DEFAULT_EXIFTOOL_ARGS`, `DEFAULT_EXIFTOOL_EXCLUDE_KEYS`, `DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS` |
+| Extension Groups | Mappings from file extensions to logical groups (e.g., 'image', 'video'). Used for categorization in output metadata. | Extension-to-group classification mappings. | `DEFAULT_EXTENSION_GROUPS` |
+| Extension Validation | Regex pattern defining what constitutes a valid file extension. Files with non-matching extensions are flagged in output. | Regex pattern. | `DEFAULT_EXTENSION_VALIDATION_PATTERN` |
 
-Each group renders its values in a read-only `CTkTextbox` widget. When full editing is implemented (targeted for v0.2.0), the read-only textboxes will be replaced with editable list widgets supporting add/remove/reorder operations, real-time regex validation (compile-on-keystroke with visual error feedback), and per-group "Reset to Defaults" buttons.
+Each group renders its values in a read-only `CTkTextbox` widget with complete, untruncated default values — including long patterns such as the BCP 47 language-code alternation. Subsection descriptions are rendered as muted-color text below each subsection header. Each subsection is independently collapsible: clicking a subsection header toggles only that subsection without affecting siblings or the parent. The parent "Advanced Configuration" toggle controls overall visibility; when expanded, each subsection returns to its last-known individual state. All subsections default to collapsed on first launch. Individual subsection expanded/collapsed states persist across sessions via the session file.
+
+When full editing is implemented (targeted for v0.2.0), the read-only textboxes will be replaced with editable list widgets supporting add/remove/reorder operations, real-time regex validation (compile-on-keystroke with visual error feedback), and per-group "Reset to Defaults" buttons.
 
 ---
 
