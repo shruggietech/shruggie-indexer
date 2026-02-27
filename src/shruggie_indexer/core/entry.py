@@ -192,6 +192,8 @@ def build_file_entry(
     config: IndexerConfig,
     siblings: list[Path] | None = None,
     delete_queue: list[Path] | None = None,
+    sidecar_type_cache: dict[Path, str | None] | None = None,
+    sidecar_entry_cache: dict[Path, MetadataEntry] | None = None,
     *,
     cancel_event: threading.Event | None = None,
     _index_root: Path | None = None,
@@ -208,6 +210,8 @@ def build_file_entry(
             (for sidecar discovery).  If ``None``, the module will
             enumerate the parent directory.
         delete_queue: MetaMergeDelete accumulator (see spec section 6.7).
+        sidecar_type_cache: Optional per-directory sidecar type cache.
+        sidecar_entry_cache: Optional per-directory sidecar metadata cache.
         cancel_event: Optional ``threading.Event`` checked before expensive
             operations (hashing, EXIF extraction).  When set, raises
             ``IndexerCancellationError``.
@@ -301,6 +305,8 @@ def build_file_entry(
                 config=config,
                 index_root=index_root,
                 delete_queue=delete_queue,
+                sidecar_type_cache=sidecar_type_cache,
+                sidecar_entry_cache=sidecar_entry_cache,
             )
         except Exception:
             logger.warning(
@@ -469,6 +475,12 @@ def build_directory_entry(
 
     # Process file children first
     logger.info("Processing phase started: %d items", total_items)
+    sidecar_type_cache: dict[Path, str | None] | None = None
+    sidecar_entry_cache: dict[Path, MetadataEntry] | None = None
+    if config.meta_merge:
+        sidecar_type_cache = {}
+        sidecar_entry_cache = {}
+
     for child_path in entry_files:
         if cancel_event is not None and cancel_event.is_set():
             raise IndexerCancellationError("Indexing cancelled")
@@ -480,6 +492,8 @@ def build_directory_entry(
                 config,
                 siblings=siblings,
                 delete_queue=delete_queue,
+                sidecar_type_cache=sidecar_type_cache,
+                sidecar_entry_cache=sidecar_entry_cache,
                 cancel_event=cancel_event,
                 _index_root=index_root,
                 session_id=session_id,

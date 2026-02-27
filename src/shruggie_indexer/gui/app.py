@@ -148,6 +148,22 @@ _WEBSITE_URL = "https://shruggie.tech"
 _ACTION_LABEL_START = "\u25b6  START"
 _ACTION_LABEL_RUNNING = "\u25a0  Cancel"
 
+_VERBOSITY_LABELS = ("None", "Normal", "Verbose", "Debug")
+_VERBOSITY_MAP = {
+    "none": "None",
+    "normal": "Normal",
+    "verbose": "Verbose",
+    "debug": "Debug",
+}
+
+
+def _normalize_verbosity(value: str | None) -> str:
+    """Normalize UI/session verbosity values to canonical labels."""
+    if value is None:
+        return "Normal"
+    normalized = _VERBOSITY_MAP.get(value.strip().lower())
+    return normalized if normalized is not None else "Normal"
+
 # Compact widget constructors — controls sized modestly larger than labels.
 # Explicit ``height``/size kwargs on individual widgets override these defaults.
 _CtkCheckBox = partial(ctk.CTkCheckBox, checkbox_width=_CB_SIZE, checkbox_height=_CB_SIZE)
@@ -809,21 +825,31 @@ class OutputPanel(ctk.CTkFrame):
         self.save_btn.configure(state="disabled")
 
     def append_log(self, line: str) -> None:
-        """Append a line to the log buffer.  If log view active, update."""
-        self._log_lines.append(line)
+        """Append a single line to the log buffer."""
+        self.append_logs([line])
+
+    def append_logs(self, lines: list[str]) -> None:
+        """Append multiple log lines efficiently."""
+        if not lines:
+            return
+        self._log_lines.extend(lines)
         if not self._showing_json:
-            self.textbox.configure(state="normal")
+            self._append_log_lines_to_widget(lines)
+        self._update_button_state()
+
+    def _append_log_lines_to_widget(self, lines: list[str]) -> None:
+        """Append log lines directly to the textbox with level tags."""
+        self.textbox.configure(state="normal")
+        for line in lines:
             start_idx = self.textbox._textbox.index("end-1c")
             self.textbox.insert("end", line + "\n")
             end_idx = self.textbox._textbox.index("end-1c")
-            # Apply color tag based on log level
             tag = self._detect_level_tag(line)
             if tag:
                 self.textbox._textbox.tag_add(tag, start_idx, end_idx)
-            if self._auto_scroll:
-                self.textbox.see("end")
-            self.textbox.configure(state="disabled")
-        self._update_button_state()
+        if self._auto_scroll:
+            self.textbox.see("end")
+        self.textbox.configure(state="disabled")
 
     def _detect_level_tag(self, line: str) -> str | None:
         """Return the tag name for a log line's level, or None for INFO."""
@@ -914,17 +940,7 @@ class OutputPanel(ctk.CTkFrame):
                     with contextlib.suppress(Exception):
                         _apply_json_highlighting(self.textbox, text)
         else:
-            content = "\n".join(self._log_lines)
-            self.textbox.insert("1.0", content)
-            # Apply color tags to each log line
-            for i, line in enumerate(self._log_lines):
-                tag = self._detect_level_tag(line)
-                if tag:
-                    line_num = i + 1
-                    self.textbox._textbox.tag_add(
-                        tag, f"{line_num}.0", f"{line_num}.end",
-                    )
-            self.textbox.see("end")
+            self._append_log_lines_to_widget(self._log_lines)
         self.textbox.configure(state="disabled")
 
     def _copy(self) -> None:
@@ -2074,7 +2090,7 @@ class SettingsTab(ctk.CTkFrame):
         self.verbosity_var = ctk.StringVar(value="Normal")
         self._log_level_dropdown = ctk.CTkOptionMenu(
             row3,
-            values=["None", "Normal", "Verbose", "Debug"],
+            values=list(_VERBOSITY_LABELS),
             variable=self.verbosity_var,
             width=130,
             command=self._on_log_level_changed,
@@ -2192,7 +2208,8 @@ class SettingsTab(ctk.CTkFrame):
         self._log_path_entry.configure(state="disabled")
 
         # Grey out text when logging to file is disabled
-        is_active = self.log_to_file_var.get() and self.verbosity_var.get() != "None"
+        verbosity = _normalize_verbosity(self.verbosity_var.get())
+        is_active = self.log_to_file_var.get() and verbosity != "None"
         muted = ("gray50", "gray50")
         normal = ("gray10", "gray90")
         color = normal if is_active else muted
@@ -2223,14 +2240,23 @@ class SettingsTab(ctk.CTkFrame):
             return
 
         lib_logger = logging.getLogger("shruggie_indexer")
+        verbosity = _normalize_verbosity(self.verbosity_var.get())
+        if self.verbosity_var.get() != verbosity:
+            self.verbosity_var.set(verbosity)
         should_log = (
             self.log_to_file_var.get()
-            and self.verbosity_var.get() != "None"
+            and verbosity != "None"
         )
 
         if should_log and app._persistent_file_handler is None:
             # Re-attach file handler
             app._setup_file_logging()
+        elif (
+            should_log
+            and app._persistent_file_handler is not None
+            and app._persistent_file_handler not in lib_logger.handlers
+        ):
+            lib_logger.addHandler(app._persistent_file_handler)
         elif not should_log and app._persistent_file_handler is not None:
             # Detach file handler
             lib_logger.removeHandler(app._persistent_file_handler)
@@ -2589,10 +2615,7 @@ class SettingsTab(ctk.CTkFrame):
         if "verbosity" in state:
             # Migrate old lowercase values to new capitalized format
             raw = state["verbosity"]
-            migrated = {
-                "normal": "Normal", "verbose": "Verbose",
-                "debug": "Debug", "none": "None",
-            }.get(raw, raw)
+            migrated = _normalize_verbosity(raw)
             self.verbosity_var.set(migrated)
         if "log_to_file" in state:
             self.log_to_file_var.set(state["log_to_file"])
@@ -2771,7 +2794,7 @@ class ShruggiIndexerApp(ctk.CTk):
 
     # -- Persistent file logging (Issue 3) ----------------------------------
 
-    def _setup_file_logging(self) -> None:
+    def _setup_file_logging(self, *, force_rotate: bool = False) -> None:
         """Set up a persistent DEBUG-level log file.
 
         The file handler is only created when:
@@ -2782,21 +2805,33 @@ class ShruggiIndexerApp(ctk.CTk):
         enabled unconditionally.  Once Settings is available, the
         controls gate file handler creation.
         """
+        lib_logger = logging.getLogger("shruggie_indexer")
+
         # If Settings tab is available, respect its controls
         if hasattr(self, "_settings_tab"):
             settings = self._settings_tab
+            verbosity = _normalize_verbosity(settings.verbosity_var.get())
             if (
                 not settings.log_to_file_var.get()
-                or settings.verbosity_var.get() == "None"
+                or verbosity == "None"
             ):
                 return
+
+        if self._persistent_file_handler is not None:
+            if not force_rotate:
+                if self._persistent_file_handler not in lib_logger.handlers:
+                    lib_logger.addHandler(self._persistent_file_handler)
+                return
+            with contextlib.suppress(ValueError):
+                lib_logger.removeHandler(self._persistent_file_handler)
+            self._persistent_file_handler.close()
+            self._persistent_file_handler = None
 
         try:
             from shruggie_indexer.log_file import make_file_handler
 
             self._persistent_file_handler = make_file_handler()
             self._persistent_file_handler.setLevel(logging.DEBUG)
-            lib_logger = logging.getLogger("shruggie_indexer")
             lib_logger.setLevel(logging.DEBUG)
             lib_logger.addHandler(self._persistent_file_handler)
             logger.info("Shruggie Indexer GUI v%s started", __version__)
@@ -2980,7 +3015,9 @@ class ShruggiIndexerApp(ctk.CTk):
         checkbox and the "None" log level (suppressed in both cases).
         """
         settings = self._settings_tab
-        verbosity = settings.verbosity_var.get()
+        verbosity = _normalize_verbosity(settings.verbosity_var.get())
+        if settings.verbosity_var.get() != verbosity:
+            settings.verbosity_var.set(verbosity)
 
         # "None" — suppress all logging to GUI panel
         if verbosity == "None":
@@ -3030,13 +3067,15 @@ class ShruggiIndexerApp(ctk.CTk):
     def _drain_log_queue(self) -> None:
         """Drain all pending log messages from the queue."""
         count = 0
+        drained: list[str] = []
         while count < 200:
             try:
-                msg = self._log_queue.get_nowait()
-                self._output_panel.append_log(msg)
+                drained.append(self._log_queue.get_nowait())
             except queue.Empty:
                 break
             count += 1
+        if drained:
+            self._output_panel.append_logs(drained)
 
     # -- Job execution ------------------------------------------------------
 
@@ -3073,6 +3112,12 @@ class ShruggiIndexerApp(ctk.CTk):
             return
 
         op_label = ops._op_type_var.get()
+        if (
+            self._settings_tab.log_to_file_var.get()
+            and _normalize_verbosity(self._settings_tab.verbosity_var.get()) != "None"
+        ):
+            self._setup_file_logging(force_rotate=True)
+
         logger.info(
             "Operation started: %s on %s (%s%s)",
             op_label,
@@ -3202,7 +3247,11 @@ class ShruggiIndexerApp(ctk.CTk):
         do not abort the loop — remaining files are still attempted.
         """
         deleted = 0
+        seen: set[Path] = set()
         for path in queue:
+            if path in seen:
+                continue
+            seen.add(path)
             try:
                 path.unlink()
                 logger.info("Sidecar deleted: %s", path)
@@ -3292,6 +3341,7 @@ class ShruggiIndexerApp(ctk.CTk):
 
     def _drain_progress_queue(self) -> None:
         """Drain pending progress events (main thread only)."""
+        progress_lines: list[str] = []
         for _ in range(200):
             try:
                 event = self._progress_queue.get_nowait()
@@ -3300,7 +3350,9 @@ class ShruggiIndexerApp(ctk.CTk):
             self._ops_page._progress_panel.update_progress(event)
             if event.message:
                 ts = time.strftime("%H:%M:%S")
-                self._output_panel.append_log(f"{ts}  INFO     {event.message}")
+                progress_lines.append(f"{ts}  INFO     {event.message}")
+        if progress_lines:
+            self._output_panel.append_logs(progress_lines)
 
     def _poll_results(self) -> None:
         # Drain progress events first (main-thread safe).

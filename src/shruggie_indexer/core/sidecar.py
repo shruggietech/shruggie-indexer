@@ -494,6 +494,8 @@ def discover_and_parse(
     *,
     index_root: Path | None = None,
     delete_queue: list[Path] | None = None,
+    sidecar_type_cache: dict[Path, str | None] | None = None,
+    sidecar_entry_cache: dict[Path, MetadataEntry] | None = None,
 ) -> list[MetadataEntry]:
     """Discover and parse sidecar metadata files for an item.
 
@@ -518,6 +520,10 @@ def discover_and_parse(
         delete_queue: When ``config.meta_merge_delete`` is ``True`` and this
             list is provided, sidecar paths are appended for deferred deletion
             in Stage 6.
+        sidecar_type_cache: Optional cache for sidecar type detection results,
+            keyed by sibling path.
+        sidecar_entry_cache: Optional cache for parsed ``MetadataEntry``
+            objects, keyed by sidecar path.
 
     Returns:
         List of ``MetadataEntry`` objects, empty if no sidecars found.
@@ -546,7 +552,14 @@ def discover_and_parse(
             continue
 
         # Detect type by matching against identification patterns.
-        sidecar_type = _detect_type(sibling_name, metadata_identify)
+        if sidecar_type_cache is not None:
+            sidecar_type = sidecar_type_cache.get(sibling_path)
+            if sibling_path not in sidecar_type_cache:
+                sidecar_type = _detect_type(sibling_name, metadata_identify)
+                sidecar_type_cache[sibling_path] = sidecar_type
+        else:
+            sidecar_type = _detect_type(sibling_name, metadata_identify)
+
         if sidecar_type is None:
             continue
 
@@ -557,19 +570,25 @@ def discover_and_parse(
             item_name,
         )
 
-        # Read the sidecar content using the type-specific strategy.
-        data, fmt, transforms = _read_with_fallback(sibling_path, sidecar_type, config)
+        if sidecar_entry_cache is not None and sibling_path in sidecar_entry_cache:
+            entry = sidecar_entry_cache[sibling_path]
+        else:
+            # Read the sidecar content using the type-specific strategy.
+            data, fmt, transforms = _read_with_fallback(sibling_path, sidecar_type, config)
 
-        # Build the MetadataEntry.
-        entry = _build_metadata_entry(
-            sidecar_path=sibling_path,
-            sidecar_type=sidecar_type,
-            data=data,
-            fmt=fmt,
-            transforms=transforms,
-            index_root=index_root,
-            config=config,
-        )
+            # Build the MetadataEntry.
+            entry = _build_metadata_entry(
+                sidecar_path=sibling_path,
+                sidecar_type=sidecar_type,
+                data=data,
+                fmt=fmt,
+                transforms=transforms,
+                index_root=index_root,
+                config=config,
+            )
+            if sidecar_entry_cache is not None:
+                sidecar_entry_cache[sibling_path] = entry
+
         entries.append(entry)
 
         # MetaMergeDelete queue.
