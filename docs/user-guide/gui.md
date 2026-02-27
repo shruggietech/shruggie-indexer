@@ -122,7 +122,6 @@ The Output section uses a dropdown menu to select where results are written:
 
     - **Multi-file** requires a directory target (not available for single files).
     - **View only** is not available for Meta Merge Delete (destructive operations require a persistent output record) or when Rename is active (rename requires writing files to disk). The option remains visible in the dropdown but selecting it snaps back to the appropriate default with an explanatory message.
-    - **Rename** forces Multi-file mode (renamed files need per-item sidecar output).
 
 ### Running an Operation
 
@@ -143,7 +142,7 @@ While the operation runs:
 - The action button changes to a red **■ Cancel** button with the same dimensions as the START button. Click it (or press ++escape++) to stop the operation after the current file finishes.
 - All input controls on the Operations tab are disabled during execution.
 
-When the operation completes, the progress panel disappears and the output panel shows the results.
+When the operation completes, the progress panel disappears and the result data is populated. The active Output/Log tab is preserved — if you were viewing the Log tab during the operation, the Log tab remains active. The Output button briefly highlights green to signal that new content is available.
 
 ---
 
@@ -263,7 +262,7 @@ The application supports the following keyboard shortcuts:
 
 ## Session Persistence
 
-The application automatically saves your window size, position, selected tab, operation settings, and output panel height when you close it. The next time you open the application, everything is restored to where you left off.
+The application automatically saves your window size, position, selected tab, operation settings, card collapsed/expanded states, Advanced Configuration section states, and output panel height when you close it. The next time you open the application, everything is restored to where you left off.
 
 Session data is stored in your operating system's standard configuration directory under the shared ShruggieTech ecosystem namespace:
 

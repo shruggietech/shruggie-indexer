@@ -2082,8 +2082,8 @@ class SettingsTab(ctk.CTkFrame):
         self._log_level_dropdown.pack(side="left")
         _Tooltip(self._log_level_dropdown, (
             "None — suppress all logging output.\n"
-            "Normal — INFO-level and above.\n"
-            "Verbose — DEBUG-level and above.\n"
+            "Normal — warnings and errors only.\n"
+            "Verbose — informational messages and above.\n"
             "Debug — full diagnostic output including trace-level details."
         ))
 
