@@ -218,9 +218,9 @@ Below the standard settings, a collapsed **Advanced Configuration** section prov
 | **Extension Groups** | File extension to logical group mappings (e.g., image, video). |
 | **Extension Validation** | Regex pattern defining valid file extensions. |
 
-Each subsection displays the complete, untruncated compiled default values in read-only monospace textboxes. Subsections are individually collapsible — clicking a subsection header toggles only that subsection. The parent "Advanced Configuration" toggle controls overall visibility. All subsections default to collapsed and their states persist across sessions.
+Each subsection displays the complete, untruncated compiled default values in read-only monospace textboxes sized to show all content without scrolling (capped at a maximum height for very large groups). Subsections are individually collapsible — clicking a subsection header toggles only that subsection. The parent "Advanced Configuration" toggle controls overall visibility. All subsections default to collapsed and their states persist across sessions.
 
-The section includes a cosmetic "Shared Settings" / "Indexer-Specific Settings" separator preparing for future cross-tool configuration via `shared.toml`.
+The section includes a "Shared Settings" / "Indexer-Specific Settings" separator preparing for future cross-tool configuration via `shared.toml`. The "Shared Settings (not yet available)" label is displayed in red text to clearly indicate that this feature is not yet functional.
 
 !!! note "Editing Deferred"
     The Advanced Configuration section is read-only in this release. Full editing,
