@@ -2450,7 +2450,7 @@ includes a disabled "Reset to Defaults" button placeholder.</p>
 <hr />
 <h2 id="session-persistence">Session Persistence</h2>
 <p>The application automatically saves your window size, position, selected tab, operation settings, card collapsed/expanded states, Advanced Configuration section states, and output panel height when you close it. The next time you open the application, everything is restored to where you left off.</p>
-<p>Session data is stored in your operating system's standard configuration directory under the shared ShruggieTech ecosystem namespace:</p>
+<p>Session data is stored in your operating system's standard application data directory under the shared shruggie-tech ecosystem namespace:</p>
 <table>
 <thead>
 <tr>
@@ -2461,7 +2461,7 @@ includes a disabled "Reset to Defaults" button placeholder.</p>
 <tbody>
 <tr>
 <td>Windows</td>
-<td><code>%APPDATA%\shruggie-tech\shruggie-indexer\gui-session.json</code></td>
+<td><code>%LOCALAPPDATA%\shruggie-tech\shruggie-indexer\gui-session.json</code></td>
 </tr>
 <tr>
 <td>macOS</td>
@@ -2473,11 +2473,13 @@ includes a disabled "Reset to Defaults" button placeholder.</p>
 </tr>
 </tbody>
 </table>
+<p>This is the same directory that contains the <code>config.toml</code> configuration file and the <code>logs/</code> subdirectory. The <strong>Open Config Folder</strong> button on the Settings page opens this directory.</p>
 <p>If the session file is missing or becomes corrupted, the application starts with default settings.</p>
 <div class="admonition info">
-<p class="admonition-title">Migration from v0.1.0</p>
-<p>If you are upgrading from v0.1.0, existing session data at the old path
-(e.g., <code>%APPDATA%\shruggie-indexer\gui-session.json</code>) is read automatically.
+<p class="admonition-title">Migration from earlier versions</p>
+<p>If you are upgrading from v0.1.1 or v0.1.0, existing session data at the
+old path (e.g., <code>%APPDATA%\shruggie-tech\shruggie-indexer\gui-session.json</code>
+or <code>%APPDATA%\shruggie-indexer\gui-session.json</code>) is read automatically.
 On the next save (application exit or operation completion), the session file
 is written to the new location. The old file is preserved — it is safe to
 delete manually after confirming the new file has been created.</p>
