@@ -888,7 +888,8 @@ tests/
 │   ├── test_serializer.py
 │   ├── test_rename.py
 │   ├── test_schema.py
-│   └── test_config.py
+│   ├── test_config.py
+│   └── test_app_paths.py
 ├── integration/
 │   ├── __init__.py
 │   ├── test_single_file.py
@@ -8641,6 +8642,27 @@ Exercises `config/loader.py` and `config/types.py` ([§7](#7-configuration)).
 | Frozen immutability | Attempting to set a field on a constructed `IndexerConfig` | `FrozenInstanceError` raised. |
 | Sidecar pattern configuration | A TOML file adding a new sidecar type regex | New pattern appears in `config.sidecar_include_patterns`. |
 | Exiftool exclusion extension | A TOML file adding `.xyz` to the exclusion list | `.xyz` present in `config.exiftool_exclude_extensions`. |
+
+#### test_app_paths.py
+
+> **Added 2026-02-28:** Test specification for the canonical path resolver module.
+
+Exercises `app_paths.py` ([§3.3](#33-configuration-file-locations)) — the single source of truth for application data directory resolution.
+
+| Test case | Input | Expected behavior |
+|-----------|-------|-------------------|
+| Returns Path object | `get_app_data_dir()` | Returns a `pathlib.Path` instance. |
+| Ecosystem namespace suffix | `get_app_data_dir()` | Path ends with `shruggie-tech/shruggie-indexer`. |
+| Windows LOCALAPPDATA | `platform.system()` → `"Windows"`, `LOCALAPPDATA` set | Resolves under `LOCALAPPDATA/shruggie-tech/shruggie-indexer`. |
+| Windows fallback | `platform.system()` → `"Windows"`, `LOCALAPPDATA` unset | Falls back to `~/AppData/Local/shruggie-tech/shruggie-indexer`. |
+| Linux XDG_CONFIG_HOME | `platform.system()` → `"Linux"`, `XDG_CONFIG_HOME` set | Resolves under `XDG_CONFIG_HOME/shruggie-tech/shruggie-indexer`. |
+| Linux fallback | `platform.system()` → `"Linux"`, `XDG_CONFIG_HOME` unset | Falls back to `~/.config/shruggie-tech/shruggie-indexer`. |
+| macOS Library | `platform.system()` → `"Darwin"` | Resolves to `~/Library/Application Support/shruggie-tech/shruggie-indexer`. |
+| Log dir returns Path | `get_log_dir()` | Returns a `pathlib.Path` instance. |
+| Log dir is subdirectory | `get_log_dir()` | Returns `<app_data_dir>/logs/`. |
+| Windows log dir | `platform.system()` → `"Windows"`, `LOCALAPPDATA` set | `LOCALAPPDATA/shruggie-tech/shruggie-indexer/logs`. |
+| No PascalCase namespace | `get_log_dir()` across all platforms | Path string does not contain `ShruggieTech` on any platform. |
+| log_file delegation | `log_file.get_default_log_dir()` | Returns the same value as `app_paths.get_log_dir()`. |
 
 #### test_sidecar_exclusion.py
 
