@@ -188,16 +188,18 @@ class SessionManager:
     and output panel height.  Gracefully falls back to defaults when the
     file is missing or corrupt.
 
-    Since v0.1.1, session files are stored under the shared ShruggieTech
-    ecosystem namespace (``<base>/shruggie-tech/shruggie-indexer/``).  On
-    read, the manager checks the new path first then falls back to the
-    legacy v0.1.0 path (``<base>/shruggie-indexer/``).  Writes always go to
-    the new path (auto-migrate on write).
+    Session files are stored under the canonical application data directory
+    returned by :func:`shruggie_indexer.app_paths.get_app_data_dir`.  On
+    read, the manager checks the canonical path first, then falls back to
+    two legacy locations:
+
+    1. v0.1.1 Roaming path (``%APPDATA%\\shruggie-tech\\shruggie-indexer\\``)
+    2. v0.1.0 flat path (``%APPDATA%\\shruggie-indexer\\``)
+
+    Writes always go to the canonical path (auto-migrate on write).
     """
 
     _SESSION_FILENAME = "gui-session.json"
-    _ECOSYSTEM_DIR = "shruggie-tech"
-    _TOOL_DIR = "shruggie-indexer"
     _LEGACY_DIR = "shruggie-indexer"  # v0.1.0 path (without ecosystem parent)
 
     def __init__(self) -> None:
@@ -206,52 +208,79 @@ class SessionManager:
         self._data: dict[str, Any] = {}
 
     @staticmethod
-    def _config_base() -> Path:
-        """Return the platform-standard base directory."""
-        system = platform.system()
-        if system == "Windows":
-            return Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
-        if system == "Darwin":
-            return Path.home() / "Library" / "Application Support"
-        return Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
-
-    @classmethod
-    def _resolve_path(cls) -> Path:
-        """Return the canonical (new-namespace) session file path.
+    def _resolve_path() -> Path:
+        """Return the canonical session file path.
 
         This is the path used for writes and for "Open Config Folder".
         """
-        return (
-            cls._config_base()
-            / cls._ECOSYSTEM_DIR
-            / cls._TOOL_DIR
-            / cls._SESSION_FILENAME
+        from shruggie_indexer.app_paths import get_app_data_dir
+
+        return get_app_data_dir() / SessionManager._SESSION_FILENAME
+
+    @staticmethod
+    def _legacy_roaming_base() -> Path | None:
+        """Return the v0.1.1 Roaming base directory on Windows, or None."""
+        if platform.system() != "Windows":
+            return None
+        return Path(
+            os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"),
         )
 
     @classmethod
     def _resolve_read_path(cls) -> Path:
         """Return the path to read session data from.
 
-        Checks the new namespaced location first.  If it does not exist,
-        falls back to the legacy v0.1.0 location.  If neither exists,
-        returns the new path (load will produce an empty dict).
+        Three-tier fallback chain:
+
+        1. Canonical path (``%LOCALAPPDATA%`` on Windows).
+        2. v0.1.1 Roaming path (``%APPDATA%\\shruggie-tech\\...``, Windows only).
+        3. v0.1.0 flat path (``%APPDATA%\\shruggie-indexer\\...``
+           or ``~/.config/shruggie-indexer/...``).
+
+        If none exist, returns the canonical path (load produces empty dict).
         """
-        base = cls._config_base()
-        new_path = base / cls._ECOSYSTEM_DIR / cls._TOOL_DIR / cls._SESSION_FILENAME
-        if new_path.exists():
-            return new_path
+        canonical = cls._resolve_path()
+        if canonical.exists():
+            return canonical
 
-        legacy_path = base / cls._LEGACY_DIR / cls._SESSION_FILENAME
-        if legacy_path.exists():
-            logger.info(
-                "Session file found at legacy path %s — "
-                "it will be migrated to %s on next save.",
-                legacy_path,
-                new_path,
+        # Tier 2: v0.1.1 Roaming (Windows only)
+        roaming_base = cls._legacy_roaming_base()
+        if roaming_base is not None:
+            roaming_path = (
+                roaming_base / "shruggie-tech" / "shruggie-indexer"
+                / cls._SESSION_FILENAME
             )
-            return legacy_path
+            if roaming_path.exists():
+                logger.info(
+                    "Session file found at legacy Roaming path %s — "
+                    "it will be migrated to %s on next save.",
+                    roaming_path,
+                    canonical,
+                )
+                return roaming_path
 
-        return new_path
+        # Tier 3: v0.1.0 flat path
+        if roaming_base is not None:
+            legacy_flat = roaming_base / cls._LEGACY_DIR / cls._SESSION_FILENAME
+        else:
+            # Linux / macOS: same base as canonical minus ecosystem dir
+            from shruggie_indexer.app_paths import get_app_data_dir
+
+            legacy_flat = (
+                get_app_data_dir().parent.parent
+                / cls._LEGACY_DIR
+                / cls._SESSION_FILENAME
+            )
+        if legacy_flat.exists():
+            logger.info(
+                "Session file found at legacy v0.1.0 path %s — "
+                "it will be migrated to %s on next save.",
+                legacy_flat,
+                canonical,
+            )
+            return legacy_flat
+
+        return canonical
 
     def load(self) -> dict[str, Any]:
         """Load session data.  Returns empty dict on any failure."""

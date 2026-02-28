@@ -1,18 +1,20 @@
 """Persistent log file support for shruggie-indexer.
 
-Resolves the platform-appropriate log directory and provides a factory
-for creating ``logging.FileHandler`` instances with the correct format.
+Provides a factory for creating ``logging.FileHandler`` instances with
+the correct format.  Log directory resolution is delegated to
+:func:`shruggie_indexer.app_paths.get_log_dir` — the single source of
+truth for all application data paths.
 
-See spec SS11.1 — Logging Architecture.
+See spec §11.1 — Logging Architecture.
 """
 
 from __future__ import annotations
 
 import logging
-import os
-import platform
 from datetime import UTC, datetime
 from pathlib import Path
+
+from shruggie_indexer.app_paths import get_log_dir
 
 __all__ = [
     "get_default_log_dir",
@@ -23,35 +25,15 @@ __all__ = [
 def get_default_log_dir() -> Path:
     """Return the platform-appropriate log directory.
 
+    Delegates to :func:`shruggie_indexer.app_paths.get_log_dir`.
+
     | Platform | Directory |
     |----------|-----------|
-    | Windows  | ``%LOCALAPPDATA%\\ShruggieTech\\shruggie-indexer\\logs\\`` |
-    | macOS    | ``~/Library/Application Support/ShruggieTech/shruggie-indexer/logs/`` |
-    | Linux    | ``~/.local/share/shruggie-indexer/logs/`` |
+    | Windows  | ``%LOCALAPPDATA%\\shruggie-tech\\shruggie-indexer\\logs\\`` |
+    | macOS    | ``~/Library/Application Support/shruggie-tech/shruggie-indexer/logs/`` |
+    | Linux    | ``~/.config/shruggie-tech/shruggie-indexer/logs/`` |
     """
-    system = platform.system()
-    if system == "Windows":
-        base = Path(
-            os.environ.get(
-                "LOCALAPPDATA",
-                Path.home() / "AppData" / "Local",
-            ),
-        )
-        return base / "ShruggieTech" / "shruggie-indexer" / "logs"
-    if system == "Darwin":
-        return (
-            Path.home()
-            / "Library"
-            / "Application Support"
-            / "ShruggieTech"
-            / "shruggie-indexer"
-            / "logs"
-        )
-    # Linux and other POSIX
-    base = Path(
-        os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"),
-    )
-    return base / "shruggie-indexer" / "logs"
+    return get_log_dir()
 
 
 def _generate_log_filename() -> str:

@@ -19,17 +19,20 @@ Configuration values are resolved in the following order. Higher-priority layers
 |----------|-----------------|
 | Linux | `~/.config/shruggie-tech/shruggie-indexer/config.toml` |
 | macOS | `~/Library/Application Support/shruggie-tech/shruggie-indexer/config.toml` |
-| Windows | `%APPDATA%\shruggie-tech\shruggie-indexer\config.toml` |
+| Windows | `%LOCALAPPDATA%\shruggie-tech\shruggie-indexer\config.toml` |
 
 Project-local config files (`.shruggie-indexer.toml`) are searched starting from the target directory and walking up to the filesystem root.
 
-!!! info "Migration from v0.1.0"
-    Prior to v0.1.1, configuration files were stored directly under
-    `<base>/shruggie-indexer/` (without the `shruggie-tech/` parent directory).
-    The tool checks the new path first and falls back to the legacy path
-    transparently. An INFO-level log message is emitted when the legacy path
-    is used, recommending relocation to the new path. No files are deleted
-    during migration.
+!!! info "Migration from earlier versions"
+    Prior to the current version, configuration files were stored at different
+    locations depending on the release:
+
+    - **v0.1.1:** `%APPDATA%\shruggie-tech\shruggie-indexer\config.toml` (Windows Roaming)
+    - **v0.1.0:** `<base>/shruggie-indexer/config.toml` (without `shruggie-tech/` parent)
+
+    The tool checks the canonical path first and transparently falls back to
+    legacy paths. An INFO-level log message is emitted when a legacy path is
+    used, recommending relocation. No files are deleted during migration.
 
 To specify a config file explicitly from the command line:
 
@@ -169,9 +172,9 @@ The `[logging]` section controls persistent log file output. By default, shruggi
 
 | Platform | Directory |
 |----------|-----------|
-| Windows | `%LOCALAPPDATA%\ShruggieTech\shruggie-indexer\logs\` |
-| macOS | `~/Library/Application Support/ShruggieTech/shruggie-indexer/logs/` |
-| Linux | `~/.local/share/shruggie-indexer/logs/` |
+| Windows | `%LOCALAPPDATA%\shruggie-tech\shruggie-indexer\logs\` |
+| macOS | `~/Library/Application Support/shruggie-tech/shruggie-indexer/logs/` |
+| Linux | `~/.config/shruggie-tech/shruggie-indexer/logs/` |
 
 Log files are named by date and session: `YYYY-MM-DD_HHMMSS.log`. The log file format includes timestamps, session ID, log level, logger name, and message:
 

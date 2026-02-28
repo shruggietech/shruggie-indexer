@@ -706,7 +706,9 @@ src/shruggie_indexer/
 ├── __init__.py
 ├── __main__.py
 ├── _version.py
+├── app_paths.py
 ├── exceptions.py
+├── log_file.py
 ├── core/
 │   ├── __init__.py
 │   ├── traversal.py
@@ -742,7 +744,9 @@ src/shruggie_indexer/
 | `__init__.py` | Public API surface. Exports the primary programmatic entry points (e.g., `index_path()`, `index_file()`, `index_directory()`) and the configuration constructor. Consumers who `import shruggie_indexer` interact through this module. See [§9.1](#91-public-api-surface). |
 | `__main__.py` | Enables `python -m shruggie_indexer` invocation. Contains only an import and call to `cli.main.main()`. No logic beyond the entry-point dispatch. |
 | `_version.py` | Single source of truth for the package version string: `__version__ = "0.1.0"`. Read by `pyproject.toml` (via `hatchling`'s version plugin), by `__init__.py` for the public `__version__` attribute, and by the CLI `--version` flag. This is the same version management pattern used by `shruggie-feedtools`. |
+| `app_paths.py` | Canonical application data path resolver. Defines `get_app_data_dir()` and `get_log_dir()` — the single source of truth for all application data directories on all platforms. Every module that reads or writes to the application data directory imports from this module. See [§3.3](#33-configuration-file-locations). |
 | `exceptions.py` | Defines the exception hierarchy used throughout the package: `IndexerError` (base), `IndexerConfigError`, `IndexerTargetError`, `IndexerRuntimeError`, `RenameError`, and `IndexerCancellationError`. See [§9.4](#94-data-classes-and-type-definitions), Exception hierarchy. |
+| `log_file.py` | Persistent log file support. Provides `get_default_log_dir()` (delegates to `app_paths.get_log_dir()`) and `make_file_handler()` for creating `logging.FileHandler` instances with timestamped filenames. See [§11.1](#111-logging-architecture). |
 
 <a id="core-indexing-engine"></a>
 #### `core/` — Indexing Engine
@@ -808,30 +812,53 @@ If the GUI grows in complexity (custom widgets, asset files, multiple views), ad
 <a id="33-configuration-file-locations"></a>
 ### 3.3. Configuration File Locations
 
-> **Updated 2026-02-25:** The user config directory was moved from a tool-level namespace (`shruggie-indexer/`) to the shared ecosystem namespace (`shruggie-tech/shruggie-indexer/`). Legacy paths are still read via automatic fallback; see Migration below.
+> **Updated 2026-02-27:** All application data paths are now resolved through `app_paths.py` (`get_app_data_dir()`), the single source of truth for the canonical application data directory. On Windows, the base directory changed from `%APPDATA%` (Roaming) to `%LOCALAPPDATA%` (Local), consolidating all application data under one root. On macOS, the config loader now uses `~/Library/Application Support` (matching the GUI session manager) rather than `~/.config`. The legacy path fallback chain is now three tiers deep. See the Application Data Directory subsection below.
+
+<a id="33a-application-data-directory"></a>
+#### Application Data Directory
+
+All tool-generated data — session files, configuration, and log files — is stored under a single canonical directory per platform. This directory is resolved by `app_paths.get_app_data_dir()`, which is the **only** authorized source for application data paths. No other module may resolve these paths independently.
+
+**Canonical application data directory:**
+
+| Platform | Path | Environment variable |
+|----------|------|---------------------|
+| Windows  | `%LOCALAPPDATA%\shruggie-tech\shruggie-indexer\` | `LOCALAPPDATA` (fallback: `~/AppData/Local`) |
+| Linux    | `~/.config/shruggie-tech/shruggie-indexer/` | `XDG_CONFIG_HOME` (fallback: `~/.config`) |
+| macOS    | `~/Library/Application Support/shruggie-tech/shruggie-indexer/` | _(hardcoded)_ |
+
+**Directory contents:**
+
+| Artifact | Relative path | Written by |
+|----------|--------------|------------|
+| GUI session state | `gui-session.json` | `SessionManager.save()` |
+| User config file | `config.toml` | User (manual placement) |
+| Persistent log files | `logs/YYYY-MM-DD_HHMMSS.log` | `log_file.make_file_handler()` |
+
+The two-level directory structure (`shruggie-tech/shruggie-indexer/`) places the tool's data under a shared ecosystem namespace. Other tools in the `shruggie-tech` family (e.g., `shruggie-feedtools`, `shruggie-catalog`) use sibling directories under the same `shruggie-tech/` parent, providing consistent discoverability and a single parent directory for users managing multiple `shruggie-tech` tools.
+
+All future application data MUST be written under this directory. The `app_paths.py` module also provides `get_log_dir()`, which returns `<app_data_dir>/logs/`.
+
+#### Configuration File Resolution
 
 The indexer's configuration system uses a layered resolution strategy. The following locations are checked in order, with later sources overriding earlier ones:
 
 | Priority | Location | Description |
 |----------|----------|-------------|
 | 1 (lowest) | Compiled defaults | The values in `config/defaults.py`. Always present. |
-| 2 | User config directory | `<base>/shruggie-tech/shruggie-indexer/config.toml` where `<base>` is the platform-standard config root (see path table below). Per-user persistent configuration. |
+| 2 | User config directory | `<app_data_dir>/config.toml` where `<app_data_dir>` is the canonical application data directory (see table above). Per-user persistent configuration. |
 | 3 | Project/working directory | `.shruggie-indexer.toml` in the target directory or its ancestors (ancestor walk). Per-project overrides. |
 | 4 (highest) | CLI flags | Command-line arguments override all file-based configuration. |
 
-**User config directory paths (v0.1.1+):**
+**Migration from legacy paths.** The config loader implements a three-tier read fallback for the user config file:
 
-| Platform | Path |
-|----------|------|
-| Windows  | `%APPDATA%\shruggie-tech\shruggie-indexer\config.toml` |
-| Linux    | `~/.config/shruggie-tech/shruggie-indexer/config.toml` (or `$XDG_CONFIG_HOME/shruggie-tech/shruggie-indexer/config.toml` if set) |
-| macOS    | `~/.config/shruggie-tech/shruggie-indexer/config.toml` |
+| Tier | Path (Windows) | Path (Linux/macOS) | Introduced |
+|------|---------------|-------------------|------------|
+| 1 (canonical) | `%LOCALAPPDATA%\shruggie-tech\shruggie-indexer\config.toml` | `<app_data_dir>/config.toml` | This version |
+| 2 (v0.1.1 Roaming) | `%APPDATA%\shruggie-tech\shruggie-indexer\config.toml` | _(same as tier 1)_ | v0.1.1 |
+| 3 (v0.1.0 flat) | `%APPDATA%\shruggie-indexer\config.toml` | `~/.config/shruggie-indexer/config.toml` | v0.1.0 |
 
-The two-level directory structure (`shruggie-tech/shruggie-indexer/`) places the tool's configuration under a shared ecosystem namespace. Other tools in the `shruggie-tech` family (e.g., `shruggie-feedtools`, `shruggie-catalog`) use sibling directories under the same `shruggie-tech/` parent, providing consistent discoverability and a single parent directory for users managing multiple `shruggie-tech` tools.
-
-The base directory is resolved via `os.environ` lookups (`APPDATA` on Windows, `XDG_CONFIG_HOME` on Linux/macOS) with hardcoded fallbacks (`~/AppData/Roaming`, `~/.config`). The implementation MUST NOT hardcode full platform-specific paths — the resolution logic must work correctly on all three target platforms.
-
-**Migration from v0.1.0 paths.** The v0.1.0 release used a flat `shruggie-indexer/` directory at the config root (e.g., `%APPDATA%\shruggie-indexer\config.toml`). The v0.1.1 resolution strategy checks the new namespaced path first; if the file is not found there, it falls back to the legacy v0.1.0 path. When a configuration file is found at the legacy path, the tool logs an `INFO`-level message advising the user to move it to the new location. This is a read-only fallback — the tool does not automatically copy or move the file. The GUI session persistence layer ([§10.1](#101-gui-framework-and-architecture)) performs auto-migration of its own session file on write (see session persistence section for details).
+On Linux and macOS, tiers 1 and 2 collapse to the same path (no Local/Roaming distinction). When a configuration file is found at a legacy path, the tool logs an `INFO`-level message advising the user to move it to the canonical location. This is a read-only fallback — the tool does not automatically copy or move the file. The GUI session persistence layer ([§10.1](#101-gui-framework-and-architecture)) performs auto-migration of its own session file on write (see session persistence section for details). Legacy files are never deleted.
 
 Configuration files are TOML format, parsed by `tomllib` (stdlib). See [§7.6](#76-configuration-file-format) for the file format specification and [§7.7](#77-configuration-override-and-merging-behavior) for the merge/override behavior.
 
@@ -5858,27 +5885,21 @@ The threading contract:
 <a id="session-persistence"></a>
 #### Session persistence
 
-The GUI persists user session settings — window geometry, last-used operation tab, per-tab input values, and settings panel preferences — to a JSON file in the platform-appropriate application data directory. This ensures the GUI reopens in the state the user left it.
+The GUI persists user session settings — window geometry, last-used operation tab, per-tab input values, and settings panel preferences — to a JSON file in the canonical application data directory ([§3.3](#33-configuration-file-locations)). This ensures the GUI reopens in the state the user left it.
 
-> **Updated 2026-02-25:** Session file paths moved to the shared `shruggie-tech` ecosystem namespace. Legacy paths are read via automatic fallback and auto-migrated on the next write.
+> **Updated 2026-02-27:** Session file paths are now resolved through `app_paths.get_app_data_dir()`. On Windows, the base changed from `%APPDATA%` (Roaming) to `%LOCALAPPDATA%` (Local). The migration fallback chain is now three tiers deep, covering both the v0.1.1 Roaming path and the v0.1.0 flat path. The `SessionManager._config_base()` method and `_ECOSYSTEM_DIR`/`_TOOL_DIR` class constants have been removed — path resolution is now owned entirely by `app_paths.py`.
 
-**Session file location (v0.1.1+):**
+**Session file location:** `<app_data_dir>/gui-session.json` where `<app_data_dir>` is the canonical application data directory defined in [§3.3](#33-configuration-file-locations).
 
-| Platform | Path |
-|----------|------|
-| Windows | `%APPDATA%\shruggie-tech\shruggie-indexer\gui-session.json` |
-| Linux | `~/.config/shruggie-tech/shruggie-indexer/gui-session.json` |
-| macOS | `~/Library/Application Support/shruggie-tech/shruggie-indexer/gui-session.json` |
+**Legacy path migration.** On read, the `SessionManager` checks paths in this order:
 
-**Legacy paths (v0.1.0):**
+| Tier | Path (Windows) | Path (Linux/macOS) | Origin |
+|------|---------------|-------------------|--------|
+| 1 (canonical) | `%LOCALAPPDATA%\shruggie-tech\shruggie-indexer\gui-session.json` | `<app_data_dir>/gui-session.json` | This version |
+| 2 (v0.1.1 Roaming) | `%APPDATA%\shruggie-tech\shruggie-indexer\gui-session.json` | _(same as tier 1)_ | v0.1.1 |
+| 3 (v0.1.0 flat) | `%APPDATA%\shruggie-indexer\gui-session.json` | `~/.config/shruggie-indexer/gui-session.json` | v0.1.0 |
 
-| Platform | Path |
-|----------|------|
-| Windows | `%APPDATA%\shruggie-indexer\gui-session.json` |
-| Linux | `~/.config/shruggie-indexer/gui-session.json` |
-| macOS | `~/Library/Application Support/shruggie-indexer/gui-session.json` |
-
-**Migration behavior.** On read, the `SessionManager` checks the new namespaced path first. If the file is not found there, it falls back to the legacy v0.1.0 path and logs an `INFO`-level message indicating that the file will be migrated on the next save. Writes always target the new namespaced path, creating parent directories as needed — this constitutes auto-migration on write. After the first write, subsequent reads resolve to the new path and the legacy file is no longer consulted. The legacy file is not deleted; users may remove it manually.
+On Linux/macOS, tiers 1 and 2 collapse to the same path. When a session file is found at a legacy path, an `INFO`-level message is logged indicating that the file will be migrated on the next save. Writes always target the canonical path, creating parent directories as needed — this constitutes auto-migration on write. After the first write, subsequent reads resolve to the canonical path and legacy files are no longer consulted. Legacy files are not deleted; users may remove them manually.
 
 This uses the same ecosystem namespace structure as the indexer's TOML configuration file ([§3.3](#33-configuration-file-locations)), under `shruggie-tech/shruggie-indexer/`. The session file is a separate file from the TOML configuration — it stores GUI-specific presentation state, not indexing configuration. The TOML file governs indexing behavior; the session file governs window preferences.
 
@@ -6955,13 +6976,15 @@ The logging system follows four principles that govern all implementation decisi
 
 > **Updated 2026-02-27:** The GUI's "Write log files" checkbox now defaults to **on** (enabled). File handler creation (`_setup_file_logging()`) is deferred until after `_restore_session()` completes, so the user's persisted preference gates whether a `FileHandler` is attached. This resolved a bug where the handler was created unconditionally during `__init__` (before session restore), then immediately detached by `_sync_file_logging()` during restore — leaving 0-byte orphan log files and no actual logging output.
 
-When enabled, log files are written to the platform-appropriate application data directory:
+When enabled, log files are written to the canonical application data directory's `logs/` subdirectory, as defined in [§3.3](#33-configuration-file-locations):
 
 | Platform | Directory |
 |----------|-----------|
-| Windows | `%LOCALAPPDATA%\ShruggieTech\shruggie-indexer\logs\` |
-| macOS | `~/Library/Application Support/ShruggieTech/shruggie-indexer/logs/` |
-| Linux | `~/.local/share/shruggie-indexer/logs/` |
+| Windows | `%LOCALAPPDATA%\shruggie-tech\shruggie-indexer\logs\` |
+| macOS | `~/Library/Application Support/shruggie-tech/shruggie-indexer/logs/` |
+| Linux | `~/.config/shruggie-tech/shruggie-indexer/logs/` |
+
+> **Updated 2026-02-27:** Log directory paths are now resolved through `app_paths.get_log_dir()`, the single source of truth for all application data paths. The previous `ShruggieTech` (PascalCase) namespace and Linux `~/.local/share` base have been replaced with the canonical `shruggie-tech` (kebab-case) namespace under the unified application data directory. The `log_file.py` module no longer contains any inline path resolution logic.
 
 Log files are named by date and session: `YYYY-MM-DD_HHMMSS.log`. The log file uses the CLI's full format including session ID ([§11.5](#115-log-output-destinations)). The directory is created on first use via `platformdirs`. The tool does not manage log rotation — each invocation creates a new file. This is a deliberate design choice: a CLI tool that silently writes to the filesystem on every invocation is surprising behavior, so file logging is always opt-in.
 

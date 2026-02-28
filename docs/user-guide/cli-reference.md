@@ -244,9 +244,9 @@ shruggie-indexer path/to/target --log-file /path/to/output.log
 
 | Platform | Directory |
 |----------|-----------|
-| Windows | `%LOCALAPPDATA%\ShruggieTech\shruggie-indexer\logs\` |
-| macOS | `~/Library/Application Support/ShruggieTech/shruggie-indexer/logs/` |
-| Linux | `~/.local/share/shruggie-indexer/logs/` |
+| Windows | `%LOCALAPPDATA%\shruggie-tech\shruggie-indexer\logs\` |
+| macOS | `~/Library/Application Support/shruggie-tech/shruggie-indexer/logs/` |
+| Linux | `~/.config/shruggie-tech/shruggie-indexer/logs/` |
 
 Log files are named by date and session: `YYYY-MM-DD_HHMMSS.log`. The log level written to the file matches the currently configured verbosity.
 

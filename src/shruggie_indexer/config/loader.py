@@ -45,8 +45,6 @@ logger = logging.getLogger(__name__)
 
 # Config file names
 _USER_CONFIG_FILENAME = "config.toml"
-_ECOSYSTEM_DIR_NAME = "shruggie-tech"
-_TOOL_DIR_NAME = "shruggie-indexer"
 _LEGACY_DIR_NAME = "shruggie-indexer"  # v0.1.0 path (without ecosystem parent)
 _PROJECT_CONFIG_FILENAME = ".shruggie-indexer.toml"
 
@@ -56,39 +54,68 @@ _PROJECT_CONFIG_FILENAME = ".shruggie-indexer.toml"
 # ---------------------------------------------------------------------------
 
 
-def _resolve_config_base() -> Path:
-    """Return the platform-standard base directory for user configuration."""
-    if sys.platform == "win32":
-        return Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
-    xdg = os.environ.get("XDG_CONFIG_HOME")
-    return Path(xdg) if xdg else Path.home() / ".config"
+def _legacy_roaming_base() -> Path | None:
+    """Return the v0.1.1 Roaming base directory on Windows, or None."""
+    if sys.platform != "win32":
+        return None
+    return Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
 
 
 def _find_user_config() -> Path | None:
     """Resolve the platform-standard user configuration file path.
 
-    Searches the new ecosystem namespace first
-    (``<base>/shruggie-tech/shruggie-indexer/config.toml``), then falls back
-    to the legacy v0.1.0 path (``<base>/shruggie-indexer/config.toml``).
-    Returns ``None`` if neither file exists.
+    Three-tier fallback chain:
+
+    1. Canonical path via :func:`~shruggie_indexer.app_paths.get_app_data_dir`
+       (``%LOCALAPPDATA%`` on Windows).
+    2. v0.1.1 Roaming path (``%APPDATA%\\shruggie-tech\\shruggie-indexer\\``,
+       Windows only).
+    3. v0.1.0 flat path (``%APPDATA%\\shruggie-indexer\\`` or
+       ``~/.config/shruggie-indexer/``).
+
+    Returns ``None`` if no config file is found at any location.
     """
-    base = _resolve_config_base()
+    from shruggie_indexer.app_paths import get_app_data_dir
 
-    # New namespaced path  (v0.1.1+)
-    new_path = base / _ECOSYSTEM_DIR_NAME / _TOOL_DIR_NAME / _USER_CONFIG_FILENAME
-    if new_path.is_file():
-        return new_path
+    canonical_dir = get_app_data_dir()
 
-    # Legacy path  (v0.1.0)
-    legacy_path = base / _LEGACY_DIR_NAME / _USER_CONFIG_FILENAME
-    if legacy_path.is_file():
-        logger.info(
-            "Configuration file found at legacy path %s — "
-            "consider moving it to %s",
-            legacy_path,
-            new_path,
+    # Tier 1: Canonical path
+    canonical_path = canonical_dir / _USER_CONFIG_FILENAME
+    if canonical_path.is_file():
+        return canonical_path
+
+    # Tier 2: v0.1.1 Roaming (Windows only)
+    roaming_base = _legacy_roaming_base()
+    if roaming_base is not None:
+        roaming_path = (
+            roaming_base / "shruggie-tech" / "shruggie-indexer"
+            / _USER_CONFIG_FILENAME
         )
-        return legacy_path
+        if roaming_path.is_file():
+            logger.info(
+                "Configuration file found at legacy Roaming path %s — "
+                "consider moving it to %s",
+                roaming_path,
+                canonical_path,
+            )
+            return roaming_path
+
+    # Tier 3: v0.1.0 flat path
+    if roaming_base is not None:
+        legacy_flat = roaming_base / _LEGACY_DIR_NAME / _USER_CONFIG_FILENAME
+    else:
+        # Linux / macOS: same config base minus ecosystem dir
+        legacy_flat = (
+            canonical_dir.parent.parent / _LEGACY_DIR_NAME / _USER_CONFIG_FILENAME
+        )
+    if legacy_flat.is_file():
+        logger.info(
+            "Configuration file found at legacy v0.1.0 path %s — "
+            "consider moving it to %s",
+            legacy_flat,
+            canonical_path,
+        )
+        return legacy_flat
 
     return None
 

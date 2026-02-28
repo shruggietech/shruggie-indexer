@@ -264,19 +264,22 @@ The application supports the following keyboard shortcuts:
 
 The application automatically saves your window size, position, selected tab, operation settings, card collapsed/expanded states, Advanced Configuration section states, and output panel height when you close it. The next time you open the application, everything is restored to where you left off.
 
-Session data is stored in your operating system's standard configuration directory under the shared ShruggieTech ecosystem namespace:
+Session data is stored in your operating system's standard application data directory under the shared shruggie-tech ecosystem namespace:
 
 | Platform | Location |
 |----------|----------|
-| Windows | `%APPDATA%\shruggie-tech\shruggie-indexer\gui-session.json` |
+| Windows | `%LOCALAPPDATA%\shruggie-tech\shruggie-indexer\gui-session.json` |
 | macOS | `~/Library/Application Support/shruggie-tech/shruggie-indexer/gui-session.json` |
 | Linux | `~/.config/shruggie-tech/shruggie-indexer/gui-session.json` |
 
+This is the same directory that contains the `config.toml` configuration file and the `logs/` subdirectory. The **Open Config Folder** button on the Settings page opens this directory.
+
 If the session file is missing or becomes corrupted, the application starts with default settings.
 
-!!! info "Migration from v0.1.0"
-    If you are upgrading from v0.1.0, existing session data at the old path
-    (e.g., `%APPDATA%\shruggie-indexer\gui-session.json`) is read automatically.
+!!! info "Migration from earlier versions"
+    If you are upgrading from v0.1.1 or v0.1.0, existing session data at the
+    old path (e.g., `%APPDATA%\shruggie-tech\shruggie-indexer\gui-session.json`
+    or `%APPDATA%\shruggie-indexer\gui-session.json`) is read automatically.
     On the next save (application exit or operation completion), the session file
     is written to the new location. The old file is preserved — it is safe to
     delete manually after confirming the new file has been created.
