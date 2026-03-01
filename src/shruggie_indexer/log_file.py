@@ -69,6 +69,13 @@ def make_file_handler(
 
     handler = logging.FileHandler(log_path, encoding="utf-8")
 
+    # Force line-buffered mode for real-time log visibility on all
+    # platforms.  Without this, records may accumulate in the OS I/O
+    # buffer and the log file can appear 0 bytes in file managers
+    # until the buffer is flushed.  See spec §11.1 Principle 3.
+    if hasattr(handler.stream, "reconfigure"):
+        handler.stream.reconfigure(line_buffering=True)
+
     # Format matches the CLI's verbose stderr format with session ID
     if session_id:
         fmt = f"%(asctime)s  {session_id}  %(levelname)-9s %(name)s  %(message)s"

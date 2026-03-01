@@ -6342,7 +6342,9 @@ Settings values are saved to the session file ([§10.1](#101-gui-framework-and-a
 
 **Reset to Defaults.** Resets all Settings fields to their compiled default values. Does NOT reset Operations page input state — only the Settings page's own fields. Presents a confirmation dialog before proceeding: _"Reset all settings to their default values?"_
 
-**Open Config Folder.** Opens the platform-specific application data directory (`%APPDATA%\shruggie-tech\shruggie-indexer\` on Windows, `~/.config/shruggie-tech/shruggie-indexer/` on Linux, `~/Library/Application Support/shruggie-tech/shruggie-indexer/` on macOS) in the system file manager. This is a convenience for users who want to edit the TOML configuration file directly or inspect the session file. If the directory does not exist, it is created before opening. The path is derived from `SessionManager._resolve_path().parent`, ensuring consistency with the session persistence layer.
+> **Updated 2026-02-28:** Corrected the Windows path from `%APPDATA%` to `%LOCALAPPDATA%`, consistent with the canonical application data directory defined in [§3.3a](#33a-application-data-directory).
+
+**Open Config Folder.** Opens the canonical application data directory ([§3.3a](#33a-application-data-directory)) in the system file manager. On Windows this resolves to `%LOCALAPPDATA%\shruggie-tech\shruggie-indexer\`, on Linux to `~/.config/shruggie-tech/shruggie-indexer/`, and on macOS to `~/Library/Application Support/shruggie-tech/shruggie-indexer/`. This is a convenience for users who want to edit the TOML configuration file directly or inspect the session file. If the directory does not exist, it is created before opening. The path is derived from `SessionManager._resolve_path().parent`, ensuring consistency with the session persistence layer.
 
 <a id="advanced-configuration-scaffold"></a>
 #### Advanced Configuration scaffold
@@ -6976,6 +6978,8 @@ The logging system follows four principles that govern all implementation decisi
 3. **GUI toggle:** A "Write log files" checkbox on the Settings page enables per-operation log file output.
 
 > **Updated 2026-02-27:** The GUI's "Write log files" checkbox now defaults to **on** (enabled). File handler creation (`_setup_file_logging()`) is deferred until after `_restore_session()` completes, so the user's persisted preference gates whether a `FileHandler` is attached. This resolved a bug where the handler was created unconditionally during `__init__` (before session restore), then immediately detached by `_sync_file_logging()` during restore — leaving 0-byte orphan log files and no actual logging output.
+
+> **Updated 2026-02-28:** The `FileHandler`'s underlying stream is now reconfigured with `line_buffering=True` after creation, and an explicit `flush()` is called after the initial startup log records. This ensures log files are non-empty on disk immediately after application startup, regardless of OS-level I/O buffering behavior. Previously, log records could accumulate in the write buffer and the file would appear as 0 bytes in the file manager until the buffer was flushed by a subsequent event.
 
 When enabled, log files are written to the canonical application data directory's `logs/` subdirectory, as defined in [§3.3](#33-configuration-file-locations):
 

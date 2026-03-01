@@ -2899,6 +2899,11 @@ class ShruggiIndexerApp(ctk.CTk):
                 "Log file: %s",
                 self._persistent_file_handler.baseFilename,
             )
+            # Explicit flush ensures the log file is non-empty on disk
+            # immediately after startup, even if subsequent records are
+            # delayed.  Guards against 0-byte files visible in file
+            # managers.  See Defect 5 / 20260228-001.
+            self._persistent_file_handler.flush()
         except Exception:
             logger.warning("Failed to set up persistent file logging", exc_info=True)
 
