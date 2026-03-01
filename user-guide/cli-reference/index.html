@@ -937,6 +937,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#de-duplication-during-rename" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        De-duplication during Rename
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2032,6 +2043,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#de-duplication-during-rename" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        De-duplication during Rename
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2410,6 +2432,23 @@ shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </spa
 <div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--rename<span class="w"> </span>--dry-run
 </code></pre></div>
 <p>Logs each proposed rename at <code>INFO</code> level. Only meaningful when used with <code>--rename</code>.</p>
+<h3 id="de-duplication-during-rename">De-duplication during Rename</h3>
+<p>When <code>--rename</code> is active, the indexer performs session-scoped de-duplication before any files are renamed. Files sharing identical content hashes are detected across all directories in the target tree:</p>
+<ol>
+<li><strong>Scan:</strong> The completed entry tree is walked to identify groups of byte-identical files (same <code>id</code> hash).</li>
+<li><strong>Canonical selection:</strong> The first file encountered in each group becomes the canonical copy. All others are duplicates.</li>
+<li><strong>Provenance preservation:</strong> Each duplicate's complete <code>IndexEntry</code> — including its original name, timestamps, filesystem location, and all metadata entries — is stored in the canonical entry's <code>duplicates</code> array.</li>
+<li><strong>Rename:</strong> Only canonical files are renamed to their <code>storage_name</code>. Duplicate files are removed from the entry tree.</li>
+<li><strong>Cleanup:</strong> Duplicate files are deleted from disk after the rename phase completes.</li>
+</ol>
+<div class="highlight"><pre><span></span><code><span class="c1"># Run rename with de-duplication (default when --rename is active)</span>
+shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--rename<span class="w"> </span>--inplace
+
+<span class="c1"># Preview dedup results without deleting or renaming</span>
+shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--rename<span class="w"> </span>--dry-run
+</code></pre></div>
+<p>In <code>--dry-run</code> mode, duplicates are identified and reported in the JSON output (the <code>duplicates</code> array is populated), but no files are renamed or deleted.</p>
+<p>The <code>duplicates</code> field appears on the canonical entry's sidecar JSON. Each element is a full <code>IndexEntry</code> preserving the absorbed file's original identity. See the <a href="../../schema/">Schema Reference</a> for field details.</p>
 <h2 id="identity-options">Identity Options</h2>
 <h3 id="-id-type"><code>--id-type</code></h3>
 <p>Select which hash algorithm is used for the <code>id</code> field and <code>storage_name</code>. Choices: <code>md5</code> (default) or <code>sha256</code>.</p>

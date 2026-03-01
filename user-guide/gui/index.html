@@ -2225,7 +2225,7 @@ published on the GitHub release page.</p>
 <li><strong>ID Algorithm</strong> — Choose between <code>md5</code> (faster, shorter IDs) and <code>sha256</code> (stronger, longer IDs). This controls how file identifiers are generated.</li>
 <li><strong>Compute SHA-512</strong> — When checked, an additional high-strength hash is computed for each file. If the "Compute SHA-512 by default" setting is enabled on the Settings tab, this checkbox is forced on with an explanation ("Enabled in Settings") and cannot be unchecked from the Operations tab.</li>
 <li><strong>Extract EXIF metadata</strong> — When checked, embedded metadata (camera settings, GPS coordinates, creation dates, etc.) is extracted from media files using ExifTool. Requires ExifTool to be installed. Automatically forced on for Meta Merge and Meta Merge Delete operations.</li>
-<li><strong>Rename files</strong> — When checked, files are renamed to unique, content-based names ("storage names") after indexing. This feature can be combined with any operation type. Enabling rename makes the operation destructive (the indicator dot turns red) unless dry-run is also enabled.</li>
+<li><strong>Rename files</strong> — When checked, files are renamed to unique, content-based names ("storage names") after indexing. This feature can be combined with any operation type. Enabling rename makes the operation destructive (the indicator dot turns red) unless dry-run is also enabled. When rename is active, the indexer also performs <strong>provenance-preserving de-duplication</strong>: byte-identical files across the target tree are automatically detected, the first encountered becomes the canonical copy, and all duplicates are absorbed into the canonical entry's <code>duplicates</code> array before being deleted from disk. In dry-run mode, duplicates are identified in the output but no files are deleted.</li>
 <li><strong>Dry run</strong> — Only shown when "Rename files" is checked. When enabled, previews what files <em>would</em> be renamed without actually changing anything. This is on by default as a safety measure.</li>
 </ul>
 <h3 id="output-section">Output Section</h3>
@@ -2248,6 +2248,10 @@ published on the GitHub release page.</p>
 <li><strong>View only</strong> is not available for Meta Merge Delete (destructive operations require a persistent output record) or when Rename is active (rename requires writing files to disk). The option remains visible in the dropdown but selecting it snaps back to the appropriate default with an explanatory message.</li>
 <li><strong>Single file</strong> is not available when directory metadata is unchecked with a directory target (Single file produces only directory metadata, which would be empty). The mode falls back to Multi-file automatically.</li>
 </ul>
+</div>
+<div class="admonition info">
+<p class="admonition-title">De-duplication and the <code>duplicates</code> field</p>
+<p>When Rename is active, the sidecar JSON for each canonical file may include a <code>duplicates</code> array containing full <code>IndexEntry</code> objects for every file that was de-duplicated against it. This preserves the complete identity of absorbed files (original name, timestamps, filesystem location, and metadata). The <code>duplicates</code> field is absent when no duplicates were found. See the <a href="../../schema/">Schema Reference</a> for details.</p>
 </div>
 <h3 id="running-an-operation">Running an Operation</h3>
 <p>Once everything is configured, click the green <strong>▶  START</strong> button at the bottom of the Operations area. The button is centered and uses a distinct green color to differentiate it from other controls.</p>

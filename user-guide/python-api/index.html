@@ -949,6 +949,78 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#de-duplication-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        De-duplication API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="De-duplication API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dedupregistry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DedupRegistry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scan_treeentry-registrynone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scan_tree(entry, registry=None)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apply_dedupentry-registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        apply_dedup(entry, registry)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dedupresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DedupResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cleanup_duplicate_filesactions-dry_runfalse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cleanup_duplicate_files(actions, *, dry_run=False)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#exception-hierarchy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1815,6 +1887,78 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#de-duplication-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        De-duplication API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="De-duplication API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dedupregistry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DedupRegistry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scan_treeentry-registrynone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scan_tree(entry, registry=None)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apply_dedupentry-registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        apply_dedup(entry, registry)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dedupresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DedupResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cleanup_duplicate_filesactions-dry_runfalse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cleanup_duplicate_files(actions, *, dry_run=False)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#exception-hierarchy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2253,6 +2397,7 @@
 <li><code>meta_merge_delete=True</code> → <code>meta_merge=True</code></li>
 <li><code>meta_merge=True</code> → <code>extract_exif=True</code></li>
 </ul>
+<p>The <code>write_directory_meta</code> field (default <code>True</code>) controls whether <code>_directorymeta2.json</code> directory sidecar files are emitted during output. Set to <code>False</code> to suppress directory-level sidecars while retaining per-file sidecars. Corresponds to the CLI <code>--no-dir-meta</code> flag.</p>
 </div>
 <h2 id="data-models">Data Models</h2>
 <p>All data classes are defined in <code>models/schema.py</code> and map directly to the <a href="../../schema/">v2 JSON Schema</a> types.</p>
@@ -2274,6 +2419,7 @@
     <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">IndexEntry</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">metadata</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">MetadataEntry</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">mime_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">duplicates</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">IndexEntry</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Absorbed dedup entries (rename only)</span>
     <span class="n">session_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>    <span class="c1"># UUID4 identifying the indexing session</span>
     <span class="n">indexed_at</span><span class="p">:</span> <span class="n">TimestampPair</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># When this entry was constructed</span>
 </code></pre></div>
@@ -2385,6 +2531,53 @@
 <p class="admonition-title">Callback threading</p>
 <p>The callback is invoked on the indexing thread. GUI consumers should enqueue events into a <code>queue.Queue</code> for main-thread processing. CLI consumers using <code>tqdm</code> or <code>rich</code> can update progress bars directly (both are thread-safe for single-bar updates). If the callback raises an exception, the engine logs a warning and continues.</p>
 </div>
+<h2 id="de-duplication-api">De-duplication API</h2>
+<p>The <code>core.dedup</code> module provides session-scoped de-duplication primitives. These are public API and designed for standalone import by downstream projects.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">shruggie_indexer.core.dedup</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DedupRegistry</span><span class="p">,</span>
+    <span class="n">DedupResult</span><span class="p">,</span>
+    <span class="n">DedupStats</span><span class="p">,</span>
+    <span class="n">DedupAction</span><span class="p">,</span>
+    <span class="n">scan_tree</span><span class="p">,</span>
+    <span class="n">apply_dedup</span><span class="p">,</span>
+    <span class="n">cleanup_duplicate_files</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+<h3 id="dedupregistry"><code>DedupRegistry</code></h3>
+<p>Session-scoped registry that maps content hashes to lists of <code>IndexEntry</code> objects. Call <code>register()</code> to add entries; call <code>get_groups()</code> to retrieve groups with two or more members.</p>
+<h3 id="scan_treeentry-registrynone"><code>scan_tree(entry, registry=None)</code></h3>
+<p>Recursively walk an <code>IndexEntry</code> tree, registering every file-type entry into the given <code>DedupRegistry</code> (or a fresh one). Returns the populated <code>DedupRegistry</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="n">registry</span> <span class="o">=</span> <span class="n">scan_tree</span><span class="p">(</span><span class="n">root_entry</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">hash_key</span><span class="p">,</span> <span class="n">entries</span> <span class="ow">in</span> <span class="n">registry</span><span class="o">.</span><span class="n">get_groups</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">hash_key</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">entries</span><span class="p">)</span><span class="si">}</span><span class="s2"> duplicates&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="apply_dedupentry-registry"><code>apply_dedup(entry, registry)</code></h3>
+<p>Apply de-duplication to the entry tree using the populated registry. For each group, the first entry is the canonical copy; all subsequent entries are moved into the canonical entry's <code>duplicates</code> array and removed from the tree. Returns a <code>DedupResult</code>.</p>
+<h3 id="dedupresult"><code>DedupResult</code></h3>
+<p>Result object from <code>apply_dedup()</code> containing:</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stats</code></td>
+<td><code>DedupStats</code></td>
+<td>Aggregate statistics (groups found, files absorbed, bytes saved).</td>
+</tr>
+<tr>
+<td><code>actions</code></td>
+<td><code>list[DedupAction]</code></td>
+<td>Per-file actions taken (canonical designation or duplicate absorption).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cleanup_duplicate_filesactions-dry_runfalse"><code>cleanup_duplicate_files(actions, *, dry_run=False)</code></h3>
+<p>Delete duplicate files from disk based on the actions list from <code>apply_dedup()</code>. In dry-run mode, logs proposed deletions without removing files. Each deletion is logged at <code>INFO</code> level; failures are logged at <code>ERROR</code> level and do not abort remaining deletions.</p>
 <h2 id="exception-hierarchy">Exception Hierarchy</h2>
 <p>All exceptions inherit from <code>IndexerError</code> for catch-all handling:</p>
 <div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">IndexerError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
