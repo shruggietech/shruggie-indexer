@@ -339,6 +339,12 @@
       ]
     },
 
+    "duplicates": {
+      "description": "Complete IndexEntry objects for files that were de-duplicated against this entry during a rename operation. Each element preserves the full identity metadata of a removed duplicate file. Absent when no duplicates exist for this entry.",
+      "type": "array",
+      "items": { "$ref": "#" }
+    },
+
     "session_id": {
       "description": "A UUID4 string that identifies the indexing invocation (session) that produced this entry. All entries generated within a single CLI, GUI, or API invocation share the same session_id. Useful for run correlation, staleness detection, provenance linking, and batch integrity verification by downstream consumers such as shruggie-catalog.",
       "type": "string",

@@ -837,6 +837,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#-dir-meta-no-dir-meta" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --dir-meta / --no-dir-meta
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1921,6 +1932,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#-dir-meta-no-dir-meta" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --dir-meta / --no-dir-meta
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2326,6 +2348,22 @@ shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>-o
 </tbody>
 </table>
 <p>Disables stdout output by default (use <code>--stdout</code> to re-enable).</p>
+<h3 id="-dir-meta-no-dir-meta"><code>--dir-meta</code> / <code>--no-dir-meta</code></h3>
+<p>Control whether <code>_directorymeta2.json</code> directory sidecar files are written.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Suppress directory metadata — only per-file sidecars are written</span>
+shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--inplace<span class="w"> </span>--no-dir-meta
+
+<span class="c1"># Explicitly enable (default behavior)</span>
+shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--inplace<span class="w"> </span>--dir-meta
+</code></pre></div>
+<ul>
+<li><strong>Default:</strong> Enabled (<code>--dir-meta</code>). All directory sidecars are written normally.</li>
+<li><strong><code>--no-dir-meta</code>:</strong> Suppresses directory-level <code>_directorymeta2.json</code> sidecars during <code>--inplace</code> output. Per-file <code>_meta2.json</code> sidecars are unaffected.</li>
+<li>Auto-generated aggregate output files (those ending in <code>_directorymeta2.json</code> produced by the output path defaulting logic) are also suppressed.</li>
+<li>Explicitly specified <code>--outfile</code> paths are never suppressed, regardless of this flag.</li>
+<li>Stdout output is never affected by this flag.</li>
+<li>Maps to the <code>write_directory_meta</code> configuration key.</li>
+</ul>
 <h2 id="metadata-options">Metadata Options</h2>
 <p>These options control embedded metadata extraction and sidecar metadata processing.</p>
 <div class="admonition warning">

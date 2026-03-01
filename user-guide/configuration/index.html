@@ -2109,6 +2109,7 @@ used, recommending relocation. No files are deleted during migration.</p>
 <span class="n">stdout</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w">                </span><span class="c1"># Conditional default (see docs)</span>
 <span class="c1"># file = &quot;index.json&quot;       # No default; set to enable file output</span>
 <span class="n">inplace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+<span class="n">write_directory_meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w">  </span><span class="c1"># Suppress with false to skip _directorymeta2.json files</span>
 
 <span class="c1"># ── Metadata processing ────────────────────────────────────</span>
 
@@ -2213,6 +2214,11 @@ used, recommending relocation. No files are deleted during migration.</p>
 <td><code>output.inplace</code></td>
 <td><code>false</code></td>
 <td>Write in-place sidecar files.</td>
+</tr>
+<tr>
+<td><code>output.write_directory_meta</code></td>
+<td><code>true</code></td>
+<td>Write <code>_directorymeta2.json</code> directory sidecars. Set to <code>false</code> to suppress directory-level metadata while keeping per-file sidecars.</td>
 </tr>
 <tr>
 <td><code>metadata.extract_exif</code></td>

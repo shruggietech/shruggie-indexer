@@ -1392,6 +1392,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1431,7 +1442,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_1" class="md-nav__link">
+  <a href="#changed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1554,6 +1565,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1593,7 +1615,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_1" class="md-nav__link">
+  <a href="#changed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1674,13 +1696,31 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.1...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
-<li><strong>GUI: Exit button</strong> — Added an "Exit" button to the bottom of the sidebar, positioned above the version label. The button uses a red accent color (<code>#c0392b</code> / <code>#a93226</code>) to visually distinguish it from navigation buttons. Clicking it triggers the same close/cleanup sequence as the window's close button (<code>WM_DELETE_WINDOW</code>), including the cancellation confirmation dialog when an operation is in progress.</li>
+<li><strong>Core: Provenance-preserving de-duplication</strong> — When Rename is active (<code>--rename</code> flag or GUI Rename checkbox), the indexer now performs session-scoped de-duplication. The first file encountered with a given content hash is designated the canonical copy; all subsequent byte-identical files are absorbed into the canonical entry's new <code>duplicates</code> array, preserving their complete identity metadata (original name, timestamps, filesystem location, and all metadata entries). Duplicate files are deleted from disk after the rename phase. Works for both same-directory and cross-directory duplicates. In dry-run mode, duplicates are identified and reported in the output but no files are deleted.</li>
+<li><strong>Schema: <code>duplicates</code> field on IndexEntry</strong> — New optional <code>duplicates</code> field (array of <code>IndexEntry</code>) on the root schema object. Contains complete <code>IndexEntry</code> objects for files that were de-duplicated against this entry during a rename operation. Absent (not <code>null</code>, not empty array) when no duplicates exist. The field appears after <code>metadata</code> and before <code>session_id</code>/<code>indexed_at</code> in serialized output.</li>
+<li><strong>Core: <code>dedup</code> module</strong> — New <code>src/shruggie_indexer/core/dedup.py</code> module providing <code>DedupRegistry</code>, <code>DedupResult</code>, <code>DedupStats</code>, <code>DedupAction</code>, <code>scan_tree()</code>, <code>apply_dedup()</code>, and <code>cleanup_duplicate_files()</code>. Designed for standalone importability by downstream projects (specifically <code>shruggie-catalog</code>).</li>
+<li><strong>Schema: De-duplication example</strong> — New <code>docs/schema/examples/deduplicated_meta2.json</code> example file demonstrating the <code>duplicates</code> field with a canonical entry and one absorbed duplicate.</li>
+<li><strong>Tests: De-duplication unit tests</strong> — 26 unit tests in <code>tests/unit/test_dedup.py</code> covering registry population, duplicate detection, canonical selection, merge behavior, stats calculation, tree scanning, empty-tree and single-file edge cases, <code>to_dict()</code> serialization, and provenance preservation.</li>
+<li><strong>Tests: De-duplication integration tests</strong> — 12 integration tests in <code>tests/integration/test_dedup_rename.py</code> covering same-directory dedup, cross-directory dedup, dry-run output, cleanup file deletion, provenance round-trip, and no-duplicates baseline.</li>
+<li><strong>CLI: <code>--dir-meta/--no-dir-meta</code> flag</strong> — New boolean toggle (<code>--dir-meta</code> / <code>--no-dir-meta</code>) controlling whether <code>_directorymeta2.json</code> sidecar files are written during inplace output. Defaults to enabled (preserving existing behavior). When disabled, per-file <code>_meta2.json</code> sidecars are still written normally; only the directory-level summary files are suppressed. Also suppresses auto-generated aggregate <code>_directorymeta2.json</code> output files (explicit <code>--outfile</code> paths are never suppressed). Corresponds to the <code>write_directory_meta</code> configuration key.</li>
+<li><strong>GUI: "Write directory metadata" checkbox</strong> — New checkbox in the Output card on the Operations page controlling directory metadata sidecar suppression. Mirrors the CLI <code>--no-dir-meta</code> flag. Automatically disabled when the target type is "File" (not applicable). Automatically forces Multi-file output mode when unchecked with a directory target (Single file mode produces only directory metadata, which would be empty). State persists across sessions.</li>
+<li><strong>Config: <code>write_directory_meta</code> key</strong> — New boolean configuration key (default <code>true</code>) supported in user TOML, project TOML, and CLI/API overrides. Controls whether <code>_directorymeta2.json</code> files are emitted during output. Participates in the standard 4-layer config resolution pipeline.</li>
+<li><strong>Tests: Directory metadata suppression</strong> — 3 unit tests in <code>tests/unit/test_serializer.py</code> and 6 integration tests in <code>tests/integration/test_output_modes.py</code> covering inplace sidecar suppression, aggregate output gating, stdout passthrough, explicit outfile preservation, and single-file target edge cases.</li>
+</ul>
+<h3 id="changed">Changed</h3>
+<ul>
+<li>
+<p><strong>Core: Rename collision logging elevated to ERROR</strong> — The collision branch in <code>rename_item()</code> now logs at <code>ERROR</code> level (was <code>WARNING</code>). After the dedup pass removes duplicates from the entry tree, same-directory collisions should never occur; if they do, it indicates a bug in the dedup pipeline. The message explicitly states this is a defensive guard.</p>
+</li>
+<li>
+<p><strong>GUI: Exit button</strong> — Added an "Exit" button to the bottom of the sidebar, positioned above the version label. The button uses a red accent color (<code>#c0392b</code> / <code>#a93226</code>) to visually distinguish it from navigation buttons. Clicking it triggers the same close/cleanup sequence as the window's close button (<code>WM_DELETE_WINDOW</code>), including the cancellation confirmation dialog when an operation is in progress.</p>
+</li>
 <li><strong>GUI: Log file path display</strong> — The Settings page "Output &amp; Logging" card now includes a read-only entry field showing the computed log file path (platform-specific log directory with <code>&lt;timestamp&gt;.log</code> naming). The field is always visible but displays greyed-out/muted text when logging to file is disabled or log level is "None".</li>
 <li><strong>GUI: "None" log level</strong> — The Log Level dropdown on the Settings page now includes a "None" option that suppresses all logging output. When selected, no log messages are routed to the GUI log panel during operations (a static notice is displayed instead), and no log file is written even if "Write log files" is checked. This is a GUI-only feature; the CLI is not affected.</li>
 <li><strong>GUI: Advanced Configuration improvements</strong> — Each subsection within the Advanced Configuration area is now independently collapsible via its own disclosure caret (▶/▼), using the same <code>_LabeledGroup</code> pattern as the Operations page cards. Clicking a subsection header toggles only that subsection; the parent "Advanced Configuration" toggle still controls overall visibility. Six subsections are now displayed: Filesystem Exclusions, Metadata Identification, Metadata Exclusion, ExifTool, Extension Groups (new), and Extension Validation. Each subsection includes a brief description in muted text explaining the configuration group's purpose. All read-only textboxes now display the complete, untruncated default values from <code>config/defaults.py</code> — the BCP 47 language-code alternation and other long patterns are no longer truncated with "...". List-type values are rendered one item per line for improved readability. Subsection expanded/collapsed states persist across sessions independently of the parent section. All subsections default to collapsed on first launch.</li>
 <li><strong>Infra: Canonical path resolver module</strong> — New <code>app_paths.py</code> module provides <code>get_app_data_dir()</code> and <code>get_log_dir()</code> as the single source of truth for all application data directories on all platforms. Every module that reads or writes application data now imports from this module rather than resolving paths independently. This prevents the namespace and path inconsistencies that arose when separate sprints resolved paths in isolation.</li>
 </ul>
-<h3 id="changed">Changed</h3>
+<h3 id="changed_1">Changed</h3>
 <ul>
 <li><strong>GUI: Settings "Custom Config File" label and documentation link</strong> — The "Config File" label on the Settings page Configuration card has been renamed to "Custom Config File" for clarity. A clickable hyperlink to the <a href="https://shruggietech.github.io/shruggie-indexer/user-guide/configuration/#configuration-file-format">Configuration File Format</a> documentation is now displayed below the entry field, opening the relevant documentation section in the user's default browser.</li>
 <li><strong>GUI: Drag handle repositioned above START button</strong> — The drag handle (resizer bar) for the output panel has been moved from below the START button to above it, sitting between the scrollable input area and the fixed progress/action region. This places the resize control at the natural boundary between the configuration surface and the action area. The drag handle is now owned by the <code>OperationsPage</code> frame rather than the main application area, eliminating the need for explicit pack/unpack management during tab switches.</li>
@@ -1720,7 +1760,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Tests: Entry builder unit tests</strong> — Added <code>TestSessionIdThreading</code> (3 cases) and <code>TestIndexedAtTimestamp</code> (4 cases) to <code>tests/unit/test_entry.py</code> verifying <code>session_id</code> propagation through <code>build_file_entry()</code> and <code>build_directory_entry()</code>, <code>indexed_at</code> population, and default <code>None</code> values for directly constructed entries.</li>
 <li><strong>GUI: Advanced configuration scaffold</strong> — The Settings tab now includes a collapsed "Advanced Configuration" section below existing settings. Expanding the section reveals five labeled groups — Filesystem Exclusion, ExifTool, Extension Validation, Sidecar Identification, and Metadata Exclusion — each displaying compiled default values in read-only monospace textboxes. Includes a cosmetic "Shared Settings" / "Indexer-Specific Settings" separator preparing for future cross-tool configuration. Each group has a disabled "Reset to Defaults" button placeholder. Full editing, data binding, and persistence are deferred to a post-v0.1.1 release. The section's expanded/collapsed state is persisted across sessions.</li>
 </ul>
-<h3 id="changed_1">Changed</h3>
+<h3 id="changed_2">Changed</h3>
 <ul>
 <li><strong>Infra: Shared configuration namespace</strong> — Configuration and session storage paths now use a shared ShruggieTech ecosystem directory (<code>&lt;base&gt;/shruggie-tech/shruggie-indexer/</code>) instead of the tool-specific <code>&lt;base&gt;/shruggie-indexer/</code> path used in v0.1.0. Both the TOML config loader and GUI <code>SessionManager</code> check the new path first, fall back to the legacy path with an INFO-level migration recommendation, and always write to the new path. Old files are never deleted. Prepares the directory structure for future ecosystem tools (<code>shruggie-catalog</code>, <code>shruggie-vault</code>, <code>shruggie-sync</code>).</li>
 <li><strong>Archive: Normalized naming convention</strong> — All files in <code>.archive/</code> now follow a <code>&lt;YYYYmmdd&gt;-&lt;ZZZ&gt;-&lt;title&gt;.&lt;ext&gt;</code> naming convention. Renamed <code>shruggie-indexer-spec.pdf</code> → <code>20260224-001-shruggie-indexer-spec.pdf</code>, <code>shruggie-indexer-spec.html</code> → <code>20260224-001-shruggie-indexer-spec.html</code>, and <code>shruggie-indexer-plan.md</code> → <code>20260219-002-shruggie-indexer-plan.md</code>. Updated all spec references (§1.5, §3.1) to the new filenames.</li>

@@ -2237,7 +2237,8 @@ published on the GitHub release page.</p>
 <li><strong>View only</strong> — Results are displayed in the output panel at the bottom of the window. Nothing is written to disk. Not available when Meta Merge Delete or Rename is active.</li>
 </ul>
 </li>
-<li><strong>Output path</strong> — A read-only field showing the auto-computed output path based on your target. For "View only" mode, this displays "(displayed in viewer)". For "Multi-file" mode, a note explains that sidecar files are written alongside originals.</li>
+<li><strong>Output path</strong> — A read-only field showing the auto-computed output path based on your target. For "View only" mode, this displays "(displayed in viewer)". For "Multi-file" mode, a note explains that sidecar files are written alongside originals. When Multi-file is active and directory metadata is suppressed, the note changes to indicate that only per-file sidecars are written.</li>
+<li><strong>Write directory metadata</strong> — A checkbox controlling whether <code>_directorymeta2.json</code> directory sidecar files are produced. Default: checked. Unchecking this suppresses all directory-level sidecars during Multi-file output while leaving per-file <code>_meta2.json</code> sidecars intact. This is useful for workflows that only need per-file metadata (e.g., media library indexing). Disabled when the target type is "File" (not applicable to file targets). Corresponds to the CLI <code>--no-dir-meta</code> flag and the <code>write_directory_meta</code> configuration key.</li>
 </ul>
 <div class="admonition tip">
 <p class="admonition-title">Output mode constraints</p>
@@ -2245,6 +2246,7 @@ published on the GitHub release page.</p>
 <ul>
 <li><strong>Multi-file</strong> requires a directory target (not available for single files).</li>
 <li><strong>View only</strong> is not available for Meta Merge Delete (destructive operations require a persistent output record) or when Rename is active (rename requires writing files to disk). The option remains visible in the dropdown but selecting it snaps back to the appropriate default with an explanatory message.</li>
+<li><strong>Single file</strong> is not available when directory metadata is unchecked with a directory target (Single file produces only directory metadata, which would be empty). The mode falls back to Multi-file automatically.</li>
 </ul>
 </div>
 <h3 id="running-an-operation">Running an Operation</h3>
