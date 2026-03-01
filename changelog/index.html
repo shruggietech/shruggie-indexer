@@ -1709,8 +1709,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
+<li><strong>Core: Rename collision logging elevated to ERROR</strong> — The collision branch in <code>rename_item()</code> now logs at <code>ERROR</code> level (was <code>WARNING</code>). After the dedup pass removes duplicates from the entry tree, same-directory collisions should never occur; if they do, it indicates a bug in the dedup pipeline. The message explicitly states this is a defensive guard.</li>
 <li>
-<p><strong>Core: Rename collision logging elevated to ERROR</strong> — The collision branch in <code>rename_item()</code> now logs at <code>ERROR</code> level (was <code>WARNING</code>). After the dedup pass removes duplicates from the entry tree, same-directory collisions should never occur; if they do, it indicates a bug in the dedup pipeline. The message explicitly states this is a defensive guard.</p>
+<p><strong>Docs: Ecosystem direction amended for de-duplication</strong> — Updated <code>.archive/20260223-002-ecosystem-direction.md</code> with five amendments: added single-session dedup to indexer responsibilities, added cross-session dedup exclusion to indexer non-responsibilities, amended the indexer's filesystem-mutation invariant to reflect rename + dedup behavior gated behind <code>--rename</code>, added cross-session dedup to catalog responsibilities, and added a new "De-Duplication Scope Boundaries" section documenting the two-scope architecture and shared <code>core.dedup</code> module reuse.</p>
 </li>
 <li>
 <p><strong>GUI: Exit button</strong> — Added an "Exit" button to the bottom of the sidebar, positioned above the version label. The button uses a red accent color (<code>#c0392b</code> / <code>#a93226</code>) to visually distinguish it from navigation buttons. Clicking it triggers the same close/cleanup sequence as the window's close button (<code>WM_DELETE_WINDOW</code>), including the cancellation confirmation dialog when an operation is in progress.</p>
