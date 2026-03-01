@@ -2207,7 +2207,7 @@ published on the GitHub release page.</p>
 <ul>
 <li><strong>Path field</strong> — Type or paste a file or folder path, or use the Browse buttons to pick one.</li>
 <li><strong>Browse buttons</strong> — When the target type is set to "Auto", two buttons appear: <strong>File…</strong> and <strong>Folder…</strong>, letting you pick either. When the type is set to "File" or "Directory", a single Browse button appears.</li>
-<li><strong>Type</strong> — Choose how the target path should be interpreted:<ul>
+<li><strong>Type</strong> — A dropdown menu to choose how the target path should be interpreted:<ul>
 <li><strong>Auto</strong> — The application figures out whether the path is a file or folder.</li>
 <li><strong>File</strong> — Treat the path as a single file.</li>
 <li><strong>Directory</strong> — Treat the path as a folder (processes all items inside).</li>
@@ -2217,7 +2217,7 @@ published on the GitHub release page.</p>
 </ul>
 <div class="admonition tip">
 <p class="admonition-title">Target/Type Validation</p>
-<p>The application automatically detects whether the selected path is a file or directory. If the detected kind conflicts with the selected type (e.g., you select "File" type but point to a directory), a red error message appears below the type selector and the START button is disabled until the conflict is resolved.</p>
+<p>The application automatically detects whether the selected path is a file or directory. If the detected kind conflicts with the selected type (e.g., you select "File" type but point to a directory), a red error message appears below the type dropdown and the START button is disabled until the conflict is resolved.</p>
 </div>
 <h3 id="options-section">Options Section</h3>
 <p>All option controls are always visible regardless of the selected operation type. Controls that do not apply to the current operation are disabled with a brief explanation.</p>
@@ -2299,7 +2299,7 @@ exists. Resolve any red error messages before running.</p>
 </tbody>
 </table>
 <h3 id="resizing">Resizing</h3>
-<p>A <strong>drag handle</strong> with a centered grip indicator (three small dots) sits between the input area and the output panel. Drag it up or down to resize the panel. The application remembers your preferred size between sessions.</p>
+<p>A <strong>drag handle</strong> with a centered grip indicator (three small dots) sits between the scrollable input area and the START button. Drag it up or down to resize the output panel below. The application remembers your preferred size between sessions.</p>
 <hr />
 <h2 id="settings-tab">Settings Tab</h2>
 <p>The Settings tab lets you customize default behavior. Changes take effect immediately and are remembered between sessions. Settings are organized into four card sections, with an additional collapsible Advanced section below.</p>
@@ -2333,7 +2333,7 @@ exists. Resolve any red error messages before running.</p>
 </ul>
 <h3 id="configuration">Configuration</h3>
 <ul>
-<li><strong>Config File</strong> — Optionally specify a TOML configuration file to load custom settings. Use the Browse button to pick one.</li>
+<li><strong>Custom Config File</strong> — Optionally specify a TOML configuration file to load custom settings. Use the Browse button to pick one. A clickable link to the <a href="https://shruggietech.github.io/shruggie-indexer/user-guide/configuration/#configuration-file-format">Configuration File Format</a> documentation is displayed below the field for reference.</li>
 </ul>
 <h3 id="global-action-buttons">Global Action Buttons</h3>
 <ul>
