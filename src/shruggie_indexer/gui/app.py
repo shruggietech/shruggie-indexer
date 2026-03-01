@@ -1197,6 +1197,14 @@ class OperationsPage(ctk.CTkFrame):
             fill="x", side="bottom",
         )
 
+        # Drag handle for resizable output panel — positioned above the
+        # START button / progress region, between the scrollable content
+        # and the action area.
+        self._drag_handle = _DragHandle(
+            self, on_drag=lambda delta: self._app._on_output_resize(delta),
+        )
+        self._drag_handle.pack(fill="x", side="bottom", pady=(2, 2))
+
         # -- Idle sub-frame (START button, centered) --
         self._idle_frame = ctk.CTkFrame(
             self._progress_region, fg_color="transparent",
@@ -1336,19 +1344,25 @@ class OperationsPage(ctk.CTkFrame):
             side="left", padx=(0, 6),
         )
         self._type_var = ctk.StringVar(value="auto")
-        self._type_radios: dict[str, ctk.CTkRadioButton] = {}
-        for label, val in [("Auto", "auto"), ("File", "file"), ("Directory", "directory")]:
-            rb = _CtkRadioButton(
-                opts_frame, text=label, variable=self._type_var, value=val,
-                command=self._on_type_changed,
-            )
-            rb.pack(side="left", padx=(0, 10))
-            self._type_radios[val] = rb
-            _Tooltip(rb, {
-                "auto": "Detect target type automatically from the path.",
-                "file": "Treat target as a single file.",
-                "directory": "Treat target as a directory.",
-            }[val])
+        _TARGET_TYPE_LABELS = ["Auto", "File", "Directory"]
+        _TARGET_TYPE_MAP = {"Auto": "auto", "File": "file", "Directory": "directory"}
+        _TARGET_TYPE_RMAP = {v: k for k, v in _TARGET_TYPE_MAP.items()}
+        self._target_type_map = _TARGET_TYPE_MAP
+        self._target_type_rmap = _TARGET_TYPE_RMAP
+
+        self._type_menu = _CtkOptionMenu(
+            opts_frame,
+            values=_TARGET_TYPE_LABELS,
+            command=self._on_type_menu_changed,
+            width=120,
+        )
+        self._type_menu.set("Auto")
+        self._type_menu.pack(side="left", padx=(0, 10))
+        _Tooltip(
+            self._type_menu,
+            "Choose how the target path is interpreted: "
+            "Auto (detect), File (single file), or Directory (folder).",
+        )
 
         # Recursive row (separate so hint aligns under the checkbox)
         recursive_row = ctk.CTkFrame(c, fg_color="transparent")
@@ -1628,9 +1642,11 @@ class OperationsPage(ctk.CTkFrame):
         logger.debug("Operation type changed to: %s", self._op_type_var.get())
         self._reconcile_controls()
 
-    def _on_type_changed(self) -> None:
-        """Handle target type radio change."""
-        logger.debug("Target type changed to: %s", self._type_var.get())
+    def _on_type_menu_changed(self, choice: str) -> None:
+        """Handle target type dropdown change."""
+        internal = self._target_type_map.get(choice, "auto")
+        self._type_var.set(internal)
+        logger.debug("Target type changed to: %s", internal)
         self._update_browse_buttons()
         self._on_target_or_type_change()
 
@@ -1979,6 +1995,8 @@ class OperationsPage(ctk.CTkFrame):
             self._path_entry.insert(0, state["target_path"])
         if "target_type" in state:
             self._type_var.set(state["target_type"])
+            display = self._target_type_rmap.get(state["target_type"], "Auto")
+            self._type_menu.set(display)
         if "recursive" in state:
             self._recursive_var.set(state["recursive"])
         if "id_algorithm" in state:
@@ -2185,7 +2203,7 @@ class SettingsTab(ctk.CTkFrame):
 
         row4 = ctk.CTkFrame(cfg, fg_color="transparent")
         row4.pack(fill="x", pady=(0, 4))
-        ctk.CTkLabel(row4, text="Config File:").pack(side="left", padx=(0, 6))
+        ctk.CTkLabel(row4, text="Custom Config File:").pack(side="left", padx=(0, 6))
         self.config_entry = _CtkEntry(
             row4, placeholder_text="Optional TOML config path",
         )
@@ -2197,6 +2215,29 @@ class SettingsTab(ctk.CTkFrame):
         )
         config_browse.pack(side="right")
         _Tooltip(config_browse, "Select a TOML configuration file.")
+
+        config_help_row = ctk.CTkFrame(cfg, fg_color="transparent")
+        config_help_row.pack(fill="x", pady=(0, 4))
+        config_help_label = ctk.CTkLabel(
+            config_help_row,
+            text="See Configuration File Format documentation for syntax details.",
+            font=ctk.CTkFont(size=11),
+            text_color=("#1a73e8", "#8ab4f8"),
+            cursor="hand2",
+            anchor="w",
+        )
+        config_help_label.pack(side="left", padx=(0, 0))
+        config_help_label.bind(
+            "<Button-1>",
+            lambda _: webbrowser.open(
+                "https://shruggietech.github.io/shruggie-indexer/"
+                "user-guide/configuration/#configuration-file-format"
+            ),
+        )
+        _Tooltip(
+            config_help_label,
+            "Open the configuration file format documentation in your browser.",
+        )
 
         # -- Advanced Configuration (scaffold) ---
         self._build_advanced_section(scroll)
@@ -2984,10 +3025,8 @@ class ShruggiIndexerApp(ctk.CTk):
         self._tabs[_TAB_SETTINGS] = self._settings_tab
         self._tabs[_TAB_ABOUT] = self._about_tab
 
-        # Drag handle for resizable output panel (item 2.13)
-        self._drag_handle = _DragHandle(
-            self._main_area, on_drag=self._on_output_resize,
-        )
+        # NOTE: The drag handle is now created inside OperationsPage and
+        # positioned above the START button / progress region.
 
         # Shared output panel
         self._output_panel = OutputPanel(self._main_area)
@@ -3024,12 +3063,10 @@ class ShruggiIndexerApp(ctk.CTk):
 
         # Show/hide output panel
         if tab_id in (_TAB_SETTINGS, _TAB_ABOUT):
-            self._drag_handle.pack_forget()
             self._output_panel.pack_forget()
         else:
             self._output_panel.configure(height=self._output_height)
             self._output_panel.pack(side="bottom", fill="x")
-            self._drag_handle.pack(side="bottom", fill="x", pady=(2, 2))
 
     def _on_output_resize(self, delta: int) -> None:
         """Adjust output panel height by delta pixels (item 2.13)."""

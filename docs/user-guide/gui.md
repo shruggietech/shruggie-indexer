@@ -88,14 +88,14 @@ This is where you tell the application what to process.
 
 - **Path field** — Type or paste a file or folder path, or use the Browse buttons to pick one.
 - **Browse buttons** — When the target type is set to "Auto", two buttons appear: **File…** and **Folder…**, letting you pick either. When the type is set to "File" or "Directory", a single Browse button appears.
-- **Type** — Choose how the target path should be interpreted:
+- **Type** — A dropdown menu to choose how the target path should be interpreted:
     - **Auto** — The application figures out whether the path is a file or folder.
     - **File** — Treat the path as a single file.
     - **Directory** — Treat the path as a folder (processes all items inside).
 - **Recursive** — When checked (the default), subfolders are also processed. Uncheck this to process only the top-level contents of a folder. This option is automatically disabled when the target type is "File" (recursion has no meaning for single files).
 
 !!! tip "Target/Type Validation"
-    The application automatically detects whether the selected path is a file or directory. If the detected kind conflicts with the selected type (e.g., you select "File" type but point to a directory), a red error message appears below the type selector and the START button is disabled until the conflict is resolved.
+    The application automatically detects whether the selected path is a file or directory. If the detected kind conflicts with the selected type (e.g., you select "File" type but point to a directory), a red error message appears below the type dropdown and the START button is disabled until the conflict is resolved.
 
 ### Options Section
 
@@ -163,7 +163,7 @@ The output panel appears at the bottom of the Operations tab after a job finishe
 
 ### Resizing
 
-A **drag handle** with a centered grip indicator (three small dots) sits between the input area and the output panel. Drag it up or down to resize the panel. The application remembers your preferred size between sessions.
+A **drag handle** with a centered grip indicator (three small dots) sits between the scrollable input area and the START button. Drag it up or down to resize the output panel below. The application remembers your preferred size between sessions.
 
 ---
 
@@ -198,7 +198,7 @@ The **Reset to Defaults** and **Open Config Folder** buttons are anchored in a f
 
 ### Configuration
 
-- **Config File** — Optionally specify a TOML configuration file to load custom settings. Use the Browse button to pick one.
+- **Custom Config File** — Optionally specify a TOML configuration file to load custom settings. Use the Browse button to pick one. A clickable link to the [Configuration File Format](https://shruggietech.github.io/shruggie-indexer/user-guide/configuration/#configuration-file-format) documentation is displayed below the field for reference.
 
 ### Global Action Buttons
 

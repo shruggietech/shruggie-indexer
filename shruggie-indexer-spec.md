@@ -5996,7 +5996,7 @@ The window uses a two-panel layout: a narrow left sidebar for page navigation an
 │  │  ations│ │  └────────────────────────────────────────────┘  │
 │  └────────┘ │  ┌ Target ─────────────────────────────────────┐  │
 │             │  │  Path: [_______________________] [File…][Folder…]│
-│  ┌────────┐ │  │  Type: (●) Auto  ( ) File  ( ) Directory   │  │
+│  ┌────────┐ │  │  Type: [Auto ▾]                                 │  │
 │  │Settings│ │  │  [✔] Recursive                              │  │
 │  └────────┘ │  └────────────────────────────────────────────┘  │
 │             │  ┌ Options ────────────────────────────────────┐  │
@@ -6007,10 +6007,10 @@ The window uses a two-panel layout: a narrow left sidebar for page navigation an
 │             │  │  Mode: [Single file ▾]                       │  │
 │             │  │  Path: target_directorymeta2.json (read-only)│  │
 │  v0.1.0    │  └────────────────────────────────────────────┘  │
+│             │  ═══════════════ drag handle ═══════════════════   │
 │             │  ┌──────────────────────────────────────────────┐  │
 │             │  │              ▶  START                        │  │
 │             │  └──────────────────────────────────────────────┘  │
-│             │  ═══════════════ drag handle ═══════════════════   │
 │             │  [Output] [Log]              [Clear][Copy][Save]   │
 │             │  ┌──────────────────────────────────────────────┐  │
 │             │  │ { "schema_version": "2", ...               } │  │
@@ -6061,8 +6061,8 @@ The working area occupies the remaining space to the right of the sidebar. It co
 The Operations page uses a vertical layout structure:
 
 1. **Input section** (top, scrollable) — Operation type selector, target path, operation-specific options, and output configuration, organized into labeled group frames ([§10.3](#103-target-selection-and-input)). Groups 2–4 (Target, Options, Output) are collapsible via clickable headers with disclosure carets.
-2. **Action button** (pinned below input section) — A single prominently-styled button to execute the selected operation.
-3. **Drag handle** — A horizontal bar with a centered grip indicator (three dots) for resizing the output panel ([§10.6](#106-output-display-and-export)).
+2. **Drag handle** — A horizontal bar with a centered grip indicator (three dots) for resizing the output panel ([§10.6](#106-output-display-and-export)). Positioned above the action button, between the scrollable content area and the fixed progress/action region.
+3. **Action button** (pinned below drag handle) — A single prominently-styled button to execute the selected operation.
 4. **Output section** (bottom, resizable) — The JSON viewer, log stream, and toolbar (Clear, Copy, Save buttons).
 
 The Settings page has its own layout ([§10.4](#104-configuration-panel)) and does not include an action button or output section. The About page has a static informational layout ([§10.8.2](#1082-about-tab)).
@@ -6093,7 +6093,7 @@ All controls are organized into four labeled groups, displayed in order from top
 | Group | Label | Description | Collapsible | Contents |
 |-------|-------|-------------|:-----------:|----------|
 | 1 | Operation | Select the indexing operation to perform. | No | Operation type dropdown and destructive operation indicator ([§10.8.1](#1081-destructive-operation-indicator)). |
-| 2 | Target | Choose the file or directory to index. | **Yes** | Path entry, browse buttons, type radio group, recursive checkbox. |
+| 2 | Target | Choose the file or directory to index. | **Yes** | Path entry, browse buttons, type dropdown, recursive checkbox. |
 | 3 | Options | Configure indexing parameters. | **Yes** | ID algorithm, SHA-512, EXIF, rename toggle, dry run — all always visible, disabled when not applicable with explanatory fine-print labels. |
 | 4 | Output | Control where results are written. | **Yes** | Output mode dropdown (`CTkOptionMenu`: Single file / Multi-file / View only) and read-only computed output path display — always visible, constrained by target type and operation. |
 
@@ -6137,16 +6137,18 @@ The Target group contains the following controls:
 
 After selection, the path is populated into the Target entry field and the output file auto-suggest is triggered ([§10.3](#103-target-selection-and-input), output file auto-suggest).
 
-**Type radio buttons.** Three options: Auto (default), File, Directory. These map directly to the CLI's target type disambiguation ([§8.2](#82-target-input-options)): Auto infers the type from the filesystem, File forces `--file`, Directory forces `--directory`. The Auto option is pre-selected by default.
+**Type dropdown.** A `CTkOptionMenu` dropdown with three options: Auto (default), File, Directory. These map directly to the CLI's target type disambiguation ([§8.2](#82-target-input-options)): Auto infers the type from the filesystem, File forces `--file`, Directory forces `--directory`. The Auto option is pre-selected by default.
 
-**Recursive checkbox.** A `CTkCheckBox` for enabling/disabling recursive traversal. Default: checked (matching `IndexerConfig.recursive` default, [§7.2](#72-default-configuration)). This checkbox is only meaningful when the target is a directory — when "File" is explicitly selected in the Type radio group, or when the target path resolves to a file while Type is "Auto", the Recursive checkbox is visually dimmed (disabled) with a fine-print label: *"Recursive is not applicable when the target is a single file."*
+> **Updated 2026-02-28:** Changed from radio buttons to a `CTkOptionMenu` dropdown for visual consistency with the other dropdown controls on the Operations page (Operation type selector, Output mode, ID Algorithm).
+
+**Recursive checkbox.** A `CTkCheckBox` for enabling/disabling recursive traversal. Default: checked (matching `IndexerConfig.recursive` default, [§7.2](#72-default-configuration)). This checkbox is only meaningful when the target is a directory — when "File" is explicitly selected in the Type dropdown, or when the target path resolves to a file while Type is "Auto", the Recursive checkbox is visually dimmed (disabled) with a fine-print label: *"Recursive is not applicable when the target is a single file."*
 
 <a id="target-type-validation"></a>
 #### Target / Type validation
 
-> **Added 2026-02-23:** Real-time validation of the target path against the selected Type radio to prevent user confusion and invalid operation execution.
+> **Added 2026-02-23:** Real-time validation of the target path against the selected Type dropdown to prevent user confusion and invalid operation execution.
 
-The GUI validates the combination of the Target path and the Type radio selection in real time (on key-release and focus-out of the path field, and on Type radio change). If the combination is invalid, a red fine-print error label appears below the path field, and the START button is disabled.
+The GUI validates the combination of the Target path and the Type dropdown selection in real time (on key-release and focus-out of the path field, and on Type dropdown change). If the combination is invalid, a red fine-print error label appears below the path field, and the START button is disabled.
 
 | Conflict | Error message |
 |----------|---------------|
@@ -6301,7 +6303,8 @@ The Settings page is accessed via the sidebar and provides a persistent configur
 │  └─────────────────────────────────────────────────┘ │
 │                                                      │
 │  ┌ Configuration ─────────────────────────────────┐  │
-│  │  Config file:  [_____________________] [Browse]│  │
+│  │  Custom config file:  [________________] [Browse]│  │
+│  │  See Configuration File Format documentation     │  │
 │  │  (Optional. Overrides compiled defaults.)      │  │
 │  └─────────────────────────────────────────────────┘ │
 │                                                      │
@@ -6328,7 +6331,9 @@ The Settings page is accessed via the sidebar and provides a persistent configur
 | Output & Logging | Log Level | `CTkOptionMenu` (`None`, `Normal`, `Verbose`, `Debug`) | `Normal` | Maps to log level: None → all logging suppressed (GUI-only), Normal → WARNING, Verbose → INFO, Debug → DEBUG. When "None" is selected, the GUI log panel displays a static notice and no log messages are routed to the panel or to the log file. |
 | Output & Logging | Log file path | `CTkEntry` (read-only) | _(computed)_ | Displays the platform-specific log directory and `<timestamp>.log` naming pattern. Read-only; shows greyed-out/muted text when logging is disabled (unchecked or Log Level is "None"). |
 | Interface | Show tooltips on hover | `CTkCheckBox` | Checked | Globally enables or disables hover tooltips (`_Tooltip.set_enabled()`). When disabled, no tooltip popups appear anywhere in the application. |
-| Configuration | Config file | `CTkEntry` + Browse | _(empty)_ | Optional path to a TOML configuration file. When set, this path is passed to `load_config(config_file=...)` for all operations. When empty, the standard resolution chain ([§3.3](#33-configuration-file-locations)) applies. |
+| Configuration | Custom config file | `CTkEntry` + Browse | _(empty)_ | Optional path to a TOML configuration file. When set, this path is passed to `load_config(config_file=...)` for all operations. When empty, the standard resolution chain ([§3.3](#33-configuration-file-locations)) applies. A clickable hyperlink to the [Configuration File Format](https://shruggietech.github.io/shruggie-indexer/user-guide/configuration/#configuration-file-format) documentation is displayed below the field for reference. |
+
+> **Updated 2026-02-28:** Field label changed from "Config File" to "Custom Config File" for clarity. Added a hyperlink to the live Configuration File Format documentation below the entry field.
 
 <a id="settings-persistence"></a>
 #### Settings persistence
