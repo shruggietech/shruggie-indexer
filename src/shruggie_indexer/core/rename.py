@@ -109,9 +109,10 @@ def rename_item(
             )
             return target_path
 
-        # Different inode = collision — skip and warn
-        logger.warning(
-            "Rename SKIPPED (collision): %s \u2192 %s (target already exists)",
+        # Different inode = collision — should not happen after dedup pass
+        logger.error(
+            "Unexpected rename collision after dedup: %s → %s (target already exists). "
+            "This indicates a bug in the dedup pipeline.",
             original_path.name,
             storage_name,
         )

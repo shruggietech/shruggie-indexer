@@ -39,6 +39,7 @@ An `IndexEntry` is the root JSON object describing a single indexed file or dire
 | `attributes` | `object` | Yes | Symlink status and deterministic storage name. |
 | `items` | `array[IndexEntry]` or `null` | No | Child entries (directory) or `null` (file). |
 | `metadata` | `array[MetadataEntry]` or `null` | No | Metadata records (file) or `null` (directory). |
+| `duplicates` | `array[IndexEntry]` | No | Complete `IndexEntry` objects for files de-duplicated against this entry during rename. Absent when no duplicates exist. |
 | `session_id` | `string` (UUID4) | No | Identifies the indexing invocation that produced this entry. All entries within a single CLI/GUI/API invocation share the same value. |
 | `indexed_at` | `TimestampPair` | No | The moment this IndexEntry was constructed. Distinct from file timestamps — records the indexer's observation time. |
 
@@ -49,7 +50,7 @@ An `IndexEntry` is the root JSON object describing a single indexed file or dire
  "extension", "size", "hashes", "file_system", "timestamps", "attributes"]
 ```
 
-`session_id` and `indexed_at` are declared properties but are **not** in the `required` array. They are present when the indexer is invoked through the standard CLI, GUI, or API entry points. Entries constructed directly (e.g., in tests) may omit them.
+`session_id`, `indexed_at`, and `duplicates` are declared properties but are **not** in the `required` array. `session_id` and `indexed_at` are present when the indexer is invoked through the standard CLI, GUI, or API entry points. `duplicates` is present only on canonical entries that absorbed one or more byte-identical files during a rename operation. Entries constructed directly (e.g., in tests) may omit all three.
 
 ### Field behavior by type
 
@@ -295,3 +296,4 @@ Key observations:
 The [examples/](examples/) directory contains real-world v2-compliant output files:
 
 - [flashplayer.exe_meta2.json](examples/flashplayer.exe_meta2.json)
+- [deduplicated_meta2.json](examples/deduplicated_meta2.json) — demonstrates the `duplicates` field for provenance-preserving de-duplication

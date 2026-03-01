@@ -298,6 +298,9 @@ class IndexEntry:
     metadata: list[MetadataEntry] | None = None
     """Metadata entries or ``None``."""
 
+    duplicates: list[IndexEntry] | None = None
+    """Complete IndexEntry objects for files de-duplicated against this entry."""
+
     mime_type: str | None = None
 
     session_id: str | None = None
@@ -332,6 +335,8 @@ class IndexEntry:
                 [m.to_dict() for m in self.metadata] if self.metadata is not None else None
             ),
         }
+        if self.duplicates:
+            d["duplicates"] = [dup.to_dict() for dup in self.duplicates]
         if self.session_id is not None:
             d["session_id"] = self.session_id
         if self.indexed_at is not None:

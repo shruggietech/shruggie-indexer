@@ -5,6 +5,15 @@ hashing, timestamp extraction, EXIF metadata collection, sidecar parsing, entry
 orchestration, JSON serialization, and rename operations.
 """
 
+from shruggie_indexer.core.dedup import (
+    DedupAction,
+    DedupRegistry,
+    DedupResult,
+    DedupStats,
+    apply_dedup,
+    cleanup_duplicate_files,
+    scan_tree,
+)
 from shruggie_indexer.core.entry import (
     build_directory_entry,
     build_file_entry,
@@ -35,13 +44,19 @@ from shruggie_indexer.core.timestamps import extract_timestamps
 from shruggie_indexer.core.traversal import list_children
 
 __all__ = [
+    "DedupAction",
+    "DedupRegistry",
+    "DedupResult",
+    "DedupStats",
     "NULL_HASHES",
     "PathComponents",
     "ProgressEvent",
+    "apply_dedup",
     "build_directory_entry",
     "build_file_entry",
     "build_sidecar_path",
     "build_storage_path",
+    "cleanup_duplicate_files",
     "discover_and_parse",
     "extract_components",
     "extract_exif",
@@ -54,6 +69,7 @@ __all__ = [
     "relative_forward_slash",
     "rename_item",
     "resolve_path",
+    "scan_tree",
     "select_id",
     "serialize_entry",
     "validate_extension",

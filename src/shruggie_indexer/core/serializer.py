@@ -72,6 +72,7 @@ _TOP_LEVEL_KEY_ORDER: tuple[str, ...] = (
     "attributes",
     "items",
     "metadata",
+    "duplicates",
 )
 
 

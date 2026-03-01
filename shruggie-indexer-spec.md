@@ -719,7 +719,8 @@ src/shruggie_indexer/
 │   ├── sidecar.py
 │   ├── entry.py
 │   ├── serializer.py
-│   └── rename.py
+│   ├── rename.py
+│   └── dedup.py
 ├── models/
 │   ├── __init__.py
 │   └── schema.py
@@ -764,6 +765,7 @@ The `core/` subpackage contains all indexing logic. Every module in `core/` corr
 | `entry.py` | Cat 8 (Output Object Construction & Schema) | Orchestrates the construction of a single `IndexEntry` from a filesystem path. Calls into `paths`, `hashing`, `timestamps`, `exif`, and `sidecar` to gather all components, then assembles the final v2 schema object. |
 | `serializer.py` | Cat 9 (JSON Serialization & Output Routing) | Converts `IndexEntry` model instances to JSON. Routes output to stdout, a single aggregate file, or per-item in-place sidecar files (`_meta2.json` / `_directorymeta2.json`), depending on the active output mode. Handles pretty-printing vs. compact output. Uses `orjson` as the primary serializer with a `json.dumps()` stdlib fallback for resilience. |
 | `rename.py` | Cat 10 (File Rename & In-Place Write) | Implements the `StorageName` rename operation: renames files and directories from their original names to their hash-based `storage_name` values. Handles collision detection, dry-run mode, and rollback on partial failure. |
+| `dedup.py` | Cat 11 (De-Duplication) | Provenance-preserving de-duplication. Provides `DedupRegistry` (canonical-copy tracking by `storage_name`), `DedupResult`, `DedupStats`, `DedupAction` data classes, `scan_tree()` (recursive duplicate discovery), `apply_dedup()` (merge duplicates into canonical entries), and `cleanup_duplicate_files()` (disk deletion of absorbed duplicates and orphaned sidecars). Designed for standalone importability by downstream projects (specifically `shruggie-catalog`). |
 
 The `core/__init__.py` file SHOULD re-export the primary orchestration functions (e.g., `index_path`, `index_file`, `index_directory`) so that internal callers can write `from shruggie_indexer.core import index_path` without reaching into individual modules. The individual modules remain importable for callers who need fine-grained access (e.g., `from shruggie_indexer.core.hashing import hash_file`).
 
@@ -1163,7 +1165,7 @@ The stages map to the tool's module structure as follows:
 | 2 — Target Resolution | `core/paths.py`, `cli/main.py` |
 | 3 — Traversal | `core/traversal.py` |
 | 4 — Entry Construction | `core/entry.py` (orchestrator), `core/hashing.py`, `core/timestamps.py`, `core/exif.py`, `core/sidecar.py`, `core/paths.py` |
-| 5 — Output Routing | `core/serializer.py`, `core/rename.py` |
+| 5 — Output Routing | `core/serializer.py`, `core/rename.py`, `core/dedup.py` |
 | 6 — Post-Processing | `core/serializer.py` (finalization), top-level orchestrator |
 
 <a id="deviation-from-original-pipeline-linearity"></a>
@@ -1232,7 +1234,7 @@ Key structural rules:
 <a id="module-count-and-original-function-mapping"></a>
 #### Module count
 
-The tool comprises 10 `core/` modules, 1 `models/` module, and 3 `config/` modules. This represents a roughly 4:1 consolidation over the equivalent scope in the original PowerShell implementation, achieved primarily by eliminating the hashing duplication (DEV-01), path resolution duplication (DEV-04), and the five eliminated dependencies (DEV-05 through DEV-08, DEV-13).
+The tool comprises 11 `core/` modules, 1 `models/` module, and 3 `config/` modules. This represents a roughly 4:1 consolidation over the equivalent scope in the original PowerShell implementation, achieved primarily by eliminating the hashing duplication (DEV-01), path resolution duplication (DEV-04), and the five eliminated dependencies (DEV-05 through DEV-08, DEV-13).
 
 > **Historical note:** The original codebase contained approximately 60 discrete code units across the `MakeIndex` function body, its 20+ inline sub-functions, the 8 external pslib dependencies, and their own internal sub-functions.
 
@@ -1660,6 +1662,7 @@ An `IndexEntry` is a JSON object conforming to the root schema. It describes a s
 | `attributes` | `object` | Yes | [§5.8](#58-attribute-fields) |
 | `items` | `array` of `IndexEntry` or `null` | No | [§5.9](#59-recursive-items-field) |
 | `metadata` | `array` of `MetadataEntry` or `null` | No | [§5.10](#510-metadata-array-and-metadataentry-fields) |
+| `duplicates` | `array` of `IndexEntry` or absent | No | [§5.10a](#510a-duplicates-array) |
 
 `additionalProperties` is `false` at the root level — all permitted keys are explicitly enumerated in the canonical schema. The `required` array in the canonical schema is:
 
@@ -1670,7 +1673,7 @@ An `IndexEntry` is a JSON object conforming to the root schema. It describes a s
 ]
 ```
 
-The `items`, `metadata`, `session_id`, `indexed_at`, and `mime_type` fields are not in the `required` array. They MAY be omitted entirely (not just set to `null`) when not applicable. However, the implementation SHOULD include them with explicit `null` values for consistency — an `IndexEntry` for a file emits `"items": null`, `"metadata": null` rather than omitting the keys. This makes every entry structurally uniform, which simplifies consumer parsing. The `session_id` and `indexed_at` fields follow a different convention: they are conditionally included (present when the indexer populates them, absent when not). The `to_dict()` serializer omits these fields when their value is `None`, rather than emitting `null`. This keeps output compact for consumers that do not use session tracking.
+The `items`, `metadata`, `session_id`, `indexed_at`, `duplicates`, and `mime_type` fields are not in the `required` array. They MAY be omitted entirely (not just set to `null`) when not applicable. However, the implementation SHOULD include them with explicit `null` values for consistency — an `IndexEntry` for a file emits `"items": null`, `"metadata": null` rather than omitting the keys. This makes every entry structurally uniform, which simplifies consumer parsing. The `session_id`, `indexed_at`, and `duplicates` fields follow a different convention: they are conditionally included (present when the indexer populates them, absent when not). The `to_dict()` serializer omits these fields when their value is `None` (or empty), rather than emitting `null`. This keeps output compact for consumers that do not use session tracking or de-duplication.
 
 <a id="54-identity-fields"></a>
 ### 5.4. Identity Fields
@@ -2107,6 +2110,34 @@ The `data` field contains the actual metadata content. Its structure depends on 
 
 **v1 comparison:** v1's `Data` field has the same polymorphic nature (`"type": ["null", "string", "object", "array"]`). The difference is that v2's `attributes.format` explicitly declares how to interpret the `data` value, whereas v1 consumers must infer the format from context.
 
+<a id="510a-duplicates-array"></a>
+### 5.10a. Duplicates Array
+
+> **Added 2026-03-01:** Documents the `duplicates` field added for provenance-preserving de-duplication.
+
+The `duplicates` field is an optional array of `IndexEntry` objects. It contains the complete identity, filesystem, timestamp, and metadata records of files that were identified as byte-identical to this entry during a rename operation and subsequently absorbed.
+
+| Attribute | Value |
+|-----------|-------|
+| Type | `array` of `IndexEntry` |
+| Required | No |
+| Default | Absent (field omitted from output) |
+| v1 equivalent | None |
+
+**Population rules:**
+
+- The field is populated exclusively by the de-duplication pass ([§6.10a](#610a-provenance-preserving-de-duplication)), which runs only when rename is active.
+- The first file encountered with a given content hash becomes the **canonical** copy. All subsequent byte-identical files are absorbed into the canonical entry's `duplicates` array.
+- Each absorbed entry is a complete `IndexEntry` preserving the duplicate's original name, filesystem location, timestamps, hashes, and all metadata entries. No information from the duplicate is discarded.
+- After absorption, the duplicate entry is removed from its parent directory's `items` array and the duplicate file is deleted from disk (unless dry-run mode is active).
+
+**Serialization convention:**
+
+- When the field is `None` (no duplicates), it is **omitted** from the serialized output — not emitted as `null` or `[]`. This matches the conditional-inclusion convention used by `session_id` and `indexed_at`.
+- When present, the field appears after `metadata` and before `session_id` in the serialized key order.
+
+**Downstream use:** The `duplicates` array enables downstream consumers (primarily `shruggie-catalog`) to maintain a complete provenance chain: which files existed, where they were located, and which canonical entry absorbed them. This supports audit trails, storage reclamation reporting, and revert operations.
+
 <a id="511-dropped-and-restructured-fields"></a>
 ### 5.11. Dropped and Restructured Fields
 
@@ -2177,6 +2208,7 @@ This section documents every v1 field that is absent from v2 and every v1 field 
 | `metadata[].attributes.format` | Explicit data format declaration. |
 | `metadata[].attributes.transforms` | Applied transformation chain (for data reversal). |
 | `metadata[].attributes.source_media_type` | Original MIME type of binary sidecar data. |
+| `duplicates` | Array of `IndexEntry` objects representing byte-identical files absorbed during provenance-preserving de-duplication. Conditionally present (absent when no duplicates exist). |
 
 <a id="512-schema-validation-and-enforcement"></a>
 ### 5.12. Schema Validation and Enforcement
@@ -3488,14 +3520,16 @@ The rename operation constructs the target path via `paths.build_storage_path(or
 #### Collision detection
 
 > **Updated 2026-02-25:** Collision behavior updated to skip-and-warn instead of raising `RenameError`. When multiple files share identical content hashes and therefore identical `storage_name` values, the first file is renamed successfully; subsequent files targeting the same name are skipped with a `WARNING`-level log.
+>
+> **Updated 2026-03-01:** After the introduction of the provenance-preserving de-duplication pass ([§6.10a](#610a-provenance-preserving-de-duplication)), same-directory collisions should never reach the rename phase — all duplicates are absorbed into the canonical entry's `duplicates` array and removed from the entry tree before rename begins. The collision log level has been elevated from `WARNING` to `ERROR` to reflect that any collision reaching the rename phase indicates a bug in the dedup pipeline.
 
-Before renaming, the module checks whether the target path already exists. If it does, and it is not the same inode as the source, the rename is **skipped** and a `WARNING`-level log message is emitted:
+Before renaming, the module checks whether the target path already exists. If it does, and it is not the same inode as the source, the rename is **skipped** and an `ERROR`-level log message is emitted:
 
 ```
-Rename SKIPPED (collision): {original_name} → {storage_name} (target already exists)
+Unexpected rename collision after dedup: {original_name} → {storage_name} (target already exists). This indicates a bug in the dedup pipeline.
 ```
 
-The collision does not raise an exception or abort the rename loop. Files that would collide retain their original names on disk, and their in-place sidecars retain the original filename as their base. This skip-and-warn behavior is a deliberate safety improvement over the original's `Move-Item -Force`, which would silently overwrite the existing file.
+The collision does not raise an exception or abort the rename loop. Files that would collide retain their original names on disk, and their in-place sidecars retain the original filename as their base. This skip-and-error behavior is a defensive guard: the dedup pass should have resolved all duplicates before the rename phase. If a collision still occurs, it is logged at `ERROR` level to surface the problem for investigation.
 
 If the target path exists and is the same inode as the source (meaning the file was already renamed in a previous run), the rename is a no-op and the existing path is returned.
 
@@ -3556,7 +3590,28 @@ Key behaviors:
 - Each successful deletion produces an `INFO`-level log message: `Sidecar deleted: {path}`.
 - Each failed deletion produces an `ERROR`-level log message: `Sidecar delete FAILED: {path}: {exception}`.
 - A failed deletion does not abort the loop — remaining sidecar files are still processed.
-- The delete phase runs **after** the rename phase. The full post-processing pipeline ordering is: indexing → in-place sidecar write → rename → delete.
+- The delete phase runs **after** the rename phase. The full post-processing pipeline ordering is: indexing → dedup scan/apply (when rename active) → in-place sidecar write → rename → dedup cleanup (duplicate file deletion) → MetaMergeDelete sidecar deletion.
+
+<a id="610a-provenance-preserving-de-duplication"></a>
+#### Provenance-preserving de-duplication
+
+> **Added 2026-03-01:** Documents the de-duplication phase integrated into the rename pipeline.
+
+When the rename flag is active, a de-duplication pass runs between entry construction (Stage 4) and in-place sidecar writing (Stage 5). The pass is implemented by `core/dedup.py` and operates on the completed entry tree in memory — it does not perform additional filesystem I/O during the scan phase.
+
+**Phase 1 — Scan.** `scan_tree(root_entry, registry)` performs a depth-first walk of the entry tree. For each file entry, it checks the `DedupRegistry` (keyed by `storage_name`, which encodes content hash + extension). The first file with a given key is registered as canonical. Subsequent files with the same key produce `DedupAction` objects identifying the duplicate entry, its canonical counterpart, the duplicate's relative path, and the parent directory entry that contains it.
+
+**Phase 2 — Apply.** `apply_dedup(actions)` iterates the action list and, for each action: (1) appends the duplicate entry to the canonical entry's `duplicates` list, and (2) removes the duplicate entry from its parent directory's `items` list. This phase mutates the entry tree in place.
+
+**Phase 3 — Cleanup.** After the rename phase completes, `cleanup_duplicate_files(actions, root_path)` iterates the action list and deletes each duplicate's file from disk. Orphaned sidecar files (`{filename}_meta2.json`) are also deleted. In dry-run mode, cleanup is skipped entirely — no files are deleted, but the entry tree still reflects the de-duplication (duplicates appear in the `duplicates` array and are removed from `items`).
+
+**Design constraints:**
+
+- The scan phase is non-mutating — it produces a list of actions without altering the entry tree.
+- The apply phase is idempotent — applying the same action list twice does not produce incorrect results.
+- Canonical selection is deterministic: the first file encountered in depth-first traversal order wins.
+- Cross-directory dedup is supported: duplicates in different directories are absorbed into the canonical entry regardless of directory nesting depth.
+- The `DedupRegistry`, `DedupResult`, `DedupStats`, `DedupAction`, `scan_tree()`, `apply_dedup()`, and `cleanup_duplicate_files()` are exported from `core/__init__.py` for use by downstream projects.
 
 <a id="revert-capability"></a>
 #### Revert capability

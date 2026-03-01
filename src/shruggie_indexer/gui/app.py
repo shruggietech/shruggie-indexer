@@ -3283,6 +3283,31 @@ class ShruggiIndexerApp(ctk.CTk):
                 session_id=session_id,
             )
 
+            # ── Dedup scan/apply (when rename is active) ────────────────
+            dedup_actions: list[Any] = []
+            if config.rename:
+                from shruggie_indexer.core.dedup import (
+                    DedupRegistry,
+                    apply_dedup,
+                    cleanup_duplicate_files,
+                    format_bytes,
+                    scan_tree,
+                )
+
+                registry = DedupRegistry()
+                dedup_actions = scan_tree(entry, registry)
+
+                if dedup_actions:
+                    apply_dedup(dedup_actions)
+                    stats = registry.stats
+                    logger.info(
+                        "De-duplication: %d duplicate(s) found across %d unique "
+                        "content hashes. %s reclaimed.",
+                        stats.duplicates_found,
+                        stats.unique_files,
+                        format_bytes(stats.bytes_reclaimed),
+                    )
+
             # ── In-place sidecar output ─────────────────────────────────
             # Written BEFORE rename so the rename phase can also rename
             # the sidecar file from {original}_meta2.json to
@@ -3299,6 +3324,12 @@ class ShruggiIndexerApp(ctk.CTk):
                         rename_inplace_sidecar(target, entry)
                 elif entry.items is not None:
                     self._rename_tree(entry, target, config)
+
+            # ── Dedup cleanup: delete duplicate files from disk ─────────
+            if dedup_actions:
+                cleanup_duplicate_files(
+                    dedup_actions, target, dry_run=config.dry_run,
+                )
 
             # ── Aggregate output ────────────────────────────────────────
             json_str = serialize_entry(entry)
