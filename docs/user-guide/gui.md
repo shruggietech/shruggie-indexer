@@ -104,7 +104,7 @@ All option controls are always visible regardless of the selected operation type
 - **ID Algorithm** — Choose between `md5` (faster, shorter IDs) and `sha256` (stronger, longer IDs). This controls how file identifiers are generated.
 - **Compute SHA-512** — When checked, an additional high-strength hash is computed for each file. If the "Compute SHA-512 by default" setting is enabled on the Settings tab, this checkbox is forced on with an explanation ("Enabled in Settings") and cannot be unchecked from the Operations tab.
 - **Extract EXIF metadata** — When checked, embedded metadata (camera settings, GPS coordinates, creation dates, etc.) is extracted from media files using ExifTool. Requires ExifTool to be installed. Automatically forced on for Meta Merge and Meta Merge Delete operations.
-- **Rename files** — When checked, files are renamed to unique, content-based names ("storage names") after indexing. This feature can be combined with any operation type. Enabling rename makes the operation destructive (the indicator dot turns red) unless dry-run is also enabled.
+- **Rename files** — When checked, files are renamed to unique, content-based names ("storage names") after indexing. This feature can be combined with any operation type. Enabling rename makes the operation destructive (the indicator dot turns red) unless dry-run is also enabled. When rename is active, the indexer also performs **provenance-preserving de-duplication**: byte-identical files across the target tree are automatically detected, the first encountered becomes the canonical copy, and all duplicates are absorbed into the canonical entry's `duplicates` array before being deleted from disk. In dry-run mode, duplicates are identified in the output but no files are deleted.
 - **Dry run** — Only shown when "Rename files" is checked. When enabled, previews what files *would* be renamed without actually changing anything. This is on by default as a safety measure.
 
 ### Output Section
@@ -124,6 +124,9 @@ The Output section uses a dropdown menu to select where results are written:
     - **Multi-file** requires a directory target (not available for single files).
     - **View only** is not available for Meta Merge Delete (destructive operations require a persistent output record) or when Rename is active (rename requires writing files to disk). The option remains visible in the dropdown but selecting it snaps back to the appropriate default with an explanatory message.
     - **Single file** is not available when directory metadata is unchecked with a directory target (Single file produces only directory metadata, which would be empty). The mode falls back to Multi-file automatically.
+
+!!! info "De-duplication and the `duplicates` field"
+    When Rename is active, the sidecar JSON for each canonical file may include a `duplicates` array containing full `IndexEntry` objects for every file that was de-duplicated against it. This preserves the complete identity of absorbed files (original name, timestamps, filesystem location, and metadata). The `duplicates` field is absent when no duplicates were found. See the [Schema Reference](../schema/index.md) for details.
 
 ### Running an Operation
 

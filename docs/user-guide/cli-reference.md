@@ -180,6 +180,28 @@ shruggie-indexer path/to/directory/ --rename --dry-run
 
 Logs each proposed rename at `INFO` level. Only meaningful when used with `--rename`.
 
+### De-duplication during Rename
+
+When `--rename` is active, the indexer performs session-scoped de-duplication before any files are renamed. Files sharing identical content hashes are detected across all directories in the target tree:
+
+1. **Scan:** The completed entry tree is walked to identify groups of byte-identical files (same `id` hash).
+2. **Canonical selection:** The first file encountered in each group becomes the canonical copy. All others are duplicates.
+3. **Provenance preservation:** Each duplicate's complete `IndexEntry` — including its original name, timestamps, filesystem location, and all metadata entries — is stored in the canonical entry's `duplicates` array.
+4. **Rename:** Only canonical files are renamed to their `storage_name`. Duplicate files are removed from the entry tree.
+5. **Cleanup:** Duplicate files are deleted from disk after the rename phase completes.
+
+```bash
+# Run rename with de-duplication (default when --rename is active)
+shruggie-indexer path/to/directory/ --rename --inplace
+
+# Preview dedup results without deleting or renaming
+shruggie-indexer path/to/directory/ --rename --dry-run
+```
+
+In `--dry-run` mode, duplicates are identified and reported in the JSON output (the `duplicates` array is populated), but no files are renamed or deleted.
+
+The `duplicates` field appears on the canonical entry's sidecar JSON. Each element is a full `IndexEntry` preserving the absorbed file's original identity. See the [Schema Reference](../schema/index.md) for field details.
+
 ## Identity Options
 
 ### `--id-type`

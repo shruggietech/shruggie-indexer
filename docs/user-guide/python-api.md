@@ -207,6 +207,8 @@ new_config = replace(config, id_algorithm="sha256")
     - `meta_merge_delete=True` → `meta_merge=True`
     - `meta_merge=True` → `extract_exif=True`
 
+    The `write_directory_meta` field (default `True`) controls whether `_directorymeta2.json` directory sidecar files are emitted during output. Set to `False` to suppress directory-level sidecars while retaining per-file sidecars. Corresponds to the CLI `--no-dir-meta` flag.
+
 ## Data Models
 
 All data classes are defined in `models/schema.py` and map directly to the [v2 JSON Schema](../schema/index.md) types.
@@ -232,6 +234,7 @@ class IndexEntry:
     items: list[IndexEntry] | None = None
     metadata: list[MetadataEntry] | None = None
     mime_type: str | None = None
+    duplicates: list[IndexEntry] | None = None  # Absorbed dedup entries (rename only)
     session_id: str | None = None    # UUID4 identifying the indexing session
     indexed_at: TimestampPair | None = None  # When this entry was constructed
 ```
@@ -274,6 +277,53 @@ class ProgressEvent:
 
 !!! tip "Callback threading"
     The callback is invoked on the indexing thread. GUI consumers should enqueue events into a `queue.Queue` for main-thread processing. CLI consumers using `tqdm` or `rich` can update progress bars directly (both are thread-safe for single-bar updates). If the callback raises an exception, the engine logs a warning and continues.
+
+## De-duplication API
+
+The `core.dedup` module provides session-scoped de-duplication primitives. These are public API and designed for standalone import by downstream projects.
+
+```python
+from shruggie_indexer.core.dedup import (
+    DedupRegistry,
+    DedupResult,
+    DedupStats,
+    DedupAction,
+    scan_tree,
+    apply_dedup,
+    cleanup_duplicate_files,
+)
+```
+
+### `DedupRegistry`
+
+Session-scoped registry that maps content hashes to lists of `IndexEntry` objects. Call `register()` to add entries; call `get_groups()` to retrieve groups with two or more members.
+
+### `scan_tree(entry, registry=None)`
+
+Recursively walk an `IndexEntry` tree, registering every file-type entry into the given `DedupRegistry` (or a fresh one). Returns the populated `DedupRegistry`.
+
+```python
+registry = scan_tree(root_entry)
+for hash_key, entries in registry.get_groups().items():
+    print(f"{hash_key}: {len(entries)} duplicates")
+```
+
+### `apply_dedup(entry, registry)`
+
+Apply de-duplication to the entry tree using the populated registry. For each group, the first entry is the canonical copy; all subsequent entries are moved into the canonical entry's `duplicates` array and removed from the tree. Returns a `DedupResult`.
+
+### `DedupResult`
+
+Result object from `apply_dedup()` containing:
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `stats` | `DedupStats` | Aggregate statistics (groups found, files absorbed, bytes saved). |
+| `actions` | `list[DedupAction]` | Per-file actions taken (canonical designation or duplicate absorption). |
+
+### `cleanup_duplicate_files(actions, *, dry_run=False)`
+
+Delete duplicate files from disk based on the actions list from `apply_dedup()`. In dry-run mode, logs proposed deletions without removing files. Each deletion is logged at `INFO` level; failures are logged at `ERROR` level and do not abort remaining deletions.
 
 ## Exception Hierarchy
 

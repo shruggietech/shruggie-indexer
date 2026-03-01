@@ -6,7 +6,7 @@
 - **License:** Apache 2.0 ([full text](https://www.apache.org/licenses/LICENSE-2.0))
 - **Version:** 0.1.0 (MVP)
 - **Author:** William Thompson (ShruggieTech LLC)
-- **Date:** 2026-02-27
+- **Date:** 2026-03-01
 - **Status:** AMENDED
 - **Audience:** AI-first, Human-second
 
@@ -3788,6 +3788,10 @@ After implication propagation and output mode defaulting, the configuration load
 
 4. **Regex compilation.** All regex strings in the metadata identification and exclusion pattern lists MUST compile without error. If a user-provided pattern is invalid, the loader raises a `ConfigurationError` with the offending pattern and the `re.error` message.
 
+5. **Directory metadata suppression + MetaMergeDelete.** If `meta_merge_delete` is `True` and `write_directory_meta` is `False`, the output mode MUST ensure that per-file in-place sidecars are written (`output_inplace` MUST be `True`). In the GUI, this forces Multi-file output mode when the target is a directory — Single file mode produces only directory metadata, which would be suppressed, leaving no persistent output for MetaMergeDelete safety. The CLI relies on the user to specify `--inplace`; rule 1 (MetaMergeDelete safety) covers the case where no persistent output is configured.
+
+   > **Added 2026-03-01:** Constraint introduced with the `write_directory_meta` / `--no-dir-meta` feature.
+
 ---
 
 <a id="72-default-configuration"></a>
@@ -5099,6 +5103,15 @@ from shruggie_indexer.core.entry import (
 )
 from shruggie_indexer.core.progress import ProgressEvent
 from shruggie_indexer.core.serializer import serialize_entry
+from shruggie_indexer.core.dedup import (
+    DedupRegistry,
+    DedupResult,
+    DedupStats,
+    DedupAction,
+    scan_tree,
+    apply_dedup,
+    cleanup_duplicate_files,
+)
 from shruggie_indexer.models.schema import (
     IndexEntry,
     MetadataEntry,
@@ -5134,8 +5147,20 @@ __all__ = [
     "TimestampPair",
     "TimestampsObject",
     "ParentObject",
+    # De-duplication
+    "DedupRegistry",
+    "DedupResult",
+    "DedupStats",
+    "DedupAction",
+    "scan_tree",
+    "apply_dedup",
+    "cleanup_duplicate_files",
 ]
 ```
+
+> **Added 2026-03-01:** Seven de-duplication symbols (`DedupRegistry`,
+> `DedupResult`, `DedupStats`, `DedupAction`, `scan_tree`, `apply_dedup`,
+> `cleanup_duplicate_files`) added to `__all__`.
 
 The `__all__` list is exhaustive — it defines the complete set of names available via `from shruggie_indexer import *`. Names not in `__all__` are not part of the public API and may change without notice between versions. Consumers who import from subpackages (`from shruggie_indexer.core.hashing import hash_file`) do so at their own risk — those paths are internal and may be restructured.
 
