@@ -89,6 +89,25 @@ For files, the sidecar is named `<filename>_meta2.json`. For directories, the si
 
 Disables stdout output by default (use `--stdout` to re-enable).
 
+### `--dir-meta` / `--no-dir-meta`
+
+Control whether `_directorymeta2.json` directory sidecar files are written.
+
+```bash
+# Suppress directory metadata — only per-file sidecars are written
+shruggie-indexer path/to/directory/ --inplace --no-dir-meta
+
+# Explicitly enable (default behavior)
+shruggie-indexer path/to/directory/ --inplace --dir-meta
+```
+
+- **Default:** Enabled (`--dir-meta`). All directory sidecars are written normally.
+- **`--no-dir-meta`:** Suppresses directory-level `_directorymeta2.json` sidecars during `--inplace` output. Per-file `_meta2.json` sidecars are unaffected.
+- Auto-generated aggregate output files (those ending in `_directorymeta2.json` produced by the output path defaulting logic) are also suppressed.
+- Explicitly specified `--outfile` paths are never suppressed, regardless of this flag.
+- Stdout output is never affected by this flag.
+- Maps to the `write_directory_meta` configuration key.
+
 ## Metadata Options
 
 These options control embedded metadata extraction and sidecar metadata processing.

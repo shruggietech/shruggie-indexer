@@ -13,6 +13,7 @@ import signal
 import sys
 import threading
 import uuid
+from dataclasses import replace
 from enum import IntEnum
 from pathlib import Path
 from typing import Any
@@ -272,6 +273,16 @@ def _drain_delete_queue(queue: list[Path]) -> int:
     default=False,
     help="Write individual sidecar JSON files alongside each item.",
 )
+@click.option(
+    "--dir-meta/--no-dir-meta",
+    "dir_meta",
+    default=None,
+    help=(
+        "Write directory-level _directorymeta2.json files. "
+        "--no-dir-meta suppresses directory sidecars "
+        "while leaving per-file sidecars unaffected."
+    ),
+)
 # -- Metadata options --
 @click.option(
     "--meta",
@@ -361,6 +372,7 @@ def main(
     stdout: bool | None,
     outfile: str | None,
     inplace: bool,
+    dir_meta: bool | None,
     meta: bool,
     meta_merge: bool,
     meta_merge_delete: bool,
@@ -441,6 +453,8 @@ def main(
             overrides["dry_run"] = True
         if inplace:
             overrides["output_inplace"] = True
+        if dir_meta is not None:
+            overrides["write_directory_meta"] = dir_meta
         if outfile is not None:
             overrides["output_file"] = Path(outfile).resolve()
 
@@ -537,7 +551,10 @@ def main(
         # the sidecar file from {original}_meta2.json to
         # {storage_name}_meta2.json.  (Batch 6, §4.)
         if config.output_inplace:
-            _write_inplace_tree(entry, target_path, write_inplace)
+            _write_inplace_tree(
+                entry, target_path, write_inplace,
+                write_directory_meta=config.write_directory_meta,
+            )
 
         # ── Rename (spec section 6.10) ──────────────────────────────────
         if config.rename and entry.type == "file":
@@ -555,7 +572,21 @@ def main(
             )
 
         # ── Aggregate output (stdout + outfile) ─────────────────────────
-        write_output(entry, config)
+        # Gate auto-generated directory aggregate output when
+        # --no-dir-meta is active.  User-specified --outfile paths
+        # are never suppressed.
+        if (
+            not config.write_directory_meta
+            and entry.type == "directory"
+            and config.output_file is not None
+            and str(config.output_file).endswith("_directorymeta2.json")
+        ):
+            logger.info("Directory aggregate output suppressed (--no-dir-meta).")
+            config_for_write = replace(config, output_file=None)
+        else:
+            config_for_write = config
+
+        write_output(entry, config_for_write)
 
         # ── MetaMergeDelete: drain deletion queue (Stage 6) ─────────────
         if delete_queue:
@@ -600,6 +631,7 @@ def _write_inplace_tree(
     write_fn: Any,
     *,
     _is_root: bool = True,
+    write_directory_meta: bool = True,
 ) -> None:
     """Recursively write in-place sidecar files for an entry tree.
 
@@ -607,17 +639,25 @@ def _write_inplace_tree(
     The root directory entry is skipped because its in-place sidecar
     (written inside the target) duplicates the aggregate output file
     (written alongside the target).  Child sidecars are unaffected.
+
+    When *write_directory_meta* is ``False``, directory-level sidecar
+    files (``_directorymeta2.json``) are suppressed.  Per-file sidecars
+    are unaffected.
     """
     if entry.type == "file":
         item_path = root_path.parent / entry.file_system.relative
         write_fn(entry, item_path, "file")
     elif entry.type == "directory":
-        if not _is_root:
+        if not _is_root and write_directory_meta:
             dir_path = root_path.parent / entry.file_system.relative
             write_fn(entry, dir_path, "directory")
         if entry.items:
             for child in entry.items:
-                _write_inplace_tree(child, root_path, write_fn, _is_root=False)
+                _write_inplace_tree(
+                    child, root_path, write_fn,
+                    _is_root=False,
+                    write_directory_meta=write_directory_meta,
+                )
 
 
 def _rename_tree(

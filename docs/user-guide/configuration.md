@@ -62,6 +62,7 @@ compute_sha512 = false
 stdout = true                # Conditional default (see docs)
 # file = "index.json"       # No default; set to enable file output
 inplace = false
+write_directory_meta = true  # Suppress with false to skip _directorymeta2.json files
 
 # ── Metadata processing ────────────────────────────────────
 
@@ -143,6 +144,7 @@ base_args = [
 | `traversal.compute_sha512` | `false` | Compute SHA-512 (not computed by default for performance). |
 | `output.stdout` | `true` (conditional) | Write to stdout when no other output is specified. |
 | `output.inplace` | `false` | Write in-place sidecar files. |
+| `output.write_directory_meta` | `true` | Write `_directorymeta2.json` directory sidecars. Set to `false` to suppress directory-level metadata while keeping per-file sidecars. |
 | `metadata.extract_exif` | `false` | Extract embedded metadata via ExifTool. |
 | `metadata.meta_merge` | `false` | Merge sidecar metadata into parent entries. |
 | `metadata.meta_merge_delete` | `false` | Merge and delete sidecar files. |

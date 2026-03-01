@@ -199,3 +199,187 @@ class TestWriteInplace:
 
         sidecar = dir_path / "mydir_directorymeta2.json"
         assert sidecar.exists()
+
+
+class TestWriteDirectoryMetaSuppression:
+    """Tests for write_directory_meta=False suppression of dir sidecars.
+
+    Verifies that the _write_inplace_tree helper skips directory-level
+    _directorymeta2.json files when write_directory_meta is False,
+    while per-file sidecars remain unaffected.
+    """
+
+    @staticmethod
+    def _make_dir_entry(**overrides: Any) -> IndexEntry:
+        pair = TimestampPair(
+            iso="2024-01-01T00:00:00.000000+00:00", unix=1704067200000,
+        )
+        defaults: dict[str, Any] = {
+            "schema_version": 2,
+            "id": "yD41D8CD98F00B204E9800998ECF8427E",
+            "id_algorithm": "md5",
+            "type": "directory",
+            "name": NameObject(
+                text="mydir",
+                hashes=HashSet(
+                    md5="D41D8CD98F00B204E9800998ECF8427E",
+                    sha256="E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                    sha512=None,
+                ),
+            ),
+            "extension": None,
+            "size": SizeObject(text="0 B", bytes=0),
+            "hashes": None,
+            "file_system": FileSystemObject(relative="mydir", parent=None),
+            "timestamps": TimestampsObject(
+                created=pair, modified=pair, accessed=pair,
+            ),
+            "attributes": AttributesObject(is_link=False, storage_name=None),
+        }
+        defaults.update(overrides)
+        return IndexEntry(**defaults)
+
+    def test_dir_sidecar_written_when_enabled(self, tmp_path: Path) -> None:
+        """Directory sidecar is written when write_directory_meta=True."""
+        from shruggie_indexer.cli.main import _write_inplace_tree
+
+        root = tmp_path / "root"
+        root.mkdir()
+        subdir = root / "sub"
+        subdir.mkdir()
+        (subdir / "file.txt").write_bytes(b"data")
+
+        file_entry = _make_entry(
+            file_system=FileSystemObject(
+                relative="root/sub/file.txt", parent=None,
+            ),
+        )
+        sub_entry = self._make_dir_entry(
+            name=NameObject(
+                text="sub",
+                hashes=HashSet(
+                    md5="D41D8CD98F00B204E9800998ECF8427E",
+                    sha256="E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                    sha512=None,
+                ),
+            ),
+            file_system=FileSystemObject(relative="root/sub", parent=None),
+            items=[file_entry],
+        )
+        root_entry = self._make_dir_entry(
+            name=NameObject(
+                text="root",
+                hashes=HashSet(
+                    md5="D41D8CD98F00B204E9800998ECF8427E",
+                    sha256="E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                    sha512=None,
+                ),
+            ),
+            file_system=FileSystemObject(relative="root", parent=None),
+            items=[sub_entry],
+        )
+
+        _write_inplace_tree(
+            root_entry, root, write_inplace,
+            write_directory_meta=True,
+        )
+
+        # Sub-directory sidecar should exist
+        sub_sidecar = subdir / "sub_directorymeta2.json"
+        assert sub_sidecar.exists()
+        # File sidecar should exist
+        file_sidecar = subdir / "file.txt_meta2.json"
+        assert file_sidecar.exists()
+
+    def test_dir_sidecar_suppressed_when_disabled(self, tmp_path: Path) -> None:
+        """Directory sidecar is NOT written when write_directory_meta=False."""
+        from shruggie_indexer.cli.main import _write_inplace_tree
+
+        root = tmp_path / "root"
+        root.mkdir()
+        subdir = root / "sub"
+        subdir.mkdir()
+        (subdir / "file.txt").write_bytes(b"data")
+
+        file_entry = _make_entry(
+            file_system=FileSystemObject(
+                relative="root/sub/file.txt", parent=None,
+            ),
+        )
+        sub_entry = self._make_dir_entry(
+            name=NameObject(
+                text="sub",
+                hashes=HashSet(
+                    md5="D41D8CD98F00B204E9800998ECF8427E",
+                    sha256="E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                    sha512=None,
+                ),
+            ),
+            file_system=FileSystemObject(relative="root/sub", parent=None),
+            items=[file_entry],
+        )
+        root_entry = self._make_dir_entry(
+            name=NameObject(
+                text="root",
+                hashes=HashSet(
+                    md5="D41D8CD98F00B204E9800998ECF8427E",
+                    sha256="E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                    sha512=None,
+                ),
+            ),
+            file_system=FileSystemObject(relative="root", parent=None),
+            items=[sub_entry],
+        )
+
+        _write_inplace_tree(
+            root_entry, root, write_inplace,
+            write_directory_meta=False,
+        )
+
+        # Sub-directory sidecar should NOT exist
+        sub_sidecar = subdir / "sub_directorymeta2.json"
+        assert not sub_sidecar.exists()
+        # File sidecar should still exist
+        file_sidecar = subdir / "file.txt_meta2.json"
+        assert file_sidecar.exists()
+
+    def test_file_sidecars_unaffected(self, tmp_path: Path) -> None:
+        """Per-file sidecars are always written regardless of write_directory_meta."""
+        from shruggie_indexer.cli.main import _write_inplace_tree
+
+        root = tmp_path / "root"
+        root.mkdir()
+        (root / "a.txt").write_bytes(b"aaa")
+        (root / "b.txt").write_bytes(b"bbb")
+
+        entries = []
+        for name in ("a.txt", "b.txt"):
+            entries.append(
+                _make_entry(
+                    name=NameObject(
+                        text=name,
+                        hashes=HashSet(
+                            md5="D41D8CD98F00B204E9800998ECF8427E",
+                            sha256="E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                            sha512=None,
+                        ),
+                    ),
+                    extension=name.rsplit(".", 1)[-1],
+                    file_system=FileSystemObject(
+                        relative=f"root/{name}", parent=None,
+                    ),
+                ),
+            )
+
+        root_entry = self._make_dir_entry(
+            file_system=FileSystemObject(relative="root", parent=None),
+            items=entries,
+        )
+
+        _write_inplace_tree(
+            root_entry, root, write_inplace,
+            write_directory_meta=False,
+        )
+
+        assert (root / "a.txt_meta2.json").exists()
+        assert (root / "b.txt_meta2.json").exists()

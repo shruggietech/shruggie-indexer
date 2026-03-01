@@ -77,6 +77,9 @@ class IndexerConfig:
     meta_merge: bool = False
     meta_merge_delete: bool = False
 
+    # ── Output suppression ──────────────────────────────────────────────
+    write_directory_meta: bool = True
+
     # ── Rename ──────────────────────────────────────────────────────────
     rename: bool = False
     dry_run: bool = False

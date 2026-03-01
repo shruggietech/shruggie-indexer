@@ -115,13 +115,15 @@ The Output section uses a dropdown menu to select where results are written:
     - **Single file** — All results are written to one aggregate JSON file. The file path is shown in a read-only display below the dropdown.
     - **Multi-file** — Results are written as individual sidecar JSON files alongside each processed file (e.g., `photo.jpg_meta2.json`) and inside each subdirectory (e.g., `images_directorymeta2.json`). The root target directory does not receive an in-place sidecar — use **Single file** mode for the aggregate output. Only available when the target is a directory.
     - **View only** — Results are displayed in the output panel at the bottom of the window. Nothing is written to disk. Not available when Meta Merge Delete or Rename is active.
-- **Output path** — A read-only field showing the auto-computed output path based on your target. For "View only" mode, this displays "(displayed in viewer)". For "Multi-file" mode, a note explains that sidecar files are written alongside originals.
+- **Output path** — A read-only field showing the auto-computed output path based on your target. For "View only" mode, this displays "(displayed in viewer)". For "Multi-file" mode, a note explains that sidecar files are written alongside originals. When Multi-file is active and directory metadata is suppressed, the note changes to indicate that only per-file sidecars are written.
+- **Write directory metadata** — A checkbox controlling whether `_directorymeta2.json` directory sidecar files are produced. Default: checked. Unchecking this suppresses all directory-level sidecars during Multi-file output while leaving per-file `_meta2.json` sidecars intact. This is useful for workflows that only need per-file metadata (e.g., media library indexing). Disabled when the target type is "File" (not applicable to file targets). Corresponds to the CLI `--no-dir-meta` flag and the `write_directory_meta` configuration key.
 
 !!! tip "Output mode constraints"
     The available modes adjust automatically based on your target and operation type:
 
     - **Multi-file** requires a directory target (not available for single files).
     - **View only** is not available for Meta Merge Delete (destructive operations require a persistent output record) or when Rename is active (rename requires writing files to disk). The option remains visible in the dropdown but selecting it snaps back to the appropriate default with an explanatory message.
+    - **Single file** is not available when directory metadata is unchecked with a directory target (Single file produces only directory metadata, which would be empty). The mode falls back to Multi-file automatically.
 
 ### Running an Operation
 

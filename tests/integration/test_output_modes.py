@@ -1,6 +1,6 @@
 """Integration tests — output modes (stdout, outfile, inplace).
 
-5 test cases per §14.3.
+5 + 6 test cases per §14.3.
 """
 
 from __future__ import annotations
@@ -99,3 +99,133 @@ class TestOutputModes:
         parsed = json.loads(json_str)
         assert parsed["schema_version"] == 2
         assert parsed["items"] == []
+
+
+class TestWriteDirectoryMetaFlag:
+    """Tests for --no-dir-meta suppression of directory sidecars."""
+
+    def test_dir_sidecar_suppressed_inplace(
+        self, sample_tree: Path, mock_exiftool: None,
+    ) -> None:
+        """--no-dir-meta suppresses in-place _directorymeta2.json files."""
+        from shruggie_indexer.cli.main import _write_inplace_tree
+
+        config = _cfg(output_inplace=True, write_directory_meta=False)
+        entry = index_path(sample_tree, config)
+
+        _write_inplace_tree(
+            entry, sample_tree, write_inplace,
+            write_directory_meta=False,
+        )
+
+        # No _directorymeta2.json should exist anywhere
+        dir_sidecars = list(sample_tree.rglob("*_directorymeta2.json"))
+        assert dir_sidecars == [], f"Unexpected dir sidecars: {dir_sidecars}"
+
+        # Per-file sidecars should exist
+        file_sidecars = list(sample_tree.rglob("*_meta2.json"))
+        assert len(file_sidecars) > 0
+
+    def test_dir_sidecar_written_when_enabled(
+        self, sample_tree: Path, mock_exiftool: None,
+    ) -> None:
+        """With write_directory_meta=True, dir sidecars are written."""
+        from shruggie_indexer.cli.main import _write_inplace_tree
+
+        config = _cfg(output_inplace=True, write_directory_meta=True)
+        entry = index_path(sample_tree, config)
+
+        _write_inplace_tree(
+            entry, sample_tree, write_inplace,
+            write_directory_meta=True,
+        )
+
+        # At least one _directorymeta2.json should exist (subdir)
+        dir_sidecars = list(sample_tree.rglob("*_directorymeta2.json"))
+        assert len(dir_sidecars) > 0
+
+    def test_stdout_unaffected_by_no_dir_meta(
+        self, sample_tree: Path, mock_exiftool: None,
+    ) -> None:
+        """Stdout output is NOT suppressed by --no-dir-meta."""
+        config = _cfg(
+            output_stdout=True,
+            write_directory_meta=False,
+        )
+        entry = index_path(sample_tree, config)
+
+        captured = StringIO()
+        with patch("sys.stdout", captured):
+            write_output(entry, config)
+
+        output = captured.getvalue().strip()
+        parsed = json.loads(output)
+        assert parsed["schema_version"] == 2
+        assert parsed["type"] == "directory"
+        assert "items" in parsed
+
+    def test_explicit_outfile_unaffected(
+        self, sample_tree: Path, tmp_path: Path, mock_exiftool: None,
+    ) -> None:
+        """An explicit --outfile path is NOT suppressed by --no-dir-meta."""
+        outfile = tmp_path / "custom_output.json"
+        config = _cfg(
+            output_stdout=False,
+            output_file=outfile,
+            write_directory_meta=False,
+        )
+        entry = index_path(sample_tree, config)
+
+        write_output(entry, config)
+
+        assert outfile.exists()
+        parsed = json.loads(outfile.read_text(encoding="utf-8"))
+        assert parsed["schema_version"] == 2
+
+    def test_auto_generated_aggregate_suppressed(
+        self, sample_tree: Path, tmp_path: Path, mock_exiftool: None,
+    ) -> None:
+        """Auto-generated _directorymeta2.json is suppressed by --no-dir-meta."""
+        from dataclasses import replace as dc_replace
+
+        auto_path = tmp_path / "sample_tree_directorymeta2.json"
+        config = _cfg(
+            output_stdout=False,
+            output_file=auto_path,
+            write_directory_meta=False,
+        )
+        entry = index_path(sample_tree, config)
+
+        # Simulate the CLI gating logic
+        if (
+            not config.write_directory_meta
+            and entry.type == "directory"
+            and config.output_file is not None
+            and str(config.output_file).endswith("_directorymeta2.json")
+        ):
+            config_for_write = dc_replace(config, output_file=None)
+        else:
+            config_for_write = config
+
+        write_output(entry, config_for_write)
+
+        assert not auto_path.exists()
+
+    def test_single_file_target_unaffected(
+        self, sample_file: Path, mock_exiftool: None,
+    ) -> None:
+        """--no-dir-meta has no effect on single-file targets."""
+        config = _cfg(
+            output_stdout=True,
+            write_directory_meta=False,
+        )
+        entry = index_path(sample_file, config)
+
+        captured = StringIO()
+        with patch("sys.stdout", captured):
+            write_output(entry, config)
+
+        output = captured.getvalue().strip()
+        parsed = json.loads(output)
+        assert parsed["type"] == "file"
+        assert parsed["schema_version"] == 2

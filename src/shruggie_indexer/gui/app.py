@@ -1509,6 +1509,30 @@ class OperationsPage(ctk.CTkFrame):
         )
         self._output_mode_info_label.pack(fill="x", padx=(4, 0), pady=(0, 2))
 
+        # Write directory summary files checkbox
+        dir_meta_row = ctk.CTkFrame(c, fg_color="transparent")
+        dir_meta_row.pack(fill="x", pady=(2, 0))
+        self._write_dir_meta_var = ctk.BooleanVar(value=True)
+        self._write_dir_meta_cb = ctk.CTkCheckBox(
+            dir_meta_row,
+            text="Write directory summary files",
+            variable=self._write_dir_meta_var,
+            command=self._on_write_dir_meta_changed,
+        )
+        self._write_dir_meta_cb.pack(anchor="w")
+        _Tooltip(
+            self._write_dir_meta_cb,
+            "When unchecked, _directorymeta2.json files are suppressed.\n"
+            "Per-file sidecar files are unaffected.",
+        )
+        self._write_dir_meta_info_label = ctk.CTkLabel(
+            c, text="",
+            font=ctk.CTkFont(size=10),
+            text_color=("gray40", "gray60"),
+            anchor="w",
+        )
+        self._write_dir_meta_info_label.pack(fill="x", padx=(26, 0), pady=(0, 2))
+
         # Read-only output path display
         self._outpath_display = _CtkEntry(
             c, state="disabled",
@@ -1659,6 +1683,14 @@ class OperationsPage(ctk.CTkFrame):
         logger.debug("Output mode changed to: %s", self._output_mode_var.get())
         self._reconcile_controls()
 
+    def _on_write_dir_meta_changed(self) -> None:
+        """Write directory summary files checkbox toggled."""
+        logger.debug(
+            "Option changed: Write directory meta = %s",
+            self._write_dir_meta_var.get(),
+        )
+        self._reconcile_controls()
+
     def _on_rename_changed(self) -> None:
         """Rename checkbox toggled — refresh dependent controls."""
         logger.debug("Option changed: Rename files = %s", self._rename_var.get())
@@ -1756,7 +1788,20 @@ class OperationsPage(ctk.CTkFrame):
         is_dir = effective_type == "directory"
         is_mmd = op == _OP_META_MERGE_DELETE
         view_only_constrained = is_mmd or rename_on
+        dir_meta_on = self._write_dir_meta_var.get()
         mode = self._output_mode_var.get()
+
+        # -- Write directory meta checkbox constraints --
+        if is_dir:
+            self._enable_cb(self._write_dir_meta_cb)
+            self._write_dir_meta_info_label.configure(text="")
+        else:
+            self._write_dir_meta_var.set(True)
+            self._disable_cb(self._write_dir_meta_cb, select=True)
+            self._write_dir_meta_info_label.configure(
+                text="Directory output is only applicable for directory targets.",
+            )
+            dir_meta_on = True
 
         # Build list of available modes for this combination.
         # "View only" is always listed; constraints are enforced via
@@ -1766,10 +1811,24 @@ class OperationsPage(ctk.CTkFrame):
             available_modes.append(_OUT_MULTI)
         available_modes.append(_OUT_VIEW)
 
+        # When dir meta is off and target is a directory, Single file mode
+        # is disabled — it would produce zero output.
+        single_blocked_by_dir_meta = is_dir and not dir_meta_on
+
+        # When MMD is active and dir meta is off, force Multi-file.
+        mmd_forces_multi = is_mmd and is_dir and not dir_meta_on
+
         # Enforce fallback if current mode is constrained or unavailable.
         if mode == _OUT_VIEW and view_only_constrained:
             # View only is constrained — snap back to appropriate default.
             mode = _OUT_MULTI if is_dir else _OUT_SINGLE
+            self._output_mode_var.set(mode)
+        elif mode == _OUT_SINGLE and single_blocked_by_dir_meta:
+            # Single file blocked by suppressed dir meta — snap to Multi-file.
+            mode = _OUT_MULTI
+            self._output_mode_var.set(mode)
+        elif mmd_forces_multi and mode != _OUT_MULTI:
+            mode = _OUT_MULTI
             self._output_mode_var.set(mode)
         elif mode not in available_modes:
             # Mode no longer in available list (e.g., Multi-file on file target).
@@ -1783,6 +1842,17 @@ class OperationsPage(ctk.CTkFrame):
         info_parts: list[str] = []
         if not is_dir:
             info_parts.append("Multi-file is only available for directory targets.")
+        if single_blocked_by_dir_meta:
+            info_parts.append(
+                "Single file mode requires directory summary output. "
+                "Enable 'Write directory summary files' or use Multi-file mode.",
+            )
+        if mmd_forces_multi:
+            info_parts.append(
+                "Multi-file mode is required when directory output is "
+                "suppressed with Meta Merge Delete. Per-file sidecars "
+                "preserve merged sidecar data.",
+            )
         if view_only_constrained:
             if is_mmd:
                 info_parts.append(
@@ -1834,10 +1904,16 @@ class OperationsPage(ctk.CTkFrame):
             self._outpath_note.configure(text="")
         else:
             computed = self._compute_output_path()
+            dir_meta_on = self._write_dir_meta_var.get()
             self._outpath_display.insert(0, computed)
-            # Set note based on mode and target kind.
+            # Set note based on mode, target kind, and dir meta setting.
             if target_kind == "directory":
-                if mode == _OUT_MULTI:
+                if mode == _OUT_MULTI and not dir_meta_on:
+                    self._outpath_note.configure(
+                        text="(per-file sidecars only — directory summaries "
+                             "suppressed)",
+                    )
+                elif mode == _OUT_MULTI:
                     self._outpath_note.configure(
                         text="Summary output file. Per-file sidecar files "
                              "will also be written within the directory tree.",
@@ -1915,6 +1991,9 @@ class OperationsPage(ctk.CTkFrame):
             overrides["output_file"] = Path(computed_path) if computed_path else None
             overrides["output_inplace"] = False
 
+        # Write directory meta suppression
+        overrides["write_directory_meta"] = self._write_dir_meta_var.get()
+
         return replace(base, **overrides)
 
     def get_target_path(self) -> str:
@@ -1971,6 +2050,7 @@ class OperationsPage(ctk.CTkFrame):
             "sha512": self._sha512_var.get(),
             "extract_exif": self._exif_var.get(),
             "rename": self._rename_var.get(),
+            "write_directory_meta": self._write_dir_meta_var.get(),
             "output_mode": _OUT_KEY_MAP.get(
                 self._output_mode_var.get(), "single",
             ),
@@ -2007,6 +2087,8 @@ class OperationsPage(ctk.CTkFrame):
             self._exif_var.set(state["extract_exif"])
         if "rename" in state:
             self._rename_var.set(state["rename"])
+        if "write_directory_meta" in state:
+            self._write_dir_meta_var.set(state["write_directory_meta"])
         if "output_mode" in state:
             # Backward compat: map old "view"/"save"/"both" to new modes.
             mode_val = state["output_mode"]
@@ -3313,7 +3395,10 @@ class ShruggiIndexerApp(ctk.CTk):
             # the sidecar file from {original}_meta2.json to
             # {storage_name}_meta2.json.  (Batch 6, §4.)
             if config.output_inplace:
-                self._write_inplace_tree(entry, target)
+                self._write_inplace_tree(
+                    entry, target,
+                    write_directory_meta=config.write_directory_meta,
+                )
 
             # ── Stage 6: Rename (spec §6.10) ───────────────────────────
             if config.rename:
@@ -3334,7 +3419,20 @@ class ShruggiIndexerApp(ctk.CTk):
             # ── Aggregate output ────────────────────────────────────────
             json_str = serialize_entry(entry)
 
-            if config.output_file is not None:
+            # Gate auto-generated directory aggregate output when
+            # write_directory_meta is False.  User-specified --outfile
+            # paths are never suppressed.
+            write_aggregate = True
+            if (
+                not config.write_directory_meta
+                and entry.type == "directory"
+                and config.output_file is not None
+                and str(config.output_file).endswith("_directorymeta2.json")
+            ):
+                logger.info("Directory aggregate output suppressed (--no-dir-meta).")
+                write_aggregate = False
+
+            if config.output_file is not None and write_aggregate:
                 config.output_file.write_text(json_str + "\n", encoding="utf-8")
                 logger.info("Output written to: %s", config.output_file)
 
@@ -3389,25 +3487,33 @@ class ShruggiIndexerApp(ctk.CTk):
 
     @staticmethod
     def _write_inplace_tree(
-        entry: Any, root_path: Path, *, _is_root: bool = True,
+        entry: Any, root_path: Path, *,
+        _is_root: bool = True,
+        write_directory_meta: bool = True,
     ) -> None:
         """Recursively write in-place sidecar files for an entry tree.
 
         The root directory entry is skipped because its in-place sidecar
         (written inside the target) duplicates the aggregate output file
         (written alongside the target).  Child sidecars are unaffected.
+
+        When *write_directory_meta* is ``False``, directory-level sidecar
+        files (``_directorymeta2.json``) are suppressed.  Per-file sidecars
+        are unaffected.
         """
         if entry.type == "file":
             item_path = root_path.parent / entry.file_system.relative
             write_inplace(entry, item_path, "file")
         elif entry.type == "directory":
-            if not _is_root:
+            if not _is_root and write_directory_meta:
                 dir_path = root_path.parent / entry.file_system.relative
                 write_inplace(entry, dir_path, "directory")
             if entry.items:
                 for child in entry.items:
                     ShruggiIndexerApp._write_inplace_tree(
-                        child, root_path, _is_root=False,
+                        child, root_path,
+                        _is_root=False,
+                        write_directory_meta=write_directory_meta,
                     )
 
     @staticmethod

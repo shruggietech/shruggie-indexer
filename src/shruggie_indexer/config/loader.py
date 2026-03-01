@@ -201,6 +201,7 @@ def _merge_toml(config_dict: dict[str, Any], toml_data: dict[str, Any]) -> None:
     for key in (
         "recursive", "id_algorithm", "compute_sha512",
         "output_stdout", "output_file", "output_inplace",
+        "write_directory_meta",
         "extract_exif", "meta_merge", "meta_merge_delete",
         "rename", "dry_run", "extension_validation_pattern",
     ):
@@ -289,6 +290,7 @@ def _merge_toml(config_dict: dict[str, Any], toml_data: dict[str, Any]) -> None:
     known_top = {
         "recursive", "id_algorithm", "compute_sha512",
         "output_stdout", "output_file", "output_inplace",
+        "write_directory_meta",
         "extract_exif", "meta_merge", "meta_merge_delete",
         "rename", "dry_run", "extension_validation_pattern",
         "filesystem_excludes", "exiftool", "metadata_identify",
@@ -313,6 +315,7 @@ def _merge_overrides(config_dict: dict[str, Any], overrides: dict[str, Any]) -> 
     scalar_keys = {
         "recursive", "id_algorithm", "compute_sha512",
         "output_stdout", "output_file", "output_inplace",
+        "write_directory_meta",
         "extract_exif", "meta_merge", "meta_merge_delete",
         "rename", "dry_run", "extension_validation_pattern",
     }
@@ -480,6 +483,7 @@ def _build_config(config_dict: dict[str, Any]) -> IndexerConfig:
         output_stdout=config_dict.get("output_stdout", True),
         output_file=output_file,
         output_inplace=config_dict.get("output_inplace", False),
+        write_directory_meta=config_dict.get("write_directory_meta", True),
         extract_exif=config_dict.get("extract_exif", False),
         meta_merge=config_dict.get("meta_merge", False),
         meta_merge_delete=config_dict.get("meta_merge_delete", False),
