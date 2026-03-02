@@ -1170,6 +1170,8 @@ The stages map to the tool's module structure as follows:
 | 5 — Output Routing | `core/serializer.py`, `core/rename.py`, `core/dedup.py` |
 | 6 — Post-Processing | `core/serializer.py` (finalization), top-level orchestrator |
 
+> **Added 2026-03-01:** The rollback pipeline ([§6.11](#611-rollback-operations), `core/rollback.py`) is a separate processing path invoked via the `rollback` subcommand ([§8.12](#812-rollback-subcommand)). It does not participate in the six-stage indexing pipeline described above. The rollback pipeline has its own two-phase execution model (plan → execute) and operates on previously-generated `_meta2.json` sidecar files rather than raw filesystem targets.
+
 <a id="deviation-from-original-pipeline-linearity"></a>
 #### Pipeline linearity
 
@@ -3557,7 +3559,7 @@ When the `--rename` flag is active, the configuration MUST also activate `--inpl
 
 > **Historical note:** The original enforces this same constraint (`MakeIndex` forces `OutFileInPlace = $true` when `Rename = $true`).
 
-The sidecar file written alongside each renamed item serves as the reversal manifest: it contains the original filename in `name.text`, allowing a future revert operation to reconstruct the original path.
+The sidecar file written alongside each renamed item serves as the reversal manifest: it contains the original filename in `name.text`, allowing the rollback feature ([§6.11](#611-rollback-operations)) to reconstruct the original path, directory structure, and timestamps.
 
 <a id="safety-metamergedelete-guard"></a>
 #### Safety: MetaMergeDelete guard
@@ -3634,6 +3636,129 @@ When the rename flag is active, a de-duplication pass runs between entry constru
 #### Revert capability
 
 The rollback feature ([§8.12](#812-rollback-subcommand), `core/rollback.py`) reverses rename and de-duplication operations by reading `_meta2.json` sidecar files and restoring files to their original names, directory structure, and timestamps. The in-place sidecar files serve as the rollback manifest: the `name.text` field records the original filename, `file_system.relative` records the original path, and `timestamps` records the original filesystem timestamps. See [§18.1.2](#1812-rename-revert-operation) for the historical context.
+
+<a id="611-rollback-operations"></a>
+### 6.11. Rollback Operations
+
+> **Added 2026-03-01:** Documents the rollback engine as a core operation.
+
+**Module:** `core/rollback.py` — Standalone module with no CLI, GUI, or presentation-layer dependencies. Operates on `IndexEntry` objects and filesystem paths. Designed for direct importability by downstream ecosystem components (specifically `shruggie-vault`).
+
+<a id="rollback-inputs"></a>
+#### Inputs
+
+The rollback engine accepts three input shapes:
+
+| Input shape | Description |
+|---|---|
+| Per-file sidecar | A single `_meta2.json` file containing one `IndexEntry`. |
+| Aggregate output | A `_directorymeta2.json` file containing a directory entry with nested `items[]`. The tree is flattened to extract all file-type entries. |
+| Directory of sidecars | A directory containing `*_meta2.json` files. Each is loaded independently. When `recursive=True`, subdirectories are also searched. |
+
+All inputs MUST have `schema_version == 2`. v1 sidecars are not supported — loading raises `IndexerConfigError` with a message directing the user to the future `migrate` tool.
+
+<a id="rollback-restore-modes"></a>
+#### Restore modes
+
+**Structured mode (default).** Uses `file_system.relative` to reconstruct the original directory hierarchy under the target root. Forward slashes are converted to platform-native separators. This faithfully restores the filesystem state as it existed at index time.
+
+**Flat mode (`flat=True`).** Ignores `file_system.relative` entirely. Restores each file using only `name.text` directly into the target directory with no subdirectory creation. When two entries have the same `name.text`, the second is skipped with a WARNING log. Flat mode is appropriate for vault delivery, mixed-session inputs, and scenarios where the original directory structure is not needed.
+
+<a id="rollback-target-resolution"></a>
+#### Target directory resolution
+
+The `target_dir` parameter in `plan_rollback()` is always an explicit `Path` — it is never `None`. The "default to parent of meta2 path" logic is a presentation-layer convenience resolved by the CLI ([§8.12](#812-rollback-subcommand)) and GUI ([§10.3](#103-target-selection-and-input)) before calling the core engine.
+
+| Input shape | CLI default when `--target` is omitted |
+|---|---|
+| Single meta2 file | Parent directory of the file. |
+| Directory of sidecars | The directory itself. |
+| Aggregate output file | Parent directory of the file. |
+
+<a id="rollback-timestamp-restoration"></a>
+#### Timestamp restoration
+
+After copying each file, the executor explicitly sets timestamps using `os.utime()`:
+
+- `mtime` ← `timestamps.modified.unix / 1000`
+- `atime` ← `timestamps.accessed.unix / 1000`
+
+On Windows, if `pywin32` is available, `ctime` (creation time) is also restored via `win32file.SetFileTime()`. This is a SHOULD requirement — `pywin32` is not a required dependency. If unavailable, `ctime` restoration is skipped with a DEBUG-level log.
+
+<a id="rollback-sidecar-reconstruction"></a>
+#### Sidecar reconstruction
+
+For each `MetadataEntry` where `origin == "sidecar"`, the executor reconstructs the original sidecar file:
+
+| `attributes.format` | Action |
+|---|---|
+| `"json"` | `json.dumps(data, indent=2, ensure_ascii=False)` → write as UTF-8 |
+| `"text"` | Write `data` as UTF-8 text |
+| `"base64"` | `base64.b64decode(data)` → write as binary |
+| `"lines"` | `"\n".join(data)` → write as UTF-8 text |
+
+Timestamps are set on restored sidecar files using the same `os.utime()` approach.
+
+<a id="rollback-conflict-resolution"></a>
+#### Conflict resolution
+
+| Situation | Behavior |
+|---|---|
+| Target exists, `verify=True`, hashes match | Skipped — `skip_reason="Already exists (same content)"`. |
+| Target exists, hashes differ (or `verify=False`) | Skipped with WARNING — `skip_reason="Already exists (different content)"`, unless `force=True`. |
+| `force=True` | Target is overwritten. |
+| Flat mode collision (same `name.text`, different entries) | Second entry skipped with WARNING. |
+
+<a id="rollback-mixed-session-detection"></a>
+#### Mixed-session detection and warning
+
+When operating in structured mode (`flat=False`), if entries span multiple distinct `session_id` values (excluding `None`), the planner emits a WARNING:
+
+```
+{n} entries span {m} distinct indexing sessions. Relative paths may not share
+a common root. Restored directory tree may be incoherent. Consider using --flat
+or specifying --target explicitly.
+```
+
+This warning is advisory — the operation proceeds. It is NOT emitted in flat mode.
+
+<a id="rollback-source-resolver"></a>
+#### SourceResolver protocol
+
+The `SourceResolver` protocol enables pluggable source file resolution:
+
+```python
+class SourceResolver(Protocol):
+    def resolve(self, entry: IndexEntry, search_dir: Path | None) -> Path | None: ...
+```
+
+The default `LocalSourceResolver` searches the local filesystem:
+
+1. Look for `storage_name` in `search_dir` (renamed file).
+2. Look for `name.text` in `search_dir`, verify hash if found (non-renamed file).
+3. Return `None` if neither match succeeds.
+
+Downstream tools (e.g., `shruggie-vault`) provide custom implementations for remote storage retrieval.
+
+<a id="rollback-error-handling"></a>
+#### Error handling
+
+The executor follows the same fail-per-item principle as the indexing pipeline ([§4.5](#45-error-handling-strategy)):
+
+- Source not found → entry skipped with WARNING, other entries continue.
+- Copy failure → entry logged at ERROR, marked as failed, other entries continue.
+- Path traversal (`..` segments escaping `target_dir`) → entry rejected during planning.
+- Cancellation (`cancel_event` set) → stop processing, return partial `RollbackResult`. Files already restored remain (non-destructive — no cleanup on cancel).
+
+<a id="rollback-plan-execute"></a>
+#### Plan-then-execute architecture
+
+Following the pattern established by `core/dedup.py`:
+
+1. **`plan_rollback()`** — Computes the complete operation graph without touching the filesystem. Returns a `RollbackPlan` containing all actions, statistics, and warnings.
+2. **`execute_rollback()`** — Carries out the plan in four phases: mkdir → restore → duplicate_restore → sidecar_restore.
+
+This separation gives callers dry-run, inspection, and selective execution for free.
 
 <a id="7-configuration"></a>
 ## 7. Configuration
@@ -5112,7 +5237,7 @@ When the CLI is displaying a progress bar (via `tqdm` or `rich`, see [§11.6](#1
 <a id="812-rollback-subcommand"></a>
 ### 8.12. Rollback Subcommand
 
-The `rollback` subcommand restores files from `_meta2.json` sidecar metadata to their original names, directory structure, and timestamps. It is the CLI presentation layer for the core rollback engine ([§6.10](#610-file-rename-and-in-place-write-operations), `core/rollback.py`).
+The `rollback` subcommand restores files from `_meta2.json` sidecar metadata to their original names, directory structure, and timestamps. It is the CLI presentation layer for the core rollback engine ([§6.11](#611-rollback-operations), `core/rollback.py`).
 
 ```
 shruggie-indexer rollback [OPTIONS] META2_PATH
@@ -5212,6 +5337,25 @@ from shruggie_indexer.core.dedup import (
     apply_dedup,
     cleanup_duplicate_files,
 )
+from shruggie_indexer.core.rollback import (
+    RollbackPlan,
+    RollbackAction,
+    RollbackStats,
+    RollbackResult,
+    SourceResolver,
+    LocalSourceResolver,
+    discover_meta2_files,
+    execute_rollback,
+    load_meta2,
+    plan_rollback,
+    verify_file_hash,
+)
+from shruggie_indexer.exceptions import (
+    IndexerError,
+    IndexerConfigError,
+    IndexerRuntimeError,
+    RollbackError,
+)
 from shruggie_indexer.models.schema import (
     IndexEntry,
     MetadataEntry,
@@ -5255,12 +5399,35 @@ __all__ = [
     "scan_tree",
     "apply_dedup",
     "cleanup_duplicate_files",
+    # Rollback
+    "RollbackPlan",
+    "RollbackAction",
+    "RollbackStats",
+    "RollbackResult",
+    "SourceResolver",
+    "LocalSourceResolver",
+    "discover_meta2_files",
+    "execute_rollback",
+    "load_meta2",
+    "plan_rollback",
+    "verify_file_hash",
+    # Exceptions
+    "IndexerError",
+    "IndexerConfigError",
+    "IndexerRuntimeError",
+    "RollbackError",
 ]
 ```
 
 > **Added 2026-03-01:** Seven de-duplication symbols (`DedupRegistry`,
 > `DedupResult`, `DedupStats`, `DedupAction`, `scan_tree`, `apply_dedup`,
 > `cleanup_duplicate_files`) added to `__all__`.
+
+> **Added 2026-03-01:** Twelve rollback symbols (`RollbackPlan`,
+> `RollbackAction`, `RollbackStats`, `RollbackResult`, `SourceResolver`,
+> `LocalSourceResolver`, `discover_meta2_files`, `execute_rollback`,
+> `load_meta2`, `plan_rollback`, `verify_file_hash`) and `RollbackError`
+> added to `__all__`.
 
 The `__all__` list is exhaustive — it defines the complete set of names available via `from shruggie_indexer import *`. Names not in `__all__` are not part of the public API and may change without notice between versions. Consumers who import from subpackages (`from shruggie_indexer.core.hashing import hash_file`) do so at their own risk — those paths are internal and may be restructured.
 

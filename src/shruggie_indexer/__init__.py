@@ -16,6 +16,19 @@ from shruggie_indexer.core.entry import (
 from shruggie_indexer.core.exif import shutdown_exiftool
 from shruggie_indexer.core.progress import ProgressEvent
 from shruggie_indexer.core.rename import rename_inplace_sidecar, rename_item
+from shruggie_indexer.core.rollback import (
+    LocalSourceResolver,
+    RollbackAction,
+    RollbackPlan,
+    RollbackResult,
+    RollbackStats,
+    SourceResolver,
+    discover_meta2_files,
+    execute_rollback,
+    load_meta2,
+    plan_rollback,
+    verify_file_hash,
+)
 from shruggie_indexer.core.serializer import serialize_entry, write_inplace
 from shruggie_indexer.exceptions import (
     IndexerCancellationError,
@@ -23,6 +36,7 @@ from shruggie_indexer.exceptions import (
     IndexerError,
     IndexerRuntimeError,
     IndexerTargetError,
+    RollbackError,
     RenameError,
 )
 from shruggie_indexer.models.schema import (
@@ -50,6 +64,7 @@ __all__ = [
     "IndexerError",
     "IndexerRuntimeError",
     "IndexerTargetError",
+    "LocalSourceResolver",
     "MetadataAttributes",
     "MetadataEntry",
     "MetadataTypeAttributes",
@@ -57,17 +72,28 @@ __all__ = [
     "ParentObject",
     "ProgressEvent",
     "RenameError",
+    "RollbackAction",
+    "RollbackError",
+    "RollbackPlan",
+    "RollbackResult",
+    "RollbackStats",
     "SizeObject",
+    "SourceResolver",
     "TimestampPair",
     "TimestampsObject",
     "__version__",
     "build_directory_entry",
     "build_file_entry",
+    "discover_meta2_files",
+    "execute_rollback",
     "index_path",
     "load_config",
+    "load_meta2",
+    "plan_rollback",
     "rename_inplace_sidecar",
     "rename_item",
     "serialize_entry",
     "shutdown_exiftool",
+    "verify_file_hash",
     "write_inplace",
 ]

@@ -31,6 +31,18 @@ from shruggie_indexer import (
     TimestampPair,
     TimestampsObject,
     ParentObject,
+    # Rollback
+    RollbackPlan,
+    RollbackAction,
+    RollbackStats,
+    RollbackResult,
+    SourceResolver,
+    LocalSourceResolver,
+    load_meta2,
+    discover_meta2_files,
+    plan_rollback,
+    execute_rollback,
+    verify_file_hash,
 )
 ```
 
@@ -325,6 +337,254 @@ Result object from `apply_dedup()` containing:
 
 Delete duplicate files from disk based on the actions list from `apply_dedup()`. In dry-run mode, logs proposed deletions without removing files. Each deletion is logged at `INFO` level; failures are logged at `ERROR` level and do not abort remaining deletions.
 
+## Rollback API
+
+The `core.rollback` module provides the rollback engine for reversing rename and de-duplication operations. All symbols are exported from the top-level `shruggie_indexer` namespace.
+
+```python
+from shruggie_indexer import (
+    # Data classes
+    RollbackPlan,
+    RollbackAction,
+    RollbackStats,
+    RollbackResult,
+    # Source resolution
+    SourceResolver,
+    LocalSourceResolver,
+    # Core functions
+    load_meta2,
+    discover_meta2_files,
+    plan_rollback,
+    execute_rollback,
+    verify_file_hash,
+)
+```
+
+### `load_meta2(path, *, recursive=False)`
+
+Load and parse a `_meta2.json` file into a flat list of `IndexEntry` objects.
+
+```python
+def load_meta2(
+    path: Path,
+    *,
+    recursive: bool = False,
+) -> list[IndexEntry]: ...
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `path` | `Path` | Path to a per-file sidecar, aggregate output file, or directory of sidecars. |
+| `recursive` | `bool` | When `path` is a directory and `recursive=True`, search subdirectories for sidecar files. Default: `False`. |
+
+Handles three input shapes:
+
+1. **Per-file sidecar** — A single `IndexEntry` object → returns `[entry]`.
+2. **Aggregate output** — A directory entry with nested `items[]` → walks the tree, returns all file-type entries flattened.
+3. **Directory path** — Discovers all `*_meta2.json` files (recursively if `recursive=True`), loads each, returns combined flat list.
+
+Duplicate entries from the `duplicates` array of each canonical entry are extracted and included in the returned list with annotations distinguishing them from canonical entries.
+
+**Raises:**
+
+| Exception | Condition |
+|-----------|-----------|
+| `IndexerConfigError` | Invalid JSON or `schema_version` is not 2. |
+| `IndexerTargetError` | Path does not exist. |
+
+### `discover_meta2_files(directory, *, recursive=False)`
+
+Find all `*_meta2.json` files in a directory.
+
+```python
+def discover_meta2_files(
+    directory: Path,
+    *,
+    recursive: bool = False,
+) -> list[Path]: ...
+```
+
+Returns a sorted list of discovered meta2 file paths. When `recursive=False` (default), only the immediate directory is searched.
+
+### `plan_rollback()`
+
+Compute the full rollback plan without executing it.
+
+```python
+def plan_rollback(
+    entries: list[IndexEntry],
+    target_dir: Path,
+    *,
+    source_dir: Path | None = None,
+    resolver: SourceResolver | None = None,
+    verify: bool = True,
+    force: bool = False,
+    flat: bool = False,
+    skip_duplicates: bool = False,
+    restore_sidecars: bool = True,
+) -> RollbackPlan: ...
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `entries` | `list[IndexEntry]` | — | Flat list from `load_meta2()`. |
+| `target_dir` | `Path` | — | Root directory for restored files. Created if absent. |
+| `source_dir` | `Path \| None` | `None` | Directory to search for content files. |
+| `resolver` | `SourceResolver \| None` | `None` | Source file locator. Defaults to `LocalSourceResolver()`. |
+| `verify` | `bool` | `True` | Verify content hashes before restoring. |
+| `force` | `bool` | `False` | Overwrite existing files in target directory. |
+| `flat` | `bool` | `False` | Restore using `name.text` only, no directory structure. |
+| `skip_duplicates` | `bool` | `False` | Do not restore files from `duplicates[]` arrays. |
+| `restore_sidecars` | `bool` | `True` | Restore absorbed sidecar metadata files. |
+
+Returns a `RollbackPlan` describing all actions to be taken.
+
+### `execute_rollback()`
+
+Execute a previously computed rollback plan.
+
+```python
+def execute_rollback(
+    plan: RollbackPlan,
+    *,
+    dry_run: bool = False,
+    progress_callback: Callable[[ProgressEvent], None] | None = None,
+    cancel_event: threading.Event | None = None,
+) -> RollbackResult: ...
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `plan` | `RollbackPlan` | — | The plan from `plan_rollback()`. |
+| `dry_run` | `bool` | `False` | Log actions without executing them. |
+| `progress_callback` | `Callable \| None` | `None` | Optional callback for progress reporting. |
+| `cancel_event` | `threading.Event \| None` | `None` | Optional event for cancellation. |
+
+Processes actions in order: mkdir → restore → duplicate_restore → sidecar_restore. Returns a `RollbackResult` summarizing the outcome.
+
+### `verify_file_hash(path, expected, algorithm="md5")`
+
+Verify a file's content hash against expected values.
+
+```python
+def verify_file_hash(
+    path: Path,
+    expected: HashSet,
+    algorithm: str = "md5",
+) -> bool: ...
+```
+
+Returns `True` if the hash matches, `False` otherwise.
+
+### Data Classes
+
+#### `RollbackAction`
+
+A single file restoration action within a rollback plan.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `source_path` | `Path \| None` | Where the content bytes currently live. `None` if unresolvable. |
+| `target_path` | `Path` | Where they should be restored to. |
+| `entry` | `IndexEntry` | The `IndexEntry` driving this action. |
+| `action_type` | `str` | One of: `'restore'`, `'duplicate_restore'`, `'sidecar_restore'`, `'mkdir'`. |
+| `skip_reason` | `str \| None` | Non-`None` if this action will be skipped. Contains the reason. |
+| `verified` | `bool` | Whether the source file's hash was checked against the sidecar. |
+
+#### `RollbackStats`
+
+Summary statistics for a rollback plan or execution result.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `total_entries` | `int` | Total entries processed. |
+| `files_to_restore` | `int` | Canonical files to restore. |
+| `duplicates_to_restore` | `int` | Duplicate files to restore. |
+| `sidecars_to_restore` | `int` | Sidecar metadata files to restore. |
+| `directories_to_create` | `int` | Directories to create. |
+| `skipped_unresolvable` | `int` | Entries skipped because source file not found. |
+| `skipped_conflict` | `int` | Entries skipped due to target conflict. |
+| `skipped_already_exists` | `int` | Entries skipped because target already exists with same content. |
+
+#### `RollbackPlan`
+
+Complete plan for a rollback operation, computed before execution.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `actions` | `list[RollbackAction]` | All actions to be taken. |
+| `stats` | `RollbackStats` | Summary statistics. |
+| `warnings` | `list[str]` | Advisory warnings (e.g., mixed-session detection). |
+
+#### `RollbackResult`
+
+Outcome of executing a rollback plan.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `restored` | `int` | Canonical files restored. |
+| `duplicates_restored` | `int` | Duplicate files restored. |
+| `sidecars_restored` | `int` | Sidecar metadata files restored. |
+| `directories_created` | `int` | Directories created. |
+| `skipped` | `int` | Actions skipped. |
+| `failed` | `int` | Actions that failed. |
+| `errors` | `list[str]` | Error messages for failed actions. |
+
+### `SourceResolver` Protocol
+
+The `SourceResolver` protocol enables pluggable source file resolution. The default implementation (`LocalSourceResolver`) searches the local filesystem for content files. Downstream tools can provide custom implementations for remote storage retrieval.
+
+```python
+class SourceResolver(Protocol):
+    def resolve(self, entry: IndexEntry, search_dir: Path | None) -> Path | None:
+        """Return the local path to the content file, or None if not found."""
+        ...
+```
+
+### `LocalSourceResolver`
+
+Default implementation that searches the local filesystem:
+
+1. Look for `storage_name` in `search_dir` (renamed file).
+2. Look for `name.text` in `search_dir`, verify hash if found (non-renamed file).
+3. Return `None` if neither match succeeds.
+
+```python
+resolver = LocalSourceResolver(verify_hash=True)
+path = resolver.resolve(entry, search_dir=Path("/vault"))
+```
+
+### Vault Integration Example
+
+The `SourceResolver` protocol enables downstream tools like `shruggie-vault` to provide custom file retrieval logic for rollback operations. Here is an example of using the rollback API for single-file vault delivery with `flat=True`:
+
+```python
+from pathlib import Path
+from shruggie_indexer import (
+    load_meta2,
+    plan_rollback,
+    execute_rollback,
+    LocalSourceResolver,
+)
+
+# Load a single sidecar
+entries = load_meta2(Path("/vault/yABC.jpg_meta2.json"))
+
+# Plan a flat restore (single file, no directory structure)
+plan = plan_rollback(
+    entries,
+    target_dir=Path("/delivery/output"),
+    source_dir=Path("/vault"),
+    flat=True,
+)
+
+# Execute the restore
+result = execute_rollback(plan)
+print(f"Restored {result.restored} file(s)")
+# The file at /delivery/output/original-photo.jpg now has its original
+# name, and mtime/atime are set from the sidecar timestamps.
+```
+
 ## Exception Hierarchy
 
 All exceptions inherit from `IndexerError` for catch-all handling:
@@ -344,6 +604,9 @@ class IndexerRuntimeError(IndexerError):
 
 class RenameError(IndexerError):
     """File rename failed (collision, permission, etc.)."""
+
+class RollbackError(IndexerRuntimeError):
+    """Rollback-specific failure."""
 
 class IndexerCancellationError(IndexerError):
     """The indexing operation was cancelled by the caller."""

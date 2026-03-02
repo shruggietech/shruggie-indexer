@@ -69,6 +69,7 @@ Output (abbreviated):
 
 - [GitHub Repository](https://github.com/shruggietech/shruggie-indexer)
 - [V2 JSON Schema (canonical)](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json)
+- [Rollback Guide](user-guide/rollback.md) — Restore renamed and de-duplicated files to their original state.
 - Technical Specification:
     - [Markdown (GitHub)](https://github.com/shruggietech/shruggie-indexer/blob/main/shruggie-indexer-spec.md)
     - [PDF Download](https://raw.githubusercontent.com/shruggietech/shruggie-indexer/main/.archive/20260224-001-shruggie-indexer-spec.pdf)

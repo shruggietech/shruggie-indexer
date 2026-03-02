@@ -51,6 +51,7 @@ nav:
       - CLI Reference: user-guide/cli-reference.md
       - Configuration: user-guide/configuration.md
       - Python API: user-guide/python-api.md
+      - Rollback Guide: user-guide/rollback.md
       - Platform Notes: user-guide/platform-notes.md
   - Schema Reference:
       - Overview: schema/index.md
