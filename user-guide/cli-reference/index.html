@@ -740,6 +740,51 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Command Structure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#default-subcommand" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Subcommand
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#subcommands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subcommands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Subcommands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#index-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        index (default)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1846,6 +1891,51 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Command Structure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#default-subcommand" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Subcommand
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#subcommands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subcommands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Subcommands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#index-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        index (default)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2297,9 +2387,21 @@
 
 
 <h1 id="cli-reference">CLI Reference</h1>
-<p>shruggie-indexer is invoked as a single command with options and an optional target path.</p>
+<p>shruggie-indexer uses a subcommand-based CLI. When no subcommand is given, the <code>index</code> subcommand is used by default, preserving backward compatibility with earlier versions.</p>
 <h2 id="command-structure">Command Structure</h2>
-<div class="highlight"><pre><span></span><code>shruggie-indexer [OPTIONS] [TARGET]
+<div class="highlight"><pre><span></span><code>shruggie-indexer [OPTIONS] COMMAND [ARGS]...
+</code></pre></div>
+<p>The top-level group accepts <code>--version</code> and <code>--help</code>. All other options belong to individual subcommands.</p>
+<h3 id="default-subcommand">Default Subcommand</h3>
+<p>When the first argument is not a recognized subcommand, the <code>index</code> subcommand is assumed automatically. This means all legacy invocations continue to work:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># These are equivalent:</span>
+shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>--rename<span class="w"> </span>--inplace
+shruggie-indexer<span class="w"> </span>index<span class="w"> </span>path/to/target<span class="w"> </span>--rename<span class="w"> </span>--inplace
+</code></pre></div>
+<h2 id="subcommands">Subcommands</h2>
+<h3 id="index-default"><code>index</code> (default)</h3>
+<p>Index files and directories, producing structured JSON output.</p>
+<div class="highlight"><pre><span></span><code>shruggie-indexer index [OPTIONS] [TARGET]
 </code></pre></div>
 <p><code>TARGET</code> is an optional positional argument specifying the file or directory to index. When omitted, the current working directory is used.</p>
 <h2 id="target-options">Target Options</h2>
