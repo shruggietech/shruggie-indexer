@@ -749,6 +749,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../user-guide/rollback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rollback Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../user-guide/platform-notes/" class="md-nav__link">
         
   
@@ -1711,6 +1739,16 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>GUI: "Write directory metadata" checkbox</strong> — New checkbox in the Output card on the Operations page controlling directory metadata sidecar suppression. Mirrors the CLI <code>--no-dir-meta</code> flag. Automatically disabled when the target type is "File" (not applicable). Automatically forces Multi-file output mode when unchecked with a directory target (Single file mode produces only directory metadata, which would be empty). State persists across sessions.</li>
 <li><strong>Config: <code>write_directory_meta</code> key</strong> — New boolean configuration key (default <code>true</code>) supported in user TOML, project TOML, and CLI/API overrides. Controls whether <code>_directorymeta2.json</code> files are emitted during output. Participates in the standard 4-layer config resolution pipeline.</li>
 <li><strong>Tests: Directory metadata suppression</strong> — 3 unit tests in <code>tests/unit/test_serializer.py</code> and 6 integration tests in <code>tests/integration/test_output_modes.py</code> covering inplace sidecar suppression, aggregate output gating, stdout passthrough, explicit outfile preservation, and single-file target edge cases.</li>
+<li><strong>Core: Rollback engine</strong> — New <code>src/shruggie_indexer/core/rollback.py</code> module providing the complete rollback engine for reversing rename and de-duplication operations. Reads <code>_meta2.json</code> sidecar files and reconstructs the original filesystem layout. Provides <code>load_meta2()</code> (JSON→<code>IndexEntry</code> deserialization supporting per-file sidecars, aggregate directory sidecars, and directories of sidecars), <code>discover_meta2_files()</code> (recursive/non-recursive sidecar discovery), <code>plan_rollback()</code> (structured or flat restore planning with conflict detection, path traversal safety, duplicate handling, and sidecar restoration), <code>execute_rollback()</code> (4-phase executor: mkdir→restore→duplicate→sidecar with dry-run, cancellation, and progress reporting), and <code>verify_file_hash()</code> (content integrity verification). Uses a <code>SourceResolver</code> protocol with <code>LocalSourceResolver</code> as the default implementation. Follows the same plan-then-execute architecture as <code>core/dedup.py</code>.</li>
+<li><strong>CLI: Rollback subcommand</strong> — New <code>shruggie-indexer rollback</code> subcommand providing CLI access to the rollback engine. Accepts a <code>META2_PATH</code> argument (sidecar file, aggregate output, or directory of sidecars) and restores files to their original names and directory structure. Supports <code>--target</code> (optional, defaults to parent of META2_PATH), <code>--source</code> (explicit content file directory), <code>--flat</code> (restore without directory structure), <code>--recursive</code> (search subdirectories for sidecars), <code>--dry-run</code>, <code>--no-verify</code>, <code>--force</code>, <code>--skip-duplicates</code>, and <code>--no-restore-sidecars</code> flags. Follows the same thin-orchestration pattern as the <code>index</code> subcommand.</li>
+<li><strong>Exceptions: <code>RollbackError</code></strong> — New <code>RollbackError(IndexerRuntimeError)</code> exception for rollback-specific failures.</li>
+<li><strong>Tests: Rollback unit tests</strong> — 50 unit tests in <code>tests/unit/test_rollback.py</code> covering meta2 loading (per-file sidecar, aggregate tree, directory discovery, v1 rejection, malformed JSON, duplicate extraction, sidecar metadata preservation), source resolution (storage name match, original name match, hash verification), rollback planning (renamed/non-renamed files, source-not-found, path traversal rejection, conflict detection with same/different hashes, force overwrite, duplicate skipping, sidecar restoration, directory actions, flat mode, mixed sessions), rollback execution (dry-run, file copy with timestamp restoration, directory creation, duplicate copy, 4 sidecar format decoders, cancellation, error handling, flat mode), and hash verification.</li>
+<li><strong>Tests: Rollback fixtures</strong> — New <code>tests/fixtures/rollback-testbed/</code> directory with 7 subdirectories providing renamed files, non-renamed files, aggregate directory sidecars, deduplicated entries with sidecar metadata, mixed-session entries, malformed JSON, and v1-format sidecars for comprehensive rollback testing.</li>
+<li><strong>GUI: Rollback operation mode</strong> — Added "Rollback" as a fourth option in the operation type dropdown on the Operations page. When selected, the page morphs to present rollback-specific controls: a Source card (meta2 path with file/folder browse buttons, optional source directory, recursive checkbox), an Options card (flat restore, verify hashes, force overwrite, skip duplicates, restore sidecars), and a Target card (output directory with placeholder text showing the default). All indexing-specific cards are hidden during rollback mode. The destructive operation indicator shows green (non-destructive). The START button is disabled when the meta2 path field is empty. The rollback job runs in a background thread with progress reporting and cancellation support, producing a human-readable text summary on completion. All rollback-specific control states persist across application sessions.</li>
+<li><strong>Public API: Rollback exports</strong> — Twelve rollback symbols (<code>RollbackPlan</code>, <code>RollbackAction</code>, <code>RollbackStats</code>, <code>RollbackResult</code>, <code>SourceResolver</code>, <code>LocalSourceResolver</code>, <code>discover_meta2_files</code>, <code>execute_rollback</code>, <code>load_meta2</code>, <code>plan_rollback</code>, <code>verify_file_hash</code>) and <code>RollbackError</code> added to <code>__all__</code> in <code>__init__.py</code>. All symbols are importable via <code>from shruggie_indexer import ...</code>.</li>
+<li><strong>Docs: Rollback Guide</strong> — New <code>docs/user-guide/rollback.md</code> providing a dedicated rollback guide with plan-then-execute architecture overview, nine scenario walkthroughs (single renamed file, renamed directory, deduplicated files, aggregate output, non-renamed files, mixed sessions, flat mode, default target, vault delivery), sidecar reconstruction, timestamp restoration, hash verification, conflict resolution, and error handling documentation.</li>
+<li><strong>Docs: Rollback Python API</strong> — <code>docs/user-guide/python-api.md</code> updated with a full Rollback API section covering <code>load_meta2</code>, <code>discover_meta2_files</code>, <code>plan_rollback</code>, <code>execute_rollback</code>, <code>verify_file_hash</code>, all four data classes, the <code>SourceResolver</code> protocol, <code>LocalSourceResolver</code>, and a vault integration example.</li>
+<li><strong>Spec: §6.11 Rollback Operations</strong> — New specification section documenting the rollback engine's inputs, restore modes, target resolution, timestamp restoration, sidecar reconstruction, conflict resolution, mixed-session detection, <code>SourceResolver</code> protocol, error handling, and plan-then-execute architecture. Cross-referenced from §4.1, §6.10, §8.12, and §9.1.</li>
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>

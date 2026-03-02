@@ -16,7 +16,7 @@
         <link rel="prev" href="../configuration/">
       
       
-        <link rel="next" href="../platform-notes/">
+        <link rel="next" href="../rollback/">
       
       
         
@@ -1021,6 +1021,172 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#rollback-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rollback API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#load_meta2path-recursivefalse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load_meta2(path, *, recursive=False)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#discover_meta2_filesdirectory-recursivefalse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        discover_meta2_files(directory, *, recursive=False)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plan_rollback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plan_rollback()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#execute_rollback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        execute_rollback()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verify_file_hashpath-expected-algorithmmd5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        verify_file_hash(path, expected, algorithm="md5")
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Classes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Classes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rollbackaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RollbackAction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rollbackstats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RollbackStats
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rollbackplan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RollbackPlan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rollbackresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RollbackResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sourceresolver-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SourceResolver Protocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#localsourceresolver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LocalSourceResolver
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vault-integration-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vault Integration Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#exception-hierarchy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1118,6 +1284,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rollback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rollback Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1959,6 +2153,172 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#rollback-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rollback API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#load_meta2path-recursivefalse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load_meta2(path, *, recursive=False)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#discover_meta2_filesdirectory-recursivefalse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        discover_meta2_files(directory, *, recursive=False)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plan_rollback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        plan_rollback()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#execute_rollback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        execute_rollback()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verify_file_hashpath-expected-algorithmmd5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        verify_file_hash(path, expected, algorithm="md5")
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Classes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Classes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rollbackaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RollbackAction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rollbackstats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RollbackStats
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rollbackplan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RollbackPlan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rollbackresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RollbackResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sourceresolver-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SourceResolver Protocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#localsourceresolver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LocalSourceResolver
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vault-integration-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vault Integration Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#exception-hierarchy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2100,6 +2460,18 @@
     <span class="n">TimestampPair</span><span class="p">,</span>
     <span class="n">TimestampsObject</span><span class="p">,</span>
     <span class="n">ParentObject</span><span class="p">,</span>
+    <span class="c1"># Rollback</span>
+    <span class="n">RollbackPlan</span><span class="p">,</span>
+    <span class="n">RollbackAction</span><span class="p">,</span>
+    <span class="n">RollbackStats</span><span class="p">,</span>
+    <span class="n">RollbackResult</span><span class="p">,</span>
+    <span class="n">SourceResolver</span><span class="p">,</span>
+    <span class="n">LocalSourceResolver</span><span class="p">,</span>
+    <span class="n">load_meta2</span><span class="p">,</span>
+    <span class="n">discover_meta2_files</span><span class="p">,</span>
+    <span class="n">plan_rollback</span><span class="p">,</span>
+    <span class="n">execute_rollback</span><span class="p">,</span>
+    <span class="n">verify_file_hash</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
 <p>Names not listed in <code>__all__</code> are internal and may change without notice between versions.</p>
@@ -2578,6 +2950,444 @@
 </table>
 <h3 id="cleanup_duplicate_filesactions-dry_runfalse"><code>cleanup_duplicate_files(actions, *, dry_run=False)</code></h3>
 <p>Delete duplicate files from disk based on the actions list from <code>apply_dedup()</code>. In dry-run mode, logs proposed deletions without removing files. Each deletion is logged at <code>INFO</code> level; failures are logged at <code>ERROR</code> level and do not abort remaining deletions.</p>
+<h2 id="rollback-api">Rollback API</h2>
+<p>The <code>core.rollback</code> module provides the rollback engine for reversing rename and de-duplication operations. All symbols are exported from the top-level <code>shruggie_indexer</code> namespace.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">shruggie_indexer</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="c1"># Data classes</span>
+    <span class="n">RollbackPlan</span><span class="p">,</span>
+    <span class="n">RollbackAction</span><span class="p">,</span>
+    <span class="n">RollbackStats</span><span class="p">,</span>
+    <span class="n">RollbackResult</span><span class="p">,</span>
+    <span class="c1"># Source resolution</span>
+    <span class="n">SourceResolver</span><span class="p">,</span>
+    <span class="n">LocalSourceResolver</span><span class="p">,</span>
+    <span class="c1"># Core functions</span>
+    <span class="n">load_meta2</span><span class="p">,</span>
+    <span class="n">discover_meta2_files</span><span class="p">,</span>
+    <span class="n">plan_rollback</span><span class="p">,</span>
+    <span class="n">execute_rollback</span><span class="p">,</span>
+    <span class="n">verify_file_hash</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+<h3 id="load_meta2path-recursivefalse"><code>load_meta2(path, *, recursive=False)</code></h3>
+<p>Load and parse a <code>_meta2.json</code> file into a flat list of <code>IndexEntry</code> objects.</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_meta2</span><span class="p">(</span>
+    <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">recursive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">IndexEntry</span><span class="p">]:</span> <span class="o">...</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>path</code></td>
+<td><code>Path</code></td>
+<td>Path to a per-file sidecar, aggregate output file, or directory of sidecars.</td>
+</tr>
+<tr>
+<td><code>recursive</code></td>
+<td><code>bool</code></td>
+<td>When <code>path</code> is a directory and <code>recursive=True</code>, search subdirectories for sidecar files. Default: <code>False</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Handles three input shapes:</p>
+<ol>
+<li><strong>Per-file sidecar</strong> — A single <code>IndexEntry</code> object → returns <code>[entry]</code>.</li>
+<li><strong>Aggregate output</strong> — A directory entry with nested <code>items[]</code> → walks the tree, returns all file-type entries flattened.</li>
+<li><strong>Directory path</strong> — Discovers all <code>*_meta2.json</code> files (recursively if <code>recursive=True</code>), loads each, returns combined flat list.</li>
+</ol>
+<p>Duplicate entries from the <code>duplicates</code> array of each canonical entry are extracted and included in the returned list with annotations distinguishing them from canonical entries.</p>
+<p><strong>Raises:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Exception</th>
+<th>Condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IndexerConfigError</code></td>
+<td>Invalid JSON or <code>schema_version</code> is not 2.</td>
+</tr>
+<tr>
+<td><code>IndexerTargetError</code></td>
+<td>Path does not exist.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="discover_meta2_filesdirectory-recursivefalse"><code>discover_meta2_files(directory, *, recursive=False)</code></h3>
+<p>Find all <code>*_meta2.json</code> files in a directory.</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">discover_meta2_files</span><span class="p">(</span>
+    <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">recursive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span> <span class="o">...</span>
+</code></pre></div>
+<p>Returns a sorted list of discovered meta2 file paths. When <code>recursive=False</code> (default), only the immediate directory is searched.</p>
+<h3 id="plan_rollback"><code>plan_rollback()</code></h3>
+<p>Compute the full rollback plan without executing it.</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plan_rollback</span><span class="p">(</span>
+    <span class="n">entries</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">IndexEntry</span><span class="p">],</span>
+    <span class="n">target_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">source_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">resolver</span><span class="p">:</span> <span class="n">SourceResolver</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">verify</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">flat</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">skip_duplicates</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">restore_sidecars</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RollbackPlan</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>entries</code></td>
+<td><code>list[IndexEntry]</code></td>
+<td>—</td>
+<td>Flat list from <code>load_meta2()</code>.</td>
+</tr>
+<tr>
+<td><code>target_dir</code></td>
+<td><code>Path</code></td>
+<td>—</td>
+<td>Root directory for restored files. Created if absent.</td>
+</tr>
+<tr>
+<td><code>source_dir</code></td>
+<td><code>Path \| None</code></td>
+<td><code>None</code></td>
+<td>Directory to search for content files.</td>
+</tr>
+<tr>
+<td><code>resolver</code></td>
+<td><code>SourceResolver \| None</code></td>
+<td><code>None</code></td>
+<td>Source file locator. Defaults to <code>LocalSourceResolver()</code>.</td>
+</tr>
+<tr>
+<td><code>verify</code></td>
+<td><code>bool</code></td>
+<td><code>True</code></td>
+<td>Verify content hashes before restoring.</td>
+</tr>
+<tr>
+<td><code>force</code></td>
+<td><code>bool</code></td>
+<td><code>False</code></td>
+<td>Overwrite existing files in target directory.</td>
+</tr>
+<tr>
+<td><code>flat</code></td>
+<td><code>bool</code></td>
+<td><code>False</code></td>
+<td>Restore using <code>name.text</code> only, no directory structure.</td>
+</tr>
+<tr>
+<td><code>skip_duplicates</code></td>
+<td><code>bool</code></td>
+<td><code>False</code></td>
+<td>Do not restore files from <code>duplicates[]</code> arrays.</td>
+</tr>
+<tr>
+<td><code>restore_sidecars</code></td>
+<td><code>bool</code></td>
+<td><code>True</code></td>
+<td>Restore absorbed sidecar metadata files.</td>
+</tr>
+</tbody>
+</table>
+<p>Returns a <code>RollbackPlan</code> describing all actions to be taken.</p>
+<h3 id="execute_rollback"><code>execute_rollback()</code></h3>
+<p>Execute a previously computed rollback plan.</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">execute_rollback</span><span class="p">(</span>
+    <span class="n">plan</span><span class="p">:</span> <span class="n">RollbackPlan</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">dry_run</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">progress_callback</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">ProgressEvent</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cancel_event</span><span class="p">:</span> <span class="n">threading</span><span class="o">.</span><span class="n">Event</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RollbackResult</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>plan</code></td>
+<td><code>RollbackPlan</code></td>
+<td>—</td>
+<td>The plan from <code>plan_rollback()</code>.</td>
+</tr>
+<tr>
+<td><code>dry_run</code></td>
+<td><code>bool</code></td>
+<td><code>False</code></td>
+<td>Log actions without executing them.</td>
+</tr>
+<tr>
+<td><code>progress_callback</code></td>
+<td><code>Callable \| None</code></td>
+<td><code>None</code></td>
+<td>Optional callback for progress reporting.</td>
+</tr>
+<tr>
+<td><code>cancel_event</code></td>
+<td><code>threading.Event \| None</code></td>
+<td><code>None</code></td>
+<td>Optional event for cancellation.</td>
+</tr>
+</tbody>
+</table>
+<p>Processes actions in order: mkdir → restore → duplicate_restore → sidecar_restore. Returns a <code>RollbackResult</code> summarizing the outcome.</p>
+<h3 id="verify_file_hashpath-expected-algorithmmd5"><code>verify_file_hash(path, expected, algorithm="md5")</code></h3>
+<p>Verify a file's content hash against expected values.</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">verify_file_hash</span><span class="p">(</span>
+    <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">expected</span><span class="p">:</span> <span class="n">HashSet</span><span class="p">,</span>
+    <span class="n">algorithm</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;md5&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<p>Returns <code>True</code> if the hash matches, <code>False</code> otherwise.</p>
+<h3 id="data-classes">Data Classes</h3>
+<h4 id="rollbackaction"><code>RollbackAction</code></h4>
+<p>A single file restoration action within a rollback plan.</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>source_path</code></td>
+<td><code>Path \| None</code></td>
+<td>Where the content bytes currently live. <code>None</code> if unresolvable.</td>
+</tr>
+<tr>
+<td><code>target_path</code></td>
+<td><code>Path</code></td>
+<td>Where they should be restored to.</td>
+</tr>
+<tr>
+<td><code>entry</code></td>
+<td><code>IndexEntry</code></td>
+<td>The <code>IndexEntry</code> driving this action.</td>
+</tr>
+<tr>
+<td><code>action_type</code></td>
+<td><code>str</code></td>
+<td>One of: <code>'restore'</code>, <code>'duplicate_restore'</code>, <code>'sidecar_restore'</code>, <code>'mkdir'</code>.</td>
+</tr>
+<tr>
+<td><code>skip_reason</code></td>
+<td><code>str \| None</code></td>
+<td>Non-<code>None</code> if this action will be skipped. Contains the reason.</td>
+</tr>
+<tr>
+<td><code>verified</code></td>
+<td><code>bool</code></td>
+<td>Whether the source file's hash was checked against the sidecar.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="rollbackstats"><code>RollbackStats</code></h4>
+<p>Summary statistics for a rollback plan or execution result.</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>total_entries</code></td>
+<td><code>int</code></td>
+<td>Total entries processed.</td>
+</tr>
+<tr>
+<td><code>files_to_restore</code></td>
+<td><code>int</code></td>
+<td>Canonical files to restore.</td>
+</tr>
+<tr>
+<td><code>duplicates_to_restore</code></td>
+<td><code>int</code></td>
+<td>Duplicate files to restore.</td>
+</tr>
+<tr>
+<td><code>sidecars_to_restore</code></td>
+<td><code>int</code></td>
+<td>Sidecar metadata files to restore.</td>
+</tr>
+<tr>
+<td><code>directories_to_create</code></td>
+<td><code>int</code></td>
+<td>Directories to create.</td>
+</tr>
+<tr>
+<td><code>skipped_unresolvable</code></td>
+<td><code>int</code></td>
+<td>Entries skipped because source file not found.</td>
+</tr>
+<tr>
+<td><code>skipped_conflict</code></td>
+<td><code>int</code></td>
+<td>Entries skipped due to target conflict.</td>
+</tr>
+<tr>
+<td><code>skipped_already_exists</code></td>
+<td><code>int</code></td>
+<td>Entries skipped because target already exists with same content.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="rollbackplan"><code>RollbackPlan</code></h4>
+<p>Complete plan for a rollback operation, computed before execution.</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>actions</code></td>
+<td><code>list[RollbackAction]</code></td>
+<td>All actions to be taken.</td>
+</tr>
+<tr>
+<td><code>stats</code></td>
+<td><code>RollbackStats</code></td>
+<td>Summary statistics.</td>
+</tr>
+<tr>
+<td><code>warnings</code></td>
+<td><code>list[str]</code></td>
+<td>Advisory warnings (e.g., mixed-session detection).</td>
+</tr>
+</tbody>
+</table>
+<h4 id="rollbackresult"><code>RollbackResult</code></h4>
+<p>Outcome of executing a rollback plan.</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>restored</code></td>
+<td><code>int</code></td>
+<td>Canonical files restored.</td>
+</tr>
+<tr>
+<td><code>duplicates_restored</code></td>
+<td><code>int</code></td>
+<td>Duplicate files restored.</td>
+</tr>
+<tr>
+<td><code>sidecars_restored</code></td>
+<td><code>int</code></td>
+<td>Sidecar metadata files restored.</td>
+</tr>
+<tr>
+<td><code>directories_created</code></td>
+<td><code>int</code></td>
+<td>Directories created.</td>
+</tr>
+<tr>
+<td><code>skipped</code></td>
+<td><code>int</code></td>
+<td>Actions skipped.</td>
+</tr>
+<tr>
+<td><code>failed</code></td>
+<td><code>int</code></td>
+<td>Actions that failed.</td>
+</tr>
+<tr>
+<td><code>errors</code></td>
+<td><code>list[str]</code></td>
+<td>Error messages for failed actions.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sourceresolver-protocol"><code>SourceResolver</code> Protocol</h3>
+<p>The <code>SourceResolver</code> protocol enables pluggable source file resolution. The default implementation (<code>LocalSourceResolver</code>) searches the local filesystem for content files. Downstream tools can provide custom implementations for remote storage retrieval.</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">SourceResolver</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entry</span><span class="p">:</span> <span class="n">IndexEntry</span><span class="p">,</span> <span class="n">search_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the local path to the content file, or None if not found.&quot;&quot;&quot;</span>
+        <span class="o">...</span>
+</code></pre></div>
+<h3 id="localsourceresolver"><code>LocalSourceResolver</code></h3>
+<p>Default implementation that searches the local filesystem:</p>
+<ol>
+<li>Look for <code>storage_name</code> in <code>search_dir</code> (renamed file).</li>
+<li>Look for <code>name.text</code> in <code>search_dir</code>, verify hash if found (non-renamed file).</li>
+<li>Return <code>None</code> if neither match succeeds.</li>
+</ol>
+<div class="highlight"><pre><span></span><code><span class="n">resolver</span> <span class="o">=</span> <span class="n">LocalSourceResolver</span><span class="p">(</span><span class="n">verify_hash</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">path</span> <span class="o">=</span> <span class="n">resolver</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="n">search_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/vault&quot;</span><span class="p">))</span>
+</code></pre></div>
+<h3 id="vault-integration-example">Vault Integration Example</h3>
+<p>The <code>SourceResolver</code> protocol enables downstream tools like <code>shruggie-vault</code> to provide custom file retrieval logic for rollback operations. Here is an example of using the rollback API for single-file vault delivery with <code>flat=True</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shruggie_indexer</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">load_meta2</span><span class="p">,</span>
+    <span class="n">plan_rollback</span><span class="p">,</span>
+    <span class="n">execute_rollback</span><span class="p">,</span>
+    <span class="n">LocalSourceResolver</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Load a single sidecar</span>
+<span class="n">entries</span> <span class="o">=</span> <span class="n">load_meta2</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/vault/yABC.jpg_meta2.json&quot;</span><span class="p">))</span>
+
+<span class="c1"># Plan a flat restore (single file, no directory structure)</span>
+<span class="n">plan</span> <span class="o">=</span> <span class="n">plan_rollback</span><span class="p">(</span>
+    <span class="n">entries</span><span class="p">,</span>
+    <span class="n">target_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/delivery/output&quot;</span><span class="p">),</span>
+    <span class="n">source_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/vault&quot;</span><span class="p">),</span>
+    <span class="n">flat</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Execute the restore</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">execute_rollback</span><span class="p">(</span><span class="n">plan</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Restored </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">restored</span><span class="si">}</span><span class="s2"> file(s)&quot;</span><span class="p">)</span>
+<span class="c1"># The file at /delivery/output/original-photo.jpg now has its original</span>
+<span class="c1"># name, and mtime/atime are set from the sidecar timestamps.</span>
+</code></pre></div>
 <h2 id="exception-hierarchy">Exception Hierarchy</h2>
 <p>All exceptions inherit from <code>IndexerError</code> for catch-all handling:</p>
 <div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">IndexerError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
@@ -2594,6 +3404,9 @@
 
 <span class="k">class</span><span class="w"> </span><span class="nc">RenameError</span><span class="p">(</span><span class="n">IndexerError</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;File rename failed (collision, permission, etc.).&quot;&quot;&quot;</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">RollbackError</span><span class="p">(</span><span class="n">IndexerRuntimeError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Rollback-specific failure.&quot;&quot;&quot;</span>
 
 <span class="k">class</span><span class="w"> </span><span class="nc">IndexerCancellationError</span><span class="p">(</span><span class="n">IndexerError</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;The indexing operation was cancelled by the caller.&quot;&quot;&quot;</span>

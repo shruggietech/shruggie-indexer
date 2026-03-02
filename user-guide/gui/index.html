@@ -826,6 +826,67 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#rollback-operation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback Operation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rollback Operation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#source-section" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source Section
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rollback-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#target-section_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Target Section
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rollback-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback Results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#output-panel" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1132,6 +1193,34 @@
     
   
     Python API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rollback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rollback Guide
   
 
     
@@ -1870,6 +1959,67 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#rollback-operation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback Operation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rollback Operation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#source-section" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source Section
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rollback-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#target-section_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Target Section
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rollback-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback Results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#output-panel" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2163,7 +2313,7 @@ published on the GitHub release page.</p>
 <h2 id="operations-tab">Operations Tab</h2>
 <p>The Operations tab is where you configure and run indexing jobs. It is organized into labeled card sections. The <strong>Target</strong>, <strong>Options</strong>, and <strong>Output</strong> cards are <strong>collapsible</strong> — click anywhere on a card's header row to collapse or expand it. A small caret icon (▶ collapsed / ▼ expanded) on the left side of each header indicates the current state. Collapsed/expanded states are remembered between sessions. All three cards are expanded by default.</p>
 <h3 id="choosing-an-operation-type">Choosing an Operation Type</h3>
-<p>At the top of the Operations tab, a dropdown lets you choose one of three operation types:</p>
+<p>At the top of the Operations tab, a dropdown lets you choose one of four operation types:</p>
 <table>
 <thead>
 <tr>
@@ -2187,6 +2337,11 @@ published on the GitHub release page.</p>
 <td><strong>Meta Merge Delete</strong></td>
 <td>Same as Meta Merge, but <strong>deletes the sidecar files</strong> from disk after merging them into the report. The merged data is preserved in the output file.</td>
 <td style="text-align: center;"><strong>Yes</strong></td>
+</tr>
+<tr>
+<td><strong>Rollback</strong></td>
+<td>Reverses a previous indexing operation by restoring renamed files to their original names, reconstructing directory structure, and optionally recreating absorbed sidecar files. Operates from a <code>_meta2.json</code> manifest.</td>
+<td style="text-align: center;">No</td>
 </tr>
 </tbody>
 </table>
@@ -2274,6 +2429,65 @@ exists. Resolve any red error messages before running.</p>
 <li>All input controls on the Operations tab are disabled during execution.</li>
 </ul>
 <p>When the operation completes, the progress panel disappears and the result data is populated. The active Output/Log tab is preserved — if you were viewing the Log tab during the operation, the Log tab remains active. The Output button briefly highlights green to signal that new content is available.</p>
+<hr />
+<h2 id="rollback-operation">Rollback Operation</h2>
+<p>When you select <strong>Rollback</strong> from the operation type dropdown, the Operations tab morphs to show rollback-specific controls in place of the standard indexing cards. Rollback restores files that were previously renamed or reorganized by the indexer back to their original names and directory structure.</p>
+<h3 id="source-section">Source Section</h3>
+<p>The Source card (replacing the indexing Target card) lets you specify what to roll back:</p>
+<ul>
+<li><strong>Meta2 path</strong> — Path to a <code>_meta2.json</code> sidecar file or a directory containing sidecars. Two browse buttons (<strong>File…</strong> / <strong>Folder…</strong>) let you pick either a single file or an entire folder.</li>
+<li><strong>Source directory</strong> — Optional. Explicitly specify where the content files are located. When empty, the engine searches adjacent to the meta2 file.</li>
+<li><strong>Recursive</strong> — When the meta2 path is a directory, search subdirectories for sidecar files. This checkbox is automatically disabled when the meta2 path points to a single file.</li>
+</ul>
+<h3 id="rollback-options">Rollback Options</h3>
+<p>The Options card shows rollback-specific controls:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th style="text-align: center;">Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Flat restore</strong></td>
+<td style="text-align: center;">Off</td>
+<td>Restore files using original names only, without reconstructing directory structure.</td>
+</tr>
+<tr>
+<td><strong>Verify hashes</strong></td>
+<td style="text-align: center;">On</td>
+<td>Verify content integrity via hash comparison before restoring.</td>
+</tr>
+<tr>
+<td><strong>Force overwrite</strong></td>
+<td style="text-align: center;">Off</td>
+<td>Overwrite existing files in the target directory.</td>
+</tr>
+<tr>
+<td><strong>Skip duplicates</strong></td>
+<td style="text-align: center;">Off</td>
+<td>Do not restore files that were absorbed as duplicates.</td>
+</tr>
+<tr>
+<td><strong>Restore sidecars</strong></td>
+<td style="text-align: center;">On</td>
+<td>Recreate absorbed metadata sidecar files alongside restored content.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="target-section_1">Target Section</h3>
+<p>The Target card (replacing the indexing Output card) has a single control:</p>
+<ul>
+<li><strong>Target directory</strong> — The root directory where restored files will be placed. When left empty, the rollback defaults to the parent directory of the meta2 path. Placeholder text shows this default when the field is empty.</li>
+</ul>
+<h3 id="rollback-results">Rollback Results</h3>
+<p>After a rollback job completes, the Output tab displays a <strong>human-readable text summary</strong> (not JSON) of what was restored, skipped, and failed. Plan warnings — such as mixed-session detection — are included in the summary. The Log tab shows the full operation log as with indexing operations.</p>
+<div class="admonition tip">
+<p class="admonition-title">Non-Destructive</p>
+<p>Rollback only copies files — it does not modify or delete the source files or sidecar manifests. The destructive indicator shows green when Rollback is selected.</p>
+</div>
 <hr />
 <h2 id="output-panel">Output Panel</h2>
 <p>The output panel appears at the bottom of the Operations tab after a job finishes. It has two views, switchable via toggle buttons in the toolbar:</p>
