@@ -796,9 +796,9 @@ The `config/__init__.py` file SHOULD export `IndexerConfig`, `load_config()`, an
 
 | Module | Responsibility |
 |--------|----------------|
-| `main.py` | Defines the CLI entry point using `click`. Parses command-line arguments, constructs an `IndexerConfig`, calls into `core/` to perform the requested operation, and routes output via `serializer`. Contains no indexing logic — it is a pure presentation layer. Registered as the `shruggie-indexer` console script entry point in `pyproject.toml`. See [§8](#8-cli-interface). |
+| `main.py` | Defines the CLI entry point as a `click.Group` using the `DefaultGroup` subclass. The group provides automatic delegation to the `index` subcommand when no explicit subcommand is given. The `index_cmd()` function contains all indexing logic — argument parsing, `IndexerConfig` construction, and dispatch to `core/`. Contains no indexing logic in the group itself — it is a pure presentation layer. Registered as the `shruggie-indexer` console script entry point in `pyproject.toml`. See [§8](#8-cli-interface). |
 
-The `cli/` subpackage is intentionally minimal for the MVP. If the CLI grows to support subcommands in future versions, additional modules (e.g., `cli/commands/`) can be added without restructuring.
+The `cli/` subpackage supports subcommands via Click groups. Additional subcommands (e.g., `rollback`, `migrate`) are registered on the same group in their own modules.
 
 <a id="gui-graphical-user-interface"></a>
 #### `gui/` — Graphical User Interface
@@ -4447,24 +4447,60 @@ The CLI module is `cli/main.py` ([§3.2](#32-source-package-layout)). The entry 
 <a id="81-command-structure"></a>
 ### 8.1. Command Structure
 
-`shruggie-indexer` exposes a single top-level command with no subcommands. All behavior is controlled via options and a single positional argument.
+`shruggie-indexer` uses a `click.Group` with automatic default-subcommand delegation. The CLI entry point is the group; when the first argument is not a recognized subcommand or group-level option (`--help`, `--version`), the `index` subcommand is injected automatically. This preserves full backward compatibility with the original flat-command interface.
+
+Top-level group:
 
 ```
-shruggie-indexer [OPTIONS] [TARGET]
+shruggie-indexer [--version] [--help] COMMAND [ARGS]...
+```
+
+Default subcommand (`index`):
+
+```
+shruggie-indexer index [OPTIONS] [TARGET]
+```
+
+Because `index` is the default, the following invocations are equivalent:
+
+```bash
+shruggie-indexer path/to/target --rename --inplace
+shruggie-indexer index path/to/target --rename --inplace
 ```
 
 The command name when installed via `pip install -e .` is `shruggie-indexer` (hyphenated). The `python -m shruggie_indexer` invocation behaves identically.
 
+The `DefaultGroup` class (in `cli/main.py`) handles the subcommand injection by inspecting `self.get_params(ctx)` to distinguish group-level options from subcommand arguments. It does not use external dependencies.
+
 <a id="help-output"></a>
 #### Help output
 
-The `--help` flag produces a usage summary organized into logical option groups. The following is the canonical help layout — the implementation MUST produce output equivalent to this structure, though minor whitespace or wrapping differences are acceptable:
+The CLI has two levels of help:
+
+**Group help** (`shruggie-indexer --help`): Shows the top-level group with version and subcommand listing.
 
 ```
-Usage: shruggie-indexer [OPTIONS] [TARGET]
+Usage: shruggie-indexer [OPTIONS] COMMAND [ARGS]...
 
   Index files and directories, producing structured JSON output with hash-based
   identities, filesystem metadata, EXIF data, and sidecar metadata.
+
+  When no subcommand is given, 'index' is used by default.
+
+Options:
+  --version  Show the version and exit.
+  --help     Show this message and exit.
+
+Commands:
+  index  Index files and directories (default command).
+```
+
+**Index subcommand help** (`shruggie-indexer index --help`): Shows the full indexing option set. The following is the canonical help layout — the implementation MUST produce output equivalent to this structure, though minor whitespace or wrapping differences are acceptable:
+
+```
+Usage: shruggie-indexer index [OPTIONS] [TARGET]
+
+  Index files and directories (default command).
 
 Arguments:
   [TARGET]  Path to the file or directory to index. Defaults to the current
@@ -4508,9 +4544,6 @@ Configuration:
 Logging:
   -v, --verbose           Increase verbosity. Repeat for more detail (-vv, -vvv).
   -q, --quiet             Suppress all non-error output.
-
-General:
-  --version               Show version and exit.
   --help                  Show this message and exit.
 ```
 

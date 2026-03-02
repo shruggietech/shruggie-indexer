@@ -1,11 +1,33 @@
 # CLI Reference
 
-shruggie-indexer is invoked as a single command with options and an optional target path.
+shruggie-indexer uses a subcommand-based CLI. When no subcommand is given, the `index` subcommand is used by default, preserving backward compatibility with earlier versions.
 
 ## Command Structure
 
 ```
-shruggie-indexer [OPTIONS] [TARGET]
+shruggie-indexer [OPTIONS] COMMAND [ARGS]...
+```
+
+The top-level group accepts `--version` and `--help`. All other options belong to individual subcommands.
+
+### Default Subcommand
+
+When the first argument is not a recognized subcommand, the `index` subcommand is assumed automatically. This means all legacy invocations continue to work:
+
+```bash
+# These are equivalent:
+shruggie-indexer path/to/target --rename --inplace
+shruggie-indexer index path/to/target --rename --inplace
+```
+
+## Subcommands
+
+### `index` (default)
+
+Index files and directories, producing structured JSON output.
+
+```
+shruggie-indexer index [OPTIONS] [TARGET]
 ```
 
 `TARGET` is an optional positional argument specifying the file or directory to index. When omitted, the current working directory is used.

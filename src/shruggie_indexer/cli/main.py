@@ -1,7 +1,11 @@
 """Command-line interface for shruggie-indexer.
 
-Provides the single ``main()`` click command that serves as the entry point
-for ``shruggie-indexer`` (console script) and ``python -m shruggie_indexer``.
+Provides the ``main()`` click group that serves as the entry point for
+``shruggie-indexer`` (console script) and ``python -m shruggie_indexer``.
+
+The group uses :class:`DefaultGroup` to fall back to the ``index``
+subcommand when no explicit subcommand is given, preserving backward
+compatibility with earlier CLI versions.
 
 See spec sections 8.1-8.11 for full behavioral guidance.
 """
@@ -23,7 +27,9 @@ import click
 from shruggie_indexer._version import __version__
 
 __all__ = [
+    "DefaultGroup",
     "ExitCode",
+    "index_cmd",
     "main",
 ]
 
@@ -224,18 +230,68 @@ def _drain_delete_queue(queue: list[Path]) -> int:
 
 
 # ---------------------------------------------------------------------------
-# CLI command
+# DefaultGroup — subcommand fallback
 # ---------------------------------------------------------------------------
 
 
-@click.command(
+class DefaultGroup(click.Group):
+    """Click group that falls back to a default command.
+
+    When the first argument is not a recognized subcommand or a group-level
+    option (``--help``, ``--version``), the *default_cmd_name* subcommand is
+    injected automatically.  This preserves backward compatibility with the
+    original flat-command CLI.
+    """
+
+    default_cmd_name: str | None = None
+
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        """Inject the default subcommand when none is explicitly given."""
+        if self.default_cmd_name:
+            # Collect group-level option names (--help, --version, etc.)
+            # Use get_params(ctx) because Click adds --help dynamically
+            # rather than storing it in self.params.
+            group_opts: set[str] = set()
+            for param in self.get_params(ctx):
+                group_opts.update(param.opts)
+                group_opts.update(param.secondary_opts)
+
+            if not args:
+                args = [self.default_cmd_name]
+            elif args[0] not in self.commands and args[0] not in group_opts:
+                args = [self.default_cmd_name, *args]
+        return super().parse_args(ctx, args)
+
+
+# ---------------------------------------------------------------------------
+# CLI group
+# ---------------------------------------------------------------------------
+
+
+@click.group(
     name="shruggie-indexer",
+    cls=DefaultGroup,
     help=(
         "Index files and directories, producing structured JSON output with "
         "hash-based identities, filesystem metadata, EXIF data, and sidecar "
-        "metadata."
+        "metadata.\n\n"
+        "When no subcommand is given, 'index' is used by default."
     ),
 )
+@click.version_option(version=__version__, prog_name="shruggie-indexer")
+def main() -> None:
+    """shruggie-indexer CLI group."""
+
+
+main.default_cmd_name = "index"  # type: ignore[attr-defined]
+
+
+# ---------------------------------------------------------------------------
+# index subcommand (default)
+# ---------------------------------------------------------------------------
+
+
+@main.command("index")
 @click.argument(
     "target",
     required=False,
@@ -363,9 +419,7 @@ def _drain_delete_queue(queue: list[Path]) -> int:
         "the specified file."
     ),
 )
-# -- General --
-@click.version_option(version=__version__, prog_name="shruggie-indexer")
-def main(
+def index_cmd(
     target: str | None,
     target_type: bool | None,
     recursive: bool | None,
@@ -385,7 +439,7 @@ def main(
     quiet: bool,
     log_file: str | None,
 ) -> None:
-    """Index files and directories with hash-based identities."""
+    """Index files and directories (default command)."""
     from shruggie_indexer.config.loader import load_config
     from shruggie_indexer.core.entry import index_path
     from shruggie_indexer.core.rename import rename_item
