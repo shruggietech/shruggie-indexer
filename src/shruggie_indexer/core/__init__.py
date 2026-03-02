@@ -38,6 +38,18 @@ from shruggie_indexer.core.paths import (
 )
 from shruggie_indexer.core.progress import ProgressEvent
 from shruggie_indexer.core.rename import rename_item
+from shruggie_indexer.core.rollback import (
+    LocalSourceResolver,
+    RollbackAction,
+    RollbackPlan,
+    RollbackResult,
+    RollbackStats,
+    discover_meta2_files,
+    execute_rollback,
+    load_meta2,
+    plan_rollback,
+    verify_file_hash,
+)
 from shruggie_indexer.core.serializer import serialize_entry, write_inplace, write_output
 from shruggie_indexer.core.sidecar import discover_and_parse
 from shruggie_indexer.core.timestamps import extract_timestamps
@@ -48,9 +60,14 @@ __all__ = [
     "DedupRegistry",
     "DedupResult",
     "DedupStats",
+    "LocalSourceResolver",
     "NULL_HASHES",
     "PathComponents",
     "ProgressEvent",
+    "RollbackAction",
+    "RollbackPlan",
+    "RollbackResult",
+    "RollbackStats",
     "apply_dedup",
     "build_directory_entry",
     "build_file_entry",
@@ -58,6 +75,8 @@ __all__ = [
     "build_storage_path",
     "cleanup_duplicate_files",
     "discover_and_parse",
+    "discover_meta2_files",
+    "execute_rollback",
     "extract_components",
     "extract_exif",
     "extract_timestamps",
@@ -66,6 +85,8 @@ __all__ = [
     "hash_string",
     "index_path",
     "list_children",
+    "load_meta2",
+    "plan_rollback",
     "relative_forward_slash",
     "rename_item",
     "resolve_path",
@@ -73,6 +94,7 @@ __all__ = [
     "select_id",
     "serialize_entry",
     "validate_extension",
+    "verify_file_hash",
     "write_inplace",
     "write_output",
 ]

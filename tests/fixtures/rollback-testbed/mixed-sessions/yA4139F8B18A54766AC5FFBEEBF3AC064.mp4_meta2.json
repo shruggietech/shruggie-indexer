@@ -1,0 +1,47 @@
+{
+  "schema_version": 2,
+  "id": "yA4139F8B18A54766AC5FFBEEBF3AC064",
+  "id_algorithm": "md5",
+  "type": "file",
+  "name": {
+    "text": "drone.mp4",
+    "hashes": {
+      "md5": "CE091FD7529385E96761B2393C846D5F",
+      "sha256": "6BDF4CA86C5395C8DCAE4906955F89B4FC4E0711411E3B3BCCFD4F4D228298DC"
+    }
+  },
+  "extension": "mp4",
+  "mime_type": "video/mp4",
+  "size": {
+    "text": "44 B",
+    "bytes": 44
+  },
+  "hashes": {
+    "md5": "A4139F8B18A54766AC5FFBEEBF3AC064",
+    "sha256": "CE3AEA97835BDA37272512D97AA46003F1FB0504DCFD2939D052370AEE0ACA37"
+  },
+  "file_system": {
+    "relative": "media/clips/drone.mp4",
+    "parent": {
+      "id": "xCLIPSDIR000000000000000000000000",
+      "name": {
+        "text": "clips",
+        "hashes": {
+          "md5": "BBBB0000BBBB0000BBBB0000BBBB0000",
+          "sha256": "BBBB0000BBBB0000BBBB0000BBBB0000BBBB0000BBBB0000BBBB0000BBBB0000"
+        }
+      }
+    }
+  },
+  "timestamps": {
+    "created":  { "iso": "2026-01-25T14:00:00.000-05:00", "unix": 1770228000000 },
+    "modified": { "iso": "2026-01-25T14:30:00.000-05:00", "unix": 1770229800000 },
+    "accessed": { "iso": "2026-01-25T15:00:00.000-05:00", "unix": 1770231600000 }
+  },
+  "attributes": {
+    "is_link": false,
+    "storage_name": "yA4139F8B18A54766AC5FFBEEBF3AC064.mp4"
+  },
+  "session_id": "bbbb2222-bbbb-4bbb-bbbb-bbbbbbbbbbbb",
+  "indexed_at": { "iso": "2026-01-25T15:30:00.000-05:00", "unix": 1770233400000 }
+}

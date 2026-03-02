@@ -15,6 +15,7 @@ __all__ = [
     "IndexerRuntimeError",
     "IndexerTargetError",
     "RenameError",
+    "RollbackError",
 ]
 
 
@@ -40,3 +41,7 @@ class RenameError(IndexerRuntimeError):
 
 class IndexerCancellationError(IndexerError):
     """The indexing operation was cancelled by the caller."""
+
+
+class RollbackError(IndexerRuntimeError):
+    """An error occurred during a rollback operation."""

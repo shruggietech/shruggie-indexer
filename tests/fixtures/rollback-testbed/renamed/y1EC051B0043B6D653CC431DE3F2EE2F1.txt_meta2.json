@@ -1,0 +1,47 @@
+{
+  "schema_version": 2,
+  "id": "y1EC051B0043B6D653CC431DE3F2EE2F1",
+  "id_algorithm": "md5",
+  "type": "file",
+  "name": {
+    "text": "testfile.txt",
+    "hashes": {
+      "md5": "A30F5A585EFA971FC5B3EAE62620251A",
+      "sha256": "FDB0CA202B94A4B8A8D968ACA21A927D52F8DA0889B5B3B9ABD3B0CB4E097066"
+    }
+  },
+  "extension": "txt",
+  "mime_type": "text/plain",
+  "size": {
+    "text": "42 B",
+    "bytes": 42
+  },
+  "hashes": {
+    "md5": "1EC051B0043B6D653CC431DE3F2EE2F1",
+    "sha256": "A1E13DE80D9EB65EE21FCDB21C3653676192BC23B55C23DC644FDD3CA410FFDE"
+  },
+  "file_system": {
+    "relative": "testdir/testfile.txt",
+    "parent": {
+      "id": "x1234567890ABCDEF1234567890ABCDEF",
+      "name": {
+        "text": "testdir",
+        "hashes": {
+          "md5": "F0E4C2F76C58916EC258F246851BEA09",
+          "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+        }
+      }
+    }
+  },
+  "timestamps": {
+    "created":  { "iso": "2026-02-15T10:00:00.000-05:00", "unix": 1771167600000 },
+    "modified": { "iso": "2026-02-15T10:01:00.000-05:00", "unix": 1771167660000 },
+    "accessed": { "iso": "2026-02-15T10:02:00.000-05:00", "unix": 1771167720000 }
+  },
+  "attributes": {
+    "is_link": false,
+    "storage_name": "y1EC051B0043B6D653CC431DE3F2EE2F1.txt"
+  },
+  "session_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+  "indexed_at": { "iso": "2026-02-15T09:30:00.000-05:00", "unix": 1771165800000 }
+}

@@ -1,0 +1,47 @@
+{
+  "schema_version": 2,
+  "id": "y2D5109B8C84BDA94C4D47F034AABA7EA",
+  "id_algorithm": "md5",
+  "type": "file",
+  "name": {
+    "text": "beach.jpg",
+    "hashes": {
+      "md5": "7A86CFA27AD1C446291021A60B90B284",
+      "sha256": "83281D59FB05B7CE64052F6438B96237677B1E5CEB6DCBDC2931AFE4D89AC835"
+    }
+  },
+  "extension": "jpg",
+  "mime_type": "image/jpeg",
+  "size": {
+    "text": "44 B",
+    "bytes": 44
+  },
+  "hashes": {
+    "md5": "2D5109B8C84BDA94C4D47F034AABA7EA",
+    "sha256": "37B0C39BF73BBA680CB252CF013DCF05D61D0EA599B7B328504C4C3AE430481A"
+  },
+  "file_system": {
+    "relative": "vacation/beach.jpg",
+    "parent": {
+      "id": "xVACATION0000000000000000000000000",
+      "name": {
+        "text": "vacation",
+        "hashes": {
+          "md5": "AAAA0000AAAA0000AAAA0000AAAA0000",
+          "sha256": "AAAA0000AAAA0000AAAA0000AAAA0000AAAA0000AAAA0000AAAA0000AAAA0000"
+        }
+      }
+    }
+  },
+  "timestamps": {
+    "created":  { "iso": "2026-01-20T08:00:00.000-05:00", "unix": 1769778000000 },
+    "modified": { "iso": "2026-01-20T08:30:00.000-05:00", "unix": 1769779800000 },
+    "accessed": { "iso": "2026-01-20T09:00:00.000-05:00", "unix": 1769781600000 }
+  },
+  "attributes": {
+    "is_link": false,
+    "storage_name": "y2D5109B8C84BDA94C4D47F034AABA7EA.jpg"
+  },
+  "session_id": "aaaa1111-aaaa-4aaa-aaaa-aaaaaaaaaaaa",
+  "indexed_at": { "iso": "2026-01-20T09:30:00.000-05:00", "unix": 1769783400000 }
+}

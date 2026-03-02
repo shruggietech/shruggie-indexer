@@ -1,0 +1,38 @@
+{
+  "schema_version": 2,
+  "id": "y0654CDF77702945DA87A8B4E72E98EEE",
+  "id_algorithm": "md5",
+  "type": "file",
+  "name": {
+    "text": "readme.txt",
+    "hashes": {
+      "md5": "EB6B6C90251AB33CEE784713C451E6D8",
+      "sha256": "9E6E4772050998A5C0DC3C61ACF3DAB0A7E594566171FA5746D6B62F9598EFB6"
+    }
+  },
+  "extension": "txt",
+  "mime_type": "text/plain",
+  "size": {
+    "text": "46 B",
+    "bytes": 46
+  },
+  "hashes": {
+    "md5": "0654CDF77702945DA87A8B4E72E98EEE",
+    "sha256": "0CB544DD1D4A81D757E5BDBFE8474C2303377608B091A672A57D38FEE2A27440"
+  },
+  "file_system": {
+    "relative": "readme.txt",
+    "parent": null
+  },
+  "timestamps": {
+    "created":  { "iso": "2026-02-14T08:00:00.000-05:00", "unix": 1771074000000 },
+    "modified": { "iso": "2026-02-14T08:30:00.000-05:00", "unix": 1771075800000 },
+    "accessed": { "iso": "2026-02-14T09:00:00.000-05:00", "unix": 1771077600000 }
+  },
+  "attributes": {
+    "is_link": false,
+    "storage_name": "y0654CDF77702945DA87A8B4E72E98EEE.txt"
+  },
+  "session_id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+  "indexed_at": { "iso": "2026-02-14T09:30:00.000-05:00", "unix": 1771079400000 }
+}

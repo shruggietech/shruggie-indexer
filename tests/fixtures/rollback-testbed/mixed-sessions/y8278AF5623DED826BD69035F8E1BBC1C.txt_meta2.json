@@ -1,0 +1,38 @@
+{
+  "schema_version": 2,
+  "id": "y8278AF5623DED826BD69035F8E1BBC1C",
+  "id_algorithm": "md5",
+  "type": "file",
+  "name": {
+    "text": "notes.txt",
+    "hashes": {
+      "md5": "A5D5286F1E67B6CD6876223E53F999C4",
+      "sha256": "E39538E7F27A7BF579CD9B85A103C0F0B86B60B788534295538D0301A9C5DCE6"
+    }
+  },
+  "extension": "txt",
+  "mime_type": "text/plain",
+  "size": {
+    "text": "38 B",
+    "bytes": 38
+  },
+  "hashes": {
+    "md5": "8278AF5623DED826BD69035F8E1BBC1C",
+    "sha256": "5D5298613CCD2FA9C81DCE54530EB6DAFBE590FFB4136680D5C944BADCE5663C"
+  },
+  "file_system": {
+    "relative": "notes.txt",
+    "parent": null
+  },
+  "timestamps": {
+    "created":  { "iso": "2026-01-30T10:00:00.000-05:00", "unix": 1770642000000 },
+    "modified": { "iso": "2026-01-30T10:30:00.000-05:00", "unix": 1770643800000 },
+    "accessed": { "iso": "2026-01-30T11:00:00.000-05:00", "unix": 1770645600000 }
+  },
+  "attributes": {
+    "is_link": false,
+    "storage_name": "y8278AF5623DED826BD69035F8E1BBC1C.txt"
+  },
+  "session_id": "cccc3333-cccc-4ccc-cccc-cccccccccccc",
+  "indexed_at": { "iso": "2026-01-30T11:30:00.000-05:00", "unix": 1770647400000 }
+}
