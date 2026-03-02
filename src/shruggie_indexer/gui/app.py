@@ -47,6 +47,11 @@ from shruggie_indexer import (
     shutdown_exiftool,
     write_inplace,
 )
+from shruggie_indexer.core.rollback import (
+    execute_rollback,
+    load_meta2,
+    plan_rollback,
+)
 from shruggie_indexer.config.defaults import (
     DEFAULT_EXIFTOOL_ARGS,
     DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS,
@@ -109,9 +114,10 @@ _TAB_ABOUT = "about"
 _OP_INDEX = "Index"
 _OP_META_MERGE = "Meta Merge"
 _OP_META_MERGE_DELETE = "Meta Merge Delete"
+_OP_ROLLBACK = "Rollback"
 
 _OPERATION_LABELS: list[str] = [
-    _OP_INDEX, _OP_META_MERGE, _OP_META_MERGE_DELETE,
+    _OP_INDEX, _OP_META_MERGE, _OP_META_MERGE_DELETE, _OP_ROLLBACK,
 ]
 
 # Display label <-> internal key for session persistence
@@ -119,6 +125,7 @@ _OP_KEY_MAP: dict[str, str] = {
     _OP_INDEX: "index",
     _OP_META_MERGE: "meta_merge",
     _OP_META_MERGE_DELETE: "meta_merge_delete",
+    _OP_ROLLBACK: "rollback",
 }
 _OP_LABEL_MAP: dict[str, str] = {v: k for k, v in _OP_KEY_MAP.items()}
 
@@ -1120,6 +1127,24 @@ class ProgressPanel(ctk.CTkFrame):
                 self.status_label.configure(
                     text=f"Processing: {self._global_completed}/{self._global_total} ({pct}%)",
                 )
+        elif event.phase == "rollback":
+            # Rollback progress: total and completed are set directly
+            # by the executor, not accumulated like indexing.
+            if not self._has_started_processing:
+                self._has_started_processing = True
+                self.progress_bar.stop()
+                self.progress_bar.configure(mode="determinate")
+            if event.items_total is not None and event.items_total > 0:
+                self._global_total = event.items_total
+            if event.items_completed is not None and event.items_completed > 0:
+                self._global_completed = event.items_completed
+            if self._global_total > 0:
+                fraction = min(self._global_completed / self._global_total, 1.0)
+                self.progress_bar.set(fraction)
+                pct = int(fraction * 100)
+                self.status_label.configure(
+                    text=f"Restoring: {self._global_completed}/{self._global_total} ({pct}%)",
+                )
 
         if event.current_path is not None:
             display_path = str(event.current_path)
@@ -1260,6 +1285,9 @@ class OperationsPage(ctk.CTkFrame):
         self._build_target_group()
         self._build_options_group()
         self._build_output_group()
+        self._build_rollback_source_group()
+        self._build_rollback_options_group()
+        self._build_rollback_target_group()
 
     def _build_operation_group(self) -> None:
         group = _LabeledGroup(
@@ -1281,7 +1309,7 @@ class OperationsPage(ctk.CTkFrame):
             width=180,
         )
         self._op_menu.pack(side="left", padx=(0, 16))
-        _Tooltip(self._op_menu, "Choose Index, Meta Merge, or Meta Merge Delete.")
+        _Tooltip(self._op_menu, "Choose Index, Meta Merge, Meta Merge Delete, or Rollback.")
 
         self._indicator = _DestructiveIndicator(row)
         self._indicator.pack(side="left")
@@ -1549,6 +1577,261 @@ class OperationsPage(ctk.CTkFrame):
         )
         self._outpath_note.pack(fill="x", padx=(4, 0), pady=(0, 2))
 
+    # -- Rollback-specific card builders ------------------------------------
+
+    def _build_rollback_source_group(self) -> None:
+        """Card 2 (rollback) — Source: meta2 path, source dir, recursive."""
+        self._rb_source_group = _LabeledGroup(
+            self._scroll.content, "Source",
+            "Select the meta2 sidecar file or directory to rollback from.",
+            collapsible=True,
+        )
+        # Initially hidden; _reconcile_controls() shows it when rollback is active
+        c = self._rb_source_group.content
+
+        # Meta2 path entry row
+        meta2_frame = ctk.CTkFrame(c, fg_color="transparent")
+        meta2_frame.pack(fill="x", pady=(0, 2))
+
+        ctk.CTkLabel(meta2_frame, text="Meta2:", width=48, anchor="w").pack(
+            side="left", padx=(0, 6),
+        )
+        self._rb_meta2_entry = _CtkEntry(
+            meta2_frame,
+            placeholder_text="Select a _meta2.json file or folder...",
+        )
+        self._rb_meta2_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        _Tooltip(
+            self._rb_meta2_entry,
+            "Path to a _meta2.json sidecar file, aggregate output file, "
+            "or directory containing _meta2.json sidecars.",
+        )
+
+        # Bind validation on text change
+        self._rb_meta2_entry.bind(
+            "<FocusOut>", lambda _: self._reconcile_controls(),
+        )
+        self._rb_meta2_entry.bind(
+            "<KeyRelease>", lambda _: self._reconcile_controls(),
+        )
+
+        # Dual browse buttons (File… / Folder…) matching the indexer Target pattern
+        self._rb_meta2_dir_btn = _CtkButton(
+            meta2_frame, text="Folder\u2026", width=70,
+            command=self._browse_rb_meta2_dir,
+        )
+        self._rb_meta2_dir_btn.pack(side="right", padx=(2, 0))
+        _Tooltip(self._rb_meta2_dir_btn, "Browse for a directory of sidecar files.")
+        self._rb_meta2_file_btn = _CtkButton(
+            meta2_frame, text="File\u2026", width=60,
+            command=self._browse_rb_meta2_file,
+        )
+        self._rb_meta2_file_btn.pack(side="right", padx=(2, 0))
+        _Tooltip(self._rb_meta2_file_btn, "Browse for a _meta2.json sidecar file.")
+
+        # Source path entry row (optional)
+        source_frame = ctk.CTkFrame(c, fg_color="transparent")
+        source_frame.pack(fill="x", pady=(2, 2))
+
+        ctk.CTkLabel(source_frame, text="Source:", width=48, anchor="w").pack(
+            side="left", padx=(0, 6),
+        )
+        self._rb_source_entry = _CtkEntry(
+            source_frame,
+            placeholder_text="(optional) Explicit source directory for content files",
+        )
+        self._rb_source_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        _Tooltip(
+            self._rb_source_entry,
+            "Optional explicit source directory containing content files. "
+            "When empty, the engine searches adjacent to the meta2 file.",
+        )
+
+        self._rb_source_browse_btn = _CtkButton(
+            source_frame, text="Browse", width=80,
+            command=self._browse_rb_source_dir,
+        )
+        self._rb_source_browse_btn.pack(side="right")
+        _Tooltip(self._rb_source_browse_btn, "Browse for a source directory.")
+
+        # Recursive checkbox
+        rb_recursive_row = ctk.CTkFrame(c, fg_color="transparent")
+        rb_recursive_row.pack(fill="x", pady=(2, 0))
+        self._rb_recursive_var = ctk.BooleanVar(value=False)
+        self._rb_recursive_cb = _CtkCheckBox(
+            rb_recursive_row, text="Recursive",
+            variable=self._rb_recursive_var,
+        )
+        self._rb_recursive_cb.pack(anchor="w")
+        _Tooltip(
+            self._rb_recursive_cb,
+            "When meta2 path is a directory, search subdirectories for sidecar files.",
+        )
+
+        self._rb_recursive_info = ctk.CTkLabel(
+            rb_recursive_row, text="",
+            font=ctk.CTkFont(size=10),
+            text_color=("gray40", "gray60"),
+            anchor="w",
+        )
+        self._rb_recursive_info.pack(anchor="w", padx=(26, 0))
+
+    def _build_rollback_options_group(self) -> None:
+        """Card 3 (rollback) — Options: flat, verify, force, skip dupes, restore sidecars."""
+        self._rb_opts_group = _LabeledGroup(
+            self._scroll.content, "Options",
+            "Configure rollback parameters.",
+            collapsible=True,
+        )
+        c = self._rb_opts_group.content
+
+        # Flat restore
+        flat_row = ctk.CTkFrame(c, fg_color="transparent")
+        flat_row.pack(fill="x", pady=(0, 2))
+        self._rb_flat_var = ctk.BooleanVar(value=False)
+        self._rb_flat_cb = _CtkCheckBox(
+            flat_row, text="Flat restore",
+            variable=self._rb_flat_var,
+        )
+        self._rb_flat_cb.pack(anchor="w")
+        _Tooltip(
+            self._rb_flat_cb,
+            "Restore files using original names only, without "
+            "reconstructing directory structure.",
+        )
+
+        # Verify hashes
+        verify_row = ctk.CTkFrame(c, fg_color="transparent")
+        verify_row.pack(fill="x", pady=(2, 2))
+        self._rb_verify_var = ctk.BooleanVar(value=True)
+        self._rb_verify_cb = _CtkCheckBox(
+            verify_row, text="Verify hashes",
+            variable=self._rb_verify_var,
+        )
+        self._rb_verify_cb.pack(anchor="w")
+        _Tooltip(
+            self._rb_verify_cb,
+            "Verify content hashes before restoring.",
+        )
+
+        # Force overwrite
+        force_row = ctk.CTkFrame(c, fg_color="transparent")
+        force_row.pack(fill="x", pady=(2, 2))
+        self._rb_force_var = ctk.BooleanVar(value=False)
+        self._rb_force_cb = _CtkCheckBox(
+            force_row, text="Force overwrite",
+            variable=self._rb_force_var,
+        )
+        self._rb_force_cb.pack(anchor="w")
+        _Tooltip(
+            self._rb_force_cb,
+            "Overwrite existing files in target directory.",
+        )
+
+        # Skip duplicates
+        skip_dup_row = ctk.CTkFrame(c, fg_color="transparent")
+        skip_dup_row.pack(fill="x", pady=(2, 2))
+        self._rb_skip_dup_var = ctk.BooleanVar(value=False)
+        self._rb_skip_dup_cb = _CtkCheckBox(
+            skip_dup_row, text="Skip duplicates",
+            variable=self._rb_skip_dup_var,
+        )
+        self._rb_skip_dup_cb.pack(anchor="w")
+        _Tooltip(
+            self._rb_skip_dup_cb,
+            "Do not restore files from duplicates[] arrays.",
+        )
+
+        # Restore sidecars
+        sidecar_row = ctk.CTkFrame(c, fg_color="transparent")
+        sidecar_row.pack(fill="x", pady=(2, 0))
+        self._rb_restore_sc_var = ctk.BooleanVar(value=True)
+        self._rb_restore_sc_cb = _CtkCheckBox(
+            sidecar_row, text="Restore sidecars",
+            variable=self._rb_restore_sc_var,
+        )
+        self._rb_restore_sc_cb.pack(anchor="w")
+        _Tooltip(
+            self._rb_restore_sc_cb,
+            "Restore absorbed metadata sidecar files.",
+        )
+
+    def _build_rollback_target_group(self) -> None:
+        """Card 4 (rollback) — Target: output directory for restored files."""
+        self._rb_target_group = _LabeledGroup(
+            self._scroll.content, "Target",
+            "Choose the directory for restored files.",
+            collapsible=True,
+        )
+        c = self._rb_target_group.content
+
+        target_frame = ctk.CTkFrame(c, fg_color="transparent")
+        target_frame.pack(fill="x", pady=(0, 2))
+
+        ctk.CTkLabel(target_frame, text="Path:", width=40, anchor="w").pack(
+            side="left", padx=(0, 6),
+        )
+        self._rb_target_entry = _CtkEntry(
+            target_frame,
+            placeholder_text="(defaults to parent of meta2 path)",
+        )
+        self._rb_target_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        _Tooltip(
+            self._rb_target_entry,
+            "Root directory for restored files. When empty, defaults to "
+            "the parent directory of the meta2 path.",
+        )
+
+        self._rb_target_browse_btn = _CtkButton(
+            target_frame, text="Browse", width=80,
+            command=self._browse_rb_target_dir,
+        )
+        self._rb_target_browse_btn.pack(side="right")
+        _Tooltip(self._rb_target_browse_btn, "Browse for a target directory.")
+
+    # -- Rollback browse helpers --------------------------------------------
+
+    def _browse_rb_meta2_file(self) -> None:
+        """Open file picker for a _meta2.json sidecar."""
+        logger.debug("Rollback browse: meta2 file dialog opened")
+        path = filedialog.askopenfilename(
+            title="Select Meta2 Sidecar File",
+            filetypes=[("Meta2 JSON", "*_meta2.json *.json"), ("All files", "*.*")],
+        )
+        if path:
+            logger.debug("Rollback browse meta2 file result: %s", path)
+            self._rb_meta2_entry.delete(0, "end")
+            self._rb_meta2_entry.insert(0, path)
+            self._reconcile_controls()
+
+    def _browse_rb_meta2_dir(self) -> None:
+        """Open directory picker for a directory of sidecars."""
+        logger.debug("Rollback browse: meta2 directory dialog opened")
+        path = filedialog.askdirectory(title="Select Sidecar Directory")
+        if path:
+            logger.debug("Rollback browse meta2 dir result: %s", path)
+            self._rb_meta2_entry.delete(0, "end")
+            self._rb_meta2_entry.insert(0, path)
+            self._reconcile_controls()
+
+    def _browse_rb_source_dir(self) -> None:
+        """Open directory picker for an explicit source directory."""
+        logger.debug("Rollback browse: source directory dialog opened")
+        path = filedialog.askdirectory(title="Select Source Directory")
+        if path:
+            logger.debug("Rollback browse source dir result: %s", path)
+            self._rb_source_entry.delete(0, "end")
+            self._rb_source_entry.insert(0, path)
+
+    def _browse_rb_target_dir(self) -> None:
+        """Open directory picker for the rollback target directory."""
+        logger.debug("Rollback browse: target directory dialog opened")
+        path = filedialog.askdirectory(title="Select Target Directory")
+        if path:
+            logger.debug("Rollback browse target dir result: %s", path)
+            self._rb_target_entry.delete(0, "end")
+            self._rb_target_entry.insert(0, path)
+
     # -- Browse helpers -----------------------------------------------------
 
     def _update_browse_buttons(self) -> None:
@@ -1732,6 +2015,15 @@ class OperationsPage(ctk.CTkFrame):
         **SS10.9 Standard 1.3.3** — Control Interdependency Transparency.
         """
         op = self._op_type_var.get()
+        is_rollback = op == _OP_ROLLBACK
+
+        # -- Card morphing: show/hide indexing vs rollback cards --
+        self._morph_cards(is_rollback)
+
+        if is_rollback:
+            self._reconcile_rollback_controls()
+            return
+
         rename_on = self._rename_var.get()
         selected_type = self._type_var.get()
         target_kind = self._detect_target_kind()
@@ -1881,6 +2173,69 @@ class OperationsPage(ctk.CTkFrame):
         else:
             self.action_btn.configure(state="normal")
 
+    def _morph_cards(self, rollback: bool) -> None:
+        """Show/hide indexing vs rollback card groups.
+
+        When *rollback* is ``True``, the standard Target / Options / Output
+        cards are hidden and the rollback-specific Source / Options / Target
+        cards are shown.  When ``False``, the reverse occurs.
+        """
+        indexing_cards = (self._target_group, self._opts_group, self._output_group)
+        rollback_cards = (self._rb_source_group, self._rb_opts_group, self._rb_target_group)
+
+        if rollback:
+            for card in indexing_cards:
+                card.pack_forget()
+            for card in rollback_cards:
+                card.pack(fill="x", pady=(0, 6))
+        else:
+            for card in rollback_cards:
+                card.pack_forget()
+            # Re-pack indexing cards in correct order (after the Operation card)
+            for card in indexing_cards:
+                card.pack(fill="x", pady=(0, 6))
+
+    def _reconcile_rollback_controls(self) -> None:
+        """State reconciliation for rollback operation mode."""
+        meta2_path_str = self._rb_meta2_entry.get().strip()
+
+        # -- Destructive indicator: green (non-destructive) --
+        self._indicator.set_destructive(False)
+
+        # -- Recursive checkbox: disabled when meta2 path is a file --
+        if meta2_path_str:
+            p = Path(meta2_path_str)
+            if p.exists() and p.is_file():
+                self._rb_recursive_var.set(False)
+                self._disable_cb(self._rb_recursive_cb)
+                self._rb_recursive_info.configure(
+                    text="Recursive is not applicable when meta2 path is a file.",
+                )
+            else:
+                self._enable_cb(self._rb_recursive_cb)
+                self._rb_recursive_info.configure(text="")
+        else:
+            self._enable_cb(self._rb_recursive_cb)
+            self._rb_recursive_info.configure(text="")
+
+        # -- Target placeholder: show default (parent of meta2 path) --
+        if meta2_path_str and not self._rb_target_entry.get().strip():
+            p = Path(meta2_path_str)
+            default_target = str(p.parent) if p.is_file() else meta2_path_str
+            self._rb_target_entry.configure(
+                placeholder_text=f"(default: {default_target})",
+            )
+        elif not meta2_path_str:
+            self._rb_target_entry.configure(
+                placeholder_text="(defaults to parent of meta2 path)",
+            )
+
+        # -- Action button: disabled when meta2 path is empty --
+        if not meta2_path_str:
+            self.action_btn.configure(state="disabled")
+        else:
+            self.action_btn.configure(state="normal")
+
     def _update_output_path_display(self) -> None:
         """Set the read-only output path display and note label."""
         target_path = self._path_entry.get().strip()
@@ -2022,10 +2377,19 @@ class OperationsPage(ctk.CTkFrame):
         fixed-height space in all states — no layout shift occurs.
         """
         state = "normal" if not running else "disabled"
+        # Indexing controls
         self._path_entry.configure(state=state)
         self._browse_single_btn.configure(state=state)
         self._browse_file_btn.configure(state=state)
         self._browse_dir_btn.configure(state=state)
+        # Rollback controls
+        self._rb_meta2_entry.configure(state=state)
+        self._rb_meta2_file_btn.configure(state=state)
+        self._rb_meta2_dir_btn.configure(state=state)
+        self._rb_source_entry.configure(state=state)
+        self._rb_source_browse_btn.configure(state=state)
+        self._rb_target_entry.configure(state=state)
+        self._rb_target_browse_btn.configure(state=state)
 
         if running:
             # Switch to running sub-frame within the fixed region
@@ -2039,7 +2403,7 @@ class OperationsPage(ctk.CTkFrame):
     # -- Session persistence ------------------------------------------------
 
     def get_state(self) -> dict[str, Any]:
-        return {
+        state: dict[str, Any] = {
             "operation_type": _OP_KEY_MAP.get(
                 self._op_type_var.get(), "index",
             ),
@@ -2060,6 +2424,19 @@ class OperationsPage(ctk.CTkFrame):
                 "output_expanded": self._output_group.expanded,
             },
         }
+        # Rollback-specific state
+        state["rollback_state"] = {
+            "meta2_path": self._rb_meta2_entry.get(),
+            "source_path": self._rb_source_entry.get(),
+            "target_path": self._rb_target_entry.get(),
+            "recursive": self._rb_recursive_var.get(),
+            "flat": self._rb_flat_var.get(),
+            "verify": self._rb_verify_var.get(),
+            "force": self._rb_force_var.get(),
+            "skip_duplicates": self._rb_skip_dup_var.get(),
+            "restore_sidecars": self._rb_restore_sc_var.get(),
+        }
+        return state
 
     def restore_state(self, state: dict[str, Any]) -> None:
         op_type = state.get("operation_type", "index")
@@ -2105,6 +2482,31 @@ class OperationsPage(ctk.CTkFrame):
             self._opts_group.set_expanded(card_states["options_expanded"])
         if "output_expanded" in card_states:
             self._output_group.set_expanded(card_states["output_expanded"])
+
+        # Restore rollback-specific state
+        rb_state = state.get("rollback_state", {})
+        if rb_state:
+            if "meta2_path" in rb_state:
+                self._rb_meta2_entry.delete(0, "end")
+                self._rb_meta2_entry.insert(0, rb_state["meta2_path"])
+            if "source_path" in rb_state:
+                self._rb_source_entry.delete(0, "end")
+                self._rb_source_entry.insert(0, rb_state["source_path"])
+            if "target_path" in rb_state:
+                self._rb_target_entry.delete(0, "end")
+                self._rb_target_entry.insert(0, rb_state["target_path"])
+            if "recursive" in rb_state:
+                self._rb_recursive_var.set(rb_state["recursive"])
+            if "flat" in rb_state:
+                self._rb_flat_var.set(rb_state["flat"])
+            if "verify" in rb_state:
+                self._rb_verify_var.set(rb_state["verify"])
+            if "force" in rb_state:
+                self._rb_force_var.set(rb_state["force"])
+            if "skip_duplicates" in rb_state:
+                self._rb_skip_dup_var.set(rb_state["skip_duplicates"])
+            if "restore_sidecars" in rb_state:
+                self._rb_restore_sc_var.set(rb_state["restore_sidecars"])
 
         # Update controls for the restored state
         self._update_browse_buttons()
@@ -3263,6 +3665,13 @@ class ShruggiIndexerApp(ctk.CTk):
 
     def run_operation(self, ops: OperationsPage) -> None:
         """Validate inputs, construct config, and launch the background job."""
+        op_label = ops._op_type_var.get()
+        is_rollback = op_label == _OP_ROLLBACK
+
+        if is_rollback:
+            self._run_rollback_operation(ops)
+            return
+
         target_path_str = ops.get_target_path()
         if not target_path_str:
             logger.warning("Validation: no target path provided")
@@ -3289,7 +3698,6 @@ class ShruggiIndexerApp(ctk.CTk):
             messagebox.showerror("Configuration Error", str(exc))
             return
 
-        op_label = ops._op_type_var.get()
         if (
             self._settings_tab.log_to_file_var.get()
             and _normalize_verbosity(self._settings_tab.verbosity_var.get()) != "None"
@@ -3335,6 +3743,76 @@ class ShruggiIndexerApp(ctk.CTk):
         logger.debug("Background thread created: %s", thread.name)
         thread.start()
         logger.debug("Background thread started")
+        self._poll_results()
+
+    def _run_rollback_operation(self, ops: OperationsPage) -> None:
+        """Validate rollback inputs and launch the rollback background job."""
+        meta2_path_str = ops._rb_meta2_entry.get().strip()
+        if not meta2_path_str:
+            logger.warning("Validation: no meta2 path provided")
+            messagebox.showwarning(
+                "Missing Source", "Please select a meta2 sidecar file or directory.",
+            )
+            return
+
+        meta2_path = Path(meta2_path_str)
+        if not meta2_path.exists():
+            logger.warning("Validation: meta2 path does not exist: %s", meta2_path)
+            messagebox.showerror(
+                "Invalid Source", f"Path does not exist:\n{meta2_path}",
+            )
+            return
+
+        target_dir_str = ops._rb_target_entry.get().strip()
+        source_dir_str = ops._rb_source_entry.get().strip()
+
+        # Collect rollback options
+        rb_options = {
+            "recursive": ops._rb_recursive_var.get(),
+            "flat": ops._rb_flat_var.get(),
+            "verify": ops._rb_verify_var.get(),
+            "force": ops._rb_force_var.get(),
+            "skip_duplicates": ops._rb_skip_dup_var.get(),
+            "restore_sidecars": ops._rb_restore_sc_var.get(),
+        }
+
+        if (
+            self._settings_tab.log_to_file_var.get()
+            and _normalize_verbosity(self._settings_tab.verbosity_var.get()) != "None"
+        ):
+            self._setup_file_logging(force_rotate=True)
+
+        logger.info(
+            "Rollback operation started: meta2=%s, target=%s",
+            meta2_path_str,
+            target_dir_str or "(default)",
+        )
+
+        # Rollback does not use output modes — mark as rollback for
+        # post-job display routing.
+        self._last_output_mode = "rollback"
+        self._last_output_file = ""
+
+        # Transition to running state
+        self._job_running = True
+        self._cancel_event.clear()
+        ops.set_running(True)
+        self._set_sidebar_enabled(False)
+
+        self._output_panel.clear()
+        self._ops_page._progress_panel.start()
+        self._start_log_capture()
+
+        thread = threading.Thread(
+            target=self._background_rollback,
+            args=(meta2_path_str, target_dir_str, source_dir_str, rb_options),
+            daemon=True,
+            name="shruggie-rollback-worker",
+        )
+        self._worker_thread = thread
+        logger.debug("Rollback background thread created: %s", thread.name)
+        thread.start()
+        logger.debug("Rollback background thread started")
         self._poll_results()
 
     def _background_job(self, target: Path, config: IndexerConfig) -> None:
@@ -3462,6 +3940,109 @@ class ShruggiIndexerApp(ctk.CTk):
             result = {"status": "error", "message": f"Unexpected error: {exc}"}
 
         logger.debug("Background thread exited")
+        self._result_queue.put(result)
+
+    def _background_rollback(
+        self,
+        meta2_path_str: str,
+        target_dir_str: str,
+        source_dir_str: str,
+        options: dict[str, Any],
+    ) -> None:
+        """Run a rollback operation in a background thread.
+
+        Follows the same threading pattern as ``_background_job``: posts
+        a result dict to ``_result_queue`` on completion.
+        """
+        result: dict[str, Any] = {"status": "error", "message": "Unknown error"}
+        logger.debug("Rollback thread entry: meta2=%s", meta2_path_str)
+        _job_start = time.monotonic()
+        try:
+            meta2 = Path(meta2_path_str)
+
+            # Resolve target default (same logic as CLI)
+            if not target_dir_str:
+                resolved_target = meta2.parent if meta2.is_file() else meta2
+            else:
+                resolved_target = Path(target_dir_str)
+
+            source_dir = Path(source_dir_str) if source_dir_str else None
+
+            # ── Load meta2 entries ──────────────────────────────────────
+            logger.info("Loading meta2 entries from: %s", meta2)
+            entries = load_meta2(meta2, recursive=options.get("recursive", False))
+            logger.info("Loaded %d entries", len(entries))
+
+            # ── Plan rollback ───────────────────────────────────────────
+            logger.info("Planning rollback to: %s", resolved_target)
+            plan = plan_rollback(
+                entries,
+                target_dir=resolved_target,
+                source_dir=source_dir,
+                verify=options.get("verify", True),
+                force=options.get("force", False),
+                flat=options.get("flat", False),
+                skip_duplicates=options.get("skip_duplicates", False),
+                restore_sidecars=options.get("restore_sidecars", True),
+            )
+
+            # Collect plan warnings for post-job display
+            warnings_text = ""
+            for warning in plan.warnings:
+                logger.warning("Plan warning: %s", warning)
+                warnings_text += f"WARNING: {warning}\n"
+
+            # ── Execute rollback ────────────────────────────────────────
+            rb_result = execute_rollback(
+                plan,
+                progress_callback=self._on_progress,
+                cancel_event=self._cancel_event,
+            )
+
+            # Build human-readable summary
+            summary_parts: list[str] = []
+            if warnings_text:
+                summary_parts.append(warnings_text)
+            summary_parts.append("Rollback Summary")
+            summary_parts.append("=" * 40)
+            summary_parts.append(f"Files restored:      {rb_result.restored}")
+            summary_parts.append(f"Duplicates restored: {rb_result.duplicates_restored}")
+            summary_parts.append(f"Sidecars restored:   {rb_result.sidecars_restored}")
+            summary_parts.append(f"Directories created: {rb_result.directories_created}")
+            summary_parts.append(f"Skipped:             {rb_result.skipped}")
+            summary_parts.append(f"Failed:              {rb_result.failed}")
+            if rb_result.errors:
+                summary_parts.append("")
+                summary_parts.append("Errors:")
+                for err in rb_result.errors:
+                    summary_parts.append(f"  - {err}")
+            summary_text = "\n".join(summary_parts)
+
+            if rb_result.failed > 0:
+                result = {"status": "success", "rollback_summary": summary_text}
+            else:
+                result = {"status": "success", "rollback_summary": summary_text}
+
+            _job_elapsed = time.monotonic() - _job_start
+            logger.info("Rollback completed in %.1fs", _job_elapsed)
+
+        except IndexerCancellationError:
+            logger.info("Rollback cancelled by user")
+            result = {"status": "cancelled", "message": "Rollback cancelled by user."}
+
+        except IndexerError as exc:
+            logger.error("Rollback failed: %s", exc)
+            result = {"status": "error", "message": str(exc)}
+
+        except Exception as exc:
+            logger.error(
+                "Unhandled exception in rollback thread: %s",
+                exc,
+                exc_info=True,
+            )
+            result = {"status": "error", "message": f"Unexpected error: {exc}"}
+
+        logger.debug("Rollback thread exited")
         self._result_queue.put(result)
 
     @staticmethod
@@ -3639,20 +4220,26 @@ class ShruggiIndexerApp(ctk.CTk):
                 text="Complete", text_color=("green", "#00cc00"),
             )
             logger.info("Operation completed successfully")
-            json_text = result.get("json", "")
 
-            # Route based on output mode
-            if output_mode == _OUT_VIEW:
-                # View only → display in viewer panel
-                self._output_panel.set_json(json_text)
-            elif output_mode in (_OUT_SINGLE, _OUT_MULTI):
-                # File output — show save confirmation
-                outfile = self._last_output_file
-                msg = f"Output saved to: {outfile}" if outfile else "Output saved."
-                self._output_panel.set_status_message(msg)
+            if output_mode == "rollback":
+                # Rollback produces a text summary, not JSON
+                summary = result.get("rollback_summary", "Rollback complete.")
+                self._output_panel.set_status_message(summary)
             else:
-                # Fallback (should not happen)
-                self._output_panel.set_json(json_text)
+                json_text = result.get("json", "")
+
+                # Route based on output mode
+                if output_mode == _OUT_VIEW:
+                    # View only → display in viewer panel
+                    self._output_panel.set_json(json_text)
+                elif output_mode in (_OUT_SINGLE, _OUT_MULTI):
+                    # File output — show save confirmation
+                    outfile = self._last_output_file
+                    msg = f"Output saved to: {outfile}" if outfile else "Output saved."
+                    self._output_panel.set_status_message(msg)
+                else:
+                    # Fallback (should not happen)
+                    self._output_panel.set_json(json_text)
 
         elif status == "cancelled":
             progress.status_label.configure(

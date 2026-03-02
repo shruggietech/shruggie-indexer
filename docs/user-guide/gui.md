@@ -62,13 +62,14 @@ The Operations tab is where you configure and run indexing jobs. It is organized
 
 ### Choosing an Operation Type
 
-At the top of the Operations tab, a dropdown lets you choose one of three operation types:
+At the top of the Operations tab, a dropdown lets you choose one of four operation types:
 
 | Operation | What it does | Destructive? |
 |-----------|-------------|:------------:|
 | **Index** | Scans files or folders and produces a structured JSON report containing hashes, timestamps, sizes, and (optionally) embedded metadata. Nothing on disk is changed. | No |
 | **Meta Merge** | Same as Index, but also discovers sidecar files (small companion files that sit alongside your media) and merges their contents into the report. Original files are untouched. | No |
 | **Meta Merge Delete** | Same as Meta Merge, but **deletes the sidecar files** from disk after merging them into the report. The merged data is preserved in the output file. | **Yes** |
+| **Rollback** | Reverses a previous indexing operation by restoring renamed files to their original names, reconstructing directory structure, and optionally recreating absorbed sidecar files. Operates from a `_meta2.json` manifest. | No |
 
 !!! info "Pipeline execution order"
     When Meta Merge Delete runs, the pipeline proceeds in a fixed order:
@@ -148,6 +149,45 @@ While the operation runs:
 - All input controls on the Operations tab are disabled during execution.
 
 When the operation completes, the progress panel disappears and the result data is populated. The active Output/Log tab is preserved — if you were viewing the Log tab during the operation, the Log tab remains active. The Output button briefly highlights green to signal that new content is available.
+
+---
+
+## Rollback Operation
+
+When you select **Rollback** from the operation type dropdown, the Operations tab morphs to show rollback-specific controls in place of the standard indexing cards. Rollback restores files that were previously renamed or reorganized by the indexer back to their original names and directory structure.
+
+### Source Section
+
+The Source card (replacing the indexing Target card) lets you specify what to roll back:
+
+- **Meta2 path** — Path to a `_meta2.json` sidecar file or a directory containing sidecars. Two browse buttons (**File…** / **Folder…**) let you pick either a single file or an entire folder.
+- **Source directory** — Optional. Explicitly specify where the content files are located. When empty, the engine searches adjacent to the meta2 file.
+- **Recursive** — When the meta2 path is a directory, search subdirectories for sidecar files. This checkbox is automatically disabled when the meta2 path points to a single file.
+
+### Rollback Options
+
+The Options card shows rollback-specific controls:
+
+| Option | Default | Description |
+|--------|:-------:|-------------|
+| **Flat restore** | Off | Restore files using original names only, without reconstructing directory structure. |
+| **Verify hashes** | On | Verify content integrity via hash comparison before restoring. |
+| **Force overwrite** | Off | Overwrite existing files in the target directory. |
+| **Skip duplicates** | Off | Do not restore files that were absorbed as duplicates. |
+| **Restore sidecars** | On | Recreate absorbed metadata sidecar files alongside restored content. |
+
+### Target Section
+
+The Target card (replacing the indexing Output card) has a single control:
+
+- **Target directory** — The root directory where restored files will be placed. When left empty, the rollback defaults to the parent directory of the meta2 path. Placeholder text shows this default when the field is empty.
+
+### Rollback Results
+
+After a rollback job completes, the Output tab displays a **human-readable text summary** (not JSON) of what was restored, skipped, and failed. Plan warnings — such as mixed-session detection — are included in the summary. The Log tab shows the full operation log as with indexing operations.
+
+!!! tip "Non-Destructive"
+    Rollback only copies files — it does not modify or delete the source files or sidecar manifests. The destructive indicator shows green when Rollback is selected.
 
 ---
 

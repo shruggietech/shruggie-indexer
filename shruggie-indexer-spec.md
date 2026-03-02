@@ -6061,7 +6061,7 @@ The exception hierarchy maps directly to the CLI exit codes ([§8.10](#810-exit-
 
 This section defines the standalone desktop GUI for `shruggie-indexer` — a visual frontend to the same library code consumed by the CLI ([§8](#8-cli-interface)) and the public API ([§9](#9-python-api)). The GUI uses a CustomTkinter foundation, dark theme, consistent font stack, and two-panel layout pattern. Where this specification does not explicitly define a visual convention — such as padding values, border radii, or widget spacing — the `shruggie-feedtools` GUI ([§1.5](#15-reference-documents), External References) serves as the normative reference for project-family consistency.
 
-The GUI serves a fundamentally different user need than the CLI. The CLI is a power-user and automation tool — its flag-based interface composes naturally in scripts but requires the user to internalize the full option space, understand the implication chain (`--meta-merge-delete` → `--meta-merge` → `--meta`), and manage output routing mentally. The GUI eliminates this cognitive overhead by consolidating the three operation types (Index, Meta Merge, Meta Merge Delete) into a single Operations page with an inline selector, presenting the rename feature as an optional toggle that can apply to any operation, and always displaying all controls with context-sensitive enable/disable logic and safe defaults pre-applied. The GUI is the recommended entry point for users who are unfamiliar with the tool's option space or who want visual confirmation of their configuration before executing.
+The GUI serves a fundamentally different user need than the CLI. The CLI is a power-user and automation tool — its flag-based interface composes naturally in scripts but requires the user to internalize the full option space, understand the implication chain (`--meta-merge-delete` → `--meta-merge` → `--meta`), and manage output routing mentally. The GUI eliminates this cognitive overhead by consolidating the four operation types (Index, Meta Merge, Meta Merge Delete, Rollback) into a single Operations page with an inline selector, presenting the rename feature as an optional toggle that can apply to any indexing operation, and always displaying all controls with context-sensitive enable/disable logic and safe defaults pre-applied. The GUI is the recommended entry point for users who are unfamiliar with the tool's option space or who want visual confirmation of their configuration before executing.
 
 **Module location:** `gui/app.py` ([§3.2](#32-source-package-layout)). The GUI is a single-module implementation for the MVP. If the GUI grows in complexity (custom widgets, asset files, reusable components), additional modules and an `assets/` subdirectory can be added under `gui/` without restructuring ([§3.2](#32-source-package-layout)).
 
@@ -6168,7 +6168,7 @@ This uses the same ecosystem namespace structure as the indexer's TOML configura
 
 > **Updated 2026-02-27:** The `operations` object now includes a `card_states` sub-object that persists the expanded/collapsed state of the three collapsible cards (Target, Options, Output) on the Operations page. All three default to `true` (expanded) when absent from the session file.
 
-**Session state:** Unlike the previous per-tab design, the consolidated Operations page maintains a single set of input state. The selected operation type is stored in the `operations.operation_type` field. Switching operation types within the Operations page updates the visible controls but the shared fields (target path, type, recursive, ID algorithm, SHA-512) persist across operation type changes.
+**Session state:** Unlike the previous per-tab design, the consolidated Operations page maintains a single set of input state. The selected operation type is stored in the `operations.operation_type` field. Switching operation types within the Operations page updates the visible controls but the shared fields (target path, type, recursive, ID algorithm, SHA-512) persist across indexing operation type changes. When the Rollback operation type is selected, rollback-specific control values are stored separately under the `rollback_state` key within the `operations` object, including `meta2_path`, `source_path`, `target_path`, and all rollback option flags.
 
 > **Historical note:** Session persistence is a `shruggie-indexer`-specific addition. The `shruggie-feedtools` GUI starts fresh every launch, which is acceptable for its simpler input space. The indexer's more complex configuration surface (target paths, multiple flag combinations, per-operation preferences) makes persistence substantially more valuable.
 
@@ -6328,17 +6328,32 @@ Each group uses consistent padding and alignment. Section headers are bold with 
 
 > **Updated 2026-02-23:** Rename is no longer listed as an independent operation type. It is an optional feature toggle that can be combined with any of the three core operations. See [§10.3](#103-target-selection-and-input), context-sensitive options.
 
-The Operation group contains a `CTkOptionMenu` dropdown for selecting between the three core operation types:
+The Operation group contains a `CTkOptionMenu` dropdown for selecting between the four operation types:
 
 | Label | Internal key | Configuration overrides |
 |-------|-------------|------------------------|
 | Index | `index` | Base indexing; optional EXIF extraction. |
 | Meta Merge | `meta_merge` | `extract_exif=True`, `meta_merge=True`. |
 | Meta Merge Delete | `meta_merge_delete` | `extract_exif=True`, `meta_merge=True`, `meta_merge_delete=True`. |
+| Rollback | `rollback` | Entirely different pipeline — see UI morphing below. |
 
-The Rename feature is exposed as a separate "Rename files" checkbox in the Options group ([§10.3](#103-target-selection-and-input), context-sensitive options) that can be combined with any of the three core operations. When enabled, it adds `rename=True` and optionally `dry_run=True` to the configuration overrides.
+> **Updated 2026-03-01:** Added Rollback as a fourth operation type. See UI morphing behavior below.
+
+The Rename feature is exposed as a separate "Rename files" checkbox in the Options group ([§10.3](#103-target-selection-and-input), context-sensitive options) that can be combined with any of the three indexing operations (Index, Meta Merge, Meta Merge Delete). When enabled, it adds `rename=True` and optionally `dry_run=True` to the configuration overrides. Rename is not applicable to Rollback.
 
 Changing the operation type immediately updates the enabled/disabled state of all controls, the destructive operation indicator, and the action button state. The selected operation type is persisted in the session file.
+
+**UI morphing — Rollback mode.** When the user selects "Rollback" from the operation type dropdown, the Operations page's collapsible card sections morph to present rollback-specific controls. The existing indexing cards (Target, Options, Output) are hidden via `pack_forget()` and replaced by three rollback-specific cards:
+
+| Card | Label | Contents |
+|------|-------|----------|
+| 2 | Source | Meta2 path entry with dual browse buttons (File… / Folder…), optional source directory entry with browse button, recursive checkbox (disabled when meta2 path is a file). |
+| 3 | Options | Flat restore, verify hashes, force overwrite, skip duplicates, restore sidecars — all `CTkCheckBox` controls. |
+| 4 | Target | Target directory entry with browse button. When empty, placeholder text shows the default (parent of meta2 path). |
+
+The card morphing is instantaneous — selecting any of the three indexing operation types restores the original card layout. The Operation card (Card 1) is always visible and unchanged. The destructive operation indicator shows green (non-destructive) when Rollback is selected. The START button is disabled when the meta2 path field is empty. All rollback-specific control values persist across sessions under a `rollback_state` key in the session file ([§10.1](#101-gui-framework-and-architecture)).
+
+Rollback does not produce JSON index output. After a rollback job completes, the Output tab displays a human-readable text summary of what was restored, skipped, and failed. Plan warnings (e.g., mixed-session detection) are prepended to the summary.
 
 <a id="target-path-widget-group"></a>
 #### Target path widget group
