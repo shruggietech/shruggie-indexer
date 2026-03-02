@@ -731,7 +731,8 @@ src/shruggie_indexer/
 │   └── loader.py
 ├── cli/
 │   ├── __init__.py
-│   └── main.py
+│   ├── main.py
+│   └── rollback.py
 └── gui/
     ├── __init__.py
     └── app.py
@@ -3632,7 +3633,7 @@ When the rename flag is active, a de-duplication pass runs between entry constru
 <a id="revert-capability"></a>
 #### Revert capability
 
-The original's source comments include a "To-Do" note about adding a `Revert` parameter. The v2 schema's enriched `MetadataEntry` provenance fields ([§5.10](#510-metadata-array-and-metadataentry-fields), principle P3) and the in-place sidecar files provide the data foundation for reversal. A `revert_rename()` function that reads the sidecar's `name.text` field and renames the file back to its original name is a natural post-MVP enhancement. The architecture supports it without structural changes — the sidecar file is the revert manifest.
+The rollback feature ([§8.12](#812-rollback-subcommand), `core/rollback.py`) reverses rename and de-duplication operations by reading `_meta2.json` sidecar files and restoring files to their original names, directory structure, and timestamps. The in-place sidecar files serve as the rollback manifest: the `name.text` field records the original filename, `file_system.relative` records the original path, and `timestamps` records the original filesystem timestamps. See [§18.1.2](#1812-rename-revert-operation) for the historical context.
 
 <a id="7-configuration"></a>
 ## 7. Configuration
@@ -4493,7 +4494,8 @@ Options:
   --help     Show this message and exit.
 
 Commands:
-  index  Index files and directories (default command).
+  index     Index files and directories (default command).
+  rollback  Restore files from metadata to their original names and structure.
 ```
 
 **Index subcommand help** (`shruggie-indexer index --help`): Shows the full indexing option set. The following is the canonical help layout — the implementation MUST produce output equivalent to this structure, though minor whitespace or wrapping differences are acceptable:
@@ -5106,6 +5108,70 @@ If a rename operation is interrupted, files renamed before the interrupt retain 
 When the CLI is displaying a progress bar (via `tqdm` or `rich`, see [§11.6](#116-progress-reporting)), the interrupt message from Phase 1 must not corrupt the progress bar rendering. Both `tqdm` and `rich` provide mechanisms for this: `tqdm.write()` prints a message without disrupting the active progress bar, and `rich.console.Console` supports `stderr` output that coexists with progress displays. The interrupt message MUST use the progress library's safe-print mechanism rather than a bare `print()` call. The illustrative code in the mechanism section above uses `print()` for clarity; the implementation MUST substitute the appropriate library-aware output method.
 
 > **Historical note:** The original PowerShell implementation has no interrupt handling. `Ctrl+C` during a `MakeIndex` invocation triggers PowerShell's default `StopProcessing()` behavior, which terminates the pipeline immediately with no cleanup. This can leave partially written output files, orphaned temporary files (from `TempOpen`/`TempClose`), and — in MetaMergeDelete mode — a state where some sidecar files have been deleted but the aggregate output was never written. The tool's cooperative cancellation model eliminates all of these failure modes.
+
+<a id="812-rollback-subcommand"></a>
+### 8.12. Rollback Subcommand
+
+The `rollback` subcommand restores files from `_meta2.json` sidecar metadata to their original names, directory structure, and timestamps. It is the CLI presentation layer for the core rollback engine ([§6.10](#610-file-rename-and-in-place-write-operations), `core/rollback.py`).
+
+```
+shruggie-indexer rollback [OPTIONS] META2_PATH
+```
+
+<a id="rollback-arguments"></a>
+#### Arguments
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `META2_PATH` | `click.Path(exists=True)` | Yes | Path to a `_meta2.json` sidecar file, aggregate `_directorymeta2.json` output file, or directory containing `_meta2.json` sidecars. |
+
+<a id="rollback-options"></a>
+#### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `-t, --target PATH` | `click.Path()` | Parent of `META2_PATH` | Target directory for restored files. When omitted, defaults to the parent directory of `META2_PATH` (if it is a file) or to `META2_PATH` itself (if it is a directory). |
+| `--source PATH` | `click.Path(exists=True)` | `None` | Explicit source directory containing content files. Used when the meta2 file is in a different directory from the content files (e.g., aggregate output from a separate location). |
+| `--recursive` | Flag | `False` | Search `META2_PATH` subdirectories for `_meta2.json` sidecar files. Only meaningful when `META2_PATH` is a directory. |
+| `--flat` | Flag | `False` | Restore files using only `name.text`, without reconstructing the directory structure from `file_system.relative`. All files are placed directly in the target directory. |
+| `--dry-run` | Flag | `False` | Preview restore operations without writing any files. Logs all planned actions at INFO level. |
+| `--no-verify` | Flag | `False` | Skip hash verification of source files before restoring. |
+| `--force` | Flag | `False` | Overwrite existing files in the target directory. |
+| `--skip-duplicates` | Flag | `False` | Do not restore files from `duplicates[]` arrays. Only canonical entries are restored. |
+| `--no-restore-sidecars` | Flag | `False` | Do not restore absorbed sidecar metadata files from `MetadataEntry` records. |
+| `-v, --verbose` | Counted | 0 | Increase verbosity (repeatable). |
+| `-q, --quiet` | Flag | `False` | Suppress all non-error output. |
+| `--log-file [PATH]` | Optional path | `None` | Write log output to a persistent file. |
+
+<a id="rollback-exit-codes"></a>
+#### Exit codes
+
+The rollback subcommand uses the same `ExitCode` enum as the `index` command ([§8.10](#810-exit-codes)):
+
+| Code | Meaning |
+|------|---------|
+| 0 | All actions succeeded (or dry-run completed). |
+| 1 | One or more actions failed. |
+| 2 | Configuration error (bad meta2 path, invalid arguments, v1 schema). |
+| 3 | Target error (target directory not writable). |
+| 5 | Operation interrupted by user. |
+
+<a id="rollback-command-body"></a>
+#### Command body
+
+The CLI body follows the same thin-orchestration pattern as `index_cmd()`:
+
+1. Configure logging.
+2. Install signal handlers for cooperative cancellation.
+3. Resolve `--target` default (parent of `META2_PATH` for files, `META2_PATH` itself for directories).
+4. Load entries via `load_meta2()`.
+5. Plan via `plan_rollback()`.
+6. Report plan warnings to stderr.
+7. Execute via `execute_rollback()` (or dry-run).
+8. Report result summary to stderr.
+9. Exit with code 0 (success) or 1 (partial failure).
+
+The rollback subcommand is implemented in `cli/rollback.py` and registered on the `main` group in `cli/main.py` via `main.add_command(rollback_cmd)`.
 
 <a id="9-python-api"></a>
 ## 9. Python API
@@ -10145,15 +10211,9 @@ The migration utility is a standalone command — likely a new CLI subcommand (`
 <a id="1812-rename-revert-operation"></a>
 #### 18.1.2. Rename Revert Operation
 
+**Status: Implemented.** The rollback feature ([§6.11](#611-rollback-operations), `core/rollback.py`) supersedes the originally envisioned `revert_rename()` function. Rather than a simple rename-reversal flag, rollback provides a comprehensive restoration engine that reverses both rename and de-duplication operations, reconstructs absorbed sidecar metadata files, and restores file timestamps to their pre-indexing values. The feature is available via CLI (`shruggie-indexer rollback`), GUI (Rollback operation type), and Python API (`plan_rollback()`, `execute_rollback()`).
+
 **Originating references:** [§6.10](#610-file-rename-and-in-place-write-operations) (File Rename and In-Place Write Operations).
-
-The original's source comments include a "To-Do" note about adding a `Revert` parameter. The v2 schema's enriched `MetadataEntry` provenance fields ([§5.10](#510-metadata-array-and-metadataentry-fields), principle P3) and the in-place sidecar files provide the data foundation for reversal: the sidecar file written alongside each renamed item records the original filename in `name.text`, allowing a revert operation to reconstruct the original path.
-
-A `revert_rename()` function would read the sidecar's `name.text` field and rename the file back to its original name. The implementation is straightforward — iterate sidecar files in a target directory, parse each one, extract `name.text`, and rename the associated storage-named file back to its original name. The primary complexity is conflict detection: if the original filename already exists (because a different file now occupies that name), the revert must fail gracefully for that file.
-
-**Preconditions:** The rename operation ([§6.10](#610-file-rename-and-in-place-write-operations)) and in-place write mode ([§6.9](#69-json-serialization-and-output-routing)) must be stable and producing correct sidecar files with complete `name.text` provenance.
-
-**Architectural impact:** Low. A new function in `core/rename.py` (or a new `core/revert.py` module), a new CLI flag (`--revert`), and corresponding API surface. No changes to existing modules beyond adding the new entry point.
 
 <a id="1813-exiftool-batch-mode-via-pyexiftool"></a>
 #### 18.1.3. Exiftool Batch Mode via PyExifTool

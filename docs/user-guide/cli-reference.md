@@ -32,6 +32,18 @@ shruggie-indexer index [OPTIONS] [TARGET]
 
 `TARGET` is an optional positional argument specifying the file or directory to index. When omitted, the current working directory is used.
 
+### `rollback`
+
+Restore files from shruggie-indexer metadata to their original names and directory structure.
+
+```
+shruggie-indexer rollback [OPTIONS] META2_PATH
+```
+
+`META2_PATH` is a required positional argument specifying a `_meta2.json` file, aggregate output file, or directory containing `_meta2.json` sidecars.
+
+See [Rollback Options](#rollback-options) below for the full option set.
+
 ## Target Options
 
 ### `TARGET` (positional argument)
@@ -367,6 +379,100 @@ The three output flags (`--stdout`, `--outfile`, `--inplace`) combine into the f
 | 6 — In-place + stdout | `--inplace --stdout` | ✔ | — | ✔ |
 | 7 — All three | `--outfile index.json --inplace --stdout` | ✔ | ✔ | ✔ |
 | Silent | `--no-stdout` | — | — | — |
+
+## Rollback Options
+
+These options apply to the `rollback` subcommand.
+
+### `META2_PATH` (positional argument)
+
+Path to a `_meta2.json` sidecar file, an aggregate `_directorymeta2.json` output file, or a directory containing `_meta2.json` sidecar files. Required.
+
+### `-t, --target PATH`
+
+Target directory for restored files. When omitted, defaults to the parent directory of `META2_PATH` (if it is a file) or to `META2_PATH` itself (if it is a directory).
+
+```bash
+# Restore into a specific directory
+shruggie-indexer rollback sidecars/ --target restored/
+
+# Default: restore into the meta2 file's parent directory
+shruggie-indexer rollback vault/yABC.jpg_meta2.json
+```
+
+### `--source PATH`
+
+Explicit source directory containing the content files to restore. When omitted, the rollback engine searches for files adjacent to the meta2 sidecar. Use this when the aggregate output file is in a different directory from the content files.
+
+```bash
+shruggie-indexer rollback output/photos_directorymeta2.json --source vault/ --target restored/
+```
+
+### `--recursive`
+
+When `META2_PATH` is a directory, search subdirectories for `_meta2.json` sidecar files. Has no effect when `META2_PATH` is a file. Default: disabled.
+
+### `--flat`
+
+Restore files using their original names only (`name.text`), without reconstructing the original directory structure from `file_system.relative`. All files are placed directly in the target directory.
+
+```bash
+# Structured (default): restored/photos/vacation/beach.jpg
+# Flat:                 restored/beach.jpg
+shruggie-indexer rollback meta2.json --flat --target restored/
+```
+
+When two entries have the same `name.text`, the second file is skipped with a warning.
+
+### `--dry-run`
+
+Preview restore operations without writing any files. Logs all planned actions at INFO level.
+
+### `--no-verify`
+
+Skip hash verification of source files before restoring. By default, the rollback engine computes the content hash and compares it against the sidecar's recorded hash to detect corruption or mismatch.
+
+### `--force`
+
+Overwrite existing files in the target directory. By default, files that already exist at the target path are skipped.
+
+### `--skip-duplicates`
+
+Do not restore files from the `duplicates[]` array. Only canonical entries are restored.
+
+### `--no-restore-sidecars`
+
+Do not restore absorbed sidecar metadata files. By default, metadata files that were consumed by MetaMergeDelete are reconstructed from their `MetadataEntry` representations.
+
+### Rollback Logging Options
+
+The rollback subcommand supports the same logging options as `index`:
+
+- `-v, --verbose` — Increase verbosity (repeatable).
+- `-q, --quiet` — Suppress all non-error output.
+- `--log-file [PATH]` — Write log output to a persistent file.
+
+### Rollback Examples
+
+```bash
+# Restore a single renamed file
+shruggie-indexer rollback vault/yABC.jpg_meta2.json
+
+# Restore an entire directory of sidecars
+shruggie-indexer rollback vault/ --target restored/
+
+# Restore from aggregate output with explicit source
+shruggie-indexer rollback output/photos_directorymeta2.json --source vault/ --target restored/
+
+# Flat restore (no directory structure)
+shruggie-indexer rollback vault/ --flat --target flat_output/
+
+# Dry-run preview
+shruggie-indexer rollback vault/ --dry-run -v
+
+# Skip duplicates, force overwrite
+shruggie-indexer rollback vault/ --skip-duplicates --force --target restored/
+```
 
 ## Exit Codes
 

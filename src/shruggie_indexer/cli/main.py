@@ -31,6 +31,7 @@ __all__ = [
     "ExitCode",
     "index_cmd",
     "main",
+    "rollback_cmd",
 ]
 
 logger = logging.getLogger("shruggie_indexer")
@@ -284,6 +285,11 @@ def main() -> None:
 
 
 main.default_cmd_name = "index"  # type: ignore[attr-defined]
+
+# Register rollback subcommand (batch 005, §3.1)
+from shruggie_indexer.cli.rollback import rollback_cmd  # noqa: E402
+
+main.add_command(rollback_cmd)
 
 
 # ---------------------------------------------------------------------------
