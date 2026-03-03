@@ -1191,3 +1191,382 @@ class TestSetWindowsCreationTime:
         test_file.write_text("ctime test content")
         ok = _set_windows_creation_time(test_file, 1577836800.0)
         assert ok is False
+
+
+# ===========================================================================
+# TestContentHashCollisionDetection
+# ===========================================================================
+
+
+class TestContentHashCollisionDetection:
+    """Session-ID-based deduplication of content-hash collisions."""
+
+    def test_no_collision_preserves_all(self) -> None:
+        """Entries with different hashes are all preserved."""
+        from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
+
+        e1 = _make_file_entry(name="a.txt", relative="a.txt", md5="AAAA0000AAAA0000AAAA0000AAAA0000")
+        e2 = _make_file_entry(name="b.txt", relative="b.txt", md5="BBBB0000BBBB0000BBBB0000BBBB0000")
+        result = _deduplicate_by_content_hash([e1, e2])
+        assert len(result) == 2
+
+    def test_same_hash_same_relative_no_dedup(self) -> None:
+        """Same hash, same relative → no dedup needed."""
+        from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
+
+        e1 = _make_file_entry(
+            name="a.txt", relative="dir/a.txt", md5="AAAA0000AAAA0000AAAA0000AAAA0000",
+            session_id="session-1",
+        )
+        e2 = _make_file_entry(
+            name="a.txt", relative="dir/a.txt", md5="AAAA0000AAAA0000AAAA0000AAAA0000",
+            session_id="session-2",
+        )
+        result = _deduplicate_by_content_hash([e1, e2])
+        assert len(result) == 2
+
+    def test_collision_majority_session_wins(self) -> None:
+        """Two entries, same hash, different sessions → majority session kept."""
+        from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
+
+        majority_sid = "aaaa1111-aaaa-4aaa-aaaa-aaaaaaaaaaaa"
+        minority_sid = "bbbb2222-bbbb-4bbb-bbbb-bbbbbbbbbbbb"
+
+        # 3 entries with majority session, 1 with minority
+        e_majority_1 = _make_file_entry(
+            name="file1.txt", relative="file1.txt",
+            md5="1111000011110000111100001111AAAA", session_id=majority_sid,
+        )
+        e_majority_2 = _make_file_entry(
+            name="file2.txt", relative="file2.txt",
+            md5="2222000022220000222200002222AAAA", session_id=majority_sid,
+        )
+        e_majority_3 = _make_file_entry(
+            name="file3.txt", relative="file3.txt",
+            md5="3333000033330000333300003333AAAA", session_id=majority_sid,
+        )
+        # Colliding entry from minority session — same hash as e_majority_1
+        # but different relative
+        e_minority = _make_file_entry(
+            name="file1.txt", relative="old/file1.txt",
+            md5="1111000011110000111100001111AAAA", session_id=minority_sid,
+        )
+
+        result = _deduplicate_by_content_hash(
+            [e_majority_1, e_majority_2, e_majority_3, e_minority],
+        )
+        assert len(result) == 3
+        assert e_majority_1 in result
+        assert e_minority not in result
+
+    def test_collision_session_over_no_session(self) -> None:
+        """Entry with session_id preferred over entry without."""
+        from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
+
+        e_with = _make_file_entry(
+            name="file.7z", relative="file.7z",
+            md5="AAAA0000AAAA0000AAAA0000AAAA0000",
+            session_id="session-1",
+        )
+        e_without = _make_file_entry(
+            name="file.7z", relative="data/file.7z",
+            md5="AAAA0000AAAA0000AAAA0000AAAA0000",
+        )
+        result = _deduplicate_by_content_hash([e_without, e_with])
+        assert len(result) == 1
+        assert e_with in result
+
+    def test_collision_no_sessions_keeps_first(self) -> None:
+        """Neither entry has session_id → first encountered kept."""
+        from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
+
+        e1 = _make_file_entry(
+            name="file.7z", relative="file.7z",
+            md5="AAAA0000AAAA0000AAAA0000AAAA0000",
+        )
+        e2 = _make_file_entry(
+            name="file.7z", relative="data/file.7z",
+            md5="AAAA0000AAAA0000AAAA0000AAAA0000",
+        )
+        result = _deduplicate_by_content_hash([e1, e2])
+        assert len(result) == 1
+        assert e1 in result
+
+    def test_collision_same_session_different_relative(self) -> None:
+        """Same session_id, different relative → first encountered kept."""
+        from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
+
+        sid = "aaaa1111-aaaa-4aaa-aaaa-aaaaaaaaaaaa"
+        e1 = _make_file_entry(
+            name="file.7z", relative="file.7z",
+            md5="AAAA0000AAAA0000AAAA0000AAAA0000",
+            session_id=sid,
+        )
+        e2 = _make_file_entry(
+            name="file.7z", relative="data/file.7z",
+            md5="AAAA0000AAAA0000AAAA0000AAAA0000",
+            session_id=sid,
+        )
+        result = _deduplicate_by_content_hash([e1, e2])
+        assert len(result) == 1
+        assert e1 in result
+
+    def test_collision_warning_logged(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Collision detection logs WARNING with hash and paths."""
+        import logging
+
+        from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
+
+        e1 = _make_file_entry(
+            name="file.7z", relative="file.7z",
+            md5="AAAA0000AAAA0000AAAA0000AAAA0000",
+            session_id="session-1",
+        )
+        e2 = _make_file_entry(
+            name="file.7z", relative="data/file.7z",
+            md5="AAAA0000AAAA0000AAAA0000AAAA0000",
+        )
+        with caplog.at_level(logging.WARNING, logger="shruggie_indexer.core.rollback"):
+            _deduplicate_by_content_hash([e1, e2])
+
+        warning_records = [
+            r for r in caplog.records
+            if "Duplicate content hash" in r.message
+        ]
+        assert len(warning_records) == 1
+        assert "Keeping" in warning_records[0].message
+        assert "Discarding" in warning_records[0].message
+
+    def test_empty_entries(self) -> None:
+        """Empty entries list returns empty."""
+        from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
+
+        result = _deduplicate_by_content_hash([])
+        assert result == []
+
+    def test_entries_without_hashes_pass_through(self) -> None:
+        """Entries with hashes=None are never discarded."""
+        from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
+
+        e1 = _make_file_entry(name="a.txt", relative="a.txt", md5="AAAA0000AAAA0000AAAA0000AAAA0000")
+        e1_no_hash = IndexEntry(
+            schema_version=2,
+            id="xDIR",
+            id_algorithm="md5",
+            type="directory",
+            name=NameObject(text="dir", hashes=_make_hashset()),
+            extension=None,
+            size=SizeObject(text="0 B", bytes=0),
+            hashes=None,
+            file_system=FileSystemObject(relative=".", parent=None),
+            timestamps=_make_ts(),
+            attributes=AttributesObject(is_link=False, storage_name="dir"),
+        )
+        result = _deduplicate_by_content_hash([e1, e1_no_hash])
+        assert len(result) == 2
+
+    def test_collision_in_plan_rollback(self, tmp_path: Path) -> None:
+        """plan_rollback integrates collision detection end-to-end."""
+        majority_sid = "aaaa1111-aaaa-4aaa-aaaa-aaaaaaaaaaaa"
+        minority_sid = "bbbb2222-bbbb-4bbb-bbbb-bbbbbbbbbbbb"
+
+        # Create source file
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        (source_dir / "yAAAA0000AAAA0000AAAA0000AAAA0000.7z").write_bytes(b"archive")
+
+        # Majority-session entry
+        e_keep = _make_file_entry(
+            name="FeedsExport.7z", relative="FeedsExport.7z",
+            storage_name="yAAAA0000AAAA0000AAAA0000AAAA0000.7z",
+            md5="AAAA0000AAAA0000AAAA0000AAAA0000",
+            session_id=majority_sid,
+        )
+        # Another majority entry (establishes majority)
+        e_other = _make_file_entry(
+            name="other.txt", relative="other.txt",
+            storage_name="yBBBB0000BBBB0000BBBB0000BBBB0000.txt",
+            md5="BBBB0000BBBB0000BBBB0000BBBB0000",
+            session_id=majority_sid,
+        )
+        (source_dir / "yBBBB0000BBBB0000BBBB0000BBBB0000.txt").write_bytes(b"other")
+
+        # Minority-session entry — same hash, different relative
+        e_stale = _make_file_entry(
+            name="FeedsExport.7z", relative="data/FeedsExport.7z",
+            storage_name="yAAAA0000AAAA0000AAAA0000AAAA0000.7z",
+            md5="AAAA0000AAAA0000AAAA0000AAAA0000",
+            session_id=minority_sid,
+        )
+
+        target_dir = tmp_path / "restored"
+        plan = plan_rollback(
+            [e_keep, e_other, e_stale],
+            target_dir=target_dir,
+            source_dir=source_dir,
+            verify=False,
+        )
+
+        # The stale entry should be gone — no restore action for data/FeedsExport.7z
+        target_paths = {
+            a.target_path for a in plan.actions
+            if a.action_type == "restore" and not a.skip_reason
+        }
+        assert target_dir / "FeedsExport.7z" in target_paths
+        assert target_dir / "data" / "FeedsExport.7z" not in target_paths
+
+
+# ===========================================================================
+# TestLegacyPrefixDetection
+# ===========================================================================
+
+
+class TestLegacyPrefixDetection:
+    """Legacy file_system.relative prefix stripping."""
+
+    def test_legacy_prefix_stripped(self) -> None:
+        """Entries with common first component have prefix stripped."""
+        from shruggie_indexer.core.rollback import _strip_legacy_prefix
+
+        e1 = _make_file_entry(name="slippers.gif", relative="data/images/slippers.gif")
+        e2 = _make_file_entry(name="123.nfo", relative="data/123.nfo")
+        e3 = _make_file_entry(name="readme.txt", relative="data/docs/readme.txt")
+
+        _strip_legacy_prefix([e1, e2, e3], source_dir=Path("data"))
+
+        assert e1.file_system.relative == "images/slippers.gif"
+        assert e2.file_system.relative == "123.nfo"
+        assert e3.file_system.relative == "docs/readme.txt"
+
+    def test_current_format_unchanged(self) -> None:
+        """Entries without legacy prefix pass through unchanged."""
+        from shruggie_indexer.core.rollback import _strip_legacy_prefix
+
+        e1 = _make_file_entry(name="slippers.gif", relative="images/slippers.gif")
+        e2 = _make_file_entry(name="123.nfo", relative="123.nfo")
+
+        _strip_legacy_prefix([e1, e2], source_dir=Path("somedir"))
+
+        # e2 is a single-component relative → no stripping
+        assert e1.file_system.relative == "images/slippers.gif"
+        assert e2.file_system.relative == "123.nfo"
+
+    def test_dot_relative_no_stripping(self) -> None:
+        """Entry with relative='.' prevents stripping."""
+        from shruggie_indexer.core.rollback import _strip_legacy_prefix
+
+        e1 = _make_file_entry(name="a.txt", relative=".")
+        e2 = _make_file_entry(name="b.txt", relative="sub/b.txt")
+
+        _strip_legacy_prefix([e1, e2])
+
+        assert e1.file_system.relative == "."
+        assert e2.file_system.relative == "sub/b.txt"
+
+    def test_source_dir_mismatch_no_stripping(self) -> None:
+        """When prefix doesn't match source_dir name, no stripping."""
+        from shruggie_indexer.core.rollback import _strip_legacy_prefix
+
+        e1 = _make_file_entry(name="a.txt", relative="images/a.txt")
+        e2 = _make_file_entry(name="b.txt", relative="images/b.txt")
+
+        _strip_legacy_prefix([e1, e2], source_dir=Path("other_dir"))
+
+        assert e1.file_system.relative == "images/a.txt"
+        assert e2.file_system.relative == "images/b.txt"
+
+    def test_mixed_first_components_no_stripping(self) -> None:
+        """Different first components → no stripping."""
+        from shruggie_indexer.core.rollback import _strip_legacy_prefix
+
+        e1 = _make_file_entry(name="a.txt", relative="dir1/a.txt")
+        e2 = _make_file_entry(name="b.txt", relative="dir2/b.txt")
+
+        _strip_legacy_prefix([e1, e2])
+
+        assert e1.file_system.relative == "dir1/a.txt"
+        assert e2.file_system.relative == "dir2/b.txt"
+
+    def test_single_component_no_stripping(self) -> None:
+        """Single-component relative (filename only) → no stripping."""
+        from shruggie_indexer.core.rollback import _strip_legacy_prefix
+
+        e1 = _make_file_entry(name="file.txt", relative="file.txt")
+        e2 = _make_file_entry(name="other.txt", relative="other.txt")
+
+        _strip_legacy_prefix([e1, e2])
+
+        assert e1.file_system.relative == "file.txt"
+        assert e2.file_system.relative == "other.txt"
+
+    def test_prefix_detection_logged(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Legacy prefix detection logs INFO message."""
+        import logging
+
+        from shruggie_indexer.core.rollback import _strip_legacy_prefix
+
+        e1 = _make_file_entry(name="a.txt", relative="mydata/a.txt")
+        e2 = _make_file_entry(name="b.txt", relative="mydata/sub/b.txt")
+
+        with caplog.at_level(logging.INFO, logger="shruggie_indexer.core.rollback"):
+            _strip_legacy_prefix([e1, e2], source_dir=Path("mydata"))
+
+        info_records = [
+            r for r in caplog.records
+            if "legacy relative path prefix" in r.message.lower()
+        ]
+        assert len(info_records) == 1
+        assert "'mydata'" in info_records[0].message
+
+    def test_empty_entries_no_error(self) -> None:
+        """Empty entries list → no error."""
+        from shruggie_indexer.core.rollback import _strip_legacy_prefix
+
+        _strip_legacy_prefix([])  # Should not raise
+
+    def test_legacy_prefix_in_plan_rollback(self, tmp_path: Path) -> None:
+        """plan_rollback integrates legacy prefix stripping end-to-end."""
+        source_dir = tmp_path / "data"
+        source_dir.mkdir()
+        (source_dir / "yAAAA0000AAAA0000AAAA0000AAAA0000.gif").write_bytes(b"gif")
+        (source_dir / "yBBBB0000BBBB0000BBBB0000BBBB0000.nfo").write_bytes(b"nfo")
+
+        e1 = _make_file_entry(
+            name="slippers.gif", relative="data/images/slippers.gif",
+            storage_name="yAAAA0000AAAA0000AAAA0000AAAA0000.gif",
+            md5="AAAA0000AAAA0000AAAA0000AAAA0000",
+        )
+        e2 = _make_file_entry(
+            name="123.nfo", relative="data/123.nfo",
+            storage_name="yBBBB0000BBBB0000BBBB0000BBBB0000.nfo",
+            md5="BBBB0000BBBB0000BBBB0000BBBB0000",
+        )
+
+        target_dir = tmp_path / "restored"
+        plan = plan_rollback(
+            [e1, e2],
+            target_dir=target_dir,
+            source_dir=source_dir,
+            verify=False,
+        )
+
+        target_paths = {
+            a.target_path for a in plan.actions
+            if a.action_type == "restore" and not a.skip_reason
+        }
+        # Should be under target_dir directly, NOT target_dir/data/
+        assert target_dir / "images" / "slippers.gif" in target_paths
+        assert target_dir / "123.nfo" in target_paths
+        assert target_dir / "data" / "images" / "slippers.gif" not in target_paths
+
+    def test_root_entry_relative_becomes_dot(self) -> None:
+        """If an entry's relative equals the legacy prefix, it becomes '.'."""
+        from shruggie_indexer.core.rollback import _strip_legacy_prefix
+
+        e_root = _make_file_entry(name="root.txt", relative="data/root.txt")
+        e_sub = _make_file_entry(name="sub.txt", relative="data/sub/sub.txt")
+
+        _strip_legacy_prefix([e_root, e_sub], source_dir=Path("data"))
+
+        assert e_root.file_system.relative == "root.txt"
+        assert e_sub.file_system.relative == "sub/sub.txt"

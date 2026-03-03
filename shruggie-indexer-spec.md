@@ -3793,6 +3793,47 @@ Following the pattern established by `core/dedup.py`:
 
 This separation gives callers dry-run, inspection, and selective execution for free.
 
+<a id="rollback-session-id-validation"></a>
+#### Session-ID validation and content-hash collision detection
+
+> **Added 2026-03-03:** Hardening against stale `_meta2.json` metadata from prior indexing sessions.
+
+Before planning begins, `plan_rollback()` performs two pre-planning sanitization passes on the loaded entries:
+
+**A. Legacy prefix detection.**  Pre-fix indexer versions (before the §5.6 correction) computed `file_system.relative` from the *parent* of the target directory, prepending the target directory's own name as a leading path component.  When loading entries from such legacy `_meta2.json` files, `plan_rollback()` detects and strips this prefix:
+
+1. If any entry's `file_system.relative` is `"."`, the entries use the current convention and no stripping is performed.
+2. Otherwise, if every entry's relative path contains at least two components and all entries share the same first component, the shared first component is a candidate legacy prefix.
+3. When `source_dir` is provided, the candidate prefix is confirmed only if it matches `source_dir.name` (the indexed directory name).  When `source_dir` is `None`, the candidate is accepted without confirmation.
+4. Upon confirmation, the prefix is stripped from all entries.  An entry whose relative equals the prefix itself receives `"."`.  An `INFO` message is logged:
+
+   ```
+   INFO: Detected legacy relative path prefix 'data'. Stripping prefix for rollback.
+   ```
+
+**B. Content-hash collision detection.**  After prefix stripping, entries are grouped by composite content hash — a `(md5, sha256)` tuple.  When two or more non-duplicate entries share the same composite hash but have different `file_system.relative` values, this indicates stale metadata from a prior indexing session.  Entries annotated as duplicates (from the `duplicates[]` array) are excluded from collision detection — they are *expected* to share the canonical's hash at a different path.
+
+Tiebreaking rules for collisions (applied in order):
+
+1. **Majority session:** Determine the `session_id` that appears most frequently across *all* loaded entries.  If colliding entries have `session_id` values, prefer the entry whose `session_id` matches the majority session.
+2. **Session over no session:** If only one colliding entry has a `session_id`, prefer it over entries without one.
+3. **First encountered:** If neither entry has a `session_id`, or both have the same `session_id`, keep the first encountered.
+
+Discarded entries are logged at `WARNING`:
+
+```
+WARNING: Duplicate content hash {hash} found in multiple sessions.
+  Keeping: {relative} (session {session_id})
+  Discarding: {relative} (session {session_id})
+```
+
+<a id="rollback-empty-directories"></a>
+#### Empty directory omission
+
+> **Added 2026-03-03.**
+
+**Empty directories are not reconstructed by rollback.**  The indexer catalogues *files* and their containing directory hierarchy.  Directories that contain no files (directly or transitively) produce no entries in `_meta2.json` output and therefore cannot be restored by rollback.  This is intentional — shruggie-indexer focuses on the preservation and cataloguing of files, not the replication of directory trees.  File tree replication (including empty directory preservation) is out of scope.
+
 <a id="7-configuration"></a>
 ## 7. Configuration
 

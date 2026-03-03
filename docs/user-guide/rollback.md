@@ -313,3 +313,37 @@ shruggie-indexer rollback vault/ --recursive --target restored/
 ```
 
 See the [CLI Reference](cli-reference.md#rollback-options) for the full option set.
+
+---
+
+## Legacy Compatibility
+
+Rollback automatically handles `_meta2.json` files produced by older indexer versions that computed `file_system.relative` from the *parent* of the target directory (prepending the target's own name as a prefix).
+
+When all loaded entries share a common first path component matching the source directory name, rollback detects this as a legacy prefix and strips it before planning. An informational log message is emitted:
+
+```
+INFO: Detected legacy relative path prefix 'data'. Stripping prefix for rollback.
+```
+
+This ensures files are restored directly under the target directory without an extra nesting level, regardless of which indexer version produced the sidecar files.
+
+---
+
+## Session-ID Validation
+
+When `_meta2.json` files from multiple indexing sessions coexist in the same directory (e.g., stale metadata from a prior run was not cleaned up), rollback detects content-hash collisions — entries where the same file content appears with different `file_system.relative` paths.
+
+When a collision is detected, rollback applies tiebreaking rules:
+
+1. **Majority session wins** — The entry whose `session_id` matches the most common session across all loaded entries is kept.
+2. **Session over no session** — An entry with a `session_id` is preferred over one without.
+3. **First encountered** — If neither has a `session_id`, the first entry is kept.
+
+Discarded entries are logged at WARNING level. This prevents duplicate or misplaced file restores caused by stale metadata.
+
+---
+
+## Known Limitations
+
+- **Empty directories are not reconstructed.** The indexer catalogues *files* and their containing directory hierarchy. Directories that contain no files (directly or transitively) produce no entries in `_meta2.json` output and therefore cannot be restored by rollback. This is intentional — shruggie-indexer focuses on the preservation and cataloguing of files, not the replication of directory trees.

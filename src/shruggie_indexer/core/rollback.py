@@ -618,6 +618,200 @@ def _is_path_safe(target_dir: Path, resolved: Path) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Pre-planning entry sanitization
+# ---------------------------------------------------------------------------
+
+
+def _deduplicate_by_content_hash(
+    entries: list[IndexEntry],
+) -> list[IndexEntry]:
+    """Remove entries with duplicate content hashes but conflicting relative paths.
+
+    When multiple entries share the same content hash (``hashes.sha256`` or
+    ``hashes.md5``) but differ in ``file_system.relative``, this indicates
+    stale metadata from prior indexing sessions.  Tiebreaking rules:
+
+    1. If entries have ``session_id`` values, prefer the one matching the
+       majority session (the ``session_id`` that appears most frequently
+       across *all* loaded entries).
+    2. If only one entry has a ``session_id``, prefer it over entries
+       without one.
+    3. Otherwise, keep the first encountered.
+
+    Returns a new list with conflicting duplicates removed.
+    """
+    if not entries:
+        return entries
+
+    # Determine majority session across all entries
+    session_counts: dict[str, int] = {}
+    for entry in entries:
+        if entry.session_id is not None:
+            session_counts[entry.session_id] = (
+                session_counts.get(entry.session_id, 0) + 1
+            )
+
+    majority_session: str | None = None
+    if session_counts:
+        majority_session = max(session_counts, key=lambda k: session_counts[k])
+
+    # Group entries by composite content hash (md5 + sha256).  Two entries
+    # represent the same file only when both hashes agree; using a single
+    # hash as the key would cause false collisions when test helpers or
+    # partial metadata produce entries with a shared default hash value.
+    #
+    # Entries annotated as duplicates (from the ``duplicates[]`` array of a
+    # canonical entry) are excluded from collision detection.  They are
+    # *expected* to share the canonical's content hash at a different
+    # relative path — that is the normal dedup-restore workflow, not a
+    # stale-metadata collision.
+    hash_groups: dict[tuple[str, str], list[IndexEntry]] = {}
+    for entry in entries:
+        if entry.hashes is None:
+            continue
+        if _is_duplicate(entry):
+            continue  # Dedup entries share hash intentionally
+        md5 = (entry.hashes.md5 or "").upper()
+        sha256 = (entry.hashes.sha256 or "").upper()
+        if md5 or sha256:
+            hash_groups.setdefault((md5, sha256), []).append(entry)
+
+    discarded_ids: set[int] = set()
+
+    for content_key, group in hash_groups.items():
+        if len(group) < 2:
+            continue
+
+        # Check for actual relative path conflicts
+        relatives = {e.file_system.relative for e in group}
+        if len(relatives) < 2:
+            continue  # Same hash, same relative — no conflict
+
+        # Collision detected — pick winner
+        content_hash = "/".join(k for k in content_key if k)
+        winner = _resolve_hash_collision(group, majority_session)
+        for entry in group:
+            if entry is not winner:
+                discarded_ids.add(id(entry))
+                logger.warning(
+                    "Duplicate content hash %s found in multiple sessions.\n"
+                    "  Keeping: %s (session %s)\n"
+                    "  Discarding: %s (session %s)",
+                    content_hash,
+                    winner.file_system.relative,
+                    winner.session_id or "<none>",
+                    entry.file_system.relative,
+                    entry.session_id or "<none>",
+                )
+
+    if not discarded_ids:
+        return entries
+
+    return [e for e in entries if id(e) not in discarded_ids]
+
+
+def _resolve_hash_collision(
+    group: list[IndexEntry],
+    majority_session: str | None,
+) -> IndexEntry:
+    """Pick the winning entry from a content-hash collision group.
+
+    Rules (applied in order):
+
+    1. If entries have ``session_id`` values, prefer the one matching
+       *majority_session*.
+    2. If only one entry (or subset) has a ``session_id``, prefer any
+       entry with a ``session_id`` over entries without one.
+    3. Otherwise, keep the first encountered.
+    """
+    with_session = [e for e in group if e.session_id is not None]
+
+    # Rule 1: entries with session_ids — prefer majority
+    if with_session and majority_session is not None:
+        majority_entries = [
+            e for e in with_session if e.session_id == majority_session
+        ]
+        if majority_entries:
+            return majority_entries[0]
+
+    # Rule 2: any entry with session_id over entries without
+    if with_session:
+        return with_session[0]
+
+    # Rule 3: no session_ids — first encountered
+    return group[0]
+
+
+def _strip_legacy_prefix(
+    entries: list[IndexEntry],
+    source_dir: Path | None = None,
+) -> None:
+    """Detect and strip legacy ``file_system.relative`` prefix in place.
+
+    Pre-fix indexer versions computed ``file_system.relative`` from the
+    *parent* of the target directory, prepending the target's own name
+    (e.g., ``"data/images/photo.jpg"`` instead of ``"images/photo.jpg"``).
+
+    Detection heuristic: if every entry's relative path has at least two
+    components and all entries share the same first component, that
+    component is the legacy prefix.  The candidate prefix is confirmed by
+    comparing against *source_dir*'s name — the legacy prefix equals the
+    indexed directory name, which is typically the source directory.  When
+    *source_dir* is ``None``, the prefix is accepted without confirmation
+    (callers that cannot provide a source directory accept the small risk
+    of a false positive).
+
+    Upon detection, the prefix is stripped from all entries and an ``INFO``
+    message is logged.
+    """
+    if not entries:
+        return
+
+    # If any entry already uses "." as relative, it's the current format
+    if any(e.file_system.relative == "." for e in entries):
+        return
+
+    first_components: set[str] = set()
+    for entry in entries:
+        rel = entry.file_system.relative.replace("\\", "/")
+        parts = rel.split("/")
+        if len(parts) < 2:
+            return  # At least one entry is a bare filename — not legacy
+        first_components.add(parts[0])
+
+    if len(first_components) != 1:
+        return  # No single common prefix
+
+    prefix = next(iter(first_components))
+    if not prefix or prefix == ".":
+        return
+
+    # Verify that the candidate prefix matches the source directory name.
+    # The legacy bug prepended the *indexed directory's own name*; the
+    # source directory is typically that same directory.
+    if source_dir is not None and prefix != source_dir.name:
+        return  # Common prefix is a legitimate subdirectory, not legacy
+
+    logger.info(
+        "Detected legacy relative path prefix '%s'. "
+        "Stripping prefix for rollback.",
+        prefix,
+    )
+
+    for entry in entries:
+        rel = entry.file_system.relative.replace("\\", "/")
+        if rel == prefix:
+            entry.file_system = FileSystemObject(
+                relative=".", parent=entry.file_system.parent,
+            )
+        elif rel.startswith(prefix + "/"):
+            entry.file_system = FileSystemObject(
+                relative=rel[len(prefix) + 1 :],
+                parent=entry.file_system.parent,
+            )
+
+
+# ---------------------------------------------------------------------------
 # Rollback planner
 # ---------------------------------------------------------------------------
 
@@ -684,6 +878,12 @@ def plan_rollback(
     _stale_origins = [k for k in _origin_dirs if k not in live_ids]
     for k in _stale_origins:
         del _origin_dirs[k]
+
+    # Pre-planning sanitization: legacy prefix stripping, then collision
+    # detection.  Order matters — prefix stripping normalises relative
+    # paths before collision grouping compares them.
+    _strip_legacy_prefix(entries, source_dir=source_dir)
+    entries = _deduplicate_by_content_hash(entries)
 
     if resolver is None:
         resolver = LocalSourceResolver(verify_hash=verify)
