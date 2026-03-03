@@ -1155,7 +1155,9 @@ For directory entries in recursive mode, Stage 4 recurses into child items and a
 
 **Stage 5 — Output Routing.** Route the completed entry (or entry tree) to one or more output destinations based on the configured output mode: stdout, a single aggregate file, and/or per-item in-place sidecar files. Serialization to JSON occurs at this stage. In-place sidecar writes happen during traversal (Stage 3–4 loop) so that partial results survive interruption; stdout and aggregate file writes happen after the full entry tree is assembled.
 
-**Stage 6 — Post-Processing.** Execute deferred operations that must occur after all indexing is complete: MetaMergeDelete file removal (if active), elapsed-time logging, and final status reporting.
+**Stage 6 — Post-Processing.** Execute deferred operations that must occur after all indexing is complete: MetaMergeDelete file removal (if active), stale metadata cleanup (Stage 7, if MetaMergeDelete active), elapsed-time logging, and final status reporting.
+
+> **Updated 2026-03-03:** Stage 6 now includes Stage 7 (stale metadata cleanup) as the final sub-phase of MetaMergeDelete post-processing. See [MetaMergeDelete execution loop](#metamergedelete-execution-loop) for details.
 
 > **Historical note:** The original's post-processing stage also performed global variable cleanup (`Remove-Variable` on each promoted `$global:` variable). This is unnecessary in the Python implementation due to the no-global-state design (see [§4.4](#44-state-management)).
 
@@ -1168,7 +1170,7 @@ The stages map to the tool's module structure as follows:
 | 3 — Traversal | `core/traversal.py` |
 | 4 — Entry Construction | `core/entry.py` (orchestrator), `core/hashing.py`, `core/timestamps.py`, `core/exif.py`, `core/sidecar.py`, `core/paths.py` |
 | 5 — Output Routing | `core/serializer.py`, `core/rename.py`, `core/dedup.py` |
-| 6 — Post-Processing | `core/serializer.py` (finalization), top-level orchestrator |
+| 6 — Post-Processing | `core/serializer.py` (finalization), `core/entry.py` (Stage 7 stale cleanup), top-level orchestrator |
 
 > **Added 2026-03-01:** The rollback pipeline ([§6.11](#611-rollback-operations), `core/rollback.py`) is a separate processing path invoked via the `rollback` subcommand ([§8.12](#812-rollback-subcommand)). It does not participate in the six-stage indexing pipeline described above. The rollback pipeline has its own two-phase execution model (plan → execute) and operates on previously-generated `_meta2.json` sidecar files rather than raw filesystem targets.
 
@@ -3189,6 +3191,8 @@ When `config.meta_merge_delete` is `True` and the `delete_queue` parameter is no
 
 The original's `$global:DeleteQueue` pattern is preserved but with explicit parameter passing rather than global state.
 
+> **Updated 2026-03-03:** The delete queue handles only consumed sidecars from the current run. Stale metadata artifacts from prior runs (excluded at Layer 1) are handled separately by Stage 7 cleanup — see [Stale metadata cleanup (Stage 7)](#stale-metadata-cleanup-stage-7).
+
 ---
 
 <a id="68-index-entry-construction"></a>
@@ -3613,7 +3617,25 @@ Key behaviors:
 - Each successful deletion produces an `INFO`-level log message: `Sidecar deleted: {path}`.
 - Each failed deletion produces an `ERROR`-level log message: `Sidecar delete FAILED: {path}: {exception}`.
 - A failed deletion does not abort the loop — remaining sidecar files are still processed.
-- The delete phase runs **after** the rename phase. The full post-processing pipeline ordering is: indexing → dedup scan/apply (when rename active) → in-place sidecar write → rename → dedup cleanup (duplicate file deletion) → MetaMergeDelete sidecar deletion.
+- The delete phase runs **after** the rename phase. The full post-processing pipeline ordering is: indexing → dedup scan/apply (when rename active) → in-place sidecar write → rename → dedup cleanup (duplicate file deletion) → MetaMergeDelete sidecar deletion → stale metadata cleanup (Stage 7).
+
+#### Stale metadata cleanup (Stage 7)
+
+> **Added 2026-03-03:** Documents the stale metadata cleanup phase added to the MetaMergeDelete pipeline.
+
+After the Stage 6 consumed-sidecar deletion, the MetaMergeDelete pipeline performs a final cleanup pass to remove stale metadata artifacts from prior indexer runs. These are files matching the `metadata_exclude_patterns` regex (`_meta.json`, `_meta2.json`, `_directorymeta.json`, `_directorymeta2.json`) that were excluded from traversal at Layer 1 ([§7.5](#75-metadata-exclusion-patterns)) and therefore never entered the delete queue — they accumulate silently across repeated runs.
+
+The cleanup is implemented by `cleanup_stale_metadata()` in `core/entry.py` and called from the top-level orchestrators (`cli/main.py`, `gui/app.py`) after the Stage 6 delete-queue drain. It operates as follows:
+
+1. **Collect protected paths.** When `output_inplace` is active, walk the completed entry tree and compute the set of sidecar file paths written during the current run. Both the original-name sidecar (`{filename}_meta2.json`) and the storage-name sidecar (`{storage_name}_meta2.json`) are protected for each file entry, ensuring no current-run output is accidentally deleted regardless of whether rename succeeded or failed. Directory sidecars (`{dirname}_directorymeta2.json`) are protected when `write_directory_meta` is enabled.
+2. **Collect traversed directories.** Walk the entry tree to identify every directory that was traversed during indexing. For single-file indexing, the containing directory is used.
+3. **Scan and delete.** For each traversed directory, enumerate files matching the stale metadata regex (`_(meta2?|directorymeta2?)\.json$`). Any matching file that is NOT in the protected set is a stale artifact. Delete it with an `INFO`-level log message: `Stale metadata artifact removed: {path}`. If deletion fails, log at `WARNING` and continue — the loop does not abort.
+
+Key behaviors:
+
+- The cleanup only runs when `meta_merge_delete=True`. The orchestrators (`cli/main.py`, `gui/app.py`) guard the call with an `if config.meta_merge_delete` check.
+- When `output_inplace=False`, the protected set is empty (no sidecars were written), so all metadata artifacts are identified as stale and removed.
+- Content files, sidecar companion files (`.info.json`, `.srt`, etc.), and non-metadata files are never touched — only files matching the indexer metadata naming convention are candidates for deletion.
 
 <a id="610a-provenance-preserving-de-duplication"></a>
 #### Provenance-preserving de-duplication

@@ -3951,6 +3951,24 @@ class ShruggiIndexerApp(ctk.CTk):
                 deleted = self._drain_delete_queue(delete_queue)
                 logger.info("Deleted %d merged sidecar files", deleted)
 
+            # ── Stage 7: Remove stale metadata artifacts ────────────────
+            if config.meta_merge_delete:
+                from shruggie_indexer.core.entry import cleanup_stale_metadata
+
+                stale_root = (
+                    target
+                    if entry.type == "directory"
+                    else target.parent
+                )
+                stale_removed = cleanup_stale_metadata(
+                    entry, stale_root, config,
+                )
+                if stale_removed:
+                    logger.info(
+                        "Removed %d stale metadata artifact(s)",
+                        stale_removed,
+                    )
+
             result = {"status": "success", "json": json_str}
             _job_elapsed = time.monotonic() - _job_start
             logger.info("Operation completed in %.1fs", _job_elapsed)

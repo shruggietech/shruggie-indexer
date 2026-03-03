@@ -674,6 +674,21 @@ def index_cmd(
             deleted = _drain_delete_queue(delete_queue)
             logger.info("Deleted %d merged sidecar files", deleted)
 
+        # ── Stage 7: Remove stale metadata artifacts from prior runs ───
+        if config.meta_merge_delete:
+            from shruggie_indexer.core.entry import cleanup_stale_metadata
+
+            stale_root = (
+                target_path
+                if entry.type == "directory"
+                else target_path.parent
+            )
+            stale_removed = cleanup_stale_metadata(entry, stale_root, config)
+            if stale_removed:
+                logger.info(
+                    "Removed %d stale metadata artifact(s)", stale_removed,
+                )
+
         logger.info("Indexing complete.")
         sys.exit(ExitCode.SUCCESS)
 

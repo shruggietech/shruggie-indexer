@@ -207,6 +207,16 @@ These patterns are end-anchored, so they match both bare filenames (e.g., `_meta
 
     Both layers work together to ensure sidecar files appear exclusively through the metadata merge system and never as inflated item counts in the output.
 
+!!! note "MetaMergeDelete stale artifact cleanup (Stage 7)"
+    When MetaMergeDelete is active, a post-processing cleanup pass (Stage 7)
+    scans all traversed directories for stale metadata artifacts — files
+    matching `metadata_exclude.patterns` that survived from prior indexer
+    runs. Because Layer 1 prevents these files from entering the sidecar
+    discovery pipeline, they are never queued for deletion during normal
+    processing. Stage 7 fills this gap by identifying and removing any
+    matching file that is not a current-run output sidecar. See the spec
+    §6.10 for details.
+
 ### Filesystem exclusion defaults
 
 The default exclusion set covers system artifacts across all supported platforms:

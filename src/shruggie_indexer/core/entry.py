@@ -8,6 +8,10 @@ component modules (``paths``, ``hashing``, ``timestamps``, ``exif``,
 No component module calls another component module directly; all coordination
 flows through ``entry.py``.
 
+Also contains the Stage 7 stale metadata cleanup routine
+(``cleanup_stale_metadata``), which runs as the final phase of the
+MetaMergeDelete pipeline.
+
 See spec section 6.8 for full behavioral guidance.
 """
 
@@ -15,6 +19,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 import uuid
 from datetime import UTC, datetime
@@ -29,6 +34,7 @@ from shruggie_indexer.core.hashing import (
     select_id,
 )
 from shruggie_indexer.core.paths import (
+    build_sidecar_path,
     extract_components,
     relative_forward_slash,
     resolve_path,
@@ -65,6 +71,7 @@ if TYPE_CHECKING:
 __all__ = [
     "build_directory_entry",
     "build_file_entry",
+    "cleanup_stale_metadata",
     "index_path",
 ]
 
@@ -710,4 +717,149 @@ def index_path(
     raise IndexerTargetError(
         f"Target is neither a file nor a directory: {resolved}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Stage 7: Stale metadata cleanup (MetaMergeDelete post-processing)
+# ---------------------------------------------------------------------------
+
+_STALE_METADATA_RE = re.compile(
+    r"_(meta2?|directorymeta2?)\.json$", re.IGNORECASE,
+)
+"""Matches indexer metadata output filenames:
+
+``_meta.json``, ``_meta2.json``, ``_directorymeta.json``,
+``_directorymeta2.json``.  Used to identify stale artifacts from prior
+indexer runs during Stage 7 cleanup.
+"""
+
+
+def _collect_protected_sidecars(
+    entry: Any,
+    root_path: Path,
+    config: IndexerConfig,
+    protected: set[Path],
+) -> None:
+    """Compute current-run output sidecar paths from the entry tree.
+
+    Both the original-name and storage-name sidecar paths are added for
+    file entries, ensuring no current-run output is accidentally deleted
+    regardless of whether rename succeeded, failed, or was skipped.
+    """
+    if entry.type == "file":
+        item_path = root_path / entry.file_system.relative
+        # Protect original-name sidecar (pre-rename or rename-inactive).
+        protected.add(build_sidecar_path(item_path, "file"))
+        # Protect storage-name sidecar (post-rename).
+        if entry.attributes and entry.attributes.storage_name:
+            parent_dir = item_path.parent
+            protected.add(
+                parent_dir / f"{entry.attributes.storage_name}_meta2.json"
+            )
+    elif entry.type == "directory":
+        # The root directory entry (relative == ".") has no sidecar
+        # written by _write_inplace_tree (it's skipped as _is_root).
+        if entry.file_system.relative != ".":
+            if config.write_directory_meta:
+                dir_path = root_path / entry.file_system.relative
+                protected.add(build_sidecar_path(dir_path, "directory"))
+        if entry.items:
+            for child in entry.items:
+                _collect_protected_sidecars(
+                    child, root_path, config, protected,
+                )
+
+
+def _collect_traversed_dirs(
+    entry: Any,
+    root_path: Path,
+    traversed: list[Path],
+) -> None:
+    """Extract the set of directories traversed during indexing.
+
+    Walks the entry tree and maps each directory entry back to its
+    absolute path on disk via ``root_path / relative``.
+    """
+    if entry.type == "directory":
+        if entry.file_system.relative == ".":
+            traversed.append(root_path)
+        else:
+            traversed.append(root_path / entry.file_system.relative)
+        if entry.items:
+            for child in entry.items:
+                _collect_traversed_dirs(child, root_path, traversed)
+
+
+def cleanup_stale_metadata(
+    entry: Any,
+    root_path: Path,
+    config: IndexerConfig,
+) -> int:
+    """Stage 7: Remove stale metadata artifacts from prior indexer runs.
+
+    After MetaMergeDelete's Stage 6 (consumed-sidecar deletion), scans all
+    directories traversed during the current run for files matching the
+    indexer metadata naming convention (``_meta.json``, ``_meta2.json``,
+    ``_directorymeta.json``, ``_directorymeta2.json``).  Files that are
+    NOT current-run output sidecars are identified as stale and deleted.
+
+    This addresses the gap where Layer 1 exclusion prevents re-indexing
+    of prior output artifacts but provides no cleanup mechanism, causing
+    stale files to accumulate across repeated MetaMergeDelete runs.
+
+    Args:
+        entry: The root ``IndexEntry`` (or compatible object) from the
+            current indexing run.
+        root_path: Absolute path to the target directory (for directory
+            indexing) or the target file's parent directory (for
+            single-file indexing).
+        config: Resolved configuration.  Only ``output_inplace``,
+            ``write_directory_meta``, and ``rename`` are consulted
+            (to determine which current-run sidecars to protect).
+
+    Returns:
+        Count of stale files successfully removed.
+    """
+    # ── Build the protected set (current-run output sidecars) ──────────
+    protected: set[Path] = set()
+    if config.output_inplace:
+        _collect_protected_sidecars(entry, root_path, config, protected)
+
+    # ── Collect directories traversed during this indexing run ──────────
+    traversed: list[Path] = []
+    if entry.type == "file":
+        # Single-file index: scan the containing directory.
+        traversed.append(root_path)
+    else:
+        _collect_traversed_dirs(entry, root_path, traversed)
+
+    # ── Scan and delete stale artifacts ────────────────────────────────
+    deleted = 0
+    for dir_path in traversed:
+        try:
+            children = list(dir_path.iterdir())
+        except OSError as exc:
+            logger.warning(
+                "Cannot scan directory for stale metadata: %s: %s",
+                dir_path, exc,
+            )
+            continue
+        for child in children:
+            if not child.is_file():
+                continue
+            if not _STALE_METADATA_RE.search(child.name):
+                continue
+            if child in protected:
+                continue
+            # Stale artifact — delete it.
+            try:
+                child.unlink()
+                logger.info("Stale metadata artifact removed: %s", child)
+                deleted += 1
+            except OSError as exc:
+                logger.warning(
+                    "Failed to remove stale metadata artifact: %s: %s",
+                    child, exc,
+                )
+    return deleted
 
