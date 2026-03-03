@@ -2033,7 +2033,7 @@ shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yA
 <ul>
 <li><strong><code>mtime</code></strong> (modified time) — Set from <code>timestamps.modified.unix</code> via <code>os.utime()</code>.</li>
 <li><strong><code>atime</code></strong> (accessed time) — Set from <code>timestamps.accessed.unix</code> via <code>os.utime()</code>.</li>
-<li><strong><code>ctime</code></strong> (creation time, Windows only) — Set from <code>timestamps.created.unix</code> via <code>win32file.SetFileTime()</code> when the <code>pywin32</code> package is available. Skipped silently on other platforms.</li>
+<li><strong><code>ctime</code></strong> (creation time, Windows only) — Set from <code>timestamps.created.unix</code> via <code>ctypes.windll.kernel32</code> (<code>CreateFileW</code> / <code>SetFileTime</code> / <code>CloseHandle</code>). This uses only the Python standard library and requires no external dependency. On non-Windows platforms, creation time restoration is not attempted (POSIX provides no standard API for setting file creation time).</li>
 </ul>
 <p>Sidecar timestamps are stored as millisecond Unix timestamps; they are divided by 1000 before passing to <code>os.utime()</code>.</p>
 <hr />

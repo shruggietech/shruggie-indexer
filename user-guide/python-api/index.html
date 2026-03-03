@@ -3356,7 +3356,8 @@
 <ol>
 <li>Look for <code>storage_name</code> in <code>search_dir</code> (renamed file).</li>
 <li>Look for <code>name.text</code> in <code>search_dir</code>, verify hash if found (non-renamed file).</li>
-<li>Return <code>None</code> if neither match succeeds.</li>
+<li>If strategies 1–2 fail and the entry has an origin-directory annotation (set by <code>load_meta2()</code> during loading), repeat strategies 1–2 in the origin directory. This enables recursive rollback — when <code>search_dir</code> is the tree root but the content file resides in a subdirectory alongside its <code>_meta2.json</code> sidecar, the fallback finds it.</li>
+<li>Return <code>None</code> if no match succeeds.</li>
 </ol>
 <div class="highlight"><pre><span></span><code><span class="n">resolver</span> <span class="o">=</span> <span class="n">LocalSourceResolver</span><span class="p">(</span><span class="n">verify_hash</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="n">path</span> <span class="o">=</span> <span class="n">resolver</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="n">search_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/vault&quot;</span><span class="p">))</span>
