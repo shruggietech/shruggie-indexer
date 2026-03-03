@@ -37,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docs: Rollback Python API** — `docs/user-guide/python-api.md` updated with a full Rollback API section covering `load_meta2`, `discover_meta2_files`, `plan_rollback`, `execute_rollback`, `verify_file_hash`, all four data classes, the `SourceResolver` protocol, `LocalSourceResolver`, and a vault integration example.
 - **Spec: §6.11 Rollback Operations** — New specification section documenting the rollback engine's inputs, restore modes, target resolution, timestamp restoration, sidecar reconstruction, conflict resolution, mixed-session detection, `SourceResolver` protocol, error handling, and plan-then-execute architecture. Cross-referenced from §4.1, §6.10, §8.12, and §9.1.
 
+### Fixed
+
+- **Core: `file_system.relative` path computation** — The relative path for entries produced by directory indexing operations now correctly uses the target directory as the index root (producing `"."` for the root entry), instead of the parent directory (which produced the target's own name as a prefix). This corrects a spec violation (§5.6) that caused rollback to create an extra nesting level in restored directory trees. All path reconstruction call sites in `_write_inplace_tree()`, `_rename_tree()`, and `cleanup_duplicate_files()` updated from `root_path.parent / relative` to `root_path / relative`. **Breaking change:** Existing `_meta2.json` files contain the old prefix-based relative paths. Rollback will include automatic legacy prefix detection to handle both formats (see §3 of pending updates).
+
 ### Changed
 
 - **Core: Windows ctime restoration uses ctypes** — Replaced the `pywin32` (`win32file.SetFileTime`) approach for Windows creation-time restoration during rollback with a zero-dependency `ctypes.windll.kernel32` implementation using `CreateFileW` / `SetFileTime` / `CloseHandle`. Eliminates the conditional `pywin32` import and the "pywin32 not available" fallback path. FILETIME conversion: `int((unix_seconds + 11644473600) * 10_000_000)`. Spec: §6.11, §15.5.

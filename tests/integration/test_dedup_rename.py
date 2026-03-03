@@ -126,7 +126,7 @@ class TestSameDirDedup:
         actions = scan_tree(entry, registry)
         apply_dedup(actions)
         # Verify the duplicate file still exists before cleanup
-        dup_path = same_dir_duplicates.parent / actions[0].duplicate_relative_path
+        dup_path = same_dir_duplicates / actions[0].duplicate_relative_path
         assert dup_path.exists()
         cleanup_duplicate_files(actions, same_dir_duplicates)
         assert not dup_path.exists()
@@ -172,7 +172,7 @@ class TestCrossDirDedup:
         registry = DedupRegistry()
         actions = scan_tree(entry, registry)
         apply_dedup(actions)
-        dup_path = cross_dir_duplicates.parent / actions[0].duplicate_relative_path
+        dup_path = cross_dir_duplicates / actions[0].duplicate_relative_path
         assert dup_path.exists()
         cleanup_duplicate_files(actions, cross_dir_duplicates)
         assert not dup_path.exists()

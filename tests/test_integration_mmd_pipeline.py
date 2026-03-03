@@ -104,10 +104,10 @@ def _drain_delete_queue(queue: list[Path]) -> int:
 def _write_inplace_tree(entry: Any, root_path: Path) -> None:
     """Recursively write in-place sidecar files for an entry tree."""
     if entry.type == "file":
-        item_path = root_path.parent / entry.file_system.relative
+        item_path = root_path / entry.file_system.relative
         write_inplace(entry, item_path, "file")
     elif entry.type == "directory":
-        dir_path = root_path.parent / entry.file_system.relative
+        dir_path = root_path / entry.file_system.relative
         write_inplace(entry, dir_path, "directory")
         if entry.items:
             for child in entry.items:
@@ -120,7 +120,7 @@ def _rename_tree(entry: Any, root_path: Path, config: Any) -> None:
         return
     for child in entry.items:
         if child.type == "file":
-            child_path = root_path.parent / child.file_system.relative
+            child_path = root_path / child.file_system.relative
             try:
                 rename_item(child_path, child, dry_run=config.dry_run)
                 if config.output_inplace:
@@ -266,7 +266,7 @@ class TestMMDRenamePipeline:
         file_entries = _collect_file_entries(entry)
         for fe in file_entries:
             storage_name = fe.attributes.storage_name
-            expected_path = tmp_sidecar_testbed.parent / fe.file_system.relative
+            expected_path = tmp_sidecar_testbed / fe.file_system.relative
             # The original name should be gone.
             original_path = expected_path.parent / fe.name.text
             renamed_path = expected_path.parent / storage_name
@@ -308,7 +308,7 @@ class TestMMDRenamePipeline:
         for fe in file_entries:
             storage_name = fe.attributes.storage_name
             parent_dir = (
-                tmp_sidecar_testbed.parent / fe.file_system.relative
+                tmp_sidecar_testbed / fe.file_system.relative
             ).parent
             expected_sidecar = parent_dir / f"{storage_name}_meta2.json"
             original_sidecar = parent_dir / f"{fe.name.text}_meta2.json"

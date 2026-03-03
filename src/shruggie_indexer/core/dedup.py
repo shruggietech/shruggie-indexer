@@ -282,7 +282,7 @@ def cleanup_duplicate_files(
     """
     for action in actions:
         # Reconstruct the full path to the duplicate file
-        file_path = root_path.parent / action.duplicate_relative_path
+        file_path = root_path / action.duplicate_relative_path
 
         if dry_run:
             logger.info(

@@ -251,7 +251,7 @@ class TestWriteDirectoryMetaSuppression:
 
         file_entry = _make_entry(
             file_system=FileSystemObject(
-                relative="root/sub/file.txt", parent=None,
+                relative="sub/file.txt", parent=None,
             ),
         )
         sub_entry = self._make_dir_entry(
@@ -263,7 +263,7 @@ class TestWriteDirectoryMetaSuppression:
                     sha512=None,
                 ),
             ),
-            file_system=FileSystemObject(relative="root/sub", parent=None),
+            file_system=FileSystemObject(relative="sub", parent=None),
             items=[file_entry],
         )
         root_entry = self._make_dir_entry(
@@ -275,7 +275,7 @@ class TestWriteDirectoryMetaSuppression:
                     sha512=None,
                 ),
             ),
-            file_system=FileSystemObject(relative="root", parent=None),
+            file_system=FileSystemObject(relative=".", parent=None),
             items=[sub_entry],
         )
 
@@ -303,7 +303,7 @@ class TestWriteDirectoryMetaSuppression:
 
         file_entry = _make_entry(
             file_system=FileSystemObject(
-                relative="root/sub/file.txt", parent=None,
+                relative="sub/file.txt", parent=None,
             ),
         )
         sub_entry = self._make_dir_entry(
@@ -315,7 +315,7 @@ class TestWriteDirectoryMetaSuppression:
                     sha512=None,
                 ),
             ),
-            file_system=FileSystemObject(relative="root/sub", parent=None),
+            file_system=FileSystemObject(relative="sub", parent=None),
             items=[file_entry],
         )
         root_entry = self._make_dir_entry(
@@ -327,7 +327,7 @@ class TestWriteDirectoryMetaSuppression:
                     sha512=None,
                 ),
             ),
-            file_system=FileSystemObject(relative="root", parent=None),
+            file_system=FileSystemObject(relative=".", parent=None),
             items=[sub_entry],
         )
 
@@ -366,13 +366,13 @@ class TestWriteDirectoryMetaSuppression:
                     ),
                     extension=name.rsplit(".", 1)[-1],
                     file_system=FileSystemObject(
-                        relative=f"root/{name}", parent=None,
+                        relative=name, parent=None,
                     ),
                 ),
             )
 
         root_entry = self._make_dir_entry(
-            file_system=FileSystemObject(relative="root", parent=None),
+            file_system=FileSystemObject(relative=".", parent=None),
             items=entries,
         )
 

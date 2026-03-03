@@ -631,8 +631,9 @@ def index_cmd(
         # the sidecar file from {original}_meta2.json to
         # {storage_name}_meta2.json.  (Batch 6, §4.)
         if config.output_inplace:
+            inplace_root = target_path if entry.type == "directory" else target_path.parent
             _write_inplace_tree(
-                entry, target_path, write_inplace,
+                entry, inplace_root, write_inplace,
                 write_directory_meta=config.write_directory_meta,
             )
 
@@ -725,11 +726,11 @@ def _write_inplace_tree(
     are unaffected.
     """
     if entry.type == "file":
-        item_path = root_path.parent / entry.file_system.relative
+        item_path = root_path / entry.file_system.relative
         write_fn(entry, item_path, "file")
     elif entry.type == "directory":
         if not _is_root and write_directory_meta:
-            dir_path = root_path.parent / entry.file_system.relative
+            dir_path = root_path / entry.file_system.relative
             write_fn(entry, dir_path, "directory")
         if entry.items:
             for child in entry.items:
@@ -751,10 +752,9 @@ def _rename_tree(
     performs rename operations instead of sidecar writes.  Directories
     are not renamed (spec §6.10).
 
-    Path reconstruction uses ``root_path.parent / relative`` — the
-    same formula used by ``_write_inplace_tree`` — because
-    ``file_system.relative`` is computed relative to the *parent*
-    of the target directory (the ``index_root``).
+    Path reconstruction uses ``root_path / relative`` because
+    ``file_system.relative`` is computed relative to the target
+    directory itself (the ``index_root``).
     """
     from shruggie_indexer.core.rename import rename_item
 
@@ -762,7 +762,7 @@ def _rename_tree(
         return
     for child in entry.items:
         if child.type == "file":
-            child_path = root_path.parent / child.file_system.relative
+            child_path = root_path / child.file_system.relative
             storage_name = child.attributes.storage_name
             logger.debug(
                 "Rename candidate: %s (type=%s, storage_name=%s)",

@@ -387,7 +387,7 @@ def build_directory_entry(
     from shruggie_indexer.core.progress import ProgressEvent
 
     algorithms = _get_algorithms(config)
-    index_root = _index_root if _index_root is not None else path.parent
+    index_root = _index_root if _index_root is not None else path
 
     components = extract_components(path)
     stat_result = path.stat()

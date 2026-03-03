@@ -6,7 +6,7 @@
 - **License:** Apache 2.0 ([full text](https://www.apache.org/licenses/LICENSE-2.0))
 - **Version:** 0.1.1
 - **Author:** William Thompson (ShruggieTech LLC)
-- **Date:** 2026-03-01
+- **Date:** 2026-03-03
 - **Status:** AMENDED
 - **Audience:** AI-first, Human-second
 
@@ -1917,6 +1917,8 @@ The `file_system` top-level property groups filesystem location and hierarchy in
 
 **`file_system.relative`** is the relative path from the root of the index operation to the current item. For the root item itself (the target of the indexing invocation), this is `"."`. For a file `photos/vacation/beach.jpg` within a directory being indexed recursively, the relative path is `"photos/vacation/beach.jpg"`. Path separators are always forward slashes, even when the indexer runs on Windows. This ensures that index output is portable across platforms.
 
+> **Updated 2026-03-03:** Prior to this correction, the implementation computed `file_system.relative` using the *parent* of the target directory as the index root rather than the target directory itself. This caused the root entry's relative to be the target directory's own name (e.g., `"data"`) instead of `"."`, and all child relative paths to carry the target name as a leading prefix (e.g., `"data/images/beach.jpg"` instead of `"images/beach.jpg"`). The mismatch was masked by compensating path arithmetic in `_write_inplace_tree()` and `_rename_tree()` but surfaced as incorrect nesting during rollback. Both the entry builder and all path reconstruction call sites have been corrected. Consumers of `_meta2.json` files produced by earlier versions should treat a root entry whose `file_system.relative` is a single path component (not `"."`) as a legacy prefix indicator and strip that prefix from all entries before use.
+
 > **New in v2.** v1 has no relative path field. The original's output embeds items in a recursive tree structure but does not record the relative path for any individual entry. The relative path is new in v2 and provides significant utility for consumers who need to locate or reconstruct the filesystem layout from a flat iteration of the entry tree.
 
 **`file_system.parent`** is a `ParentObject` ([§5.2.6](#526-parentobject)) containing the parent directory's computed ID and name. Null for the root item of a single-file index operation where the parent directory's identity is not meaningful. For all other items — including the root item of a directory index operation — the parent is populated.
@@ -3311,6 +3313,8 @@ def index_path(
 #### Directory entry construction sequence
 
 `build_directory_entry()` follows the same steps as file entry construction with these differences:
+
+> **Updated 2026-03-03:** The index root for directory targets is now the target directory itself, not its parent. When `build_directory_entry()` is called without an explicit `_index_root` parameter, the default is `path` (the directory being indexed). This produces `"."` as the relative path for the root entry and anchors all child relative paths to the target directory. `build_file_entry()` retains `path.parent` as its default index root when called standalone (single-file indexing), which produces the filename alone as the relative value.
 
 | Step | File behavior | Directory behavior |
 |------|--------------|-------------------|
