@@ -248,7 +248,7 @@ Rollback restores file timestamps from the sidecar's `timestamps` object:
 
 - **`mtime`** (modified time) — Set from `timestamps.modified.unix` via `os.utime()`.
 - **`atime`** (accessed time) — Set from `timestamps.accessed.unix` via `os.utime()`.
-- **`ctime`** (creation time, Windows only) — Set from `timestamps.created.unix` via `win32file.SetFileTime()` when the `pywin32` package is available. Skipped silently on other platforms.
+- **`ctime`** (creation time, Windows only) — Set from `timestamps.created.unix` via `ctypes.windll.kernel32` (`CreateFileW` / `SetFileTime` / `CloseHandle`). This uses only the Python standard library and requires no external dependency. On non-Windows platforms, creation time restoration is not attempted (POSIX provides no standard API for setting file creation time).
 
 Sidecar timestamps are stored as millisecond Unix timestamps; they are divided by 1000 before passing to `os.utime()`.
 

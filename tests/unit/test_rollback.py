@@ -1009,3 +1009,185 @@ class TestVerifyFileHash:
         expected = HashSet(md5="0654CDF77702945DA87A8B4E72E98EEE", sha256="X")
         # sha512 is None by default → requesting sha512 should return False
         assert verify_file_hash(path, expected, "sha512") is False
+
+
+# ===========================================================================
+# TestOriginDirAnnotation
+# ===========================================================================
+
+RECURSIVE_FIXTURES = FIXTURES / "recursive-testbed"
+
+
+class TestOriginDirAnnotation:
+    """Origin-dir annotations for recursive rollback."""
+
+    def test_recursive_load_annotates_origin_dirs(self) -> None:
+        """load_meta2(recursive=True) annotates each entry with its meta2 origin directory."""
+        from shruggie_indexer.core.rollback import _get_origin_dir
+
+        entries = load_meta2(RECURSIVE_FIXTURES, recursive=True)
+        assert len(entries) >= 2
+
+        # Every entry should have an origin dir annotation
+        for entry in entries:
+            origin = _get_origin_dir(entry)
+            assert origin is not None, f"Entry {entry.id} has no origin dir annotation"
+
+        # Entries from the root should have RECURSIVE_FIXTURES as origin
+        root_entries = [e for e in entries if "/" not in (e.file_system.relative or "")]
+        for entry in root_entries:
+            assert _get_origin_dir(entry) == RECURSIVE_FIXTURES
+
+        # Entries from subdir should have subdir as origin
+        sub_entries = [e for e in entries if (e.file_system.relative or "").startswith("subdir/")]
+        for entry in sub_entries:
+            assert _get_origin_dir(entry) == RECURSIVE_FIXTURES / "subdir"
+
+    def test_non_recursive_load_annotates_origin_dirs(self) -> None:
+        """load_meta2(recursive=False) still annotates origin dirs."""
+        from shruggie_indexer.core.rollback import _get_origin_dir
+
+        entries = load_meta2(RECURSIVE_FIXTURES, recursive=False)
+        # Should only find root-level entries
+        for entry in entries:
+            origin = _get_origin_dir(entry)
+            assert origin is not None
+
+    def test_single_file_annotates_origin_dir(self) -> None:
+        """load_meta2 on a single file annotates origin dir."""
+        from shruggie_indexer.core.rollback import _get_origin_dir
+
+        meta2_files = sorted(RECURSIVE_FIXTURES.glob("*_meta2.json"))
+        assert len(meta2_files) >= 1
+        entries = load_meta2(meta2_files[0])
+        for entry in entries:
+            assert _get_origin_dir(entry) == RECURSIVE_FIXTURES
+
+
+class TestLocalSourceResolverOriginFallback:
+    """LocalSourceResolver strategy 3 — origin-dir fallback."""
+
+    def test_origin_dir_fallback_finds_subdir_file(self, tmp_path: Path) -> None:
+        """Resolver uses origin-dir fallback when file is not in search_dir."""
+        from shruggie_indexer.core.rollback import _origin_dirs
+
+        resolver = LocalSourceResolver(verify_hash=False)
+        entry = _make_file_entry(
+            name="subfile.txt",
+            storage_name="yAA3FB09A0C23165E716723DB24CB945E.txt",
+            md5="AA3FB09A0C23165E716723DB24CB945E",
+        )
+
+        # Without origin annotation, fails to find in root dir
+        result = resolver.resolve(entry, RECURSIVE_FIXTURES)
+        assert result is None
+
+        # With origin annotation pointing to subdir, finds it
+        _origin_dirs[id(entry)] = RECURSIVE_FIXTURES / "subdir"
+        try:
+            result = resolver.resolve(entry, RECURSIVE_FIXTURES)
+            assert result is not None
+            assert result.name == "yAA3FB09A0C23165E716723DB24CB945E.txt"
+        finally:
+            _origin_dirs.pop(id(entry), None)
+
+    def test_recursive_rollback_resolves_subdir_files(self, tmp_path: Path) -> None:
+        """Full recursive rollback pipeline finds content files in subdirectories."""
+        entries = load_meta2(RECURSIVE_FIXTURES, recursive=True)
+        target = tmp_path / "restored"
+
+        plan = plan_rollback(
+            entries,
+            target_dir=target,
+            source_dir=RECURSIVE_FIXTURES,
+            verify=False,
+        )
+
+        # All entries should be resolvable (none skipped as unresolvable)
+        unresolvable = [a for a in plan.actions if a.skip_reason == "Source file not found"]
+        assert len(unresolvable) == 0, (
+            f"Expected 0 unresolvable entries, got {len(unresolvable)}: "
+            f"{[a.entry.name.text for a in unresolvable]}"
+        )
+
+        # Execute and verify
+        result = execute_rollback(plan)
+        assert result.restored == len(entries)
+        assert result.failed == 0
+
+
+# ===========================================================================
+# TestPlanRollbackLogging
+# ===========================================================================
+
+
+class TestPlanRollbackLogging:
+    """Verify that plan_rollback emits parameter summary at INFO level."""
+
+    def test_parameter_summary_logged(self, tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+        """plan_rollback logs all resolved parameters at INFO level."""
+        import logging
+
+        entry = _make_file_entry()
+
+        with caplog.at_level(logging.INFO, logger="shruggie_indexer.core.rollback"):
+            plan_rollback(
+                [entry],
+                target_dir=tmp_path,
+                source_dir=tmp_path,
+                verify=True,
+                force=False,
+                flat=True,
+                skip_duplicates=True,
+                restore_sidecars=False,
+            )
+
+        param_records = [r for r in caplog.records if "Rollback plan:" in r.message]
+        assert len(param_records) == 1
+        msg = param_records[0].message
+        assert "entries=1" in msg
+        assert str(tmp_path) in msg
+        assert "verify=True" in msg
+        assert "flat=True" in msg
+        assert "skip_duplicates=True" in msg
+        assert "restore_sidecars=False" in msg
+
+
+# ===========================================================================
+# TestSetWindowsCreationTime
+# ===========================================================================
+
+
+class TestSetWindowsCreationTime:
+    """ctypes-based ctime restoration."""
+
+    @pytest.mark.skipif(os.name != "nt", reason="Windows-only test")
+    def test_sets_creation_time_on_windows(self, tmp_path: Path) -> None:
+        """Verify _set_windows_creation_time sets ctime on Windows."""
+        from shruggie_indexer.core.rollback import _set_windows_creation_time
+
+        test_file = tmp_path / "ctime_test.txt"
+        test_file.write_text("ctime test content")
+
+        # Set creation time to 2020-01-01 00:00:00 UTC
+        target_ctime = 1577836800.0
+        ok = _set_windows_creation_time(test_file, target_ctime)
+        assert ok is True
+
+        # Verify via os.stat
+        import stat as stat_mod
+
+        st = os.stat(test_file)
+        # On Windows, st_ctime is the creation time
+        # Allow 2-second tolerance for filesystem rounding
+        assert abs(st.st_ctime - target_ctime) < 2.0
+
+    @pytest.mark.skipif(os.name == "nt", reason="Non-Windows only")
+    def test_noop_on_non_windows(self, tmp_path: Path) -> None:
+        """On non-Windows, _set_windows_creation_time is a no-op."""
+        from shruggie_indexer.core.rollback import _set_windows_creation_time
+
+        test_file = tmp_path / "ctime_test.txt"
+        test_file.write_text("ctime test content")
+        ok = _set_windows_creation_time(test_file, 1577836800.0)
+        assert ok is False

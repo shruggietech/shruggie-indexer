@@ -1,0 +1,49 @@
+{
+  "schema_version": 2,
+  "id": "y484ED49B8863469DEF7DAB5EE25B7245",
+  "id_algorithm": "md5",
+  "type": "file",
+  "name": {
+    "text": "rootfile.txt",
+    "hashes": {
+      "md5": "484ED49B8863469DEF7DAB5EE25B7245",
+      "sha256": "682625D7D75344C397E4662091A2BD0B97C5E9C949447A85536132393A47C7A8"
+    }
+  },
+  "extension": "txt",
+  "size": {
+    "text": "37 B",
+    "bytes": 37
+  },
+  "hashes": {
+    "md5": "484ED49B8863469DEF7DAB5EE25B7245",
+    "sha256": "0A3F515D093B9F9DF51F5F3A868BA1688276B3A8CECFF56DA90F50BC0CFE517C"
+  },
+  "file_system": {
+    "relative": "rootfile.txt",
+    "parent": null
+  },
+  "timestamps": {
+    "created": {
+      "iso": "2026-02-15T09:28:17.408-05:00",
+      "unix": 1771165697408
+    },
+    "modified": {
+      "iso": "2023-08-03T19:47:44.000-04:00",
+      "unix": 1691106464000
+    },
+    "accessed": {
+      "iso": "2026-02-15T09:28:18.109-05:00",
+      "unix": 1771165698109
+    }
+  },
+  "attributes": {
+    "is_link": false,
+    "storage_name": "y484ED49B8863469DEF7DAB5EE25B7245.txt"
+  },
+  "session_id": "rec-session-001",
+  "indexed_at": {
+    "iso": "2026-02-15T09:30:00.000-05:00",
+    "unix": 1771165800000
+  }
+}

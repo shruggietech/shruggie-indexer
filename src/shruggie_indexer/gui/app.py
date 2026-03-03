@@ -3783,9 +3783,18 @@ class ShruggiIndexerApp(ctk.CTk):
             self._setup_file_logging(force_rotate=True)
 
         logger.info(
-            "Rollback operation started: meta2=%s, target=%s",
+            "Rollback operation started: meta2=%s, target=%s, "
+            "source=%s, recursive=%s, flat=%s, verify=%s, force=%s, "
+            "skip_duplicates=%s, restore_sidecars=%s",
             meta2_path_str,
             target_dir_str or "(default)",
+            source_dir_str or "(default)",
+            rb_options.get("recursive", False),
+            rb_options.get("flat", False),
+            rb_options.get("verify", True),
+            rb_options.get("force", False),
+            rb_options.get("skip_duplicates", False),
+            rb_options.get("restore_sidecars", True),
         )
 
         # Rollback does not use output modes — mark as rollback for
@@ -3829,6 +3838,28 @@ class ShruggiIndexerApp(ctk.CTk):
             # ── Prepare delete queue for MetaMergeDelete ────────────────
             delete_queue: list[Path] | None = (
                 [] if config.meta_merge_delete else None
+            )
+
+            # ── Log resolved configuration ─────────────────────────────
+            logger.info(
+                "Index GUI: target=%s, recursive=%s, id_algorithm=%s, "
+                "compute_sha512=%s, extract_exif=%s, meta_merge=%s, "
+                "meta_merge_delete=%s, rename=%s, dry_run=%s, "
+                "output_stdout=%s, output_file=%s, output_inplace=%s, "
+                "write_directory_meta=%s",
+                target,
+                config.recursive,
+                config.id_algorithm,
+                config.compute_sha512,
+                config.extract_exif,
+                config.meta_merge,
+                config.meta_merge_delete,
+                config.rename,
+                config.dry_run,
+                config.output_stdout,
+                config.output_file,
+                config.output_inplace,
+                config.write_directory_meta,
             )
 
             # ── Execute indexing ────────────────────────────────────────
@@ -3967,6 +3998,12 @@ class ShruggiIndexerApp(ctk.CTk):
                 resolved_target = Path(target_dir_str)
 
             source_dir = Path(source_dir_str) if source_dir_str else None
+
+            # Default source_dir when not specified (match CLI behaviour)
+            if source_dir is None:
+                source_dir = meta2.parent if meta2.is_file() else meta2
+
+            logger.debug("Resolved source_dir: %s", source_dir)
 
             # ── Load meta2 entries ──────────────────────────────────────
             logger.info("Loading meta2 entries from: %s", meta2)

@@ -558,7 +558,27 @@ def index_cmd(
                 "No output destinations are enabled. The indexing operation "
                 "will execute but produce no output."
             )
-
+        # ── Log resolved configuration ─────────────────────────────────────────────
+        logger.info(
+            "Index CLI: target=%s, recursive=%s, id_algorithm=%s, "
+            "compute_sha512=%s, extract_exif=%s, meta_merge=%s, "
+            "meta_merge_delete=%s, rename=%s, dry_run=%s, "
+            "output_stdout=%s, output_file=%s, output_inplace=%s, "
+            "write_directory_meta=%s",
+            target_path,
+            config.recursive,
+            config.id_algorithm,
+            config.compute_sha512,
+            config.extract_exif,
+            config.meta_merge,
+            config.meta_merge_delete,
+            config.rename,
+            config.dry_run,
+            config.output_stdout,
+            config.output_file,
+            config.output_inplace,
+            config.write_directory_meta,
+        )
         # ── Prepare delete queue ────────────────────────────────────────
         delete_queue: list[Path] | None = (
             [] if config.meta_merge_delete else None

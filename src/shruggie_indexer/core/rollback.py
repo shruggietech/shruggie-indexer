@@ -30,10 +30,12 @@ Usage::
 from __future__ import annotations
 
 import base64
+import ctypes
 import json
 import logging
 import os
 import shutil
+import sys
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -168,6 +170,11 @@ class _DuplicateAnnotation:
 # prevents false positives if the dict is stale.
 _annotations: dict[int, _DuplicateAnnotation] = {}
 
+# Module-level dict mapping id(entry) → Path of the directory containing
+# the meta2 file that produced this entry.  Used by LocalSourceResolver
+# to locate content files in subdirectories during recursive rollback.
+_origin_dirs: dict[int, Path] = {}
+
 
 def _mark_duplicate(entry: IndexEntry, canonical_storage_name: str) -> None:
     """Annotate *entry* as a duplicate of the given canonical."""
@@ -212,6 +219,12 @@ class SourceResolver(Protocol):
         ...
 
 
+def _get_origin_dir(entry: IndexEntry) -> Path | None:
+    """Return the meta2 origin directory for *entry*, or ``None``."""
+    ann = _origin_dirs.get(id(entry))
+    return ann
+
+
 class LocalSourceResolver:
     """Locate content files on the local filesystem.
 
@@ -220,6 +233,10 @@ class LocalSourceResolver:
     1. Look for ``storage_name`` in *search_dir* — handles renamed files.
     2. Look for ``name.text`` in *search_dir*, verify hash if found — handles
        non-renamed files.
+    3. If the entry has a meta2 origin directory that differs from
+       *search_dir*, repeat strategies 1 & 2 in the origin directory —
+       handles recursive rollback where content files live alongside their
+       meta2 sidecars in subdirectories.
 
     Returns ``None`` if neither match succeeds.
     """
@@ -227,24 +244,40 @@ class LocalSourceResolver:
     def __init__(self, *, verify_hash: bool = True) -> None:
         self._verify_hash = verify_hash
 
-    def resolve(self, entry: IndexEntry, search_dir: Path | None) -> Path | None:
-        if search_dir is None:
-            return None
-
-        # Strategy 1: storage_name match (renamed file)
-        storage_path = search_dir / entry.attributes.storage_name
+    def _try_dir(self, entry: IndexEntry, directory: Path) -> Path | None:
+        """Attempt to find the source file for *entry* in *directory*."""
+        # Strategy A: storage_name match (renamed file)
+        storage_path = directory / entry.attributes.storage_name
         if storage_path.is_file():
             if self._verify_hash and entry.hashes is not None:
                 self._check_hash(storage_path, entry)
             return storage_path
 
-        # Strategy 2: original name match (non-renamed file)
+        # Strategy B: original name match (non-renamed file)
         if entry.name.text is not None:
-            original_path = search_dir / entry.name.text
+            original_path = directory / entry.name.text
             if original_path.is_file():
                 if self._verify_hash and entry.hashes is not None:
                     self._check_hash(original_path, entry)
                 return original_path
+
+        return None
+
+    def resolve(self, entry: IndexEntry, search_dir: Path | None) -> Path | None:
+        if search_dir is None:
+            return None
+
+        # Strategies 1 & 2: search in the caller-provided search_dir
+        result = self._try_dir(entry, search_dir)
+        if result is not None:
+            return result
+
+        # Strategy 3: origin directory fallback (recursive rollback)
+        origin = _get_origin_dir(entry)
+        if origin is not None and origin.resolve() != search_dir.resolve():
+            result = self._try_dir(entry, origin)
+            if result is not None:
+                return result
 
         return None
 
@@ -483,7 +516,13 @@ def load_meta2(
         files = discover_meta2_files(path, recursive=recursive)
         combined: list[IndexEntry] = []
         for f in files:
-            combined.extend(load_meta2(f, recursive=False))
+            sub_entries = load_meta2(f, recursive=False)
+            # Annotate each entry with the directory its meta2 came from
+            # so LocalSourceResolver can find content files alongside the
+            # sidecar during recursive rollback.
+            for e in sub_entries:
+                _origin_dirs[id(e)] = f.parent
+            combined.extend(sub_entries)
         return combined
 
     # Shapes 1 & 2: single JSON file
@@ -509,11 +548,18 @@ def load_meta2(
     if entry.type == "directory" and entry.items:
         flat: list[IndexEntry] = []
         _flatten_tree(entry, flat)
-        return _extract_duplicates(flat)
+        entries = _extract_duplicates(flat)
+        # Annotate all entries with the meta2 file's parent directory
+        for e in entries:
+            _origin_dirs[id(e)] = path.parent
+        return entries
 
     # Shape 1: single file entry
     if entry.type == "file":
-        return _extract_duplicates([entry])
+        entries = _extract_duplicates([entry])
+        for e in entries:
+            _origin_dirs[id(e)] = path.parent
+        return entries
 
     # Unexpected type — return empty
     return []
@@ -612,6 +658,21 @@ def plan_rollback(
     Returns:
         A :class:`RollbackPlan` describing all actions to be taken.
     """
+    # Log resolved parameters for diagnostics
+    logger.info(
+        "Rollback plan: entries=%d, target_dir=%s, source_dir=%s, "
+        "verify=%s, force=%s, flat=%s, skip_duplicates=%s, "
+        "restore_sidecars=%s",
+        len(entries),
+        target_dir,
+        source_dir,
+        verify,
+        force,
+        flat,
+        skip_duplicates,
+        restore_sidecars,
+    )
+
     # Purge stale annotations from prior load_meta2 calls.  id() values
     # can be reused after objects are garbage-collected, so we remove
     # annotations whose keys don't belong to the current *entries* batch
@@ -620,6 +681,9 @@ def plan_rollback(
     _stale = [k for k in _annotations if k not in live_ids]
     for k in _stale:
         del _annotations[k]
+    _stale_origins = [k for k in _origin_dirs if k not in live_ids]
+    for k in _stale_origins:
+        del _origin_dirs[k]
 
     if resolver is None:
         resolver = LocalSourceResolver(verify_hash=verify)
@@ -1175,6 +1239,72 @@ def _execute_sidecar_write(
         result.errors.append(f"sidecar {sidecar_name} → {action.target_path}: {exc}")
 
 
+def _set_windows_creation_time(path: Path, ctime_seconds: float) -> bool:
+    """Set file creation time on Windows using ctypes/kernel32.
+
+    Uses the Windows API directly via ``ctypes.windll.kernel32`` — no
+    external packages required.  Returns ``True`` on success, ``False``
+    on failure (logged at DEBUG).
+
+    No-op returning ``False`` on non-Windows platforms.
+    """
+    if sys.platform != "win32":
+        return False
+
+    GENERIC_WRITE = 0x40000000  # noqa: N806
+    FILE_WRITE_ATTRIBUTES = 0x100  # noqa: N806
+    OPEN_EXISTING = 3  # noqa: N806
+    FILE_SHARE_READ = 1  # noqa: N806
+    INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value  # noqa: N806
+
+    try:
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+
+        handle = kernel32.CreateFileW(
+            str(path),
+            GENERIC_WRITE | FILE_WRITE_ATTRIBUTES,
+            FILE_SHARE_READ,
+            None,
+            OPEN_EXISTING,
+            0,
+            None,
+        )
+        if handle == INVALID_HANDLE_VALUE:
+            logger.debug(
+                "CreateFileW failed for %s (error %d)",
+                path,
+                kernel32.GetLastError(),
+            )
+            return False
+
+        try:
+            # Convert Unix seconds → Windows FILETIME (100-ns intervals
+            # since 1601-01-01 00:00:00 UTC).
+            ft = int((ctime_seconds + 11644473600) * 10_000_000)
+            filetime = ctypes.c_ulonglong(ft)
+            # SetFileTime(handle, lpCreationTime, lpLastAccessTime,
+            #             lpLastWriteTime) — only set creation time.
+            ok = kernel32.SetFileTime(
+                handle,
+                ctypes.byref(filetime),
+                None,
+                None,
+            )
+            if not ok:
+                logger.debug(
+                    "SetFileTime failed for %s (error %d)",
+                    path,
+                    kernel32.GetLastError(),
+                )
+                return False
+            return True
+        finally:
+            kernel32.CloseHandle(handle)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Failed to set ctime on %s: %s", path, exc)
+        return False
+
+
 def _restore_timestamps(path: Path, timestamps: TimestampsObject) -> None:
     """Set atime/mtime from sidecar timestamps.  Attempt ctime on Windows."""
     try:
@@ -1187,31 +1317,6 @@ def _restore_timestamps(path: Path, timestamps: TimestampsObject) -> None:
         logger.error("Failed to set timestamps on %s: %s", path, exc)
         return
 
-    # Attempt ctime on Windows via pywin32 (SHOULD, not MUST)
-    try:
-        import pywintypes
-        import win32file
-
-        ctime = timestamps.created.unix / 1000
-
-        handle = win32file.CreateFile(
-            str(path),
-            win32file.GENERIC_WRITE,
-            0,
-            None,
-            win32file.OPEN_EXISTING,
-            0,
-            None,
-        )
-        try:
-            creation_time = pywintypes.Time(ctime)
-            win32file.SetFileTime(handle, creation_time, None, None)
-        finally:
-            handle.Close()
-    except ImportError:
-        logger.debug(
-            "pywin32 not available — skipping ctime restoration for %s",
-            path,
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("Failed to set ctime on %s: %s", path, exc)
+    # Restore creation time on Windows via ctypes/kernel32
+    ctime = timestamps.created.unix / 1000
+    _set_windows_creation_time(path, ctime)

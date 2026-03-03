@@ -547,7 +547,8 @@ Default implementation that searches the local filesystem:
 
 1. Look for `storage_name` in `search_dir` (renamed file).
 2. Look for `name.text` in `search_dir`, verify hash if found (non-renamed file).
-3. Return `None` if neither match succeeds.
+3. If strategies 1–2 fail and the entry has an origin-directory annotation (set by `load_meta2()` during loading), repeat strategies 1–2 in the origin directory. This enables recursive rollback — when `search_dir` is the tree root but the content file resides in a subdirectory alongside its `_meta2.json` sidecar, the fallback finds it.
+4. Return `None` if no match succeeds.
 
 ```python
 resolver = LocalSourceResolver(verify_hash=True)

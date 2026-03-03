@@ -203,7 +203,27 @@ def rollback_cmd(
     )
 
     # ── Logging ─────────────────────────────────────────────────────────
+    import logging as _logging
+
     configure_logging(verbose=verbose, quiet=quiet, log_file=log_file)
+    _logger = _logging.getLogger("shruggie_indexer")
+
+    # ── Log resolved parameters ─────────────────────────────────────────────────
+    _logger.info(
+        "Rollback CLI: meta2=%s, target=%s, source=%s, recursive=%s, "
+        "flat=%s, dry_run=%s, verify=%s, force=%s, skip_duplicates=%s, "
+        "restore_sidecars=%s",
+        meta2_path,
+        target or "(default)",
+        source or "(default)",
+        recursive,
+        flat,
+        dry_run,
+        not no_verify,
+        force,
+        skip_duplicates,
+        not no_restore_sidecars,
+    )
 
     # ── Signal handling ─────────────────────────────────────────────────
     cancel_event = threading.Event()
