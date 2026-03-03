@@ -3623,7 +3623,7 @@ Key behaviors:
 
 > **Added 2026-03-03:** Documents the stale metadata cleanup phase added to the MetaMergeDelete pipeline.
 
-After the Stage 6 consumed-sidecar deletion, the MetaMergeDelete pipeline performs a final cleanup pass to remove stale metadata artifacts from prior indexer runs. These are files matching the `metadata_exclude_patterns` regex (`_meta.json`, `_meta2.json`, `_directorymeta.json`, `_directorymeta2.json`) that were excluded from traversal at Layer 1 ([§7.5](#75-metadata-exclusion-patterns)) and therefore never entered the delete queue — they accumulate silently across repeated runs.
+After the Stage 6 consumed-sidecar deletion, the MetaMergeDelete pipeline performs a final cleanup pass to remove stale metadata artifacts from prior indexer runs. These are files matching the `metadata_exclude_patterns` regex (`_meta.json`, `_meta2.json`, `_directorymeta.json`, `_directorymeta2.json`) that were excluded from traversal at Layer 1 ([§7.5](#75-sidecar-suffix-patterns-and-type-identification)) and therefore never entered the delete queue — they accumulate silently across repeated runs.
 
 The cleanup is implemented by `cleanup_stale_metadata()` in `core/entry.py` and called from the top-level orchestrators (`cli/main.py`, `gui/app.py`) after the Stage 6 delete-queue drain. It operates as follows:
 
