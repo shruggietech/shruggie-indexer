@@ -1008,6 +1008,39 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#legacy-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legacy Compatibility
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#session-id-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session-ID Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1812,6 +1845,39 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#legacy-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legacy Compatibility
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#session-id-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session-ID Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2105,6 +2171,28 @@ shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/<s
 shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/<span class="w"> </span>--recursive<span class="w"> </span>--target<span class="w"> </span>restored/
 </code></pre></div>
 <p>See the <a href="../cli-reference/#rollback-options">CLI Reference</a> for the full option set.</p>
+<hr />
+<h2 id="legacy-compatibility">Legacy Compatibility</h2>
+<p>Rollback automatically handles <code>_meta2.json</code> files produced by older indexer versions that computed <code>file_system.relative</code> from the <em>parent</em> of the target directory (prepending the target's own name as a prefix).</p>
+<p>When all loaded entries share a common first path component matching the source directory name, rollback detects this as a legacy prefix and strips it before planning. An informational log message is emitted:</p>
+<div class="highlight"><pre><span></span><code>INFO: Detected legacy relative path prefix &#39;data&#39;. Stripping prefix for rollback.
+</code></pre></div>
+<p>This ensures files are restored directly under the target directory without an extra nesting level, regardless of which indexer version produced the sidecar files.</p>
+<hr />
+<h2 id="session-id-validation">Session-ID Validation</h2>
+<p>When <code>_meta2.json</code> files from multiple indexing sessions coexist in the same directory (e.g., stale metadata from a prior run was not cleaned up), rollback detects content-hash collisions — entries where the same file content appears with different <code>file_system.relative</code> paths.</p>
+<p>When a collision is detected, rollback applies tiebreaking rules:</p>
+<ol>
+<li><strong>Majority session wins</strong> — The entry whose <code>session_id</code> matches the most common session across all loaded entries is kept.</li>
+<li><strong>Session over no session</strong> — An entry with a <code>session_id</code> is preferred over one without.</li>
+<li><strong>First encountered</strong> — If neither has a <code>session_id</code>, the first entry is kept.</li>
+</ol>
+<p>Discarded entries are logged at WARNING level. This prevents duplicate or misplaced file restores caused by stale metadata.</p>
+<hr />
+<h2 id="known-limitations">Known Limitations</h2>
+<ul>
+<li><strong>Empty directories are not reconstructed.</strong> The indexer catalogues <em>files</em> and their containing directory hierarchy. Directories that contain no files (directly or transitively) produce no entries in <code>_meta2.json</code> output and therefore cannot be restored by rollback. This is intentional — shruggie-indexer focuses on the preservation and cataloguing of files, not the replication of directory trees.</li>
+</ul>
 
 
 

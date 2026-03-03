@@ -1409,6 +1409,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1431,7 +1442,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1481,7 +1492,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
+  <a href="#fixed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1582,6 +1593,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1604,7 +1626,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1654,7 +1676,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
+  <a href="#fixed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1724,7 +1746,13 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.1...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
-<li><strong>Core: Parameter logging at operation start</strong> — Every operation entry point (CLI indexing, CLI rollback, GUI indexing, GUI rollback, and <code>plan_rollback()</code>) now emits a single INFO-level log record summarizing all resolved operational parameters before processing begins. Provides immediate diagnostic visibility into the settings governing the current invocation. Spec: §11.4a.</li>
+<li><strong>Rollback: Session-ID validation and content-hash collision detection</strong> — <code>plan_rollback()</code> now performs two pre-planning sanitization passes on loaded entries before planning begins. Content-hash collision detection groups entries by composite <code>(md5, sha256)</code> hash and, when multiple non-duplicate entries share the same hash with different <code>file_system.relative</code> values, applies tiebreaking rules (majority session → session over no session → first encountered) to keep only one entry per content file. Discarded entries are logged at WARNING. Entries from the <code>duplicates[]</code> array are excluded from collision detection (they share the canonical's hash intentionally). Spec: §6.11.</li>
+<li>
+<p><strong>Rollback: Legacy <code>file_system.relative</code> prefix detection</strong> — <code>plan_rollback()</code> automatically detects and strips the legacy relative path prefix from <code>_meta2.json</code> files produced by indexer versions prior to the <code>file_system.relative</code> computation fix. When all entries share a common first path component matching the source directory name, the component is stripped and an INFO log is emitted. This ensures correct restoration without extra nesting regardless of sidecar provenance. Spec: §6.11.</p>
+</li>
+<li>
+<p><strong>Core: Parameter logging at operation start</strong> — Every operation entry point (CLI indexing, CLI rollback, GUI indexing, GUI rollback, and <code>plan_rollback()</code>) now emits a single INFO-level log record summarizing all resolved operational parameters before processing begins. Provides immediate diagnostic visibility into the settings governing the current invocation. Spec: §11.4a.</p>
+</li>
 <li><strong>Core: Origin-directory annotation for recursive rollback</strong> — <code>load_meta2()</code> now annotates every deserialized <code>IndexEntry</code> with the parent directory of the <code>_meta2.json</code> file that contained it, stored in a module-level <code>_origin_dirs</code> mapping. <code>LocalSourceResolver</code> uses this annotation as a Strategy 3 fallback when the content file is not found in <code>search_dir</code>, enabling recursive rollback to resolve files in subdirectories. Spec: §6.11.</li>
 <li><strong>Tests: Recursive rollback unit tests</strong> — 7 new tests in <code>tests/unit/test_rollback.py</code> covering origin-dir annotation (recursive, non-recursive, and single-file loading), <code>LocalSourceResolver</code> origin-dir fallback (isolated and full pipeline), <code>plan_rollback()</code> parameter logging via <code>caplog</code>, and <code>_set_windows_creation_time()</code> on Windows and non-Windows platforms. New <code>tests/fixtures/rollback-testbed/recursive-testbed/</code> fixture with root and subdirectory content files and meta2 sidecars.</li>
 </ul>
@@ -1750,6 +1778,11 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Docs: Rollback Guide</strong> — New <code>docs/user-guide/rollback.md</code> providing a dedicated rollback guide with plan-then-execute architecture overview, nine scenario walkthroughs (single renamed file, renamed directory, deduplicated files, aggregate output, non-renamed files, mixed sessions, flat mode, default target, vault delivery), sidecar reconstruction, timestamp restoration, hash verification, conflict resolution, and error handling documentation.</li>
 <li><strong>Docs: Rollback Python API</strong> — <code>docs/user-guide/python-api.md</code> updated with a full Rollback API section covering <code>load_meta2</code>, <code>discover_meta2_files</code>, <code>plan_rollback</code>, <code>execute_rollback</code>, <code>verify_file_hash</code>, all four data classes, the <code>SourceResolver</code> protocol, <code>LocalSourceResolver</code>, and a vault integration example.</li>
 <li><strong>Spec: §6.11 Rollback Operations</strong> — New specification section documenting the rollback engine's inputs, restore modes, target resolution, timestamp restoration, sidecar reconstruction, conflict resolution, mixed-session detection, <code>SourceResolver</code> protocol, error handling, and plan-then-execute architecture. Cross-referenced from §4.1, §6.10, §8.12, and §9.1.</li>
+</ul>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li><strong>Core: MetaMergeDelete stale metadata cleanup (Stage 7)</strong> — MetaMergeDelete now includes a post-processing cleanup phase that removes <code>_meta.json</code>, <code>_meta2.json</code>, <code>_directorymeta.json</code>, and <code>_directorymeta2.json</code> files from prior indexer runs that survive the Layer 1 exclusion mechanism. Previously, these files accumulated silently across repeated runs because Layer 1 excluded them from traversal before sidecar discovery could see them, meaning they were never queued for deletion. Stale <code>_meta2.json</code> files from prior runs caused rollback to produce duplicate or misplaced restores. The cleanup function (<code>cleanup_stale_metadata()</code> in <code>core/entry.py</code>) runs after Stage 6 consumed-sidecar deletion, scans all traversed directories for matching files, protects current-run output sidecars, and deletes stale artifacts with INFO-level logging. Failed deletions log at WARNING and do not abort the operation. Spec: §6.10.</li>
+<li><strong>Core: <code>file_system.relative</code> path computation</strong> — The relative path for entries produced by directory indexing operations now correctly uses the target directory as the index root (producing <code>"."</code> for the root entry), instead of the parent directory (which produced the target's own name as a prefix). This corrects a spec violation (§5.6) that caused rollback to create an extra nesting level in restored directory trees. All path reconstruction call sites in <code>_write_inplace_tree()</code>, <code>_rename_tree()</code>, and <code>cleanup_duplicate_files()</code> updated from <code>root_path.parent / relative</code> to <code>root_path / relative</code>. <strong>Breaking change:</strong> Existing <code>_meta2.json</code> files contain the old prefix-based relative paths. Rollback includes automatic legacy prefix detection to handle both formats (§6.11).</li>
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
@@ -1795,7 +1828,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Spec §3.1.1: Archive naming convention</strong> — Codified the <code>.archive/</code> file naming convention (<code>&lt;YYYYmmdd&gt;-&lt;ZZZ&gt;-&lt;title&gt;.&lt;ext&gt;</code>) in the technical specification as a new §3.1.1 sub-section. Documents the date-scoped increment reset rule, field definitions, batch label convention, and examples. The <code>.archive/</code> table entry in §3.1 now cross-references the new sub-section.</li>
 <li><strong>Docs: GUI guide audit corrections</strong> — Audited <code>docs/user-guide/gui.md</code> against the running application after all Batch 1 GUI changes. Removed false claim that Rename forces Multi-file output mode (Rename constrains View only but does not force Multi-file). Added documentation for tab-preservation behavior on operation completion (active Output/Log tab is preserved; Output button briefly highlights green when new content arrives while Log tab is active). Updated session persistence section to explicitly list card collapsed/expanded states and Advanced Configuration section states. Fixed log level tooltip in <code>app.py</code> to accurately describe the mapping: Normal → warnings and errors (was incorrectly labeled "INFO-level").</li>
 </ul>
-<h3 id="fixed">Fixed</h3>
+<h3 id="fixed_1">Fixed</h3>
 <ul>
 <li><strong>Core: Recursive rollback failing for subdirectory files</strong> — <code>LocalSourceResolver.resolve()</code> only searched <code>search_dir</code> (the tree root), but in recursive mode content files reside in subdirectories alongside their <code>_meta2.json</code> sidecars. Added Strategy 3 (origin-directory fallback) to <code>LocalSourceResolver</code> and origin-dir annotations in <code>load_meta2()</code>. Root files and subdirectory files are now resolved correctly during recursive rollback.</li>
 <li><strong>Core: Timestamp restoration failing on Windows</strong> — <code>_restore_timestamps()</code> attempted to import <code>pywin32</code> (not a project dependency) and silently skipped ctime restoration when it was unavailable, producing a misleading "pywin32 not available" DEBUG message. Replaced with <code>ctypes.windll.kernel32</code> calls that are unconditionally available on all Windows Python installations.</li>
@@ -1894,7 +1927,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Spec SS10.9: GUI Design Standards</strong> — Added new subsection to the technical specification codifying GUI design governance. Adopts Jakob Nielsen's 10 Usability Heuristics by reference as the baseline evaluation framework. Defines seven project-specific UI standards: layout stability, state-driven control visibility, control interdependency transparency, output handling clarity, destructive operation safeguards, progress/feedback area allocation, and log/output panel behavior. Includes a directive requiring all GUI implementation work (including AI agent sessions) to comply with these standards.</li>
 <li><strong>Deprecated <code>shruggie-indexer-plan.md</code></strong> — Moved the completed implementation plan from the repository root to <code>.archive/</code>. Added <code>.archive/</code>, <code>shruggie-indexer-spec.html</code>, and <code>shruggie-indexer-spec.pdf</code> to <code>.gitignore</code>.</li>
 </ul>
-<h3 id="fixed_1">Fixed</h3>
+<h3 id="fixed_2">Fixed</h3>
 <ul>
 <li><strong>GUI/CLI: Root directory in-place sidecar duplicating aggregate output</strong> — <code>_write_inplace_tree()</code> wrote an in-place sidecar for the root target directory inside the target (<code>data/data_directorymeta2.json</code>), duplicating the aggregate output file written alongside the target (<code>data_directorymeta2.json</code>). Both contained the same full entry tree with the same filename, differing only in location. Fixed by skipping the root directory entry during in-place sidecar traversal. Child directory sidecars are unaffected.</li>
 <li><strong>Core: In-place directory sidecar naming</strong> — <code>build_sidecar_path()</code> in <code>core/paths.py</code> constructed directory sidecar paths as <code>&lt;dir&gt;/_directorymeta2.json</code> (bare name with no identifying prefix). Every directory in the tree received an identically named file, making them indistinguishable in file managers and inconsistent with both the aggregate output naming (<code>{dirname}_directorymeta2.json</code>) and file sidecar naming (<code>{filename}_meta2.json</code>). Fixed to produce <code>&lt;dir&gt;/{dirname}_directorymeta2.json</code>. The <code>metadata_exclude_patterns</code> regex continues to match the corrected filenames because the pattern is end-anchored.</li>
