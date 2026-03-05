@@ -249,7 +249,8 @@ The metadata file parser configuration controls how sidecar files are discovered
 | `generic_metadata` | Generic config/metadata (`.cfg`, `.conf`, `.yaml`, `.meta`) | JSON → text → binary fallback |
 | `hash` | Hash/checksum files (`.md5`, `.sha256`, `.crc32`) | Lines (non-empty lines only) |
 | `json_metadata` | JSON metadata (`.info.json`, `.meta.json`) | JSON |
-| `link` | URL shortcuts (`.url`), filesystem shortcuts (`.lnk`) | URL/path extraction |
+| `link` | URL shortcuts (`.url`) and pointer files | Text cascade (JSON → text → binary fallback); full file content preserved |
+| `shortcut` | Windows filesystem shortcuts (`.lnk`) | Base64-encoded binary + optional structured `link_metadata` |
 | `screenshot` | Screen capture images | Base64-encoded binary |
 | `subtitles` | Subtitle tracks (`.srt`, `.sub`, `.vtt`, `.lrc`) | JSON → text → binary fallback |
 | `thumbnail` | Thumbnail/cover images (`.cover`, `.thumb`) | Base64-encoded binary |

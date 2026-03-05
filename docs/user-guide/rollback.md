@@ -250,6 +250,23 @@ This prevents compact JSON sidecars (e.g., minified `.info.json` files) from inf
 
 Sidecar reconstruction is on by default. Use `--no-restore-sidecars` to skip it.
 
+### Sidecar Restoration Fidelity
+
+Restored sidecar files are **data-equivalent** to the originals but not necessarily **byte-identical**. The fidelity guarantee varies by format:
+
+| Format | Fidelity | Notes |
+|--------|----------|-------|
+| Binary (`"base64"`) | Byte-identical | Base64 round-trip preserves exact bytes. Screenshots, thumbnails, `.lnk` shortcuts, and torrent files are restored perfectly. |
+| Text (`"text"`) | Data-equivalent | Minor whitespace differences (trailing newlines, line-ending normalization) may occur. Content is semantically identical. |
+| JSON (`"json"`) | Data-equivalent | JSON structure is preserved exactly. Whitespace convention (compact vs. indented) is restored via `json_style`, but minor formatting differences (key order, trailing newlines) may occur. |
+| Lines (`"lines"`) | Data-equivalent | Lines are rejoined with `\n`. Original line endings and trailing whitespace may differ. |
+
+!!! note "`.url` sidecar restoration"
+    `.url` (Windows shortcut) sidecar files are now stored as full text content — including the `[InternetShortcut]` INI header and `URL=` key — rather than extracting only the bare URL string. Restored `.url` files are functional Windows shortcuts that open in the default browser when double-clicked. This is a change from earlier versions, which performed lossy URL extraction that produced non-functional plaintext files on restore.
+
+!!! info "Existing `.url` entries"
+    `_meta2.json` files created before this change contain only the extracted URL string. Rollback of those entries will still produce the bare URL — the stored data cannot be retroactively enriched. Only newly indexed `.url` sidecars benefit from full-content preservation.
+
 ---
 
 ## Timestamp Restoration

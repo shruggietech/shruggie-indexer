@@ -185,6 +185,8 @@ A single metadata record associated with an `IndexEntry`.
 | `format` | `string` (enum) | Yes | `"json"`, `"text"`, `"base64"`, or `"lines"`. |
 | `transforms` | `array[string]` | Yes | Ordered transformation identifiers. Empty = stored as-is. |
 | `source_media_type` | `string` | No | MIME type of original source when format differs. |
+| `json_style` | `string` (enum) | No | Detected JSON formatting style of the original sidecar file: `"pretty"` (indented) or `"compact"` (minified). Present only when `format` is `"json"`. Used by the rollback engine to restore the original whitespace convention. |
+| `link_metadata` | `object` | No | Structured metadata extracted from a Windows `.lnk` shortcut file. Contains string-valued fields such as `target_path`, `working_directory`, `arguments`, `icon_location`, `description`, and `hotkey`. Present only when `type` is `"shortcut"` and the `LnkParse3` library is available. |
 
 ### Metadata type values
 
@@ -203,7 +205,8 @@ A single metadata record associated with an `IndexEntry`.
 | `generic_metadata` | Config/metadata files (`.cfg`, `.conf`, `.yaml`, `.meta`). |
 | `hash` | Hash/checksum files (`.md5`, `.sha256`, `.crc32`). |
 | `json_metadata` | JSON metadata (`.info.json`, `.meta.json`). |
-| `link` | URL shortcuts (`.url`), filesystem shortcuts (`.lnk`). |
+| `link` | URL shortcuts (`.url`) and pointer files. Stored as full text content. |
+| `shortcut` | Windows filesystem shortcuts (`.lnk`). Stored as Base64-encoded binary with optional structured `link_metadata`. |
 | `screenshot` | Screen capture images. |
 | `subtitles` | Subtitle tracks (`.srt`, `.sub`, `.vtt`, `.lrc`). |
 | `thumbnail` | Thumbnail/cover images (`.cover`, `.thumb`). |
