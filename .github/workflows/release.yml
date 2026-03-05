@@ -239,3 +239,40 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'rc') }}
           files: release-artifacts/*
           body_path: RELEASE_BODY.md
+
+      # ----------------------------------------------------------------
+      # Stage 7 — Refresh release badge cache
+      # ----------------------------------------------------------------
+      # GitHub proxies all external images through its camo CDN
+      # (camo.githubusercontent.com). If shields.io is queried before
+      # the release is published (race window between tag push and
+      # release creation), camo caches the stale "invalid" badge.
+      # This step warms the shields.io cache with the correct value
+      # and then purges the camo CDN entry so the README badge
+      # renders correctly immediately after release.
+      # ----------------------------------------------------------------
+      - name: Refresh release badge cache
+        shell: bash
+        env:
+          BADGE_URL: "https://img.shields.io/github/v/release/shruggietech/shruggie-indexer?display_name=tag&cacheSeconds=900"
+        run: |
+          echo "Waiting 15 seconds for release to propagate..."
+          sleep 15
+
+          echo "Warming shields.io cache..."
+          BADGE_VALUE=$(curl -sf "${BADGE_URL%.svg}.json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('message',''))" 2>/dev/null || echo "")
+          echo "shields.io reports: ${BADGE_VALUE:-<empty>}"
+
+          echo "Locating camo CDN URL for release badge..."
+          RENDERED=$(curl -sf \
+            -H "Accept: application/vnd.github.html+json" \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            "https://api.github.com/repos/${{ github.repository }}/readme")
+
+          CAMO_URLS=$(echo "$RENDERED" | grep -oP 'https://camo\.githubusercontent\.com/[^"]+' || true)
+          for URL in $CAMO_URLS; do
+            echo "Purging camo entry: ${URL:0:80}..."
+            curl -sf -X PURGE "$URL" -o /dev/null || true
+          done
+
+          echo "Badge cache refresh complete."
