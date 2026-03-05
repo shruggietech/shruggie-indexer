@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### To-Do
+
+- **GUI: MetaMergeDelete output field reports false `_directorymeta2.json` output** — When running MetaMergeDelete with multi-file output mode and the "Write directory metadata" checkbox unchecked, the Output field incorrectly reports upon completion that an output was written to the default `_directorymeta2.json` location. Multi-file sidecars are written as expected, but no directory summary file is produced when directory metadata output is suppressed (this is the correct behavior). The Output field completion summary must be updated to omit the `_directorymeta2.json` path when directory metadata writing is disabled.
+- **Core: Windows directory shortcut (`.lnk`) files incorrectly associated as sidecars** — Testing performed subsequent to `v0.1.2` release discovered that Windows `.lnk` directory shortcut files are misidentified as sidecars of unrelated sibling files in the same directory. The `.lnk` binary content is correctly saved and rollback properly restores the file, but the sidecar association logic incorrectly pairs the shortcut with a miscellaneous sibling file that shares no filename similarity or other discernible relationship. The sidecar matching heuristic needs investigation and correction to prevent false `.lnk` associations.
+
 ## [0.1.2] - 2026-03-05
 
 ### Added

@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### To-Do
+
+- **GUI: MetaMergeDelete output field reports false `_directorymeta2.json` output** — When running MetaMergeDelete with multi-file output mode and the "Write directory metadata" checkbox unchecked, the Output field incorrectly reports upon completion that an output was written to the default `_directorymeta2.json` location. Multi-file sidecars are written as expected, but no directory summary file is produced when directory metadata output is suppressed (this is the correct behavior). The Output field completion summary must be updated to omit the `_directorymeta2.json` path when directory metadata writing is disabled.
+- **Core: Windows directory shortcut (`.lnk`) files incorrectly associated as sidecars** — Testing performed subsequent to `v0.1.2` release discovered that Windows `.lnk` directory shortcut files are misidentified as sidecars of unrelated sibling files in the same directory. The `.lnk` binary content is correctly saved and rollback properly restores the file, but the sidecar association logic incorrectly pairs the shortcut with a miscellaneous sibling file that shares no filename similarity or other discernible relationship. The sidecar matching heuristic needs investigation and correction to prevent false `.lnk` associations.
+
 ### Added
 
 - **Rollback: Session-ID validation and content-hash collision detection** — `plan_rollback()` now performs two pre-planning sanitization passes on loaded entries before planning begins. Content-hash collision detection groups entries by composite `(md5, sha256)` hash and, when multiple non-duplicate entries share the same hash with different `file_system.relative` values, applies tiebreaking rules (majority session → session over no session → first encountered) to keep only one entry per content file. Discarded entries are logged at WARNING. Entries from the `duplicates[]` array are excluded from collision detection (they share the canonical's hash intentionally). Spec: §6.11.
