@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
     
     
       
@@ -2180,14 +2180,14 @@ shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/<s
 <p>This ensures files are restored directly under the target directory without an extra nesting level, regardless of which indexer version produced the sidecar files.</p>
 <hr />
 <h2 id="session-id-validation">Session-ID Validation</h2>
-<p>When <code>_meta2.json</code> files from multiple indexing sessions coexist in the same directory (e.g., stale metadata from a prior run was not cleaned up), rollback detects content-hash collisions — entries where the same file content appears with different <code>file_system.relative</code> paths.</p>
+<p>When <code>_meta2.json</code> files from multiple indexing sessions coexist in the same directory (e.g., stale metadata from a prior run was not cleaned up), rollback detects content-hash collisions — entries where the same file content appears with the same <code>attributes.storage_name</code> but different <code>file_system.relative</code> paths. Two entries that share a content hash but have <strong>different</strong> storage names (e.g., byte-identical <code>slippers.gif</code> and <code>slippers.png</code>) are treated as distinct canonical files and are <strong>not</strong> flagged as collisions.</p>
 <p>When a collision is detected, rollback applies tiebreaking rules:</p>
 <ol>
 <li><strong>Majority session wins</strong> — The entry whose <code>session_id</code> matches the most common session across all loaded entries is kept.</li>
 <li><strong>Session over no session</strong> — An entry with a <code>session_id</code> is preferred over one without.</li>
 <li><strong>First encountered</strong> — If neither has a <code>session_id</code>, the first entry is kept.</li>
 </ol>
-<p>Discarded entries are logged at WARNING level. This prevents duplicate or misplaced file restores caused by stale metadata.</p>
+<p>Discarded entries are logged at WARNING level with a message that accurately describes whether the collision is cross-session or intra-session. This prevents duplicate or misplaced file restores caused by stale metadata.</p>
 <hr />
 <h2 id="known-limitations">Known Limitations</h2>
 <ul>
