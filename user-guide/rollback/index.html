@@ -951,6 +951,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Sidecar Reconstruction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#json-style-preservation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSON Style Preservation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1788,6 +1805,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Sidecar Reconstruction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#json-style-preservation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSON Style Preservation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2076,7 +2110,7 @@ shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yA
 <tbody>
 <tr>
 <td><code>"json"</code></td>
-<td>Pretty-printed JSON (UTF-8)</td>
+<td>JSON (style-aware — see below)</td>
 </tr>
 <tr>
 <td><code>"text"</code></td>
@@ -2092,6 +2126,14 @@ shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yA
 </tr>
 </tbody>
 </table>
+<h3 id="json-style-preservation">JSON Style Preservation</h3>
+<p>JSON sidecar files are restored using the formatting style recorded during indexing. The <code>attributes.json_style</code> field controls the output:</p>
+<ul>
+<li><strong><code>"pretty"</code></strong> — Indented JSON (<code>indent=2</code>), matching the original's whitespace convention.</li>
+<li><strong><code>"compact"</code></strong> — Minified JSON (no whitespace), preserving the original's compact representation.</li>
+<li><strong>Absent</strong> — Defaults to compact serialization for backward compatibility with entries created before <code>json_style</code> tracking was added.</li>
+</ul>
+<p>This prevents compact JSON sidecars (e.g., minified <code>.info.json</code> files) from inflating in size during rollback.</p>
 <p>Sidecar reconstruction is on by default. Use <code>--no-restore-sidecars</code> to skip it.</p>
 <hr />
 <h2 id="timestamp-restoration">Timestamp Restoration</h2>
