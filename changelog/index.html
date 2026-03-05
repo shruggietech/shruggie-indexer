@@ -1394,6 +1394,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#to-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        To-Do
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1589,6 +1606,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#to-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        To-Do
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1766,6 +1800,11 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <h2 id="unreleased"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.2...HEAD">Unreleased</a></h2>
+<h3 id="to-do">To-Do</h3>
+<ul>
+<li><strong>GUI: MetaMergeDelete output field reports false <code>_directorymeta2.json</code> output</strong> — When running MetaMergeDelete with multi-file output mode and the "Write directory metadata" checkbox unchecked, the Output field incorrectly reports upon completion that an output was written to the default <code>_directorymeta2.json</code> location. Multi-file sidecars are written as expected, but no directory summary file is produced when directory metadata output is suppressed (this is the correct behavior). The Output field completion summary must be updated to omit the <code>_directorymeta2.json</code> path when directory metadata writing is disabled.</li>
+<li><strong>Core: Windows directory shortcut (<code>.lnk</code>) files incorrectly associated as sidecars</strong> — Testing performed subsequent to <code>v0.1.2</code> release discovered that Windows <code>.lnk</code> directory shortcut files are misidentified as sidecars of unrelated sibling files in the same directory. The <code>.lnk</code> binary content is correctly saved and rollback properly restores the file, but the sidecar association logic incorrectly pairs the shortcut with a miscellaneous sibling file that shares no filename similarity or other discernible relationship. The sidecar matching heuristic needs investigation and correction to prevent false <code>.lnk</code> associations.</li>
+</ul>
 <h2 id="012-2026-03-05"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.1...v0.1.2">0.1.2</a> - 2026-03-05</h2>
 <h3 id="added">Added</h3>
 <ul>
