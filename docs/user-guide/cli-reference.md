@@ -8,7 +8,7 @@ shruggie-indexer uses a subcommand-based CLI. When no subcommand is given, the `
 shruggie-indexer [OPTIONS] COMMAND [ARGS]...
 ```
 
-The top-level group accepts `--version` and `--help`. All other options belong to individual subcommands.
+The top-level group accepts `--version`, `-h`, and `--help`. All other options belong to individual subcommands.
 
 ### Default Subcommand
 
@@ -343,12 +343,14 @@ Print the installed version and exit.
 shruggie-indexer --version
 ```
 
-### `--help`
+### `-h` / `--help`
 
-Print the help text and exit.
+Print the help text and exit. Both `-h` and `--help` are accepted at every level (group and subcommands).
 
 ```bash
 shruggie-indexer --help
+shruggie-indexer -h
+shruggie-indexer index -h
 ```
 
 ## Mutual Exclusion Rules

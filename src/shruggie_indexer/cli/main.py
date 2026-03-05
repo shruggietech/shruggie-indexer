@@ -281,6 +281,7 @@ class DefaultGroup(click.Group):
 @click.group(
     name="shruggie-indexer",
     cls=DefaultGroup,
+    context_settings={"help_option_names": ["-h", "--help"]},
     help=(
         "Index files and directories, producing structured JSON output with "
         "hash-based identities, filesystem metadata, EXIF data, and sidecar "
@@ -299,6 +300,195 @@ main.default_cmd_name = "index"  # type: ignore[attr-defined]
 from shruggie_indexer.cli.rollback import rollback_cmd  # noqa: E402
 
 main.add_command(rollback_cmd)
+
+
+# ---------------------------------------------------------------------------
+# index helpers — extracted to reduce cognitive complexity of index_cmd
+# ---------------------------------------------------------------------------
+
+
+def _resolve_log_file_from_config(
+    log_file: str | None,
+    config_file: str | None,
+) -> str | None:
+    """Resolve the effective log-file path.
+
+    When *log_file* is not set via CLI but a TOML *config_file* is
+    provided, peek at its ``[logging]`` section to determine whether
+    file logging is enabled and where to write.
+    """
+    if log_file is not None or config_file is None:
+        return log_file
+    try:
+        import tomllib
+
+        toml_data = tomllib.loads(
+            Path(config_file).read_text(encoding="utf-8"),
+        )
+        logging_section = toml_data.get("logging", {})
+        if isinstance(logging_section, dict) and logging_section.get(
+            "file_enabled", False,
+        ):
+            return logging_section.get("file_path", "")
+    except Exception:
+        pass  # Config errors are handled later by load_config
+    return None
+
+
+def _build_cli_overrides(
+    *,
+    recursive: bool | None,
+    stdout: bool | None,
+    outfile: str | None,
+    inplace: bool,
+    dir_meta: bool | None,
+    meta: bool,
+    meta_merge: bool,
+    meta_merge_delete: bool,
+    rename: bool,
+    dry_run: bool,
+    id_type: str | None,
+    compute_sha512: bool,
+) -> dict[str, Any]:
+    """Translate CLI flags into a configuration-override dict."""
+    overrides: dict[str, Any] = {}
+
+    if recursive is not None:
+        overrides["recursive"] = recursive
+    if id_type is not None:
+        overrides["id_algorithm"] = id_type.lower()
+    if compute_sha512:
+        overrides["compute_sha512"] = True
+    if meta:
+        overrides["extract_exif"] = True
+    if meta_merge:
+        overrides["meta_merge"] = True
+    if meta_merge_delete:
+        overrides["meta_merge_delete"] = True
+    if rename:
+        overrides["rename"] = True
+    if dry_run:
+        overrides["dry_run"] = True
+    if inplace:
+        overrides["output_inplace"] = True
+    if dir_meta is not None:
+        overrides["write_directory_meta"] = dir_meta
+    if outfile is not None:
+        overrides["output_file"] = Path(outfile).resolve()
+
+    # Resolve stdout default: enabled when no other output specified
+    if stdout is None:
+        overrides["output_stdout"] = not (outfile is not None or inplace)
+    else:
+        overrides["output_stdout"] = stdout
+
+    return overrides
+
+
+def _post_index_pipeline(
+    entry: Any,
+    target_path: Path,
+    config: Any,
+    *,
+    delete_queue: list[Path] | None,
+) -> None:
+    """Run the post-indexing pipeline: dedup, inplace, rename, output, cleanup.
+
+    Extracted from ``index_cmd`` to reduce branch complexity.
+    """
+    from shruggie_indexer.core.rename import rename_item
+    from shruggie_indexer.core.serializer import write_inplace, write_output
+
+    # ── Dedup scan/apply (when rename is active) ────────────────────
+    dedup_actions: list[Any] = []
+    if config.rename:
+        from shruggie_indexer.core.dedup import (
+            DedupRegistry,
+            apply_dedup,
+            cleanup_duplicate_files,
+            format_bytes,
+            scan_tree,
+        )
+
+        registry = DedupRegistry()
+        dedup_actions = scan_tree(entry, registry)
+
+        if dedup_actions:
+            apply_dedup(dedup_actions)
+            stats = registry.stats
+            logger.info(
+                "De-duplication: %d duplicate(s) found across %d unique "
+                "content hashes. %s reclaimed.",
+                stats.duplicates_found,
+                stats.unique_files,
+                format_bytes(stats.bytes_reclaimed),
+            )
+
+    # ── In-place output ─────────────────────────────────────────────
+    # Written BEFORE rename so the rename phase can also rename
+    # the sidecar file from {original}_meta2.json to
+    # {storage_name}_meta2.json.  (Batch 6, §4.)
+    if config.output_inplace:
+        inplace_root = target_path if entry.type == "directory" else target_path.parent
+        _write_inplace_tree(
+            entry, inplace_root, write_inplace,
+            write_directory_meta=config.write_directory_meta,
+        )
+
+    # ── Rename (spec section 6.10) ──────────────────────────────────
+    if config.rename and entry.type == "file":
+        result_path = rename_item(target_path, entry, dry_run=config.dry_run)
+        if not config.dry_run and config.output_inplace and result_path != target_path:
+            from shruggie_indexer.core.rename import rename_inplace_sidecar
+
+            rename_inplace_sidecar(target_path, entry)
+    elif config.rename and entry.items is not None:
+        _rename_tree(entry, target_path, config)
+
+    # ── Dedup cleanup: delete duplicate files from disk ─────────────
+    if dedup_actions:
+        from shruggie_indexer.core.dedup import cleanup_duplicate_files
+
+        cleanup_duplicate_files(
+            dedup_actions, target_path, dry_run=config.dry_run,
+        )
+
+    # ── Aggregate output (stdout + outfile) ─────────────────────────
+    if (
+        not config.write_directory_meta
+        and entry.type == "directory"
+        and config.output_file is not None
+        and str(config.output_file).endswith("_directorymeta2.json")
+    ):
+        logger.info("Directory aggregate output suppressed (--no-dir-meta).")
+        config_for_write = replace(config, output_file=None)
+    else:
+        config_for_write = config
+
+    write_output(entry, config_for_write)
+
+    # ── MetaMergeDelete: drain deletion queue (Stage 6) ─────────────
+    logger.debug(
+        "Stage 6 delete queue: %d entries (%d unique)",
+        len(delete_queue) if delete_queue is not None else 0,
+        len(set(delete_queue)) if delete_queue else 0,
+    )
+    if delete_queue:
+        deleted = _drain_delete_queue(delete_queue)
+        logger.info("Deleted %d merged sidecar file(s)", deleted)
+
+    # ── Stage 7: Remove stale metadata artifacts from prior runs ───
+    if config.meta_merge_delete:
+        from shruggie_indexer.core.entry import cleanup_stale_metadata
+
+        stale_root = (
+            target_path if entry.type == "directory" else target_path.parent
+        )
+        stale_removed = cleanup_stale_metadata(entry, stale_root, config)
+        if stale_removed:
+            logger.info(
+                "Removed %d stale metadata artifact(s)", stale_removed,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -457,8 +647,6 @@ def index_cmd(
     """Index files and directories (default command)."""
     from shruggie_indexer.config.loader import load_config
     from shruggie_indexer.core.entry import index_path
-    from shruggie_indexer.core.rename import rename_item
-    from shruggie_indexer.core.serializer import write_inplace, write_output
     from shruggie_indexer.exceptions import (
         IndexerCancellationError,
         IndexerConfigError,
@@ -466,21 +654,7 @@ def index_cmd(
     )
 
     # ── Logging ─────────────────────────────────────────────────────────
-    # Resolve log-file from TOML config if not set via CLI
-    effective_log_file = log_file
-    if effective_log_file is None and config_file is not None:
-        # Peek at TOML for [logging] section before full config load
-        try:
-            import tomllib
-            toml_data = tomllib.loads(
-                Path(config_file).read_text(encoding="utf-8"),
-            )
-            logging_section = toml_data.get("logging", {})
-            if isinstance(logging_section, dict) and logging_section.get("file_enabled", False):
-                effective_log_file = logging_section.get("file_path", "")
-        except Exception:
-            pass  # Config errors are handled later by load_config
-
+    effective_log_file = _resolve_log_file_from_config(log_file, config_file)
     configure_logging(
         verbose=verbose, quiet=quiet, log_file=effective_log_file,
     )
@@ -502,39 +676,20 @@ def index_cmd(
             sys.exit(ExitCode.CONFIGURATION_ERROR)
 
         # ── Build configuration overrides ───────────────────────────────
-        overrides: dict[str, Any] = {}
-
-        if recursive is not None:
-            overrides["recursive"] = recursive
-        if id_type is not None:
-            overrides["id_algorithm"] = id_type.lower()
-        if compute_sha512:
-            overrides["compute_sha512"] = True
-        if meta:
-            overrides["extract_exif"] = True
-        if meta_merge:
-            overrides["meta_merge"] = True
-        if meta_merge_delete:
-            overrides["meta_merge_delete"] = True
-        if rename:
-            overrides["rename"] = True
-        if dry_run:
-            overrides["dry_run"] = True
-        if inplace:
-            overrides["output_inplace"] = True
-        if dir_meta is not None:
-            overrides["write_directory_meta"] = dir_meta
-        if outfile is not None:
-            overrides["output_file"] = Path(outfile).resolve()
-
-        # Resolve stdout default: enabled when no other output specified
-        if stdout is None:
-            if outfile is not None or inplace:
-                overrides["output_stdout"] = False
-            else:
-                overrides["output_stdout"] = True
-        else:
-            overrides["output_stdout"] = stdout
+        overrides = _build_cli_overrides(
+            recursive=recursive,
+            stdout=stdout,
+            outfile=outfile,
+            inplace=inplace,
+            dir_meta=dir_meta,
+            meta=meta,
+            meta_merge=meta_merge,
+            meta_merge_delete=meta_merge_delete,
+            rename=rename,
+            dry_run=dry_run,
+            id_type=id_type,
+            compute_sha512=compute_sha512,
+        )
 
         # ── Load configuration ──────────────────────────────────────────
         config = load_config(
@@ -567,7 +722,8 @@ def index_cmd(
                 "No output destinations are enabled. The indexing operation "
                 "will execute but produce no output."
             )
-        # ── Log resolved configuration ─────────────────────────────────────────────
+
+        # ── Log resolved configuration ─────────────────────────────────
         logger.info(
             "Index CLI: target=%s, recursive=%s, id_algorithm=%s, "
             "compute_sha512=%s, extract_exif=%s, meta_merge=%s, "
@@ -588,18 +744,16 @@ def index_cmd(
             config.output_inplace,
             config.write_directory_meta,
         )
+
         # ── Prepare delete queue ────────────────────────────────────────
         delete_queue: list[Path] | None = (
             [] if config.meta_merge_delete else None
         )
 
-        # ── Progress callback ───────────────────────────────────────────
+        # ── Execute indexing ────────────────────────────────────────────
         progress_cb = _make_progress_callback(verbose)
-
-        # ── Session ID ──────────────────────────────────────────────────
         session_id = str(uuid.uuid4())
 
-        # ── Execute indexing ────────────────────────────────────────────
         logger.info("Indexing target: %s", target_path)
         entry = index_path(
             target_path,
@@ -610,98 +764,10 @@ def index_cmd(
             session_id=session_id,
         )
 
-        # ── Dedup scan/apply (when rename is active) ────────────────────
-        dedup_actions: list[Any] = []
-        if config.rename:
-            from shruggie_indexer.core.dedup import (
-                DedupRegistry,
-                apply_dedup,
-                cleanup_duplicate_files,
-                format_bytes,
-                scan_tree,
-            )
-
-            registry = DedupRegistry()
-            dedup_actions = scan_tree(entry, registry)
-
-            if dedup_actions:
-                apply_dedup(dedup_actions)
-                stats = registry.stats
-                logger.info(
-                    "De-duplication: %d duplicate(s) found across %d unique "
-                    "content hashes. %s reclaimed.",
-                    stats.duplicates_found,
-                    stats.unique_files,
-                    format_bytes(stats.bytes_reclaimed),
-                )
-
-        # ── In-place output ─────────────────────────────────────────────
-        # Written BEFORE rename so the rename phase can also rename
-        # the sidecar file from {original}_meta2.json to
-        # {storage_name}_meta2.json.  (Batch 6, §4.)
-        if config.output_inplace:
-            inplace_root = target_path if entry.type == "directory" else target_path.parent
-            _write_inplace_tree(
-                entry, inplace_root, write_inplace,
-                write_directory_meta=config.write_directory_meta,
-            )
-
-        # ── Rename (spec section 6.10) ──────────────────────────────────
-        if config.rename and entry.type == "file":
-            result_path = rename_item(target_path, entry, dry_run=config.dry_run)
-            if not config.dry_run and config.output_inplace and result_path != target_path:
-                from shruggie_indexer.core.rename import rename_inplace_sidecar
-                rename_inplace_sidecar(target_path, entry)
-        elif config.rename and entry.items is not None:
-            _rename_tree(entry, target_path, config)
-
-        # ── Dedup cleanup: delete duplicate files from disk ─────────────
-        if dedup_actions:
-            cleanup_duplicate_files(
-                dedup_actions, target_path, dry_run=config.dry_run,
-            )
-
-        # ── Aggregate output (stdout + outfile) ─────────────────────────
-        # Gate auto-generated directory aggregate output when
-        # --no-dir-meta is active.  User-specified --outfile paths
-        # are never suppressed.
-        if (
-            not config.write_directory_meta
-            and entry.type == "directory"
-            and config.output_file is not None
-            and str(config.output_file).endswith("_directorymeta2.json")
-        ):
-            logger.info("Directory aggregate output suppressed (--no-dir-meta).")
-            config_for_write = replace(config, output_file=None)
-        else:
-            config_for_write = config
-
-        write_output(entry, config_for_write)
-
-        # ── MetaMergeDelete: drain deletion queue (Stage 6) ─────────────
-        logger.debug(
-            "Stage 6 delete queue: %d entries (%d unique)",
-            len(delete_queue) if delete_queue is not None else 0,
-            len(set(delete_queue)) if delete_queue else 0,
+        # ── Post-index pipeline (dedup, output, rename, cleanup) ───────
+        _post_index_pipeline(
+            entry, target_path, config, delete_queue=delete_queue,
         )
-        if delete_queue:
-            deleted = _drain_delete_queue(delete_queue)
-            logger.info("Deleted %d merged sidecar file(s)", deleted)
-
-        # ── Stage 7: Remove stale metadata artifacts from prior runs ───
-        if config.meta_merge_delete:
-            from shruggie_indexer.core.entry import cleanup_stale_metadata
-
-            stale_root = (
-                target_path
-                if entry.type == "directory"
-                else target_path.parent
-            )
-            stale_removed = cleanup_stale_metadata(entry, stale_root, config)
-            if stale_removed:
-                logger.info(
-                    "Removed %d stale metadata artifact(s)", stale_removed,
-                )
 
         logger.info("Indexing complete.")
         sys.exit(ExitCode.SUCCESS)
@@ -820,3 +886,7 @@ def _rename_tree(
                     "Rename candidate: %s (type=directory, skip_reason=no items)",
                     child.name.text,
                 )
+
+
+if __name__ == "__main__":
+    main()

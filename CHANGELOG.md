@@ -13,6 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **GUI: MetaMergeDelete output field reports false `_directorymeta2.json` output** — When running MetaMergeDelete with multi-file output mode and the "Write directory metadata" checkbox unchecked, the Output field incorrectly reports upon completion that an output was written to the default `_directorymeta2.json` location. Multi-file sidecars are written as expected, but no directory summary file is produced when directory metadata output is suppressed (this is the correct behavior). The Output field completion summary must be updated to omit the `_directorymeta2.json` path when directory metadata writing is disabled.
 - **Core: Windows directory shortcut (`.lnk`) files incorrectly associated as sidecars** — Testing performed subsequent to `v0.1.2` release discovered that Windows `.lnk` directory shortcut files are misidentified as sidecars of unrelated sibling files in the same directory. The `.lnk` binary content is correctly saved and rollback properly restores the file, but the sidecar association logic incorrectly pairs the shortcut with a miscellaneous sibling file that shares no filename similarity or other discernible relationship. The sidecar matching heuristic needs investigation and correction to prevent false `.lnk` associations.
 
+### Fixed
+
+- **CLI/Build: PyInstaller binary produced no output** — The standalone `shruggie-indexer.exe` binary silently exited with code 0 for all invocations (no args, `--help`, `-h`, `--file`, etc.) because the PyInstaller spec file pointed at `cli/main.py`, which defines the Click command group but never calls it. The pip-installed console script and `python -m shruggie_indexer` paths worked correctly because their wrappers explicitly call `main()`. Fixed by redirecting the spec entry point from `cli/main.py` to `__main__.py` (which has the proper `if __name__ == "__main__"` guard), adding a defensive `if __name__ == "__main__"` guard to `cli/main.py`, and expanding `hiddenimports` from `["shruggie_indexer"]` to all 28 submodules (lazy imports inside command handlers are invisible to PyInstaller's static analysis). Spec: §13.4.
+- **CLI: `-h` short help flag not recognized** — Click only enables `--help` by default; the `-h` shorthand was routed to the `index` subcommand via `DefaultGroup` and rejected as an unknown option. Added `context_settings={"help_option_names": ["-h", "--help"]}` to the Click group. Spec: §8.1.
+
+### Changed
+
+- **CLI: `index_cmd()` complexity refactor** — Extracted three helper functions (`_resolve_log_file_from_config()`, `_build_cli_overrides()`, `_post_index_pipeline()`) from the 390-line `index_cmd()` function body to reduce cognitive complexity below Pylance's analysis threshold. No behavioral changes; the same logic executes in the same order.
+
+### Added
+
+- **Tests: CLI entry-point smoke tests** — New `tests/integration/test_cli_entrypoint.py` with 8 tests covering Click in-process invocation (`--help`, `-h`, `--version`, subcommand help), `python -m` out-of-process invocation, and direct script execution (simulating the PyInstaller path). Prevents regression of the silent-exit bug.
+
 ## [0.1.2] - 2026-03-05
 
 ### Added

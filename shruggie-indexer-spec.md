@@ -798,7 +798,7 @@ The `config/__init__.py` file SHOULD export `IndexerConfig`, `load_config()`, an
 
 | Module | Responsibility |
 |--------|----------------|
-| `main.py` | Defines the CLI entry point as a `click.Group` using the `DefaultGroup` subclass. The group provides automatic delegation to the `index` subcommand when no explicit subcommand is given. The `index_cmd()` function contains all indexing logic — argument parsing, `IndexerConfig` construction, and dispatch to `core/`. Contains no indexing logic in the group itself — it is a pure presentation layer. Registered as the `shruggie-indexer` console script entry point in `pyproject.toml`. See [§8](#8-cli-interface). |
+| `main.py` | Defines the CLI entry point as a `click.Group` using the `DefaultGroup` subclass. The group provides automatic delegation to the `index` subcommand when no explicit subcommand is given. The group declares `context_settings={"help_option_names": ["-h", "--help"]}` so both `-h` and `--help` are recognized at every level. The `index_cmd()` function orchestrates argument parsing, `IndexerConfig` construction, and dispatch to `core/` via extracted helper functions (`_resolve_log_file_from_config()`, `_build_cli_overrides()`, `_post_index_pipeline()`). Contains no indexing logic in the group itself — it is a pure presentation layer. Includes a `if __name__ == "__main__"` guard so the file is directly executable (used by the PyInstaller build via `__main__.py`). Registered as the `shruggie-indexer` console script entry point in `pyproject.toml`. See [§8](#8-cli-interface). |
 
 The `cli/` subpackage supports subcommands via Click groups. Additional subcommands (e.g., `rollback`, `migrate`) are registered on the same group in their own modules.
 
@@ -900,7 +900,8 @@ tests/
 │   ├── test_directory_flat.py
 │   ├── test_directory_recursive.py
 │   ├── test_output_modes.py
-│   └── test_cli.py
+│   ├── test_cli.py
+│   └── test_cli_entrypoint.py
 ├── conformance/
 │   ├── __init__.py
 │   └── test_v2_schema.py
@@ -4721,8 +4722,8 @@ Usage: shruggie-indexer [OPTIONS] COMMAND [ARGS]...
   When no subcommand is given, 'index' is used by default.
 
 Options:
-  --version  Show the version and exit.
-  --help     Show this message and exit.
+  --version   Show the version and exit.
+  -h, --help  Show this message and exit.
 
 Commands:
   index     Index files and directories (default command).
@@ -4778,7 +4779,7 @@ Configuration:
 Logging:
   -v, --verbose           Increase verbosity. Repeat for more detail (-vv, -vvv).
   -q, --quiet             Suppress all non-error output.
-  --help                  Show this message and exit.
+  -h, --help              Show this message and exit.
 ```
 
 <a id="82-target-input-options"></a>
@@ -8593,7 +8594,7 @@ Each release produces two executables per platform: one for the CLI and one for 
 
 | Target | Entry module | PyInstaller mode | Console window | Output filename (Windows) | Output filename (Linux/macOS) |
 |---|---|---|---|---|---|
-| CLI | `src/shruggie_indexer/cli/main.py` | `--onefile --console` | Yes | `shruggie-indexer.exe` | `shruggie-indexer` |
+| CLI | `src/shruggie_indexer/__main__.py` | `--onefile --console` | Yes | `shruggie-indexer.exe` | `shruggie-indexer` |
 | GUI | `src/shruggie_indexer/gui/app.py` | `--onefile --windowed` | No | `shruggie-indexer-gui.exe` | `shruggie-indexer-gui` |
 
 **`--onefile` mode.** Both targets use PyInstaller's one-file bundle mode, which produces a single executable that extracts itself to a temporary directory at runtime. This is the simplest distribution format — the user downloads one file and runs it. The alternative `--onedir` mode (which produces a directory of files) is available as a fallback if one-file extraction causes issues on specific platforms, but `--onefile` is the default for releases.
@@ -8628,11 +8629,41 @@ block_cipher = None
 src_dir = Path("src")
 
 a = Analysis(
-    [str(src_dir / "shruggie_indexer" / "cli" / "main.py")],
+    [str(src_dir / "shruggie_indexer" / "__main__.py")],
     pathex=[str(src_dir)],
     binaries=[],
     datas=[],
-    hiddenimports=["shruggie_indexer"],
+    hiddenimports=[
+        "shruggie_indexer",
+        "shruggie_indexer._version",
+        "shruggie_indexer.app_paths",
+        "shruggie_indexer.cli",
+        "shruggie_indexer.cli.main",
+        "shruggie_indexer.cli.rollback",
+        "shruggie_indexer.config",
+        "shruggie_indexer.config.defaults",
+        "shruggie_indexer.config.loader",
+        "shruggie_indexer.config.types",
+        "shruggie_indexer.core",
+        "shruggie_indexer.core.dedup",
+        "shruggie_indexer.core.entry",
+        "shruggie_indexer.core.exif",
+        "shruggie_indexer.core.hashing",
+        "shruggie_indexer.core.lnk_parser",
+        "shruggie_indexer.core.paths",
+        "shruggie_indexer.core.progress",
+        "shruggie_indexer.core.rename",
+        "shruggie_indexer.core.rollback",
+        "shruggie_indexer.core.serializer",
+        "shruggie_indexer.core.sidecar",
+        "shruggie_indexer.core.timestamps",
+        "shruggie_indexer.core.traversal",
+        "shruggie_indexer.core._formatting",
+        "shruggie_indexer.exceptions",
+        "shruggie_indexer.log_file",
+        "shruggie_indexer.models",
+        "shruggie_indexer.models.schema",
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -8724,7 +8755,7 @@ exe = EXE(
 
 **`excludes` lists.** Each spec file excludes packages that the other target requires but the current target does not. The CLI spec excludes `customtkinter`, `tkinter`, and `_tkinter` — the GUI toolkit and its underlying C extension are substantial (several MB) and are never imported by the CLI. The GUI spec excludes `click` — the GUI does not use the CLI's argument parser. These exclusions reduce bundle size and eliminate false-positive hidden-import detection.
 
-**`hiddenimports`.** PyInstaller's static analysis cannot always detect dynamic imports (e.g., the `try: import orjson` pattern in the serializer, or the `pyexiftool` batch mode backend). The `hiddenimports` list explicitly declares packages that PyInstaller should include even if they are not statically visible. The lists shown above are the minimum set and should include the four required runtime dependencies (`click`, `orjson`, `pyexiftool`, `tqdm`). For optional packages (e.g., `customtkinter` for the GUI build), add entries if installed in the build environment. Packages listed in `hiddenimports` that are not installed in the build environment are silently skipped — they do not cause build failures.
+**`hiddenimports`.** PyInstaller's static analysis cannot always detect dynamic imports (e.g., the `try: import orjson` pattern in the serializer, or the `pyexiftool` batch mode backend). Additionally, lazy imports inside Click command handler bodies (deferred to avoid import-time overhead) are invisible to PyInstaller's module tracing. The `hiddenimports` list explicitly declares all submodules that PyInstaller should include. The CLI spec enumerates every `shruggie_indexer.*` submodule to ensure complete coverage of deferred imports in `index_cmd()` and `rollback_cmd()`. Packages listed in `hiddenimports` that are not installed in the build environment are silently skipped — they do not cause build failures.
 
 **`datas` list.** Both spec files declare an empty `datas` list. The indexer has no bundled data files (no templates, no asset images, no embedded configuration files). If a future enhancement requires bundled data (e.g., a default configuration file or GUI icon), the `datas` list is the correct mechanism for including it.
 

@@ -121,7 +121,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **GUI: Log file buffering (0-byte on disk)** — The `FileHandler`'s underlying stream could buffer write data, causing log files to appear as 0 bytes in file managers until a flush was triggered by a later event (e.g., navigating to the Settings page). Fixed by reconfiguring the handler's stream with `line_buffering=True` after creation and adding an explicit `flush()` after the initial startup log records. Log files are now non-empty on disk immediately after application startup.
 - **Spec §10.4: Incorrect Windows path** — The "Open Config Folder" description in §10.4 referenced `%APPDATA%` instead of `%LOCALAPPDATA%`. Corrected to reference the canonical application data directory defined in §3.3a.
 - **GUI: Output panel Save/Copy button state staleness** — The Save and Copy buttons on the output panel did not reliably reflect the active view's content state during log streaming. Buttons remained greyed out on the Log tab until the user manually toggled to Output and back. Root causes: (1) `set_json()` directly set button state based on JSON content, overriding the active-view check when the user was viewing the Log tab. (2) No periodic convergence mechanism existed to correct stale button state. Fixed by adding `_poll_button_state()` (1-second interval polling of `_update_button_state()`), and replacing direct button manipulation in `set_json()` and `set_status_message()` with delegation to `_update_button_state()`, which always evaluates the active view's content.
+### Fixed
 
+- **CLI/Build: PyInstaller binary produced no output** — The standalone `shruggie-indexer.exe` binary silently exited with code 0 for all invocations (no args, `--help`, `-h`, `--file`, etc.) because the PyInstaller spec file pointed at `cli/main.py`, which defines the Click command group but never calls it. The pip-installed console script and `python -m shruggie_indexer` paths worked correctly because their wrappers explicitly call `main()`. Fixed by redirecting the spec entry point from `cli/main.py` to `__main__.py` (which has the proper `if __name__ == "__main__"` guard), adding a defensive `if __name__ == "__main__"` guard to `cli/main.py`, and expanding `hiddenimports` from `["shruggie_indexer"]` to all 28 submodules (lazy imports inside command handlers are invisible to PyInstaller's static analysis). Spec: §13.4.
+- **CLI: `-h` short help flag not recognized** — Click only enables `--help` by default; the `-h` shorthand was routed to the `index` subcommand via `DefaultGroup` and rejected as an unknown option. Added `context_settings={"help_option_names": ["-h", "--help"]}` to the Click group. Spec: §8.1.
+
+### Changed
+
+- **CLI: `index_cmd()` complexity refactor** — Extracted three helper functions (`_resolve_log_file_from_config()`, `_build_cli_overrides()`, `_post_index_pipeline()`) from the 390-line `index_cmd()` function body to reduce cognitive complexity below Pylance's analysis threshold. No behavioral changes; the same logic executes in the same order.
+
+### Added
+
+- **Tests: CLI entry-point smoke tests** — New `tests/integration/test_cli_entrypoint.py` with 8 tests covering Click in-process invocation (`--help`, `-h`, `--version`, subcommand help), `python -m` out-of-process invocation, and direct script execution (simulating the PyInstaller path). Prevents regression of the silent-exit bug.
 ## [0.1.1] - 2026-02-25
 
 ### Added
