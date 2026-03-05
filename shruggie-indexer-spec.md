@@ -4,9 +4,9 @@
 - **Project:** `shruggie-indexer`
 - **Repository:** [shruggietech/shruggie-indexer](https://github.com/shruggietech/shruggie-indexer)
 - **License:** Apache 2.0 ([full text](https://www.apache.org/licenses/LICENSE-2.0))
-- **Version:** 0.1.1
+- **Version:** 0.1.2
 - **Author:** William Thompson (ShruggieTech LLC)
-- **Date:** 2026-03-03
+- **Date:** 2026-03-05
 - **Status:** AMENDED
 - **Audience:** AI-first, Human-second
 
