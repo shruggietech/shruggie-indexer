@@ -1415,6 +1415,169 @@ class TestContentHashCollisionDetection:
         assert target_dir / "FeedsExport.7z" in target_paths
         assert target_dir / "data" / "FeedsExport.7z" not in target_paths
 
+    def test_same_hash_different_storage_name_no_collision(self) -> None:
+        """Same content hash but different storage names → distinct files, no collision.
+
+        This is the slippers.gif/slippers.png scenario: byte-identical files
+        with different extensions receive different storage names during MMD
+        and must both survive rollback.
+        """
+        from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
+
+        sid = "aaaa1111-aaaa-4aaa-aaaa-aaaaaaaaaaaa"
+        shared_md5 = "B4ADC74442D00EE0953105C01D42B72B"
+
+        e_gif = _make_file_entry(
+            name="slippers.gif", relative="images/slippers.gif",
+            storage_name=f"y{shared_md5}.gif",
+            md5=shared_md5, session_id=sid,
+        )
+        e_png = _make_file_entry(
+            name="slippers.png", relative="images/slippers.png",
+            storage_name=f"y{shared_md5}.png",
+            md5=shared_md5, session_id=sid,
+        )
+
+        result = _deduplicate_by_content_hash([e_gif, e_png])
+        assert len(result) == 2
+        assert e_gif in result
+        assert e_png in result
+
+    def test_same_hash_different_storage_name_no_warning(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Same hash, different storage names → no WARNING emitted."""
+        import logging
+
+        from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
+
+        sid = "aaaa1111-aaaa-4aaa-aaaa-aaaaaaaaaaaa"
+        shared_md5 = "B4ADC74442D00EE0953105C01D42B72B"
+
+        e_gif = _make_file_entry(
+            name="slippers.gif", relative="images/slippers.gif",
+            storage_name=f"y{shared_md5}.gif",
+            md5=shared_md5, session_id=sid,
+        )
+        e_png = _make_file_entry(
+            name="slippers.png", relative="images/slippers.png",
+            storage_name=f"y{shared_md5}.png",
+            md5=shared_md5, session_id=sid,
+        )
+
+        with caplog.at_level(logging.WARNING, logger="shruggie_indexer.core.rollback"):
+            _deduplicate_by_content_hash([e_gif, e_png])
+
+        collision_warnings = [
+            r for r in caplog.records
+            if "Duplicate content hash" in r.message
+        ]
+        assert len(collision_warnings) == 0
+
+    def test_same_hash_different_storage_name_plan_rollback(
+        self, tmp_path: Path,
+    ) -> None:
+        """plan_rollback preserves both files when hash matches but storage names differ."""
+        sid = "aaaa1111-aaaa-4aaa-aaaa-aaaaaaaaaaaa"
+        shared_md5 = "B4ADC74442D00EE0953105C01D42B72B"
+
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        (source_dir / f"y{shared_md5}.gif").write_bytes(b"image-data")
+        (source_dir / f"y{shared_md5}.png").write_bytes(b"image-data")
+
+        e_gif = _make_file_entry(
+            name="slippers.gif", relative="images/slippers.gif",
+            storage_name=f"y{shared_md5}.gif",
+            md5=shared_md5, session_id=sid,
+        )
+        e_png = _make_file_entry(
+            name="slippers.png", relative="images/slippers.png",
+            storage_name=f"y{shared_md5}.png",
+            md5=shared_md5, session_id=sid,
+        )
+
+        target_dir = tmp_path / "restored"
+        plan = plan_rollback(
+            [e_gif, e_png],
+            target_dir=target_dir,
+            source_dir=source_dir,
+            verify=False,
+        )
+
+        restore_targets = {
+            a.target_path for a in plan.actions
+            if a.action_type == "restore" and not a.skip_reason
+        }
+        assert target_dir / "images" / "slippers.gif" in restore_targets
+        assert target_dir / "images" / "slippers.png" in restore_targets
+
+    def test_collision_warning_cross_session(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Cross-session collision → message says 'found in multiple sessions'."""
+        import logging
+
+        from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
+
+        shared_md5 = "AAAA0000AAAA0000AAAA0000AAAA0000"
+        shared_storage = f"y{shared_md5}.7z"
+
+        e1 = _make_file_entry(
+            name="file.7z", relative="file.7z",
+            storage_name=shared_storage,
+            md5=shared_md5, session_id="session-1",
+        )
+        e2 = _make_file_entry(
+            name="file.7z", relative="old/file.7z",
+            storage_name=shared_storage,
+            md5=shared_md5, session_id="session-2",
+        )
+
+        with caplog.at_level(logging.WARNING, logger="shruggie_indexer.core.rollback"):
+            _deduplicate_by_content_hash([e1, e2])
+
+        warning_records = [
+            r for r in caplog.records
+            if "Duplicate content hash" in r.message
+        ]
+        assert len(warning_records) == 1
+        assert "found in multiple sessions" in warning_records[0].message
+
+    def test_collision_warning_intra_session(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Intra-session collision → message says 'with conflicting paths in session'."""
+        import logging
+
+        from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
+
+        sid = "aaaa1111-aaaa-4aaa-aaaa-aaaaaaaaaaaa"
+        shared_md5 = "AAAA0000AAAA0000AAAA0000AAAA0000"
+        shared_storage = f"y{shared_md5}.7z"
+
+        e1 = _make_file_entry(
+            name="file.7z", relative="file.7z",
+            storage_name=shared_storage,
+            md5=shared_md5, session_id=sid,
+        )
+        e2 = _make_file_entry(
+            name="file.7z", relative="old/file.7z",
+            storage_name=shared_storage,
+            md5=shared_md5, session_id=sid,
+        )
+
+        with caplog.at_level(logging.WARNING, logger="shruggie_indexer.core.rollback"):
+            _deduplicate_by_content_hash([e1, e2])
+
+        warning_records = [
+            r for r in caplog.records
+            if "Duplicate content hash" in r.message
+        ]
+        assert len(warning_records) == 1
+        assert "with conflicting paths in session" in warning_records[0].message
+        assert sid in warning_records[0].message
+
 
 # ===========================================================================
 # TestLegacyPrefixDetection

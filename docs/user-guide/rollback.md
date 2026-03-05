@@ -332,7 +332,7 @@ This ensures files are restored directly under the target directory without an e
 
 ## Session-ID Validation
 
-When `_meta2.json` files from multiple indexing sessions coexist in the same directory (e.g., stale metadata from a prior run was not cleaned up), rollback detects content-hash collisions — entries where the same file content appears with different `file_system.relative` paths.
+When `_meta2.json` files from multiple indexing sessions coexist in the same directory (e.g., stale metadata from a prior run was not cleaned up), rollback detects content-hash collisions — entries where the same file content appears with the same `attributes.storage_name` but different `file_system.relative` paths. Two entries that share a content hash but have **different** storage names (e.g., byte-identical `slippers.gif` and `slippers.png`) are treated as distinct canonical files and are **not** flagged as collisions.
 
 When a collision is detected, rollback applies tiebreaking rules:
 
@@ -340,7 +340,7 @@ When a collision is detected, rollback applies tiebreaking rules:
 2. **Session over no session** — An entry with a `session_id` is preferred over one without.
 3. **First encountered** — If neither has a `session_id`, the first entry is kept.
 
-Discarded entries are logged at WARNING level. This prevents duplicate or misplaced file restores caused by stale metadata.
+Discarded entries are logged at WARNING level with a message that accurately describes whether the collision is cross-session or intra-session. This prevents duplicate or misplaced file restores caused by stale metadata.
 
 ---
 

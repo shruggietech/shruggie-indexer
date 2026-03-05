@@ -3811,7 +3811,9 @@ Before planning begins, `plan_rollback()` performs two pre-planning sanitization
    INFO: Detected legacy relative path prefix 'data'. Stripping prefix for rollback.
    ```
 
-**B. Content-hash collision detection.**  After prefix stripping, entries are grouped by composite content hash — a `(md5, sha256)` tuple.  When two or more non-duplicate entries share the same composite hash but have different `file_system.relative` values, this indicates stale metadata from a prior indexing session.  Entries annotated as duplicates (from the `duplicates[]` array) are excluded from collision detection — they are *expected* to share the canonical's hash at a different path.
+**B. Content-hash collision detection.**  After prefix stripping, entries are grouped by composite content hash **and** storage name — a `(md5, sha256, storage_name)` tuple.  When two or more non-duplicate entries share the same composite hash *and* the same `attributes.storage_name` but have different `file_system.relative` values, this indicates stale metadata from a prior indexing session.  Entries annotated as duplicates (from the `duplicates[]` array) are excluded from collision detection — they are *expected* to share the canonical's hash at a different path.
+
+> **Updated 2026-03-04:** The collision detection key was narrowed from `(md5, sha256)` to `(md5, sha256, storage_name)`.  The previous content-hash-only key produced false positives when two distinct canonical files shared the same content hash but had different file extensions (and therefore different storage names) — for example, `slippers.gif` and `slippers.png` as byte-identical files.  With the hash-only key, one file was silently discarded during rollback, causing data loss.  Adding `storage_name` to the key ensures that entries with different storage names are recognized as distinct canonical files and are never treated as collisions.
 
 Tiebreaking rules for collisions (applied in order):
 
@@ -3819,13 +3821,20 @@ Tiebreaking rules for collisions (applied in order):
 2. **Session over no session:** If only one colliding entry has a `session_id`, prefer it over entries without one.
 3. **First encountered:** If neither entry has a `session_id`, or both have the same `session_id`, keep the first encountered.
 
-Discarded entries are logged at `WARNING`:
+Discarded entries are logged at `WARNING`.  The warning message accurately reflects the collision scope:
 
-```
-WARNING: Duplicate content hash {hash} found in multiple sessions.
-  Keeping: {relative} (session {session_id})
-  Discarding: {relative} (session {session_id})
-```
+- Cross-session collision (entries have different `session_id` values):
+  ```
+  WARNING: Duplicate content hash {hash} found in multiple sessions.
+    Keeping: {relative} (session {session_id})
+    Discarding: {relative} (session {session_id})
+  ```
+- Intra-session collision (entries have the same `session_id`):
+  ```
+  WARNING: Duplicate content hash {hash} with conflicting paths in session {session_id}.
+    Keeping: {relative} (session {session_id})
+    Discarding: {relative} (session {session_id})
+  ```
 
 <a id="rollback-empty-directories"></a>
 #### Empty directory omission

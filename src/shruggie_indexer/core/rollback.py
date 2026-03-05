@@ -655,17 +655,24 @@ def _deduplicate_by_content_hash(
     if session_counts:
         majority_session = max(session_counts, key=lambda k: session_counts[k])
 
-    # Group entries by composite content hash (md5 + sha256).  Two entries
-    # represent the same file only when both hashes agree; using a single
-    # hash as the key would cause false collisions when test helpers or
-    # partial metadata produce entries with a shared default hash value.
+    # Group entries by composite content hash (md5 + sha256) AND storage
+    # name.  Two entries represent a true collision only when they share
+    # the same content hash *and* the same storage name but differ in
+    # ``file_system.relative``.  Entries with the same hash but different
+    # storage names are distinct canonical files (e.g. slippers.gif and
+    # slippers.png that are byte-identical) and MUST NOT be treated as
+    # collisions.
+    #
+    # Using a single hash as the key would cause false collisions when
+    # test helpers or partial metadata produce entries with a shared
+    # default hash value.
     #
     # Entries annotated as duplicates (from the ``duplicates[]`` array of a
     # canonical entry) are excluded from collision detection.  They are
     # *expected* to share the canonical's content hash at a different
     # relative path — that is the normal dedup-restore workflow, not a
     # stale-metadata collision.
-    hash_groups: dict[tuple[str, str], list[IndexEntry]] = {}
+    hash_groups: dict[tuple[str, str, str], list[IndexEntry]] = {}
     for entry in entries:
         if entry.hashes is None:
             continue
@@ -673,8 +680,9 @@ def _deduplicate_by_content_hash(
             continue  # Dedup entries share hash intentionally
         md5 = (entry.hashes.md5 or "").upper()
         sha256 = (entry.hashes.sha256 or "").upper()
+        storage = entry.attributes.storage_name if entry.attributes else ""
         if md5 or sha256:
-            hash_groups.setdefault((md5, sha256), []).append(entry)
+            hash_groups.setdefault((md5, sha256, storage), []).append(entry)
 
     discarded_ids: set[int] = set()
 
@@ -688,16 +696,38 @@ def _deduplicate_by_content_hash(
             continue  # Same hash, same relative — no conflict
 
         # Collision detected — pick winner
-        content_hash = "/".join(k for k in content_key if k)
+        # Build a display hash from md5/sha256 parts of the key (skip
+        # the storage-name component at index 2).
+        content_hash = "/".join(k for k in content_key[:2] if k)
         winner = _resolve_hash_collision(group, majority_session)
         for entry in group:
             if entry is not winner:
                 discarded_ids.add(id(entry))
+                # Construct an accurate description of the collision scope
+                session_ids = {
+                    e.session_id for e in group if e.session_id is not None
+                }
+                if len(session_ids) > 1:
+                    scope_msg = (
+                        f"Duplicate content hash {content_hash} "
+                        f"found in multiple sessions."
+                    )
+                elif len(session_ids) == 1:
+                    scope_msg = (
+                        f"Duplicate content hash {content_hash} "
+                        f"with conflicting paths in session "
+                        f"{next(iter(session_ids))}."
+                    )
+                else:
+                    scope_msg = (
+                        f"Duplicate content hash {content_hash} "
+                        f"with conflicting paths (no session IDs)."
+                    )
                 logger.warning(
-                    "Duplicate content hash %s found in multiple sessions.\n"
+                    "%s\n"
                     "  Keeping: %s (session %s)\n"
                     "  Discarding: %s (session %s)",
-                    content_hash,
+                    scope_msg,
                     winner.file_system.relative,
                     winner.session_id or "<none>",
                     entry.file_system.relative,
