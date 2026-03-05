@@ -906,6 +906,152 @@ class TestExecuteRollback:
         content = (tmp_path / "subtitles.srt").read_text(encoding="utf-8")
         assert content == "1\n00:00:00,000 --> 00:00:02,000\nHello"
 
+    def test_sidecar_url_restore_functional(self, tmp_path: Path) -> None:
+        """Sidecar with .url content restores as a functional Windows shortcut."""
+        url_content = "[InternetShortcut]\nURL=https://example.com\n"
+        meta = _make_sidecar_metadata(
+            name="bookmark.url",
+            relative="bookmark.url",
+            fmt="text",
+            data=url_content,
+        )
+        entry = _make_file_entry(
+            name="readme.txt",
+            storage_name="y0654CDF77702945DA87A8B4E72E98EEE.txt",
+            relative="readme.txt",
+            md5="0654CDF77702945DA87A8B4E72E98EEE",
+            metadata=[meta],
+        )
+        plan = plan_rollback(
+            [entry],
+            target_dir=tmp_path,
+            source_dir=FIXTURES / "non-renamed",
+            verify=False,
+        )
+        result = execute_rollback(plan)
+        assert result.sidecars_restored == 1
+        restored = (tmp_path / "bookmark.url").read_text(encoding="utf-8")
+        assert "[InternetShortcut]" in restored
+        assert "URL=https://example.com" in restored
+
+    def test_sidecar_lnk_restore_byte_perfect(self, tmp_path: Path) -> None:
+        """Sidecar with .lnk base64 restores as byte-perfect binary copy."""
+        import base64 as b64
+        original_bytes = b"\x4c\x00\x00\x00" + b"\x00" * 72 + b"lnk_payload"
+        encoded = b64.b64encode(original_bytes).decode("ascii")
+        meta = _make_sidecar_metadata(
+            name="shortcut.lnk",
+            relative="shortcut.lnk",
+            fmt="base64",
+            data=encoded,
+        )
+        entry = _make_file_entry(
+            name="readme.txt",
+            storage_name="y0654CDF77702945DA87A8B4E72E98EEE.txt",
+            relative="readme.txt",
+            md5="0654CDF77702945DA87A8B4E72E98EEE",
+            metadata=[meta],
+        )
+        plan = plan_rollback(
+            [entry],
+            target_dir=tmp_path,
+            source_dir=FIXTURES / "non-renamed",
+            verify=False,
+        )
+        result = execute_rollback(plan)
+        assert result.sidecars_restored == 1
+        assert (tmp_path / "shortcut.lnk").read_bytes() == original_bytes
+
+    def test_sidecar_json_compact_restore(self, tmp_path: Path) -> None:
+        """JSON sidecar with json_style='compact' restores as compact JSON."""
+        meta = _make_sidecar_metadata(
+            name="file.info.json",
+            relative="file.info.json",
+            fmt="json",
+            data={"camera": "Canon", "iso": 400},
+        )
+        meta.attributes.json_style = "compact"
+        entry = _make_file_entry(
+            name="readme.txt",
+            storage_name="y0654CDF77702945DA87A8B4E72E98EEE.txt",
+            relative="readme.txt",
+            md5="0654CDF77702945DA87A8B4E72E98EEE",
+            metadata=[meta],
+        )
+        plan = plan_rollback(
+            [entry],
+            target_dir=tmp_path,
+            source_dir=FIXTURES / "non-renamed",
+            verify=False,
+        )
+        result = execute_rollback(plan)
+        assert result.sidecars_restored == 1
+        content = (tmp_path / "file.info.json").read_text(encoding="utf-8")
+        # Compact: no whitespace between keys/values
+        assert "\n" not in content
+        assert " " not in content or content.count(" ") == 0
+        parsed = json.loads(content)
+        assert parsed["camera"] == "Canon"
+
+    def test_sidecar_json_pretty_restore(self, tmp_path: Path) -> None:
+        """JSON sidecar with json_style='pretty' restores as indented JSON."""
+        meta = _make_sidecar_metadata(
+            name="file.info.json",
+            relative="file.info.json",
+            fmt="json",
+            data={"camera": "Canon", "iso": 400},
+        )
+        meta.attributes.json_style = "pretty"
+        entry = _make_file_entry(
+            name="readme.txt",
+            storage_name="y0654CDF77702945DA87A8B4E72E98EEE.txt",
+            relative="readme.txt",
+            md5="0654CDF77702945DA87A8B4E72E98EEE",
+            metadata=[meta],
+        )
+        plan = plan_rollback(
+            [entry],
+            target_dir=tmp_path,
+            source_dir=FIXTURES / "non-renamed",
+            verify=False,
+        )
+        result = execute_rollback(plan)
+        assert result.sidecars_restored == 1
+        content = (tmp_path / "file.info.json").read_text(encoding="utf-8")
+        # Pretty: has newlines and indentation
+        assert "\n" in content
+        parsed = json.loads(content)
+        assert parsed["camera"] == "Canon"
+
+    def test_sidecar_json_no_style_defaults_compact(self, tmp_path: Path) -> None:
+        """JSON sidecar without json_style defaults to compact (backward compat)."""
+        meta = _make_sidecar_metadata(
+            name="file.info.json",
+            relative="file.info.json",
+            fmt="json",
+            data={"key": "value"},
+        )
+        # json_style is None (default) — should restore as compact
+        assert meta.attributes.json_style is None
+        entry = _make_file_entry(
+            name="readme.txt",
+            storage_name="y0654CDF77702945DA87A8B4E72E98EEE.txt",
+            relative="readme.txt",
+            md5="0654CDF77702945DA87A8B4E72E98EEE",
+            metadata=[meta],
+        )
+        plan = plan_rollback(
+            [entry],
+            target_dir=tmp_path,
+            source_dir=FIXTURES / "non-renamed",
+            verify=False,
+        )
+        result = execute_rollback(plan)
+        assert result.sidecars_restored == 1
+        content = (tmp_path / "file.info.json").read_text(encoding="utf-8")
+        # Should be compact (no whitespace)
+        assert "\n" not in content
+
     def test_cancellation(self, tmp_path: Path) -> None:
         """Cancellation stops processing and returns partial result."""
         entry1 = _make_file_entry(

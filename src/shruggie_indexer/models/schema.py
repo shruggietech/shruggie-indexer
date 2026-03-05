@@ -203,6 +203,22 @@ class MetadataAttributes:
     source_media_type: str | None = None
     """MIME type of original source data before transforms."""
 
+    json_style: str | None = None
+    """Original JSON formatting style: ``'compact'`` or ``'pretty'``.
+
+    Recorded at ingest for sidecar-origin JSON entries so that rollback
+    can restore the file with matching formatting intent.  ``None`` for
+    non-JSON formats or legacy entries (treated as ``'compact'``).
+    """
+
+    link_metadata: dict[str, str] | None = None
+    """Structured metadata extracted from ``.lnk`` binary shortcut files.
+
+    Contains fields such as ``target_path``, ``working_directory``,
+    ``arguments``, ``icon_location``, ``description``, and ``hotkey``.
+    Only populated for sidecar type ``'shortcut'``.
+    """
+
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
             "type": self.type,
@@ -211,6 +227,10 @@ class MetadataAttributes:
         }
         if self.source_media_type is not None:
             d["source_media_type"] = self.source_media_type
+        if self.json_style is not None:
+            d["json_style"] = self.json_style
+        if self.link_metadata is not None:
+            d["link_metadata"] = dict(self.link_metadata)
         return d
 
 

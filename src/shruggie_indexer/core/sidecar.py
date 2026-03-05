@@ -1,11 +1,11 @@
 """Sidecar metadata file discovery and parsing for shruggie-indexer.
 
 Discovers sidecar metadata files adjacent to an indexed item (siblings in the
-same directory) and parses them into ``MetadataEntry`` objects.  Ten sidecar
+same directory) and parses them into ``MetadataEntry`` objects.  Eleven sidecar
 types are recognized, each with type-specific reading strategies:
 
     description, desktop_ini, generic_metadata, hash, json_metadata, link,
-    screenshot, subtitles, thumbnail, torrent
+    screenshot, shortcut, subtitles, thumbnail, torrent
 
 Discovery uses compiled regex patterns from the configuration against sibling
 filenames.  First matching type wins (pattern order is significant).
@@ -24,7 +24,6 @@ original sidecar parsing logic being replaced.
 from __future__ import annotations
 
 import base64
-import configparser
 import json
 import logging
 import os
@@ -124,74 +123,63 @@ def _read_binary_base64(path: Path) -> str:
     return base64.b64encode(path.read_bytes()).decode("ascii")
 
 
-def _read_link(path: Path) -> str | None:
-    """Extract URL or path from a link file.
+def _read_url_as_text(path: Path) -> tuple[Any, str, list[str]]:
+    """Read a ``.url`` file through the text cascade.
 
-    Supports ``.url`` files (INI format with ``URL=`` key) and falls back
-    to Base64 encoding for ``.lnk`` and other binary link formats.
-
-    Returns the extracted URL string, or a Base64-encoded representation.
+    Stores the full file content verbatim (including the
+    ``[InternetShortcut]`` header and ``URL=`` key) as ``format: "text"``.
+    This preserves Windows shortcut functionality on rollback.
     """
-    suffix = path.suffix.lower()
-
-    if suffix == ".url":
-        return _read_url_file(path)
-
-    if suffix == ".lnk":
-        return _read_lnk_file(path)
-
-    # Generic link files — try text, then binary.
     try:
-        return _read_text(path)
-    except (UnicodeDecodeError, ValueError):
-        return _read_binary_base64(path)
+        data = _read_text(path)
+        return data, "text", []
+    except (OSError, UnicodeDecodeError) as exc:
+        logger.warning("Failed to read .url sidecar %s: %s", path, exc)
+        return None, "error", []
 
 
-def _read_url_file(path: Path) -> str | None:
-    """Parse a Windows ``.url`` file for its URL value."""
-    try:
-        config = configparser.ConfigParser(interpolation=None)
-        config.read(str(path), encoding="utf-8")
-        url = config.get("InternetShortcut", "URL", fallback=None)
-        if url:
-            return url
-    except (configparser.Error, OSError, UnicodeDecodeError):
-        pass
+def _read_lnk_with_metadata(path: Path) -> tuple[Any, str, list[str], dict[str, str] | None]:
+    """Read a ``.lnk`` file with dual-storage: base64 data + link_metadata.
 
-    # Fallback: scan lines for URL= pattern.
-    try:
-        text = _read_text(path)
-        for line in text.splitlines():
-            stripped = line.strip()
-            if stripped.upper().startswith("URL="):
-                return stripped[4:]
-    except (OSError, UnicodeDecodeError):
-        pass
+    Always base64-encodes the raw binary for byte-perfect rollback.
+    Additionally attempts to extract structured metadata fields
+    (target_path, working_directory, arguments, icon_location,
+    description, hotkey) using the ``LnkParse3`` library.
 
-    return None
-
-
-def _read_lnk_file(path: Path) -> str | None:
-    """Attempt to extract target from a Windows ``.lnk`` file.
-
-    Tries ``pylnk3`` first, then falls back to Base64 encoding.
+    Returns ``(data, format, transforms, link_metadata)`` where
+    ``link_metadata`` is ``None`` when extraction fails or the library
+    is unavailable.
     """
-    # Try pylnk3 if available.
+    # Always base64-encode for rollback fidelity.
     try:
-        import pylnk3  # type: ignore[import-untyped]
+        b64_data = _read_binary_base64(path)
+    except OSError as exc:
+        logger.warning("Failed to read .lnk sidecar %s: %s", path, exc)
+        return None, "error", [], None
 
-        lnk = pylnk3.parse(str(path))
-        if hasattr(lnk, "path") and lnk.path:
-            return lnk.path
-        if hasattr(lnk, "relative_path") and lnk.relative_path:
-            return lnk.relative_path
+    # Attempt metadata extraction.
+    link_metadata = _extract_lnk_metadata(path)
+
+    return b64_data, "base64", ["base64_encode"], link_metadata
+
+
+def _extract_lnk_metadata(path: Path) -> dict[str, str] | None:
+    """Extract structured metadata from a ``.lnk`` binary shortcut.
+
+    Uses ``LnkParse3`` if available.  Returns a dict of non-empty fields,
+    or ``None`` if extraction fails or the library is missing.
+    """
+    try:
+        from shruggie_indexer.core.lnk_parser import parse_lnk
     except ImportError:
-        pass
-    except Exception as exc:
-        logger.debug("pylnk3 failed for %s: %s", path, exc)
+        logger.debug(".lnk parser unavailable — skipping metadata extraction for %s", path)
+        return None
 
-    # Binary fallback.
-    return _read_binary_base64(path)
+    try:
+        return parse_lnk(path)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(".lnk metadata extraction failed for %s: %s", path, exc)
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -210,13 +198,16 @@ def _read_with_fallback(
     path: Path,
     sidecar_type: str,
     config: IndexerConfig,
-) -> tuple[Any, str, list[str]]:
+) -> tuple[Any, str, list[str], dict[str, Any] | None]:
     """Read a sidecar file using the type-appropriate strategy.
 
-    Returns ``(data, format, transforms)`` where:
+    Returns ``(data, format, transforms, extra_attrs)`` where:
     - ``data`` is the parsed content (may be ``None`` on total failure)
     - ``format`` describes the serialization format of ``data``
     - ``transforms`` lists any transformations applied
+    - ``extra_attrs`` is an optional dict of additional
+      ``MetadataAttributes`` fields (e.g. ``json_style``,
+      ``link_metadata``, ``type_override``)
 
     Args:
         path: Absolute path to the sidecar file.
@@ -224,33 +215,42 @@ def _read_with_fallback(
         config: Active configuration.
 
     Returns:
-        A 3-tuple of ``(data, format_name, transforms)``.
+        A 4-tuple of ``(data, format_name, transforms, extra_attrs)``.
     """
     type_attrs = config.metadata_attributes.get(sidecar_type)
 
     # --- Fallback chain types: JSON → text → binary ---
     if sidecar_type in _FALLBACK_CHAIN_TYPES:
-        return _read_fallback_chain(path, type_attrs)
+        data, fmt, transforms = _read_fallback_chain(path, type_attrs)
+        extra = _detect_json_style_extra(path, fmt)
+        return data, fmt, transforms, extra
 
     # --- Type-specific readers ---
     if sidecar_type == "json_metadata":
-        return _read_type_json_metadata(path)
+        data, fmt, transforms = _read_type_json_metadata(path)
+        extra = _detect_json_style_extra(path, fmt)
+        return data, fmt, transforms, extra
 
     if sidecar_type == "hash":
-        return _read_type_hash(path)
+        data, fmt, transforms = _read_type_hash(path)
+        return data, fmt, transforms, None
 
     if sidecar_type == "link":
         return _read_type_link(path)
 
     if sidecar_type == "desktop_ini":
-        return _read_type_desktop_ini(path)
+        data, fmt, transforms = _read_type_desktop_ini(path)
+        return data, fmt, transforms, None
 
     if sidecar_type in ("screenshot", "thumbnail", "torrent"):
-        return _read_type_binary(path)
+        data, fmt, transforms = _read_type_binary(path)
+        return data, fmt, transforms, None
 
     # Unknown type — try fallback chain.
     logger.debug("Unknown sidecar type %r — using fallback chain", sidecar_type)
-    return _read_fallback_chain(path, type_attrs)
+    data, fmt, transforms = _read_fallback_chain(path, type_attrs)
+    extra = _detect_json_style_extra(path, fmt)
+    return data, fmt, transforms, extra
 
 
 def _read_fallback_chain(
@@ -295,6 +295,38 @@ def _read_fallback_chain(
     return None, "error", []
 
 
+def _detect_json_style(path: Path) -> str:
+    """Detect whether a JSON file is compact or pretty-printed.
+
+    Uses a simple heuristic: if the raw text contains a newline followed
+    by a space or tab, the JSON is pretty-printed.  Otherwise it is compact.
+
+    This only inspects the raw bytes — the file has already been successfully
+    parsed as JSON by the time this is called.
+    """
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return "compact"
+
+    if "\n " in raw or "\n\t" in raw:
+        return "pretty"
+    return "compact"
+
+
+def _detect_json_style_extra(
+    path: Path,
+    fmt: str,
+) -> dict[str, Any] | None:
+    """Return extra attributes dict with ``json_style`` when format is JSON.
+
+    Returns ``None`` for non-JSON formats.
+    """
+    if fmt != "json":
+        return None
+    return {"json_style": _detect_json_style(path)}
+
+
 def _read_type_json_metadata(path: Path) -> tuple[Any, str, list[str]]:
     """Read a json_metadata sidecar (JSON only, no fallback)."""
     try:
@@ -315,27 +347,42 @@ def _read_type_hash(path: Path) -> tuple[Any, str, list[str]]:
         return None, "error", []
 
 
-def _read_type_link(path: Path) -> tuple[Any, str, list[str]]:
-    """Read a link sidecar (URL/path extraction)."""
+def _read_type_link(path: Path) -> tuple[Any, str, list[str], dict[str, Any] | None]:
+    """Read a link sidecar.
+
+    ``.url`` files use the text cascade (full content preserved).
+    ``.lnk`` files use base64 encoding with optional metadata extraction.
+    Other link files use text → binary fallback.
+
+    Returns ``(data, format, transforms, extra_attrs)`` where
+    ``extra_attrs`` is a dict of additional ``MetadataAttributes`` fields
+    (e.g. ``link_metadata``, overridden ``type``) or ``None``.
+    """
+    suffix = path.suffix.lower()
+
+    if suffix == ".url":
+        data, fmt, transforms = _read_url_as_text(path)
+        return data, fmt, transforms, None
+
+    if suffix == ".lnk":
+        data, fmt, transforms, link_meta = _read_lnk_with_metadata(path)
+        extra: dict[str, Any] = {"type_override": "shortcut"}
+        if link_meta is not None:
+            extra["link_metadata"] = link_meta
+        return data, fmt, transforms, extra
+
+    # Generic link files — try text, then binary.
     try:
-        data = _read_link(path)
-        if data is None:
-            return None, "error", []
-
-        # Check if result is Base64 (from binary fallback) or text.
-        # Base64 strings are ASCII-only and typically long; URLs/paths are not.
-        # A simple heuristic: if the result looks like Base64, label accordingly.
-        try:
-            base64.b64decode(data, validate=True)
-            if len(data) > 100:
-                return data, "base64", ["base64_encode"]
-        except Exception:
-            pass
-
-        return data, "text", []
+        data = _read_text(path)
+        return data, "text", [], None
+    except (UnicodeDecodeError, ValueError):
+        pass
+    try:
+        data = _read_binary_base64(path)
+        return data, "base64", ["base64_encode"], None
     except OSError as exc:
         logger.warning("Failed to read link sidecar %s: %s", path, exc)
-        return None, "error", []
+        return None, "error", [], None
 
 
 def _read_type_desktop_ini(path: Path) -> tuple[Any, str, list[str]]:
@@ -405,6 +452,8 @@ def _build_metadata_entry(
     transforms: list[str],
     index_root: Path,
     config: IndexerConfig,
+    *,
+    extra_attrs: dict[str, Any] | None = None,
 ) -> MetadataEntry:
     """Construct a complete ``MetadataEntry`` from a parsed sidecar.
 
@@ -417,6 +466,10 @@ def _build_metadata_entry(
         transforms: List of transform labels applied.
         index_root: Root directory of the indexing operation.
         config: Active configuration.
+        extra_attrs: Optional dict of additional ``MetadataAttributes``
+            fields.  Supported keys: ``json_style``, ``link_metadata``,
+            ``type_override`` (overrides the ``type`` field on the
+            constructed attributes).
 
     Returns:
         A fully populated ``MetadataEntry``.
@@ -460,12 +513,24 @@ def _build_metadata_entry(
     # Source media type for binary sidecars.
     source_media_type = _detect_source_media_type(sidecar_path, fmt)
 
+    # Resolve extra attributes from the reader.
+    effective_type = sidecar_type
+    json_style: str | None = None
+    link_metadata: dict[str, str] | None = None
+
+    if extra_attrs:
+        effective_type = extra_attrs.get("type_override", sidecar_type)
+        json_style = extra_attrs.get("json_style")
+        link_metadata = extra_attrs.get("link_metadata")
+
     # Attributes.
     attributes = MetadataAttributes(
-        type=sidecar_type,
+        type=effective_type,
         format=fmt,
         transforms=list(transforms),
         source_media_type=source_media_type,
+        json_style=json_style,
+        link_metadata=link_metadata,
     )
 
     return MetadataEntry(
@@ -574,7 +639,9 @@ def discover_and_parse(
             entry = sidecar_entry_cache[sibling_path]
         else:
             # Read the sidecar content using the type-specific strategy.
-            data, fmt, transforms = _read_with_fallback(sibling_path, sidecar_type, config)
+            data, fmt, transforms, extra_attrs = _read_with_fallback(
+                sibling_path, sidecar_type, config,
+            )
 
             # Build the MetadataEntry.
             entry = _build_metadata_entry(
@@ -585,6 +652,7 @@ def discover_and_parse(
                 transforms=transforms,
                 index_root=index_root,
                 config=config,
+                extra_attrs=extra_attrs,
             )
             if sidecar_entry_cache is not None:
                 sidecar_entry_cache[sibling_path] = entry

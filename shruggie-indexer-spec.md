@@ -2059,6 +2059,8 @@ The `attributes` sub-object classifies the metadata entry's content type, serial
 | `format` | `string` (enum) | Yes | Serialization format of the `data` field: `"json"`, `"text"`, `"base64"`, or `"lines"`. |
 | `source_media_type` | `string` | No | MIME type of the original source data when the stored format differs from the original (e.g., `"image/png"` for a Base64-encoded screenshot). |
 | `transforms` | `array` of `string` | Yes | Ordered list of transformations applied. Empty array means no transforms. |
+| `json_style` | `string` (enum) | No | Detected JSON formatting style of the original sidecar file: `"pretty"` (indented) or `"compact"` (minified). Present only when `format` is `"json"`. Used by the rollback engine to restore the original whitespace convention. |
+| `link_metadata` | `object` | No | Structured metadata extracted from a Windows `.lnk` shortcut file. Contains string-valued fields such as `target_path`, `working_directory`, `arguments`, `icon_location`, `description`, and `hotkey`. Present only when `type` is `"shortcut"` and the `LnkParse3` library is available. Provides API-inspectable link details alongside the byte-perfect Base64 representation in `data`. |
 
 The `required` array for `attributes` is: `["type", "format", "transforms"]`.
 
@@ -2075,7 +2077,8 @@ For sidecar metadata (no prefix — `origin` already indicates sidecar provenanc
 - `"generic_metadata"` — Generic metadata/config file (`.cfg`, `.conf`, `.yaml`, `.meta`, etc.).
 - `"hash"` — File containing hash/checksum values (`.md5`, `.sha256`, `.crc32`, etc.).
 - `"json_metadata"` — JSON-format metadata file (`.info.json`, `.meta.json`, etc.).
-- `"link"` — URL shortcut (`.url`), filesystem shortcut (`.lnk`), or pointer file.
+- `"link"` — URL shortcut (`.url`) or pointer file. Stored as full text content (not URL extraction).
+- `"shortcut"` — Windows filesystem shortcut (`.lnk`). Stored as Base64-encoded binary with optional structured `link_metadata`.
 - `"screenshot"` — Screen capture image associated with the indexed item.
 - `"subtitles"` — Subtitle/caption track (`.srt`, `.sub`, `.vtt`, `.lrc`, etc.).
 - `"thumbnail"` — Thumbnail/cover image (`.cover`, `.thumb`, `thumbs.db`).
@@ -3120,7 +3123,8 @@ Each discovered sidecar is classified into exactly one type by matching its file
 | `generic_metadata` | Generic config/metadata (`.cfg`, `.conf`, `.yaml`, `.meta`) | JSON → text → binary fallback |
 | `hash` | Hash/checksum files (`.md5`, `.sha256`, `.crc32`) | Lines (non-empty lines only) |
 | `json_metadata` | JSON metadata (`.info.json`, `.meta.json`) | JSON |
-| `link` | URL shortcuts (`.url`) and filesystem shortcuts (`.lnk`) | URL/path extraction |
+| `link` | URL shortcuts (`.url`) and pointer files | Text cascade (JSON → text → binary fallback); full file content preserved |
+| `shortcut` | Windows filesystem shortcuts (`.lnk`) | Base64-encoded binary + optional structured `link_metadata` |
 | `screenshot` | Screen capture images | Base64-encoded binary |
 | `subtitles` | Subtitle tracks (`.srt`, `.sub`, `.vtt`, `.lrc`) | JSON → text → binary fallback |
 | `thumbnail` | Thumbnail/cover images (`.cover`, `.thumb`) | Base64-encoded binary |
@@ -3147,9 +3151,11 @@ After type detection, the sidecar's content is read by a format-specific handler
 
 > **Historical note:** The original's binary reader (`MetaFileRead-Data-Base64Encode`) uses `certutil -encode` to convert binary data to Base64, writing to a temporary file and stripping the header/footer lines that `certutil` adds. Using `base64.b64encode()` directly eliminates the external binary dependency and temporary file.
 
-**Link reader.** For `.url` files, parses the INI-format content to extract the `URL=` value. For `.lnk` files on Windows, `pylnk3` or `comtypes` MAY be used to resolve the shortcut target; on non-Windows platforms, `.lnk` files are read as binary (Base64-encoded), since the `.lnk` format is Windows-specific.
+**Link reader.** For `.url` files, the full text content is read using the standard text cascade (JSON → text → binary fallback), preserving the complete INI-format content rather than extracting only the `URL=` value. This enables byte-perfect round-trip restoration during rollback. The `attributes.type` remains `"link"`.
 
-> **Historical note:** The original uses the external pslib functions `UrlFile2Url` and `Lnk2Path` for link resolution. The tool internalizes this logic.
+**Shortcut reader.** For `.lnk` files, the binary content is always Base64-encoded for byte-perfect storage. The `attributes.type` is set to `"shortcut"` (not `"link"`). When the optional `LnkParse3` library is available, structured metadata (target path, working directory, arguments, icon location, description, hotkey) is extracted and stored in `attributes.link_metadata`, providing API-inspectable link details alongside the binary representation. When `LnkParse3` is not installed, the `.lnk` file is stored as Base64 only — the metadata extraction is skipped gracefully.
+
+> **Historical note:** The original uses the external pslib functions `UrlFile2Url` and `Lnk2Path` for link resolution. v2 replaces URL extraction with full-content preservation for `.url` files and uses `LnkParse3` (optional, pure-Python) for `.lnk` metadata extraction. The dual-storage approach for `.lnk` preserves both API convenience (structured fields) and byte-perfect rollback fidelity (Base64 binary).
 
 <a id="fallback-chain"></a>
 #### Fallback chain
@@ -3180,6 +3186,8 @@ For each successfully read sidecar, the module constructs a `MetadataEntry` ([§
 | `attributes.format` | Data format (`"json"`, `"text"`, `"base64"`, `"lines"`) |
 | `attributes.transforms` | Applied transforms (e.g., `["base64_encode"]`, `["json_compact"]`) |
 | `attributes.source_media_type` | MIME type of binary sidecars (e.g., `"image/jpeg"` for thumbnails); `null` for text-based sidecars |
+| `attributes.json_style` | `"pretty"` or `"compact"` when `format` is `"json"`; absent otherwise. Detected by heuristic: if the raw file content contains `\n ` or `\n\t`, the style is `"pretty"`; otherwise `"compact"`. |
+| `attributes.link_metadata` | Structured link details for `.lnk` shortcut files when `LnkParse3` is available; absent otherwise. |
 | `data` | Parsed content (varies by format) |
 
 The provenance fields (`file_system`, `size`, `timestamps`) are the v2 additions that enable MetaMergeDelete reversal ([§5.10](#510-metadata-array-and-metadataentry-fields), principle P3). They are present only for sidecar entries (`origin: "sidecar"`) and absent for generated entries.
@@ -3728,10 +3736,17 @@ For each `MetadataEntry` where `origin == "sidecar"`, the executor reconstructs 
 
 | `attributes.format` | Action |
 |---|---|
-| `"json"` | `json.dumps(data, indent=2, ensure_ascii=False)` → write as UTF-8 |
+| `"json"` | JSON-style-aware serialization (see below) → write as UTF-8 |
 | `"text"` | Write `data` as UTF-8 text |
 | `"base64"` | `base64.b64decode(data)` → write as binary |
 | `"lines"` | `"\n".join(data)` → write as UTF-8 text |
+
+**JSON style preservation.** When `attributes.json_style` is present, the rollback engine uses it to match the original file's formatting convention:
+
+- `"pretty"` → `json.dumps(data, indent=2, ensure_ascii=False)` (indented output).
+- `"compact"` → `json.dumps(data, separators=(",", ":"), ensure_ascii=False)` (no whitespace).
+
+When `json_style` is absent (backward compatibility with entries created before this field existed), the engine defaults to compact serialization (`separators=(",", ":")`) to avoid inflating file sizes. This is a deliberate deviation from the previous default of `indent=2`, which caused compact JSON sidecars (e.g., minified `.info.json` files) to balloon in size during rollback.
 
 Timestamps are set on restored sidecar files using the same `os.utime()` approach.
 
@@ -4422,7 +4437,7 @@ This subsection consolidates the porting guidance for the sidecar metadata ident
 
 During sidecar discovery ([§6.7](#67-sidecar-metadata-file-handling)), for each item being indexed, the sidecar module examines the item's sibling files. For each sibling, it tests the sibling's filename against every pattern in `metadata_identify`, iterating types in definition order. The first matching type wins — the sibling is classified as that type and no further patterns are tested.
 
-This means type ordering in the configuration is significant when patterns could overlap. The definition order should place more specific types before more generic ones. The default ordering matches the original: Description, DesktopIni, GenericMetadata, Hash, JsonMetadata, Link, Screenshot, Subtitles, Thumbnail, Torrent.
+This means type ordering in the configuration is significant when patterns could overlap. The definition order should place more specific types before more generic ones. The default ordering matches the original: Description, DesktopIni, GenericMetadata, Hash, JsonMetadata, Link, Shortcut, Screenshot, Subtitles, Thumbnail, Torrent.
 
 <a id="indexer-exclusion-during-traversal"></a>
 #### Indexer exclusion during traversal
@@ -8209,7 +8224,7 @@ The original `MakeIndex` and its dependency tree consumed two external binaries,
 | `Date2FormatCode` | Analyzes date string structure and returns a .NET format code. Called by `Date2UnixTime` as its primary format-detection strategy. | Eliminated along with `Date2UnixTime`. The tool never converts date strings — it works with numeric timestamps from the filesystem directly. | DEV-07 |
 | `DirectoryId` (as a standalone function) | Generates directory identifiers by hashing directory name + parent name with four algorithms. Defines 7 internal sub-functions: `DirectoryId-GetName`, `DirectoryId-HashString`, `DirectoryId-HashString-Md5`, `-Sha1`, `-Sha256`, `-Sha512`, `DirectoryId-ParentName`, `DirectoryId-ResolvePath`. | `core/hashing.hash_string()` for all string hashing. `core/paths.extract_components()` for name/parent extraction. `core/hashing.compute_directory_id()` for the two-layer hash+concatenate+hash identity algorithm. The identity algorithm is preserved; the seven sub-functions are replaced by two shared utility functions. | DEV-01 |
 | `FileId` (as a standalone function) | Generates file identifiers by hashing file content (or name for symlinks) with up to four algorithms. Defines 10 internal sub-functions: `FileId-GetName`, `FileId-HashMd5`, `-HashMd5-String`, `-HashSha1`, `-HashSha1-String`, `-HashSha256`, `-HashSha256-String`, `-HashSha512`, `-HashSha512-String`, `FileId-ResolvePath`. | `core/hashing.hash_file()` for content hashing with single-pass multi-algorithm computation. `core/hashing.hash_string()` for name hashing. `core/paths.resolve_path()` for path resolution. The ten sub-functions are replaced by two shared utility functions. | DEV-01, DEV-02 |
-| `MetaFileRead` (as a standalone function) | Reads and parses sidecar metadata files. Defines 16 internal sub-functions for type detection, parent resolution, data reading (JSON, text, binary, link), and hashing. Depends on `certutil`, `jq`, `Lnk2Path`, `UrlFile2Url`, and `ValidateIsJson`. | `core/sidecar.py` reimplements the behavioral contract using stdlib: `json.loads()` replaces `jq`, `base64.b64encode()` replaces `certutil`, `hashlib` replaces the internal hash functions. `Lnk2Path` and `UrlFile2Url` are not ported — `.lnk` and `.url` are Windows-specific shortcut formats that are treated as opaque binary data in the cross-platform implementation (Base64-encoded when encountered as sidecar content). | DEV-05, DEV-06 |
+| `MetaFileRead` (as a standalone function) | Reads and parses sidecar metadata files. Defines 16 internal sub-functions for type detection, parent resolution, data reading (JSON, text, binary, link), and hashing. Depends on `certutil`, `jq`, `Lnk2Path`, `UrlFile2Url`, and `ValidateIsJson`. | `core/sidecar.py` reimplements the behavioral contract using stdlib: `json.loads()` replaces `jq`, `base64.b64encode()` replaces `certutil`, `hashlib` replaces the internal hash functions. `UrlFile2Url` is superseded — `.url` files are now stored as full text content (text cascade) rather than extracting a single URL. `Lnk2Path` is superseded — `.lnk` files are Base64-encoded for byte-perfect storage, with optional structured metadata extraction via the `LnkParse3` library (`core/lnk_parser.py`). JSON sidecar formatting style is detected and preserved in `attributes.json_style` for rollback fidelity. | DEV-05, DEV-06 |
 | `TempOpen` | Creates a temporary file with a UUID-based name in a hardcoded pslib temp directory (`C:\bin\pslib\temp`). | Eliminated. The only consumer was the exiftool argument-file pipeline, which is itself eliminated (DEV-05). If temporary files are needed in the future, `tempfile.NamedTemporaryFile` is the stdlib replacement. | DEV-05 |
 | `TempClose` | Deletes a temporary file created by `TempOpen`. Includes a `ForceAll` mode for batch cleanup of the pslib temp directory. | Eliminated along with `TempOpen`. Python's `tempfile` context managers handle cleanup automatically via `__exit__`. | DEV-05 |
 | `Vbs` | Centralized structured logging function: severity normalization, colorized `Write-Host` output, manual call-stack compression, session ID embedding, monthly log file rotation, log directory bootstrapping. Called by every function in the dependency tree. | Python's `logging` standard library module. Named loggers, hierarchical filtering, pluggable formatters and handlers, and automatic caller identification replace 100% of the `Vbs` implementation. See [§11](#11-logging-and-diagnostics). | DEV-08 |

@@ -234,3 +234,182 @@ class TestDeleteQueue:
             delete_queue=queue,
         )
         assert queue == []
+
+
+# ---------------------------------------------------------------------------
+# 3.4.A — .url text cascade (full INI content preserved)
+# ---------------------------------------------------------------------------
+
+
+class TestUrlTextCascade:
+    """Tests for .url sidecar processing through the text cascade."""
+
+    def test_url_sidecar_stores_full_content(self, tmp_path: Path) -> None:
+        """.url sidecar stores full INI content, not just the extracted URL."""
+        url_content = "[InternetShortcut]\nURL=https://example.com\n"
+        primary, siblings = _make_sidecar_dir(
+            tmp_path,
+            sidecars={"video.url": url_content},
+        )
+        config = _cfg(meta_merge=True)
+        entries = discover_and_parse(
+            primary, primary.name, siblings, config,
+        )
+        link_entries = [e for e in entries if e.attributes.type == "link"]
+        assert len(link_entries) >= 1
+        entry = link_entries[0]
+        assert entry.attributes.format == "text"
+        # Full INI content is preserved, not just the URL
+        assert "[InternetShortcut]" in entry.data
+        assert "URL=https://example.com" in entry.data
+
+    def test_url_sidecar_type_remains_link(self, tmp_path: Path) -> None:
+        """.url sidecar type is 'link' (not changed to 'shortcut')."""
+        url_content = "[InternetShortcut]\nURL=https://example.com\n"
+        primary, siblings = _make_sidecar_dir(
+            tmp_path,
+            sidecars={"video.url": url_content},
+        )
+        config = _cfg(meta_merge=True)
+        entries = discover_and_parse(
+            primary, primary.name, siblings, config,
+        )
+        link_entries = [e for e in entries if e.attributes.type == "link"]
+        assert len(link_entries) >= 1
+        assert link_entries[0].attributes.type == "link"
+
+
+# ---------------------------------------------------------------------------
+# 3.4.B — .lnk dual-storage handler
+# ---------------------------------------------------------------------------
+
+
+class TestLnkDualStorage:
+    """Tests for .lnk sidecar dual-storage (base64 data + link_metadata)."""
+
+    def test_lnk_sidecar_base64_encoded(self, tmp_path: Path) -> None:
+        """.lnk sidecar data is base64-encoded for byte-perfect rollback."""
+        import base64
+
+        # Minimal fake .lnk binary (not a valid .lnk but tests the pipeline)
+        lnk_bytes = b"\x4c\x00\x00\x00" + b"\x00" * 72 + b"fake_lnk_data"
+        primary, siblings = _make_sidecar_dir(
+            tmp_path,
+            sidecars={"video.lnk": lnk_bytes},
+        )
+        config = _cfg(meta_merge=True)
+        entries = discover_and_parse(
+            primary, primary.name, siblings, config,
+        )
+        # .lnk should be detected as link or shortcut type
+        lnk_entries = [
+            e for e in entries
+            if e.attributes.type in ("link", "shortcut")
+        ]
+        assert len(lnk_entries) >= 1
+        entry = lnk_entries[0]
+        assert entry.attributes.format == "base64"
+        assert "base64_encode" in entry.attributes.transforms
+        # Verify round-trip: decode base64 should give back original bytes
+        decoded = base64.b64decode(entry.data)
+        assert decoded == lnk_bytes
+
+    def test_lnk_sidecar_type_is_shortcut(self, tmp_path: Path) -> None:
+        """.lnk sidecar has type 'shortcut' (distinct from .url 'link')."""
+        lnk_bytes = b"\x4c\x00\x00\x00" + b"\x00" * 72 + b"fake_lnk"
+        primary, siblings = _make_sidecar_dir(
+            tmp_path,
+            sidecars={"video.lnk": lnk_bytes},
+        )
+        config = _cfg(meta_merge=True)
+        entries = discover_and_parse(
+            primary, primary.name, siblings, config,
+        )
+        lnk_entries = [
+            e for e in entries
+            if e.name.text == "video.lnk"
+        ]
+        assert len(lnk_entries) >= 1
+        assert lnk_entries[0].attributes.type == "shortcut"
+
+    def test_lnk_fallback_without_parser(self, tmp_path: Path) -> None:
+        """.lnk sidecar falls back to base64 without link_metadata when parser unavailable."""
+        import base64
+
+        lnk_bytes = b"\x4c\x00\x00\x00" + b"\x00" * 72 + b"data"
+        primary, siblings = _make_sidecar_dir(
+            tmp_path,
+            sidecars={"video.lnk": lnk_bytes},
+        )
+        config = _cfg(meta_merge=True)
+        entries = discover_and_parse(
+            primary, primary.name, siblings, config,
+        )
+        lnk_entries = [e for e in entries if e.name.text == "video.lnk"]
+        assert len(lnk_entries) >= 1
+        entry = lnk_entries[0]
+        # Base64 data must always be present regardless of parser availability
+        assert entry.attributes.format == "base64"
+        decoded = base64.b64decode(entry.data)
+        assert decoded == lnk_bytes
+        # link_metadata may or may not be present depending on LnkParse3
+        # availability — both states are acceptable
+
+
+# ---------------------------------------------------------------------------
+# 3.4.C — JSON style detection
+# ---------------------------------------------------------------------------
+
+
+class TestJsonStyleDetection:
+    """Tests for JSON formatting style detection and preservation."""
+
+    def test_compact_json_detected(self, tmp_path: Path) -> None:
+        """Compact JSON sidecar stores json_style='compact'."""
+        compact_json = '{"title":"Test","duration":100}'
+        primary, siblings = _make_sidecar_dir(
+            tmp_path,
+            sidecars={"video.info.json": compact_json},
+        )
+        config = _cfg(meta_merge=True)
+        entries = discover_and_parse(
+            primary, primary.name, siblings, config,
+        )
+        json_entries = [
+            e for e in entries if e.attributes.format == "json"
+        ]
+        assert len(json_entries) >= 1
+        assert json_entries[0].attributes.json_style == "compact"
+
+    def test_pretty_json_detected(self, tmp_path: Path) -> None:
+        """Pretty-printed JSON sidecar stores json_style='pretty'."""
+        pretty_json = json.dumps({"title": "Test", "duration": 100}, indent=2)
+        primary, siblings = _make_sidecar_dir(
+            tmp_path,
+            sidecars={"video.info.json": pretty_json},
+        )
+        config = _cfg(meta_merge=True)
+        entries = discover_and_parse(
+            primary, primary.name, siblings, config,
+        )
+        json_entries = [
+            e for e in entries if e.attributes.format == "json"
+        ]
+        assert len(json_entries) >= 1
+        assert json_entries[0].attributes.json_style == "pretty"
+
+    def test_non_json_sidecar_has_no_json_style(self, tmp_path: Path) -> None:
+        """Non-JSON sidecar has json_style=None."""
+        primary, siblings = _make_sidecar_dir(
+            tmp_path,
+            sidecars={"video.description": "Just a text description."},
+        )
+        config = _cfg(meta_merge=True)
+        entries = discover_and_parse(
+            primary, primary.name, siblings, config,
+        )
+        text_entries = [
+            e for e in entries if e.attributes.format == "text"
+        ]
+        assert len(text_entries) >= 1
+        assert text_entries[0].attributes.json_style is None

@@ -233,10 +233,20 @@ When MetaMergeDelete absorbs sidecar files (e.g., `.info.json`, `.description`),
 
 | `attributes.format` | Restoration |
 |---|---|
-| `"json"` | Pretty-printed JSON (UTF-8) |
+| `"json"` | JSON (style-aware — see below) |
 | `"text"` | UTF-8 text |
 | `"base64"` | Base64-decoded binary |
 | `"lines"` | Lines joined with newlines (UTF-8) |
+
+### JSON Style Preservation
+
+JSON sidecar files are restored using the formatting style recorded during indexing. The `attributes.json_style` field controls the output:
+
+- **`"pretty"`** — Indented JSON (`indent=2`), matching the original's whitespace convention.
+- **`"compact"`** — Minified JSON (no whitespace), preserving the original's compact representation.
+- **Absent** — Defaults to compact serialization for backward compatibility with entries created before `json_style` tracking was added.
+
+This prevents compact JSON sidecars (e.g., minified `.info.json` files) from inflating in size during rollback.
 
 Sidecar reconstruction is on by default. Use `--no-restore-sidecars` to skip it.
 

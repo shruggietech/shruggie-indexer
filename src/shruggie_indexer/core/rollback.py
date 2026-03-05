@@ -363,6 +363,8 @@ def _metadata_attrs_from_dict(d: dict[str, Any]) -> MetadataAttributes:
         format=d["format"],
         transforms=d.get("transforms", []),
         source_media_type=d.get("source_media_type"),
+        json_style=d.get("json_style"),
+        link_metadata=d.get("link_metadata"),
     )
 
 
@@ -1202,12 +1204,24 @@ def _plan_sidecar_restore(
 
 
 def _decode_sidecar_data(meta: MetadataEntry) -> tuple[bytes | str, bool]:
-    """Decode sidecar data based on format.  Returns (data, is_binary)."""
+    """Decode sidecar data based on format.
+
+    For JSON-format sidecars, respects ``attributes.json_style`` to preserve
+    the original formatting intent:
+    - ``'compact'`` (or absent) → compact JSON with no whitespace.
+    - ``'pretty'`` → indented JSON (2-space indent).
+
+    Returns ``(data, is_binary)``.
+    """
     fmt = meta.attributes.format
     data = meta.data
 
     if fmt == "json":
-        return json.dumps(data, indent=2, ensure_ascii=False), False
+        json_style = getattr(meta.attributes, "json_style", None)
+        if json_style == "pretty":
+            return json.dumps(data, indent=2, ensure_ascii=False), False
+        # Compact (default, backward-compatible for entries without json_style)
+        return json.dumps(data, separators=(",", ":"), ensure_ascii=False), False
     if fmt == "text":
         return str(data), False
     if fmt == "base64":

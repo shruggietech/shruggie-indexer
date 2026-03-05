@@ -25,6 +25,7 @@ dependencies = [
 
 [project.optional-dependencies]
 gui = ["customtkinter>=5.2"]
+lnk = ["LnkParse3>=1.4"]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
@@ -32,12 +33,13 @@ dev = [
     "pydantic>=2.0",
     "ruff>=0.3",
     "rich>=13.0",
+    "LnkParse3>=1.4",
 ]
 docs = [
     "mkdocs>=1.6",
     "mkdocs-material>=9.5",
 ]
-all = ["shruggie-indexer[gui]"]
+all = ["shruggie-indexer[gui]", "shruggie-indexer[lnk]"]
 
 # ─── Entry points ──────────────────────────────────────────────────────────
 
