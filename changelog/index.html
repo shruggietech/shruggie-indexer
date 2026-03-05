@@ -1394,7 +1394,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Unreleased">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#012-2026-03-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.2 - 2026-03-05
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.2 - 2026-03-05">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1578,7 +1589,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Unreleased">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#012-2026-03-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.2 - 2026-03-05
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.2 - 2026-03-05">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1743,7 +1765,8 @@
 <p>All notable changes to this project are documented in this file.</p>
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
-<h2 id="unreleased"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.1...HEAD">Unreleased</a></h2>
+<h2 id="unreleased"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.2...HEAD">Unreleased</a></h2>
+<h2 id="012-2026-03-05"><a href="https://github.com/shruggietech/shruggie-indexer/compare/v0.1.1...v0.1.2">0.1.2</a> - 2026-03-05</h2>
 <h3 id="added">Added</h3>
 <ul>
 <li><strong>Rollback: Session-ID validation and content-hash collision detection</strong> — <code>plan_rollback()</code> now performs two pre-planning sanitization passes on loaded entries before planning begins. Content-hash collision detection groups entries by composite <code>(md5, sha256)</code> hash and, when multiple non-duplicate entries share the same hash with different <code>file_system.relative</code> values, applies tiebreaking rules (majority session → session over no session → first encountered) to keep only one entry per content file. Discarded entries are logged at WARNING. Entries from the <code>duplicates[]</code> array are excluded from collision detection (they share the canonical's hash intentionally). Spec: §6.11.</li>

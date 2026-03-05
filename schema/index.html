@@ -2544,6 +2544,18 @@
 <td>No</td>
 <td>MIME type of original source when format differs.</td>
 </tr>
+<tr>
+<td><code>json_style</code></td>
+<td><code>string</code> (enum)</td>
+<td>No</td>
+<td>Detected JSON formatting style of the original sidecar file: <code>"pretty"</code> (indented) or <code>"compact"</code> (minified). Present only when <code>format</code> is <code>"json"</code>. Used by the rollback engine to restore the original whitespace convention.</td>
+</tr>
+<tr>
+<td><code>link_metadata</code></td>
+<td><code>object</code></td>
+<td>No</td>
+<td>Structured metadata extracted from a Windows <code>.lnk</code> shortcut file. Contains string-valued fields such as <code>target_path</code>, <code>working_directory</code>, <code>arguments</code>, <code>icon_location</code>, <code>description</code>, and <code>hotkey</code>. Present only when <code>type</code> is <code>"shortcut"</code> and the <code>LnkParse3</code> library is available.</td>
+</tr>
 </tbody>
 </table>
 <h3 id="metadata-type-values">Metadata type values</h3>
@@ -2593,7 +2605,11 @@
 </tr>
 <tr>
 <td><code>link</code></td>
-<td>URL shortcuts (<code>.url</code>), filesystem shortcuts (<code>.lnk</code>).</td>
+<td>URL shortcuts (<code>.url</code>) and pointer files. Stored as full text content.</td>
+</tr>
+<tr>
+<td><code>shortcut</code></td>
+<td>Windows filesystem shortcuts (<code>.lnk</code>). Stored as Base64-encoded binary with optional structured <code>link_metadata</code>.</td>
 </tr>
 <tr>
 <td><code>screenshot</code></td>

@@ -965,6 +965,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#sidecar-restoration-fidelity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sidecar Restoration Fidelity
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1819,6 +1830,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#sidecar-restoration-fidelity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sidecar Restoration Fidelity
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2135,6 +2157,47 @@ shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yA
 </ul>
 <p>This prevents compact JSON sidecars (e.g., minified <code>.info.json</code> files) from inflating in size during rollback.</p>
 <p>Sidecar reconstruction is on by default. Use <code>--no-restore-sidecars</code> to skip it.</p>
+<h3 id="sidecar-restoration-fidelity">Sidecar Restoration Fidelity</h3>
+<p>Restored sidecar files are <strong>data-equivalent</strong> to the originals but not necessarily <strong>byte-identical</strong>. The fidelity guarantee varies by format:</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Fidelity</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Binary (<code>"base64"</code>)</td>
+<td>Byte-identical</td>
+<td>Base64 round-trip preserves exact bytes. Screenshots, thumbnails, <code>.lnk</code> shortcuts, and torrent files are restored perfectly.</td>
+</tr>
+<tr>
+<td>Text (<code>"text"</code>)</td>
+<td>Data-equivalent</td>
+<td>Minor whitespace differences (trailing newlines, line-ending normalization) may occur. Content is semantically identical.</td>
+</tr>
+<tr>
+<td>JSON (<code>"json"</code>)</td>
+<td>Data-equivalent</td>
+<td>JSON structure is preserved exactly. Whitespace convention (compact vs. indented) is restored via <code>json_style</code>, but minor formatting differences (key order, trailing newlines) may occur.</td>
+</tr>
+<tr>
+<td>Lines (<code>"lines"</code>)</td>
+<td>Data-equivalent</td>
+<td>Lines are rejoined with <code>\n</code>. Original line endings and trailing whitespace may differ.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title"><code>.url</code> sidecar restoration</p>
+<p><code>.url</code> (Windows shortcut) sidecar files are now stored as full text content — including the <code>[InternetShortcut]</code> INI header and <code>URL=</code> key — rather than extracting only the bare URL string. Restored <code>.url</code> files are functional Windows shortcuts that open in the default browser when double-clicked. This is a change from earlier versions, which performed lossy URL extraction that produced non-functional plaintext files on restore.</p>
+</div>
+<div class="admonition info">
+<p class="admonition-title">Existing <code>.url</code> entries</p>
+<p><code>_meta2.json</code> files created before this change contain only the extracted URL string. Rollback of those entries will still produce the bare URL — the stored data cannot be retroactively enriched. Only newly indexed <code>.url</code> sidecars benefit from full-content preservation.</p>
+</div>
 <hr />
 <h2 id="timestamp-restoration">Timestamp Restoration</h2>
 <p>Rollback restores file timestamps from the sidecar's <code>timestamps</code> object:</p>

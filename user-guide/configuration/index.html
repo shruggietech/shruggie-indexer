@@ -2437,8 +2437,13 @@ matching file that is not a current-run output sidecar. See the spec
 </tr>
 <tr>
 <td><code>link</code></td>
-<td>URL shortcuts (<code>.url</code>), filesystem shortcuts (<code>.lnk</code>)</td>
-<td>URL/path extraction</td>
+<td>URL shortcuts (<code>.url</code>) and pointer files</td>
+<td>Text cascade (JSON → text → binary fallback); full file content preserved</td>
+</tr>
+<tr>
+<td><code>shortcut</code></td>
+<td>Windows filesystem shortcuts (<code>.lnk</code>)</td>
+<td>Base64-encoded binary + optional structured <code>link_metadata</code></td>
 </tr>
 <tr>
 <td><code>screenshot</code></td>
