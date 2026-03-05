@@ -1150,10 +1150,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#-help" class="md-nav__link">
+  <a href="#-h-help" class="md-nav__link">
     <span class="md-ellipsis">
       
-        --help
+        -h / --help
       
     </span>
   </a>
@@ -2489,10 +2489,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#-help" class="md-nav__link">
+  <a href="#-h-help" class="md-nav__link">
     <span class="md-ellipsis">
       
-        --help
+        -h / --help
       
     </span>
   </a>
@@ -2739,7 +2739,7 @@
 <h2 id="command-structure">Command Structure</h2>
 <div class="highlight"><pre><span></span><code>shruggie-indexer [OPTIONS] COMMAND [ARGS]...
 </code></pre></div>
-<p>The top-level group accepts <code>--version</code> and <code>--help</code>. All other options belong to individual subcommands.</p>
+<p>The top-level group accepts <code>--version</code>, <code>-h</code>, and <code>--help</code>. All other options belong to individual subcommands.</p>
 <h3 id="default-subcommand">Default Subcommand</h3>
 <p>When the first argument is not a recognized subcommand, the <code>index</code> subcommand is assumed automatically. This means all legacy invocations continue to work:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># These are equivalent:</span>
@@ -3042,9 +3042,11 @@ shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>--
 <p>Print the installed version and exit.</p>
 <div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>--version
 </code></pre></div>
-<h3 id="-help"><code>--help</code></h3>
-<p>Print the help text and exit.</p>
+<h3 id="-h-help"><code>-h</code> / <code>--help</code></h3>
+<p>Print the help text and exit. Both <code>-h</code> and <code>--help</code> are accepted at every level (group and subcommands).</p>
 <div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>--help
+shruggie-indexer<span class="w"> </span>-h
+shruggie-indexer<span class="w"> </span>index<span class="w"> </span>-h
 </code></pre></div>
 <h2 id="mutual-exclusion-rules">Mutual Exclusion Rules</h2>
 <p>The following constraints are enforced at invocation time:</p>
