@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    pass
+    import LnkParse3  # type: ignore[import-untyped]
 
 __all__ = [
     "parse_lnk",
