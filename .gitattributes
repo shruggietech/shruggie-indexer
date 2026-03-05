@@ -1,0 +1,18 @@
+# ─── Line ending normalisation ──────────────────────────────────────────────
+# Default: normalise to LF in the repo, native on checkout for source files.
+* text=auto
+
+# ─── Test fixtures ──────────────────────────────────────────────────────────
+# Fixture files MUST stay byte-for-byte identical across platforms.
+# Git's autocrlf/eol conversion would change content hashes and break tests.
+tests/fixtures/** -text
+
+# ─── Binary assets ──────────────────────────────────────────────────────────
+*.jpg  binary
+*.jpeg binary
+*.png  binary
+*.gif  binary
+*.ico  binary
+*.mp4  binary
+*.exe  binary
+*.lnk  binary
