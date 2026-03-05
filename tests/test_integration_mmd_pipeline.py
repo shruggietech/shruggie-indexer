@@ -85,20 +85,9 @@ def _collect_all_names(entry: IndexEntry) -> set[str]:
     return names
 
 
-def _drain_delete_queue(queue: list[Path]) -> int:
-    """Test copy of the drain function."""
-    import logging
-
-    logger = logging.getLogger(__name__)
-    deleted = 0
-    for path in queue:
-        try:
-            path.unlink()
-            logger.info("Sidecar deleted: %s", path)
-            deleted += 1
-        except OSError as exc:
-            logger.error("Sidecar delete FAILED: %s: %s", path, exc)
-    return deleted
+from shruggie_indexer.cli.main import (
+    _drain_delete_queue,
+)
 
 
 def _write_inplace_tree(entry: Any, root_path: Path) -> None:

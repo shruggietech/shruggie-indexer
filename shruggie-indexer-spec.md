@@ -3598,13 +3598,21 @@ If a rename collision causes the content file rename to be skipped ([collision d
 #### MetaMergeDelete execution loop
 
 > **Updated 2026-02-25:** Documents the post-processing delete loop and pipeline ordering.
+> **Updated 2026-03-04:** Delete loop now deduplicates queued paths. Diagnostic logging of queue size added.
 
 When MetaMergeDelete is active, the post-processing phase (Stage 6, [§4.1](#41-high-level-processing-pipeline)) iterates the `delete_queue` — an append-only `list[Path]` populated during sidecar discovery ([§6.7](#67-sidecar-metadata-file-handling)) — and deletes each queued sidecar file from disk.
+
+The queue may contain duplicate paths when multiple content files in a directory each discover the same sidecar during pattern matching. The drain function deduplicates via a `seen` set so each file is unlinked at most once. Before draining, a `DEBUG`-level message records the total and unique queue counts for diagnostic purposes.
 
 The delete loop executes as follows:
 
 ```python
+logger.debug("Stage 6 delete queue: %d entries (%d unique)", len(queue), len(set(queue)))
+seen: set[Path] = set()
 for sidecar_path in delete_queue:
+    if sidecar_path in seen:
+        continue
+    seen.add(sidecar_path)
     try:
         sidecar_path.unlink()
         logger.info("Sidecar deleted: %s", sidecar_path)
@@ -4914,10 +4922,14 @@ This flag carries a safety requirement: at least one persistent output mechanism
 
 When `config.meta_merge_delete` is `True`, the orchestrator (GUI `app.py` or CLI `commands.py`) creates a `list[Path]` and passes it as the `delete_queue` parameter through the call chain: `index_path()` → `build_directory_entry()` → `sidecar.discover_and_parse()`. During sidecar discovery, each successfully parsed sidecar's absolute path is appended to the queue ([§6.7](#67-sidecar-metadata-file-handling)).
 
-After indexing completes, the orchestrator iterates the queue and performs deletions:
+After indexing completes, the orchestrator deduplicates and drains the queue:
 
 ```python
+seen: set[Path] = set()
 for sidecar_path in delete_queue:
+    if sidecar_path in seen:
+        continue
+    seen.add(sidecar_path)
     try:
         sidecar_path.unlink()
         logger.info("Sidecar deleted: %s", sidecar_path)
@@ -10128,20 +10140,26 @@ Step 3 only executes if steps 1 and 2 complete without fatal error. If an unreco
 <a id="safeguard-3-per-file-deletion-error-isolation"></a>
 #### Safeguard 3: Per-file deletion error isolation
 
-When draining the delete queue, each `Path.unlink()` call is wrapped in a `try`/`except`. If a single sidecar file cannot be deleted (permission denied, file already removed, filesystem error), the failure is logged as a warning and the queue continues with the next entry. A deletion failure for one sidecar does not prevent deletion of the remaining sidecars, and does not change the exit code from `SUCCESS` to a failure code — the indexing itself completed successfully; the deletion failure is a post-processing anomaly.
+When draining the delete queue, duplicate paths are first deduplicated via a `seen` set (the same sidecar can appear multiple times when multiple content files in a directory each discover it). Each `Path.unlink()` call is wrapped in a `try`/`except`. If a single sidecar file cannot be deleted (permission denied, file already removed, filesystem error), the failure is logged at `ERROR` and the queue continues with the next entry. A deletion failure for one sidecar does not prevent deletion of the remaining sidecars, and does not change the exit code from `SUCCESS` to a failure code — the indexing itself completed successfully; the deletion failure is a post-processing anomaly.
+
+> **Updated 2026-03-04:** Drain loop now deduplicates paths and uses `INFO`/`ERROR` log levels per §6.10.
 
 ```python
-# Illustrative — not the exact implementation.
+# Illustrative — see §6.10 for the authoritative loop.
 def drain_delete_queue(queue: list[Path]) -> int:
-    failed = 0
+    deleted = 0
+    seen: set[Path] = set()
     for sidecar_path in queue:
+        if sidecar_path in seen:
+            continue
+        seen.add(sidecar_path)
         try:
             sidecar_path.unlink()
-            logger.debug("Deleted sidecar: %s", sidecar_path)
+            logger.info("Sidecar deleted: %s", sidecar_path)
+            deleted += 1
         except OSError as exc:
-            logger.warning("Failed to delete sidecar %s: %s", sidecar_path, exc)
-            failed += 1
-    return failed
+            logger.error("Sidecar delete FAILED: %s: %s", sidecar_path, exc)
+    return deleted
 ```
 
 If any deletions fail, the count is included in the final status log line so the user is aware that cleanup was incomplete.

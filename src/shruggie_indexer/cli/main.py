@@ -218,9 +218,18 @@ def _drain_delete_queue(queue: list[Path]) -> int:
 
     Returns the count of files successfully deleted.  Failed deletions
     do not abort the loop — remaining files are still attempted.
+
+    Duplicate paths are deduplicated via a ``seen`` set so each sidecar
+    is unlinked at most once (the same sidecar can appear in the queue
+    multiple times when multiple content files in a directory each
+    discover it during sidecar matching).
     """
     deleted = 0
+    seen: set[Path] = set()
     for path in queue:
+        if path in seen:
+            continue
+        seen.add(path)
         try:
             path.unlink()
             logger.info("Sidecar deleted: %s", path)
@@ -670,9 +679,14 @@ def index_cmd(
         write_output(entry, config_for_write)
 
         # ── MetaMergeDelete: drain deletion queue (Stage 6) ─────────────
+        logger.debug(
+            "Stage 6 delete queue: %d entries (%d unique)",
+            len(delete_queue) if delete_queue is not None else 0,
+            len(set(delete_queue)) if delete_queue else 0,
+        )
         if delete_queue:
             deleted = _drain_delete_queue(delete_queue)
-            logger.info("Deleted %d merged sidecar files", deleted)
+            logger.info("Deleted %d merged sidecar file(s)", deleted)
 
         # ── Stage 7: Remove stale metadata artifacts from prior runs ───
         if config.meta_merge_delete:

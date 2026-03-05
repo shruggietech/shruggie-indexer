@@ -145,27 +145,20 @@ class TestDeleteQueuePopulation:
 
 # ── Test 2: Delete phase execution ──────────────────────────────────────
 
+from shruggie_indexer.cli.main import (
+    _drain_delete_queue,
+)
+
 
 @pytest.mark.mmd
 @pytest.mark.destructive
 class TestDeletePhaseExecution:
-    """Validate the drain function deletes files correctly."""
+    """Validate the drain function deletes files correctly.
 
-    @staticmethod
-    def _drain_delete_queue(queue: list[Path]) -> int:
-        """Local copy of the drain function for testing."""
-        import logging
-
-        logger = logging.getLogger(__name__)
-        deleted = 0
-        for path in queue:
-            try:
-                path.unlink()
-                logger.info("Sidecar deleted: %s", path)
-                deleted += 1
-            except OSError as exc:
-                logger.error("Sidecar delete FAILED: %s: %s", path, exc)
-        return deleted
+    Tests use the **real** ``_drain_delete_queue`` implementation from
+    ``shruggie_indexer.cli.main`` — not a local copy — to ensure
+    production behaviour is covered.
+    """
 
     def test_delete_phase_removes_files(
         self, tmp_sidecar_testbed: Path, mmd_config,
@@ -187,14 +180,17 @@ class TestDeletePhaseExecution:
             delete_queue=delete_queue,
         )
 
+        # Collect unique paths for verification.
+        unique_paths = list(dict.fromkeys(delete_queue))
+
         # All queued paths should exist before drain.
-        for path in delete_queue:
+        for path in unique_paths:
             assert path.exists(), f"Sidecar should exist before drain: {path}"
 
-        deleted = self._drain_delete_queue(delete_queue)
+        deleted = _drain_delete_queue(delete_queue)
 
-        assert deleted == len(delete_queue)
-        for path in delete_queue:
+        assert deleted == len(unique_paths)
+        for path in unique_paths:
             assert not path.exists(), f"Sidecar should be deleted: {path}"
 
     def test_delete_phase_does_not_remove_content_files(
@@ -217,7 +213,7 @@ class TestDeletePhaseExecution:
             delete_queue=delete_queue,
         )
 
-        self._drain_delete_queue(delete_queue)
+        _drain_delete_queue(delete_queue)
 
         # Content files must still exist.
         assert (tmp_sidecar_testbed / "video.mp4").exists()
@@ -245,8 +241,8 @@ class TestDeletePhaseExecution:
             delete_queue=delete_queue,
         )
 
-        with caplog.at_level(logging.INFO):
-            deleted = self._drain_delete_queue(delete_queue)
+        with caplog.at_level(logging.INFO, logger="shruggie_indexer"):
+            deleted = _drain_delete_queue(delete_queue)
 
         assert deleted > 0
         sidecar_deleted_messages = [
@@ -254,6 +250,9 @@ class TestDeletePhaseExecution:
             if "Sidecar deleted:" in r.message
         ]
         assert len(sidecar_deleted_messages) == deleted
+        # Every message MUST be at INFO level.
+        for record in sidecar_deleted_messages:
+            assert record.levelno == logging.INFO
 
     def test_delete_phase_continues_on_failure(
         self, tmp_sidecar_testbed: Path, mmd_config,
@@ -276,17 +275,76 @@ class TestDeletePhaseExecution:
             delete_queue=delete_queue,
         )
 
-        if len(delete_queue) < 2:
+        unique_paths = list(dict.fromkeys(delete_queue))
+        if len(unique_paths) < 2:
             pytest.skip("Need at least 2 queued sidecars to test failure recovery")
 
-        # Remove the first file manually to trigger a failure.
-        delete_queue[0].unlink()
-        original_count = len(delete_queue)
+        # Remove the first unique file manually to trigger a failure.
+        unique_paths[0].unlink()
+        expected_successes = len(unique_paths) - 1
 
-        deleted = self._drain_delete_queue(delete_queue)
+        deleted = _drain_delete_queue(delete_queue)
 
         # One failed (already removed), rest should succeed.
-        assert deleted == original_count - 1
+        assert deleted == expected_successes
+
+    def test_delete_phase_deduplicates_queue(
+        self, tmp_sidecar_testbed: Path, mmd_config, caplog,
+    ) -> None:
+        """When the queue contains duplicate paths, each file is deleted
+        only once — no spurious ERROR messages for already-deleted files."""
+        item_path = tmp_sidecar_testbed / "video.mp4"
+        siblings = sorted(
+            (p for p in tmp_sidecar_testbed.iterdir() if p.is_file()),
+            key=lambda p: p.name.lower(),
+        )
+        delete_queue: list[Path] = []
+
+        discover_and_parse(
+            item_path=item_path,
+            item_name="video.mp4",
+            siblings=siblings,
+            config=mmd_config,
+            index_root=tmp_sidecar_testbed.parent,
+            delete_queue=delete_queue,
+        )
+
+        # Artificially double each entry to ensure dedup is tested.
+        delete_queue_doubled = delete_queue + list(delete_queue)
+
+        with caplog.at_level(logging.INFO, logger="shruggie_indexer"):
+            deleted = _drain_delete_queue(delete_queue_doubled)
+
+        unique_count = len(set(delete_queue))
+        assert deleted == unique_count
+
+        # No ERROR messages — dedup prevents double-delete failures.
+        error_messages = [
+            r for r in caplog.records
+            if r.levelno >= logging.ERROR and "Sidecar delete FAILED" in r.message
+        ]
+        assert len(error_messages) == 0, (
+            f"Dedup should prevent double-delete errors: {error_messages}"
+        )
+
+    def test_delete_phase_logs_failures_at_error(
+        self, tmp_sidecar_testbed: Path, mmd_config, caplog,
+    ) -> None:
+        """Failed deletions produce ERROR-level log messages."""
+        # Create a queue with a path that doesn't exist on disk.
+        nonexistent = tmp_sidecar_testbed / "ghost_sidecar.json"
+        delete_queue: list[Path] = [nonexistent]
+
+        with caplog.at_level(logging.ERROR, logger="shruggie_indexer"):
+            deleted = _drain_delete_queue(delete_queue)
+
+        assert deleted == 0
+        error_messages = [
+            r for r in caplog.records
+            if "Sidecar delete FAILED:" in r.message
+        ]
+        assert len(error_messages) == 1
+        assert error_messages[0].levelno == logging.ERROR
 
 
 # ── Test 3: Stage 7 — stale metadata cleanup ───────────────────────────
