@@ -312,7 +312,7 @@ The following documents inform this specification. All repository paths are rela
 
 | Document | Path | Description |
 |----------|------|-------------|
-| Implementation Plan | [`.archive/20260219-002-shruggie-indexer-plan.md`](.archive/20260219-002-shruggie-indexer-plan.md) | Sprint-based implementation plan that guided initial construction through Sprints 1.1–3.3 and the v0.1.0 release. All sprints complete. Archived — retained for historical reference only. |
+| Implementation Plan | [`.archive/20260219-002-shruggie-indexer-plan.md`](https://github.com/shruggietech/shruggie-indexer/blob/main/.archive/20260219-002-shruggie-indexer-plan.md) | Sprint-based implementation plan that guided initial construction through Sprints 1.1–3.3 and the v0.1.0 release. All sprints complete. Archived — retained for historical reference only. |
 
 <a id="output-schema"></a>
 #### Output Schema
@@ -320,22 +320,22 @@ The following documents inform this specification. All repository paths are rela
 | Document | Location | Description |
 |----------|----------|-------------|
 | v2 Schema (canonical) | [schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json) | The canonical JSON Schema definition for the v2 index entry output format. This is the target schema for all implementation work. Defines all fields, types, nullability, required properties, definitions (`NameObject`, `HashSet`, `SizeObject`, `TimestampPair`, `TimestampsObject`, `ParentObject`, `MetadataEntry`), and structural constraints. [§5](#5-output-schema) of this specification interprets and extends the schema with behavioral guidance but does not supersede it for field-level definitions. |
-| v2 Schema (local copy) | [`./docs/schema/shruggie-indexer-v2.schema.json`](./docs/schema/shruggie-indexer-v2.schema.json) | Local copy of the canonical v2 schema, committed to the repository. Used by the documentation site ([§3.7](#37-documentation-site)) and as a local validation reference. This file MUST be kept in sync with the canonical hosted version. |
-| v1 Schema (porting reference) | [`./docs/porting-reference/MakeIndex_OutputSchema.json`](./docs/porting-reference/MakeIndex_OutputSchema.json) | The JSON Schema definition for the original MakeIndex v1 output format. Retained as a porting reference for understanding the original implementation's output structure and for informing the eventual v1-to-v2 migration utility. shruggie-indexer does NOT target this schema. |
+| v2 Schema (local copy) | [`./docs/schema/shruggie-indexer-v2.schema.json`](https://github.com/shruggietech/shruggie-indexer/blob/main/docs/schema/shruggie-indexer-v2.schema.json) | Local copy of the canonical v2 schema, committed to the repository. Used by the documentation site ([§3.7](#37-documentation-site)) and as a local validation reference. This file MUST be kept in sync with the canonical hosted version. |
+| v1 Schema (porting reference) | [`./docs/porting-reference/MakeIndex_OutputSchema.json`](https://github.com/shruggietech/shruggie-indexer/blob/main/docs/porting-reference/MakeIndex_OutputSchema.json) | The JSON Schema definition for the original MakeIndex v1 output format. Retained as a porting reference for understanding the original implementation's output structure and for informing the eventual v1-to-v2 migration utility. shruggie-indexer does NOT target this schema. |
 
 <a id="operations-reference"></a>
 #### Operations Reference
 
 | Document | Path | Description |
 |----------|------|-------------|
-| Operations Catalog | [`./docs/porting-reference/MakeIndex_OperationsCatalog.md`](./docs/porting-reference/MakeIndex_OperationsCatalog.md) | Categorized inventory of all logical operations in the original `MakeIndex` and its dependency tree, mapped to recommended Python modules with improvement notes. The primary architectural reference for the original-to-Python mapping. |
+| Operations Catalog | [`./docs/porting-reference/MakeIndex_OperationsCatalog.md`](https://github.com/shruggietech/shruggie-indexer/blob/main/docs/porting-reference/MakeIndex_OperationsCatalog.md) | Categorized inventory of all logical operations in the original `MakeIndex` and its dependency tree, mapped to recommended Python modules with improvement notes. The primary architectural reference for the original-to-Python mapping. |
 
 <a id="configuration-reference"></a>
 #### Configuration Reference
 
 | Document | Path | Description |
 |----------|------|-------------|
-| MetadataFileParser Object | [`./docs/porting-reference/MakeIndex(MetadataFileParser).ps1`](./docs/porting-reference/MakeIndex%28MetadataFileParser%29.ps1) | Isolated PowerShell script containing the complete `$global:MetadataFileParser` object definition. This is the source of truth for sidecar metadata file discovery and classification — including all regex identification patterns, per-type behavioral attributes, exiftool exclusion lists, extension group classifications, and indexer include/exclude patterns. The regex patterns in this object (particularly the BCP 47 language code alternation for subtitle detection) have been carefully crafted and MUST be ported to Python with deliberate attention to preserving their exact matching semantics. See [§7.3](#73-metadata-file-parser-configuration) for the full porting guidance. |
+| MetadataFileParser Object | [`./docs/porting-reference/MakeIndex(MetadataFileParser).ps1`](https://github.com/shruggietech/shruggie-indexer/blob/main/docs/porting-reference/MakeIndex%28MetadataFileParser%29.ps1) | Isolated PowerShell script containing the complete `$global:MetadataFileParser` object definition. This is the source of truth for sidecar metadata file discovery and classification — including all regex identification patterns, per-type behavioral attributes, exiftool exclusion lists, extension group classifications, and indexer include/exclude patterns. The regex patterns in this object (particularly the BCP 47 language code alternation for subtitle detection) have been carefully crafted and MUST be ported to Python with deliberate attention to preserving their exact matching semantics. See [§7.3](#73-metadata-file-parser-configuration) for the full porting guidance. |
 
 <a id="dependency-catalogs"></a>
 #### Dependency Catalogs
@@ -344,15 +344,15 @@ Each dependency catalog documents a single function from the original pslib libr
 
 | Document | Path | Original Function |
 |----------|------|-------------------|
-| Base64DecodeString | [`./docs/porting-reference/Base64DecodeString_DependencyCatalog.md`](./docs/porting-reference/Base64DecodeString_DependencyCatalog.md) | Decodes Base64-encoded and URL-encoded strings. Eliminated — exiftool arguments are passed directly. |
-| Date2UnixTime | [`./docs/porting-reference/Date2UnixTime_DependencyCatalog.md`](./docs/porting-reference/Date2UnixTime_DependencyCatalog.md) | Converts formatted date strings to Unix timestamps in milliseconds. Eliminated — timestamps are derived directly from stat results. |
-| DirectoryId | [`./docs/porting-reference/DirectoryId_DependencyCatalog.md`](./docs/porting-reference/DirectoryId_DependencyCatalog.md) | Computes hash-based identity for directories using the two-layer `hash(hash(name) + hash(parentName))` scheme. |
-| FileId | [`./docs/porting-reference/FileId_DependencyCatalog.md`](./docs/porting-reference/FileId_DependencyCatalog.md) | Computes hash-based identity for files from content hashes (or name hashes for symlinks). |
-| MakeIndex | [`./docs/porting-reference/MakeIndex_DependencyCatalog.md`](./docs/porting-reference/MakeIndex_DependencyCatalog.md) | The top-level function being ported. Orchestrates traversal, identity generation, metadata extraction, and output routing. |
-| MetaFileRead | [`./docs/porting-reference/MetaFileRead_DependencyCatalog.md`](./docs/porting-reference/MetaFileRead_DependencyCatalog.md) | Reads and parses sidecar metadata files with format-specific handling (JSON, text, binary, subtitles, hash files, URL/LNK shortcuts). |
-| TempOpen | [`./docs/porting-reference/TempOpen_DependencyCatalog.md`](./docs/porting-reference/TempOpen_DependencyCatalog.md) | Creates temporary files with UUID-based naming. Eliminated — replaced by `tempfile` if needed at all. |
-| TempClose | [`./docs/porting-reference/TempClose_DependencyCatalog.md`](./docs/porting-reference/TempClose_DependencyCatalog.md) | Deletes temporary files by path. Eliminated — replaced by context manager cleanup. |
-| Vbs | [`./docs/porting-reference/Vbs_DependencyCatalog.md`](./docs/porting-reference/Vbs_DependencyCatalog.md) | Structured logging with severity levels, caller identification, session IDs, and colorized console output. Replaced by Python's `logging` framework. |
+| Base64DecodeString | [`./docs/porting-reference/Base64DecodeString_DependencyCatalog.md`](https://github.com/shruggietech/shruggie-indexer/blob/main/docs/porting-reference/Base64DecodeString_DependencyCatalog.md) | Decodes Base64-encoded and URL-encoded strings. Eliminated — exiftool arguments are passed directly. |
+| Date2UnixTime | [`./docs/porting-reference/Date2UnixTime_DependencyCatalog.md`](https://github.com/shruggietech/shruggie-indexer/blob/main/docs/porting-reference/Date2UnixTime_DependencyCatalog.md) | Converts formatted date strings to Unix timestamps in milliseconds. Eliminated — timestamps are derived directly from stat results. |
+| DirectoryId | [`./docs/porting-reference/DirectoryId_DependencyCatalog.md`](https://github.com/shruggietech/shruggie-indexer/blob/main/docs/porting-reference/DirectoryId_DependencyCatalog.md) | Computes hash-based identity for directories using the two-layer `hash(hash(name) + hash(parentName))` scheme. |
+| FileId | [`./docs/porting-reference/FileId_DependencyCatalog.md`](https://github.com/shruggietech/shruggie-indexer/blob/main/docs/porting-reference/FileId_DependencyCatalog.md) | Computes hash-based identity for files from content hashes (or name hashes for symlinks). |
+| MakeIndex | [`./docs/porting-reference/MakeIndex_DependencyCatalog.md`](https://github.com/shruggietech/shruggie-indexer/blob/main/docs/porting-reference/MakeIndex_DependencyCatalog.md) | The top-level function being ported. Orchestrates traversal, identity generation, metadata extraction, and output routing. |
+| MetaFileRead | [`./docs/porting-reference/MetaFileRead_DependencyCatalog.md`](https://github.com/shruggietech/shruggie-indexer/blob/main/docs/porting-reference/MetaFileRead_DependencyCatalog.md) | Reads and parses sidecar metadata files with format-specific handling (JSON, text, binary, subtitles, hash files, URL/LNK shortcuts). |
+| TempOpen | [`./docs/porting-reference/TempOpen_DependencyCatalog.md`](https://github.com/shruggietech/shruggie-indexer/blob/main/docs/porting-reference/TempOpen_DependencyCatalog.md) | Creates temporary files with UUID-based naming. Eliminated — replaced by `tempfile` if needed at all. |
+| TempClose | [`./docs/porting-reference/TempClose_DependencyCatalog.md`](https://github.com/shruggietech/shruggie-indexer/blob/main/docs/porting-reference/TempClose_DependencyCatalog.md) | Deletes temporary files by path. Eliminated — replaced by context manager cleanup. |
+| Vbs | [`./docs/porting-reference/Vbs_DependencyCatalog.md`](https://github.com/shruggietech/shruggie-indexer/blob/main/docs/porting-reference/Vbs_DependencyCatalog.md) | Structured logging with severity levels, caller identification, session IDs, and colorized console output. Replaced by Python's `logging` framework. |
 
 <a id="external-references"></a>
 #### External References
