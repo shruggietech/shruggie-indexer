@@ -766,7 +766,7 @@ The `core/` subpackage contains all indexing logic. Every module in `core/` corr
 | `entry.py` | Cat 8 (Output Object Construction & Schema) | Orchestrates the construction of a single `IndexEntry` from a filesystem path. Calls into `paths`, `hashing`, `timestamps`, `exif`, and `sidecar` to gather all components, then assembles the final v2 schema object. |
 | `serializer.py` | Cat 9 (JSON Serialization & Output Routing) | Converts `IndexEntry` model instances to JSON. Routes output to stdout, a single aggregate file, or per-item in-place sidecar files (`_meta2.json` / `_directorymeta2.json`), depending on the active output mode. Handles pretty-printing vs. compact output. Uses `orjson` as the primary serializer with a `json.dumps()` stdlib fallback for resilience. |
 | `rename.py` | Cat 10 (File Rename & In-Place Write) | Implements the `StorageName` rename operation: renames files and directories from their original names to their hash-based `storage_name` values. Handles collision detection, dry-run mode, and rollback on partial failure. |
-| `dedup.py` | Cat 11 (De-Duplication) | Provenance-preserving de-duplication. Provides `DedupRegistry` (canonical-copy tracking by `storage_name`), `DedupResult`, `DedupStats`, `DedupAction` data classes, `scan_tree()` (recursive duplicate discovery), `apply_dedup()` (merge duplicates into canonical entries), and `cleanup_duplicate_files()` (disk deletion of absorbed duplicates and orphaned sidecars). Designed for standalone importability by downstream projects (specifically `shruggie-catalog`). |
+| `dedup.py` | Cat 11 (De-Duplication) | Provenance-preserving de-duplication. Provides `DedupRegistry` (canonical-copy tracking by `storage_name`), `DedupResult`, `DedupStats`, `DedupAction` data classes, `scan_tree()` (recursive duplicate discovery), `apply_dedup()` (merge duplicates into canonical entries), and `cleanup_duplicate_files()` (disk deletion of absorbed duplicates and orphaned sidecars). Designed for standalone importability by downstream consumers (specifically `metadexer`'s catalog module). |
 | `rollback.py` | Cat 12 (Rollback) | Core rollback engine that reverses rename and de-duplication operations by reading `_meta2.json` sidecar files. Provides `load_meta2()` (JSON→`IndexEntry` deserialization with 3 input shapes: per-file sidecar, aggregate directory, directory of sidecars), `discover_meta2_files()` (recursive/non-recursive sidecar discovery), `plan_rollback()` (10-step planner with flat/structured modes, conflict detection, path safety, and duplicate/sidecar restoration planning), `execute_rollback()` (4-phase executor: mkdir→restore→duplicate→sidecar with dry-run, cancellation, and progress reporting), and `verify_file_hash()` (content verification). Uses the `SourceResolver` protocol for locating source files with `LocalSourceResolver` as the default implementation. Follows the same plan-then-execute architecture as `dedup.py`. Designed for standalone importability by downstream projects. |
 
 The `core/__init__.py` file SHOULD re-export the primary orchestration functions (e.g., `index_path`, `index_file`, `index_directory`) so that internal callers can write `from shruggie_indexer.core import index_path` without reaching into individual modules. The individual modules remain importable for callers who need fine-grained access (e.g., `from shruggie_indexer.core.hashing import hash_file`).
@@ -839,7 +839,7 @@ All tool-generated data — session files, configuration, and log files — is s
 | User config file | `config.toml` | User (manual placement) |
 | Persistent log files | `logs/YYYY-MM-DD_HHMMSS.log` | `log_file.make_file_handler()` |
 
-The two-level directory structure (`shruggie-tech/shruggie-indexer/`) places the tool's data under a shared ecosystem namespace. Other tools in the `shruggie-tech` family (e.g., `shruggie-feedtools`, `shruggie-catalog`) use sibling directories under the same `shruggie-tech/` parent, providing consistent discoverability and a single parent directory for users managing multiple `shruggie-tech` tools.
+The two-level directory structure (`shruggie-tech/shruggie-indexer/`) places the tool's data under a shared ecosystem namespace. Other tools in the `shruggie-tech` family (e.g., `shruggie-feedtools`, `metadexer`) use sibling directories under the same `shruggie-tech/` parent, providing consistent discoverability and a single parent directory for users managing multiple `shruggie-tech` tools.
 
 All future application data MUST be written under this directory. The `app_paths.py` module also provides `get_log_dir()`, which returns `<app_data_dir>/logs/`.
 
@@ -1773,7 +1773,7 @@ The fundamental filesystem type of the indexed item. This is the primary structu
 | Required | No |
 | v1 equivalent | None |
 
-Identifies the indexing invocation (session) that produced this entry. The value is a UUID4 string in standard hyphenated lowercase format (e.g., `"a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"`). All entries produced by a single CLI or GUI invocation share the same `session_id`. This enables downstream consumers — particularly `shruggie-catalog` — to correlate entries by run, detect staleness, verify batch integrity, and link entries to their originating log output.
+Identifies the indexing invocation (session) that produced this entry. The value is a UUID4 string in standard hyphenated lowercase format (e.g., `"a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"`). All entries produced by a single CLI or GUI invocation share the same `session_id`. This enables downstream consumers — particularly `metadexer`'s catalog module — to correlate entries by run, detect staleness, verify batch integrity, and link entries to their originating log output.
 
 **Population rules:**
 
@@ -2148,7 +2148,7 @@ The `duplicates` field is an optional array of `IndexEntry` objects. It contains
 - When the field is `None` (no duplicates), it is **omitted** from the serialized output — not emitted as `null` or `[]`. This matches the conditional-inclusion convention used by `session_id` and `indexed_at`.
 - When present, the field appears after `metadata` and before `session_id` in the serialized key order.
 
-**Downstream use:** The `duplicates` array enables downstream consumers (primarily `shruggie-catalog`) to maintain a complete provenance chain: which files existed, where they were located, and which canonical entry absorbed them. This supports audit trails, storage reclamation reporting, and revert operations.
+**Downstream use:** The `duplicates` array enables downstream consumers (primarily `metadexer`'s catalog module) to maintain a complete provenance chain: which files existed, where they were located, and which canonical entry absorbed them. This supports audit trails, storage reclamation reporting, and revert operations.
 
 <a id="511-dropped-and-restructured-fields"></a>
 ### 5.11. Dropped and Restructured Fields
@@ -3685,7 +3685,7 @@ The rollback feature ([§8.12](#812-rollback-subcommand), `core/rollback.py`) re
 
 > **Added 2026-03-01:** Documents the rollback engine as a core operation.
 
-**Module:** `core/rollback.py` — Standalone module with no CLI, GUI, or presentation-layer dependencies. Operates on `IndexEntry` objects and filesystem paths. Designed for direct importability by downstream ecosystem components (specifically `shruggie-vault`).
+**Module:** `core/rollback.py` — Standalone module with no CLI, GUI, or presentation-layer dependencies. Operates on `IndexEntry` objects and filesystem paths. Designed for direct importability by downstream ecosystem components (specifically `metadexer`'s vault module).
 
 <a id="rollback-inputs"></a>
 #### Inputs
@@ -3795,7 +3795,7 @@ The origin-directory annotation is stored in a module-level `_origin_dirs: dict[
 
 > **Updated 2026-06-14:** Added Strategy 3 (origin-directory fallback) and the `_origin_dirs` annotation mechanism. Previously, `LocalSourceResolver` only searched `search_dir`, causing recursive rollback to fail for content files in subdirectories.
 
-Downstream tools (e.g., `shruggie-vault`) provide custom implementations for remote storage retrieval.
+Downstream tools (e.g., `metadexer`'s vault module) provide custom implementations for remote storage retrieval.
 
 <a id="rollback-error-handling"></a>
 #### Error handling
@@ -7726,7 +7726,7 @@ The session ID serves two functions:
 
 1. **Log correlation.** When multiple invocations run concurrently (e.g., parallel indexing jobs in a CI pipeline), or when log output from multiple invocations is aggregated into a shared sink, the session ID uniquely identifies which log lines belong to which invocation. This is the same role served by the original's `$LibSessionID` (a GUID generated once per pslib session).
 
-2. **Output provenance.** The session ID is included in the JSON output as the `session_id` field on each `IndexEntry` ([§5.4](#54-identity-fields)). This links every index entry back to the invocation that produced it, enabling downstream consumers (particularly `shruggie-catalog`) to correlate entries by run, detect staleness, verify batch integrity, and trace provenance.
+2. **Output provenance.** The session ID is included in the JSON output as the `session_id` field on each `IndexEntry` ([§5.4](#54-identity-fields)). This links every index entry back to the invocation that produced it, enabling downstream consumers (particularly `metadexer`'s catalog module) to correlate entries by run, detect staleness, verify batch integrity, and trace provenance.
 
 <a id="injection-mechanism"></a>
 #### Injection mechanism
@@ -10701,7 +10701,7 @@ The `index_path()` function auto-generates a UUID4 when the caller does not prov
 
 **Originating references:** [§11.4](#114-session-identifiers) (Session Identifiers), [§5.4](#54-identity-fields) (Identity Fields).
 
-~~**Preconditions:** Confirmation that the session ID is useful to downstream consumers. The field adds bytes to every output file for a benefit that may be niche.~~ Precondition satisfied: `shruggie-catalog` is the immediate next component in the ecosystem and will consume `session_id` for run correlation, staleness detection, provenance tracking, and batch integrity verification.
+~~**Preconditions:** Confirmation that the session ID is useful to downstream consumers. The field adds bytes to every output file for a benefit that may be niche.~~ Precondition satisfied: `metadexer`'s catalog module is the immediate next component in the ecosystem and will consume `session_id` for run correlation, staleness detection, provenance tracking, and batch integrity verification.
 
 **Architectural impact:** Minimal. A new field on the `IndexEntry` dataclass, populated by the orchestrator from the session context. The `session_id` parameter was added to `index_path()`, `build_file_entry()`, and `build_directory_entry()`. A helper function `_make_indexed_at()` generates the `TimestampPair` for `indexed_at`.
 
