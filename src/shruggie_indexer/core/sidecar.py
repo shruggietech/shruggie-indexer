@@ -33,6 +33,7 @@ from shruggie_indexer.core._formatting import human_readable_size as _human_read
 from shruggie_indexer.core.hashing import hash_file, hash_string, select_id
 from shruggie_indexer.core.timestamps import extract_timestamps
 from shruggie_indexer.models.schema import (
+    EncodingObject,
     FileSystemObject,
     MetadataAttributes,
     MetadataEntry,
@@ -91,6 +92,38 @@ def _is_excluded(
 ) -> bool:
     """Check whether a filename matches any metadata exclusion pattern."""
     return any(pattern.search(filename) for pattern in exclude_patterns)
+
+
+# ---------------------------------------------------------------------------
+# Text formats: per-format readers with encoding variants
+# ---------------------------------------------------------------------------
+
+# Formats that carry text content which undergoes lossy decode.
+_TEXT_FORMATS: frozenset[str] = frozenset({"json", "text", "lines"})
+
+
+def _read_text_with_encoding(
+    path: Path,
+    *,
+    detect_charset_enabled: bool = True,
+) -> tuple[str, EncodingObject | None]:
+    """Read a file as UTF-8 text, capturing encoding metadata.
+
+    Reads raw bytes, performs encoding detection, then decodes.
+    Returns (decoded_text, encoding_object).
+    """
+    raw = path.read_bytes()
+
+    from shruggie_indexer.core.encoding import detect_bytes_encoding
+    enc = detect_bytes_encoding(raw, detect_charset_enabled=detect_charset_enabled)
+
+    # Decode with BOM handling (utf-8-sig strips BOM automatically).
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = raw.decode("utf-8", errors="replace")
+
+    return text, enc
 
 
 # ---------------------------------------------------------------------------
@@ -194,20 +227,45 @@ _FALLBACK_CHAIN_TYPES: frozenset[str] = frozenset({
 })
 
 
+def _detect_text_encoding(
+    path: Path,
+    fmt: str,
+    config: IndexerConfig,
+) -> EncodingObject | None:
+    """Detect encoding metadata for a sidecar with a text-based format.
+
+    Only runs for text formats (json, text, lines) when encoding detection
+    is enabled.  Returns ``None`` for binary formats, error, or when
+    detection is disabled.
+    """
+    if fmt not in _TEXT_FORMATS:
+        return None
+    if not config.detect_encoding:
+        return None
+
+    from shruggie_indexer.core.encoding import detect_file_encoding
+    return detect_file_encoding(
+        path,
+        detect_charset_enabled=config.detect_charset,
+    )
+
+
 def _read_with_fallback(
     path: Path,
     sidecar_type: str,
     config: IndexerConfig,
-) -> tuple[Any, str, list[str], dict[str, Any] | None]:
+) -> tuple[Any, str, list[str], dict[str, Any] | None, EncodingObject | None]:
     """Read a sidecar file using the type-appropriate strategy.
 
-    Returns ``(data, format, transforms, extra_attrs)`` where:
+    Returns ``(data, format, transforms, extra_attrs, encoding)`` where:
     - ``data`` is the parsed content (may be ``None`` on total failure)
     - ``format`` describes the serialization format of ``data``
     - ``transforms`` lists any transformations applied
     - ``extra_attrs`` is an optional dict of additional
       ``MetadataAttributes`` fields (e.g. ``json_style``,
       ``link_metadata``, ``type_override``)
+    - ``encoding`` is an :class:`EncodingObject` for text-format sidecars,
+      or ``None`` for binary formats and when detection is disabled
 
     Args:
         path: Absolute path to the sidecar file.
@@ -215,7 +273,7 @@ def _read_with_fallback(
         config: Active configuration.
 
     Returns:
-        A 4-tuple of ``(data, format_name, transforms, extra_attrs)``.
+        A 5-tuple of ``(data, format_name, transforms, extra_attrs, encoding)``.
     """
     type_attrs = config.metadata_attributes.get(sidecar_type)
 
@@ -223,34 +281,41 @@ def _read_with_fallback(
     if sidecar_type in _FALLBACK_CHAIN_TYPES:
         data, fmt, transforms = _read_fallback_chain(path, type_attrs)
         extra = _detect_json_style_extra(path, fmt)
-        return data, fmt, transforms, extra
+        enc = _detect_text_encoding(path, fmt, config)
+        return data, fmt, transforms, extra, enc
 
     # --- Type-specific readers ---
     if sidecar_type == "json_metadata":
         data, fmt, transforms = _read_type_json_metadata(path)
         extra = _detect_json_style_extra(path, fmt)
-        return data, fmt, transforms, extra
+        enc = _detect_text_encoding(path, fmt, config)
+        return data, fmt, transforms, extra, enc
 
     if sidecar_type == "hash":
         data, fmt, transforms = _read_type_hash(path)
-        return data, fmt, transforms, None
+        enc = _detect_text_encoding(path, fmt, config)
+        return data, fmt, transforms, None, enc
 
     if sidecar_type == "link":
-        return _read_type_link(path)
+        data, fmt, transforms, extra = _read_type_link(path)
+        enc = _detect_text_encoding(path, fmt, config)
+        return data, fmt, transforms, extra, enc
 
     if sidecar_type == "desktop_ini":
         data, fmt, transforms = _read_type_desktop_ini(path)
-        return data, fmt, transforms, None
+        enc = _detect_text_encoding(path, fmt, config)
+        return data, fmt, transforms, None, enc
 
     if sidecar_type in ("screenshot", "thumbnail", "torrent"):
         data, fmt, transforms = _read_type_binary(path)
-        return data, fmt, transforms, None
+        return data, fmt, transforms, None, None
 
     # Unknown type — try fallback chain.
     logger.debug("Unknown sidecar type %r — using fallback chain", sidecar_type)
     data, fmt, transforms = _read_fallback_chain(path, type_attrs)
     extra = _detect_json_style_extra(path, fmt)
-    return data, fmt, transforms, extra
+    enc = _detect_text_encoding(path, fmt, config)
+    return data, fmt, transforms, extra, enc
 
 
 def _read_fallback_chain(
@@ -295,36 +360,54 @@ def _read_fallback_chain(
     return None, "error", []
 
 
-def _detect_json_style(path: Path) -> str:
-    """Detect whether a JSON file is compact or pretty-printed.
+def _detect_json_indent(path: Path) -> tuple[str, str | None]:
+    """Detect JSON formatting style and indent string.
 
-    Uses a simple heuristic: if the raw text contains a newline followed
-    by a space or tab, the JSON is pretty-printed.  Otherwise it is compact.
+    Returns (json_style, json_indent) where:
+    - json_style is "compact" or "pretty"
+    - json_indent is the literal indent string (e.g., "  ", "    ",
+      "\\t") for pretty JSON, or None for compact JSON.
 
-    This only inspects the raw bytes — the file has already been successfully
-    parsed as JSON by the time this is called.
+    Detection heuristic: find the first line that starts with whitespace
+    after a newline. The leading whitespace of that line (up to the first
+    non-whitespace character) is the indent string. If the file contains
+    no indented lines, it is compact.
     """
     try:
         raw = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
-        return "compact"
+        return "compact", None
 
-    if "\n " in raw or "\n\t" in raw:
-        return "pretty"
-    return "compact"
+    # Find first indented line.
+    for line in raw.split("\n")[1:]:  # Skip first line (opening brace).
+        if line and line[0] in (" ", "\t"):
+            # Extract the indent: all leading whitespace.
+            indent = ""
+            for ch in line:
+                if ch in (" ", "\t"):
+                    indent += ch
+                else:
+                    break
+            if indent:
+                return "pretty", indent
+    return "compact", None
 
 
 def _detect_json_style_extra(
     path: Path,
     fmt: str,
 ) -> dict[str, Any] | None:
-    """Return extra attributes dict with ``json_style`` when format is JSON.
+    """Return extra attributes dict with ``json_style`` and ``json_indent``.
 
     Returns ``None`` for non-JSON formats.
     """
     if fmt != "json":
         return None
-    return {"json_style": _detect_json_style(path)}
+    style, indent = _detect_json_indent(path)
+    result: dict[str, Any] = {"json_style": style}
+    if indent is not None:
+        result["json_indent"] = indent
+    return result
 
 
 def _read_type_json_metadata(path: Path) -> tuple[Any, str, list[str]]:
@@ -454,6 +537,7 @@ def _build_metadata_entry(
     config: IndexerConfig,
     *,
     extra_attrs: dict[str, Any] | None = None,
+    encoding: EncodingObject | None = None,
 ) -> MetadataEntry:
     """Construct a complete ``MetadataEntry`` from a parsed sidecar.
 
@@ -516,11 +600,13 @@ def _build_metadata_entry(
     # Resolve extra attributes from the reader.
     effective_type = sidecar_type
     json_style: str | None = None
+    json_indent: str | None = None
     link_metadata: dict[str, str] | None = None
 
     if extra_attrs:
         effective_type = extra_attrs.get("type_override", sidecar_type)
         json_style = extra_attrs.get("json_style")
+        json_indent = extra_attrs.get("json_indent")
         link_metadata = extra_attrs.get("link_metadata")
 
     # Attributes.
@@ -530,6 +616,7 @@ def _build_metadata_entry(
         transforms=list(transforms),
         source_media_type=source_media_type,
         json_style=json_style,
+        json_indent=json_indent,
         link_metadata=link_metadata,
     )
 
@@ -543,6 +630,7 @@ def _build_metadata_entry(
         file_system=file_system,
         size=size_obj,
         timestamps=timestamps_obj,
+        encoding=encoding,
     )
 
 
@@ -639,7 +727,7 @@ def discover_and_parse(
             entry = sidecar_entry_cache[sibling_path]
         else:
             # Read the sidecar content using the type-specific strategy.
-            data, fmt, transforms, extra_attrs = _read_with_fallback(
+            data, fmt, transforms, extra_attrs, enc = _read_with_fallback(
                 sibling_path, sidecar_type, config,
             )
 
@@ -653,6 +741,7 @@ def discover_and_parse(
                 index_root=index_root,
                 config=config,
                 extra_attrs=extra_attrs,
+                encoding=enc,
             )
             if sidecar_entry_cache is not None:
                 sidecar_entry_cache[sibling_path] = entry
