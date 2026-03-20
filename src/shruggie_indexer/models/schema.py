@@ -1,8 +1,8 @@
-"""Data models for shruggie-indexer v2 schema output.
+"""Data models for shruggie-indexer v2/v3 schema output.
 
 These dataclasses are the Python representation of the types defined in the
-v2 JSON Schema (docs/schema/shruggie-indexer-v2.schema.json). Each class maps
-directly to a schema ``$ref`` definition or to the root ``IndexEntry`` type.
+JSON Schema (docs/schema/). Each class maps directly to a schema ``$ref``
+definition or to the root ``IndexEntry`` type.
 
 See spec sections 5.2-5.10 and 9.4 for full behavioral guidance.
 """
@@ -14,6 +14,7 @@ from typing import Any
 
 __all__ = [
     "AttributesObject",
+    "EncodingObject",
     "FileSystemObject",
     "HashSet",
     "IndexEntry",
@@ -122,12 +123,78 @@ class TimestampsObject:
     modified: TimestampPair
     accessed: TimestampPair
 
+    created_source: str | None = None
+    """Provenance of the created timestamp (§15.5).
+
+    Values: "birthtime" (true creation time from st_birthtime),
+            "ctime_fallback" (inode change time from st_ctime).
+    None for v2-compatibility or when source is unknown.
+    """
+
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "created": self.created.to_dict(),
             "modified": self.modified.to_dict(),
             "accessed": self.accessed.to_dict(),
         }
+        if self.created_source is not None:
+            d["created_source"] = self.created_source
+        return d
+
+
+@dataclass
+class EncodingObject:
+    """File encoding metadata for hash-perfect reversal (§5.2.8).
+
+    Captures the byte-level encoding characteristics that are lost when
+    raw file bytes are decoded into Python text strings. All fields are
+    optional; the object is omitted entirely when no encoding detection
+    was performed.
+    """
+
+    bom: str | None = None
+    """Detected BOM type identifier, or None if no BOM was present.
+
+    Values: "utf-8", "utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be".
+    The identifier maps deterministically to the original BOM byte sequence:
+      utf-8     \u2192 EF BB BF
+      utf-16-le \u2192 FF FE
+      utf-16-be \u2192 FE FF
+      utf-32-le \u2192 FF FE 00 00
+      utf-32-be \u2192 00 00 FE FF
+    """
+
+    line_endings: str | None = None
+    """Detected line-ending style, or None for binary/unknown files.
+
+    Values: "lf", "crlf", "mixed".
+    "mixed" indicates the file contains both bare LF and CRLF sequences.
+    """
+
+    detected_encoding: str | None = None
+    """Best-guess encoding name from chardet.
+
+    Python codec name (e.g., "utf-8", "ascii", "windows-1252", "shift_jis").
+    None when encoding detection was not performed or inconclusive.
+    """
+
+    confidence: float | None = None
+    """Detection confidence score (0.0 to 1.0).
+
+    Accompanies detected_encoding. None when detected_encoding is None.
+    """
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {}
+        if self.bom is not None:
+            d["bom"] = self.bom
+        if self.line_endings is not None:
+            d["line_endings"] = self.line_endings
+        if self.detected_encoding is not None:
+            d["detected_encoding"] = self.detected_encoding
+        if self.confidence is not None:
+            d["confidence"] = self.confidence
+        return d
 
 
 @dataclass
@@ -211,6 +278,20 @@ class MetadataAttributes:
     non-JSON formats or legacy entries (treated as ``'compact'``).
     """
 
+    json_indent: str | None = None
+    """Original JSON indentation string.
+
+    The literal whitespace string used for one level of indentation in the
+    original file. Common values: "  " (2 spaces), "    " (4 spaces),
+    "\\t" (tab). None for compact JSON, non-JSON formats, or when the
+    indent could not be determined. Used by the rollback engine to
+    reproduce the original indentation.
+
+    When json_style is "compact", this field MUST be None.
+    When json_style is "pretty" and this field is None, the rollback
+    engine defaults to 2-space indent for backward compatibility.
+    """
+
     link_metadata: dict[str, str] | None = None
     """Structured metadata extracted from ``.lnk`` binary shortcut files.
 
@@ -229,6 +310,8 @@ class MetadataAttributes:
             d["source_media_type"] = self.source_media_type
         if self.json_style is not None:
             d["json_style"] = self.json_style
+        if self.json_indent is not None:
+            d["json_indent"] = self.json_indent
         if self.link_metadata is not None:
             d["link_metadata"] = dict(self.link_metadata)
         return d
@@ -255,6 +338,14 @@ class MetadataEntry:
     size: SizeObject | None = None
     timestamps: TimestampsObject | None = None
 
+    encoding: EncodingObject | None = None
+    """Encoding metadata for sidecar files (sidecar-only).
+
+    Present for sidecar entries with text-format data. Absent for generated
+    entries and binary-format sidecars. Enables hash-perfect reversal of
+    the sidecar's text content back to original bytes.
+    """
+
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
             "id": self.id,
@@ -273,6 +364,10 @@ class MetadataEntry:
             d["size"] = self.size.to_dict()
         if self.timestamps is not None:
             d["timestamps"] = self.timestamps.to_dict()
+        if self.encoding is not None:
+            enc_dict = self.encoding.to_dict()
+            if enc_dict:
+                d["encoding"] = enc_dict
         return d
 
 
@@ -291,7 +386,7 @@ class IndexEntry:
     """
 
     schema_version: int
-    """Always ``2``."""
+    """Schema version: ``3`` for v3, ``2`` for legacy."""
 
     id: str
     """Prefixed hash: ``y…`` (file), ``x…`` (directory)."""
@@ -322,6 +417,13 @@ class IndexEntry:
     """Complete IndexEntry objects for files de-duplicated against this entry."""
 
     mime_type: str | None = None
+
+    encoding: EncodingObject | None = None
+    """File encoding metadata for hash-perfect reversal.
+
+    Present for files where encoding detection was performed.
+    None for directories, binary files, or when detection is disabled.
+    """
 
     session_id: str | None = None
     """UUID4 identifying the indexing session that produced this entry."""
@@ -357,6 +459,10 @@ class IndexEntry:
         }
         if self.duplicates:
             d["duplicates"] = [dup.to_dict() for dup in self.duplicates]
+        if self.encoding is not None:
+            enc_dict = self.encoding.to_dict()
+            if enc_dict:  # Only include if at least one field is populated
+                d["encoding"] = enc_dict
         if self.session_id is not None:
             d["session_id"] = self.session_id
         if self.indexed_at is not None:
