@@ -44,6 +44,7 @@ from typing import TYPE_CHECKING, Any, Callable, Protocol
 from shruggie_indexer.exceptions import IndexerConfigError, IndexerTargetError
 from shruggie_indexer.models.schema import (
     AttributesObject,
+    EncodingObject,
     FileSystemObject,
     HashSet,
     IndexEntry,
@@ -1204,35 +1205,116 @@ def _plan_sidecar_restore(
 
 
 def _decode_sidecar_data(meta: MetadataEntry) -> tuple[bytes | str, bool]:
-    """Decode sidecar data based on format.
+    """Decode sidecar data based on format, respecting encoding metadata.
 
-    For JSON-format sidecars, respects ``attributes.json_style`` to preserve
-    the original formatting intent:
-    - ``'compact'`` (or absent) → compact JSON with no whitespace.
-    - ``'pretty'`` → indented JSON (2-space indent).
+    For JSON-format sidecars, respects json_style and json_indent to
+    reproduce the original formatting. For text-format sidecars, respects
+    encoding metadata to restore BOM, line endings, and source encoding.
 
     Returns ``(data, is_binary)``.
     """
     fmt = meta.attributes.format
     data = meta.data
+    enc = meta.encoding  # May be None for legacy entries.
 
     if fmt == "json":
-        json_style = getattr(meta.attributes, "json_style", None)
-        if json_style == "pretty":
-            return json.dumps(data, indent=2, ensure_ascii=False), False
-        # Compact (default, backward-compatible for entries without json_style)
-        return json.dumps(data, separators=(",", ":"), ensure_ascii=False), False
+        text = _restore_json(data, meta.attributes)
+        return _apply_text_encoding(text, enc), True  # Always bytes.
     if fmt == "text":
-        return str(data), False
+        text = str(data)
+        return _apply_text_encoding(text, enc), True
     if fmt == "base64":
         return base64.b64decode(data), True
     if fmt == "lines":
         if isinstance(data, list):
-            return "\n".join(str(line) for line in data), False
-        return str(data), False
+            text = "\n".join(str(line) for line in data)
+        else:
+            text = str(data)
+        return _apply_text_encoding(text, enc), True
 
-    # Unknown format — treat as text
-    return str(data), False
+    # Unknown format — treat as text.
+    return _apply_text_encoding(str(data), enc), True
+
+
+def _restore_json(data: Any, attrs: MetadataAttributes) -> str:
+    """Serialize JSON data respecting the original formatting style.
+
+    Uses json_indent when available for precise indent reproduction.
+    Falls back to json_style for backward compatibility with entries
+    that lack json_indent.
+    """
+    json_style = getattr(attrs, "json_style", None)
+    json_indent = getattr(attrs, "json_indent", None)
+
+    if json_style == "pretty":
+        if json_indent is not None:
+            if "\t" in json_indent:
+                # json.dumps does not natively support tab indentation.
+                # Serialize with a placeholder indent, then replace.
+                compact = json.dumps(data, indent=2, ensure_ascii=False)
+                lines = compact.split("\n")
+                result_lines = []
+                for line in lines:
+                    stripped = line.lstrip(" ")
+                    n_spaces = len(line) - len(stripped)
+                    n_levels = n_spaces // 2
+                    result_lines.append(json_indent * n_levels + stripped)
+                return "\n".join(result_lines)
+            else:
+                # Space-based indent: pass the indent width directly.
+                return json.dumps(
+                    data,
+                    indent=len(json_indent),
+                    ensure_ascii=False,
+                )
+        # Legacy entry without json_indent: default to 2-space.
+        return json.dumps(data, indent=2, ensure_ascii=False)
+
+    # Compact (default, backward-compatible).
+    return json.dumps(data, separators=(",", ":"), ensure_ascii=False)
+
+
+def _apply_text_encoding(
+    text: str,
+    enc: "EncodingObject | None",
+) -> bytes:
+    """Convert a text string back to bytes, restoring encoding metadata.
+
+    Applies (in order):
+    1. Line-ending restoration (LF → CRLF if original was CRLF).
+    2. Encoding to bytes using the detected source encoding
+       (or UTF-8 if not detected).
+    3. BOM prepending (if original had a BOM).
+
+    When *enc* is ``None`` (v2-era entries or ``--no-detect-encoding``),
+    falls through to bare UTF-8 with no BOM and LF line endings —
+    identical to the pre-v3 rollback behavior.
+    """
+    from shruggie_indexer.core.encoding import BOM_BYTES
+
+    # 1. Restore line endings.
+    if enc is not None and enc.line_endings == "crlf":
+        # Normalize to LF first (in case of mixed), then convert to CRLF.
+        text = text.replace("\r\n", "\n").replace("\n", "\r\n")
+
+    # 2. Encode to bytes.
+    target_encoding = "utf-8"
+    if enc is not None and enc.detected_encoding is not None:
+        target_encoding = enc.detected_encoding
+    try:
+        data = text.encode(target_encoding)
+    except (UnicodeEncodeError, LookupError):
+        # Fallback to UTF-8 if the detected encoding cannot represent
+        # the text or is unrecognized.
+        data = text.encode("utf-8")
+
+    # 3. Prepend BOM.
+    if enc is not None and enc.bom is not None:
+        bom_bytes = BOM_BYTES.get(enc.bom, b"")
+        if bom_bytes:
+            data = bom_bytes + data
+
+    return data
 
 
 # ---------------------------------------------------------------------------
