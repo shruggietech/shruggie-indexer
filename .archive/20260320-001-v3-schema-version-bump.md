@@ -7,20 +7,20 @@
 | **Author**       | William (ShruggieTech)                                       |
 | **Date**         | 2026-03-20                                                   |
 | **Target**       | v0.2.0                                                       |
-| **Audience**     | AI coding agents (self-contained context for isolated window) |
-| **Predecessor**  | Sprint 3.3 (final v0.1.x sprint)                            |
+| **Audience**     | AI coding agents (self-contained context for isolated window)|
+| **Predecessor**  | Sprint 3.3 (final v0.1.x sprint)                             |
 
 ---
 
 ## Purpose and Ecosystem Context
 
-The Metadexer catalog module stores ingested file content as semantically searchable text strings in PostgreSQL. During downstream development, a critical gap was identified: when text-format file content is decoded from raw bytes into Python strings (via `path.read_text(encoding="utf-8")` or equivalent), three categories of byte-level information are silently discarded:
+The Metadexer vault module stores ingested file content as semantically searchable text strings in PostgreSQL. During downstream development, a critical gap was identified: when text-format file content is decoded from raw bytes into Python strings (via `path.read_text(encoding="utf-8")` or equivalent), three categories of byte-level information are silently discarded:
 
 1. **Byte Order Mark (BOM):** Python's UTF-8 codec strips a leading `\xef\xbb\xbf` BOM during decode. The original bytes cannot be reconstructed without knowing whether the BOM was present.
 2. **Line endings:** Python normalizes `\r\n` to `\n` in text mode. On Windows-originated files, the original CRLF sequences are lost.
 3. **Source encoding:** If a file uses a non-UTF-8 encoding (e.g., Windows-1252, Shift_JIS), the mapping from decoded text back to original bytes requires knowing what encoding produced the text.
 
-Without this metadata, hash-perfect reversal (reconstructing the original file bytes from the stored text representation) is impossible for any file that had a BOM, used CRLF line endings, or was encoded in something other than bare UTF-8. This affects both the main indexed files (whose content the catalog stores for search) and ingested sidecar metadata files (whose text content is already stored in the `MetadataEntry.data` field).
+Without this metadata, hash-perfect reversal (reconstructing the original file bytes from the stored text representation) is impossible for any file that had a BOM, used CRLF line endings, or was encoded in something other than bare UTF-8. This affects both the main indexed files (whose content the vault stores for search) and ingested sidecar metadata files (whose text content is already stored in the `MetadataEntry.data` field).
 
 This gap cannot be closed by an additive v2 field. The `encoding` field introduces a new top-level object on `IndexEntry` and a new field on `MetadataEntry`, which together constitute a structural addition significant enough to warrant a version bump. The v3 schema also provides an opportunity to promote two additional candidates from §18.2.2 that have matured since the v2 release:
 
