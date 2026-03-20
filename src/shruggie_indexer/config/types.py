@@ -77,6 +77,25 @@ class IndexerConfig:
     meta_merge: bool = False
     meta_merge_delete: bool = False
 
+    # ── Encoding detection ──────────────────────────────────────────────
+    detect_encoding: bool = True
+    """Enable BOM, line-ending, and character encoding detection.
+
+    When True, the indexer reads the first 64 KB of each file in binary
+    mode to detect encoding metadata. Default: True. Disabling this
+    omits the encoding field from output, which prevents hash-perfect
+    reversal by downstream consumers.
+    """
+
+    detect_charset: bool = True
+    """Enable chardet-based character encoding detection.
+
+    When True, the encoding detection module passes the file sample to
+    chardet for encoding identification. When False, only BOM and
+    line-ending detection are performed (chardet is skipped). Requires
+    the chardet dependency (standard, not optional). Default: True.
+    """
+
     # ── Output suppression ──────────────────────────────────────────────
     write_directory_meta: bool = True
 

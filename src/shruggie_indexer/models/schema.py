@@ -459,7 +459,7 @@ class IndexEntry:
         }
         if self.duplicates:
             d["duplicates"] = [dup.to_dict() for dup in self.duplicates]
-        if self.encoding is not None:
+        if self.schema_version >= 3 and self.encoding is not None:
             enc_dict = self.encoding.to_dict()
             if enc_dict:  # Only include if at least one field is populated
                 d["encoding"] = enc_dict

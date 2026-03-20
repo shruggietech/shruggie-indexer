@@ -26,6 +26,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from shruggie_indexer.core._formatting import human_readable_size
+from shruggie_indexer.core.encoding import detect_file_encoding
 from shruggie_indexer.core.exif import extract_exif
 from shruggie_indexer.core.hashing import (
     hash_directory_id,
@@ -320,14 +321,22 @@ def build_file_entry(
                 "Sidecar discovery failed for %s", path, exc_info=True,
             )
 
-    # Step 10 — Metadata assembly
+    # Step 10 — Encoding detection
+    encoding_obj = None
+    if config.detect_encoding and not is_symlink:
+        encoding_obj = detect_file_encoding(
+            path,
+            detect_charset_enabled=config.detect_charset,
+        )
+
+    # Step 11 — Metadata assembly
     metadata_active = config.extract_exif or config.meta_merge
     metadata = _assemble_metadata(exif_entry, sidecar_entries, metadata_active)
 
-    # Step 11 — Storage name
+    # Step 12 — Storage name
     storage_name = _build_storage_name(entry_id, extension)
 
-    # Step 12 — Assembly
+    # Step 13 — Assembly
     return IndexEntry(
         schema_version=2,
         id=entry_id,
@@ -349,6 +358,7 @@ def build_file_entry(
         items=None,
         metadata=metadata,
         mime_type=mime_type,
+        encoding=encoding_obj,
         session_id=session_id,
         indexed_at=_make_indexed_at(),
     )

@@ -1477,7 +1477,36 @@ class OperationsPage(ctk.CTkFrame):
         )
         self._exif_info_label.pack(anchor="w", padx=(26, 0))
 
-        # Row 4: Rename toggle (feature, not operation)
+        # Row 4: Detect encoding
+        enc_row = ctk.CTkFrame(c, fg_color="transparent")
+        enc_row.pack(fill="x", pady=(2, 0))
+        self._detect_encoding_var = ctk.BooleanVar(value=True)
+        self._detect_encoding_cb = _CtkCheckBox(
+            enc_row, text="Detect encoding",
+            variable=self._detect_encoding_var,
+        )
+        self._detect_encoding_cb.pack(anchor="w")
+        _Tooltip(
+            self._detect_encoding_cb,
+            "Detect BOM, line endings, and character encoding for hash-perfect reversal.",
+        )
+
+        # Row 5: Detect charset (sub-option of encoding detection)
+        charset_row = ctk.CTkFrame(c, fg_color="transparent")
+        charset_row.pack(fill="x", pady=(2, 0))
+        self._detect_charset_var = ctk.BooleanVar(value=True)
+        self._detect_charset_cb = _CtkCheckBox(
+            charset_row, text="Detect charset (chardet)",
+            variable=self._detect_charset_var,
+        )
+        self._detect_charset_cb.pack(anchor="w", padx=(26, 0))
+        _Tooltip(
+            self._detect_charset_cb,
+            "Use chardet for statistical character encoding detection. "
+            "Disable to keep only BOM and line-ending detection.",
+        )
+
+        # Row 6: Rename toggle (feature, not operation)
         rename_row = ctk.CTkFrame(c, fg_color="transparent")
         rename_row.pack(fill="x", pady=(2, 0))
         self._rename_var = ctk.BooleanVar(value=False)
@@ -2318,6 +2347,8 @@ class OperationsPage(ctk.CTkFrame):
             "compute_sha512": self._sha512_var.get(),
             "recursive": self._recursive_var.get(),
             "extract_exif": self._exif_var.get(),
+            "detect_encoding": self._detect_encoding_var.get(),
+            "detect_charset": self._detect_charset_var.get(),
             "output_stdout": False,
         }
 
@@ -2413,6 +2444,8 @@ class OperationsPage(ctk.CTkFrame):
             "id_algorithm": self._id_algo_var.get(),
             "sha512": self._sha512_var.get(),
             "extract_exif": self._exif_var.get(),
+            "detect_encoding": self._detect_encoding_var.get(),
+            "detect_charset": self._detect_charset_var.get(),
             "rename": self._rename_var.get(),
             "write_directory_meta": self._write_dir_meta_var.get(),
             "output_mode": _OUT_KEY_MAP.get(
@@ -2462,6 +2495,10 @@ class OperationsPage(ctk.CTkFrame):
             self._sha512_var.set(state["sha512"])
         if "extract_exif" in state:
             self._exif_var.set(state["extract_exif"])
+        if "detect_encoding" in state:
+            self._detect_encoding_var.set(state["detect_encoding"])
+        if "detect_charset" in state:
+            self._detect_charset_var.set(state["detect_charset"])
         if "rename" in state:
             self._rename_var.set(state["rename"])
         if "write_directory_meta" in state:

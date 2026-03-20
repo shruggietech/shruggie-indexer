@@ -349,6 +349,8 @@ def _build_cli_overrides(
     dry_run: bool,
     id_type: str | None,
     compute_sha512: bool,
+    no_detect_encoding: bool = False,
+    no_detect_charset: bool = False,
 ) -> dict[str, Any]:
     """Translate CLI flags into a configuration-override dict."""
     overrides: dict[str, Any] = {}
@@ -375,6 +377,12 @@ def _build_cli_overrides(
         overrides["write_directory_meta"] = dir_meta
     if outfile is not None:
         overrides["output_file"] = Path(outfile).resolve()
+
+    # Encoding detection
+    if no_detect_encoding:
+        overrides["detect_encoding"] = False
+    if no_detect_charset:
+        overrides["detect_charset"] = False
 
     # Resolve stdout default: enabled when no other output specified
     if stdout is None:
@@ -598,6 +606,21 @@ def _post_index_pipeline(
     default=None,
     help="Path to a TOML configuration file.",
 )
+# -- Encoding detection --
+@click.option(
+    "--no-detect-encoding",
+    "no_detect_encoding",
+    is_flag=True,
+    default=False,
+    help="Disable all encoding detection (BOM, line endings, chardet).",
+)
+@click.option(
+    "--no-detect-charset",
+    "no_detect_charset",
+    is_flag=True,
+    default=False,
+    help="Disable chardet-based encoding detection; BOM and line-ending detection remain active.",
+)
 # -- Logging --
 @click.option(
     "-v",
@@ -640,6 +663,8 @@ def index_cmd(
     id_type: str | None,
     compute_sha512: bool,
     config_file: str | None,
+    no_detect_encoding: bool,
+    no_detect_charset: bool,
     verbose: int,
     quiet: bool,
     log_file: str | None,
@@ -689,6 +714,8 @@ def index_cmd(
             dry_run=dry_run,
             id_type=id_type,
             compute_sha512=compute_sha512,
+            no_detect_encoding=no_detect_encoding,
+            no_detect_charset=no_detect_charset,
         )
 
         # ── Load configuration ──────────────────────────────────────────
@@ -729,7 +756,8 @@ def index_cmd(
             "compute_sha512=%s, extract_exif=%s, meta_merge=%s, "
             "meta_merge_delete=%s, rename=%s, dry_run=%s, "
             "output_stdout=%s, output_file=%s, output_inplace=%s, "
-            "write_directory_meta=%s",
+            "write_directory_meta=%s, detect_encoding=%s, "
+            "detect_charset=%s",
             target_path,
             config.recursive,
             config.id_algorithm,
@@ -743,6 +771,8 @@ def index_cmd(
             config.output_file,
             config.output_inplace,
             config.write_directory_meta,
+            config.detect_encoding,
+            config.detect_charset,
         )
 
         # ── Prepare delete queue ────────────────────────────────────────
