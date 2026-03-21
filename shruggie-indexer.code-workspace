@@ -92,6 +92,13 @@
                     "*-feeds-export_index2.json"
                 ],
                 "url": "https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json"
+            },{
+                "fileMatch": [
+                    "*_meta3.json",
+                    "*_directorymeta3.json",
+                    "*-feeds-export_index3.json"
+                ],
+                "url": "https://schemas.shruggie.tech/data/shruggie-indexer-v3.schema.json"
             }
         ],
         "[powershell]": {
