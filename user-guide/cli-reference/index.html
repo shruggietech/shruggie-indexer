@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -910,6 +910,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#encoding-detection-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Encoding Detection Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Encoding Detection Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-no-detect-encoding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --no-detect-encoding
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-no-detect-charset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --no-detect-charset
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#metadata-options" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1200,10 +1239,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#meta2_path-positional-argument" class="md-nav__link">
+  <a href="#meta_path-positional-argument" class="md-nav__link">
     <span class="md-ellipsis">
       
-        META2_PATH (positional argument)
+        META_PATH (positional argument)
       
     </span>
   </a>
@@ -2249,6 +2288,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#encoding-detection-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Encoding Detection Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Encoding Detection Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-no-detect-encoding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --no-detect-encoding
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-no-detect-charset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --no-detect-charset
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#metadata-options" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2539,10 +2617,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#meta2_path-positional-argument" class="md-nav__link">
+  <a href="#meta_path-positional-argument" class="md-nav__link">
     <span class="md-ellipsis">
       
-        META2_PATH (positional argument)
+        META_PATH (positional argument)
       
     </span>
   </a>
@@ -2754,9 +2832,9 @@ shruggie-indexer<span class="w"> </span>index<span class="w"> </span>path/to/tar
 <p><code>TARGET</code> is an optional positional argument specifying the file or directory to index. When omitted, the current working directory is used.</p>
 <h3 id="rollback"><code>rollback</code></h3>
 <p>Restore files from shruggie-indexer metadata to their original names and directory structure.</p>
-<div class="highlight"><pre><span></span><code>shruggie-indexer rollback [OPTIONS] META2_PATH
+<div class="highlight"><pre><span></span><code>shruggie-indexer rollback [OPTIONS] META_PATH
 </code></pre></div>
-<p><code>META2_PATH</code> is a required positional argument specifying a <code>_meta2.json</code> file, aggregate output file, or directory containing <code>_meta2.json</code> sidecars.</p>
+<p><code>META_PATH</code> is a required positional argument specifying a <code>_meta3.json</code> (or legacy <code>_meta2.json</code>) file, aggregate output file, or directory containing sidecar files.</p>
 <p>See <a href="#rollback-options">Rollback Options</a> below for the full option set.</p>
 <h2 id="target-options">Target Options</h2>
 <h3 id="target-positional-argument"><code>TARGET</code> (positional argument)</h3>
@@ -2806,7 +2884,7 @@ shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>-o
 <p>Write individual sidecar JSON files alongside each indexed item.</p>
 <div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--inplace
 </code></pre></div>
-<p>For files, the sidecar is named <code>&lt;filename&gt;_meta2.json</code>. For directories, the sidecar is named <code>&lt;dirname&gt;_directorymeta2.json</code> and placed inside the directory. The root target directory does not receive an in-place sidecar — the aggregate output file (<code>--outfile</code>) serves that purpose.</p>
+<p>For files, the sidecar is named <code>&lt;filename&gt;_meta3.json</code>. For directories, the sidecar is named <code>&lt;dirname&gt;_directorymeta3.json</code> and placed inside the directory. The root target directory does not receive an in-place sidecar — the aggregate output file (<code>--outfile</code>) serves that purpose.</p>
 <table>
 <thead>
 <tr>
@@ -2817,17 +2895,17 @@ shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>-o
 <tbody>
 <tr>
 <td><code>photos/sunset.jpg</code></td>
-<td><code>photos/sunset.jpg_meta2.json</code></td>
+<td><code>photos/sunset.jpg_meta3.json</code></td>
 </tr>
 <tr>
 <td><code>photos/vacation/</code></td>
-<td><code>photos/vacation/vacation_directorymeta2.json</code></td>
+<td><code>photos/vacation/vacation_directorymeta3.json</code></td>
 </tr>
 </tbody>
 </table>
 <p>Disables stdout output by default (use <code>--stdout</code> to re-enable).</p>
 <h3 id="-dir-meta-no-dir-meta"><code>--dir-meta</code> / <code>--no-dir-meta</code></h3>
-<p>Control whether <code>_directorymeta2.json</code> directory sidecar files are written.</p>
+<p>Control whether <code>_directorymeta3.json</code> directory sidecar files are written.</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Suppress directory metadata — only per-file sidecars are written</span>
 shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </span>--inplace<span class="w"> </span>--no-dir-meta
 
@@ -2836,12 +2914,22 @@ shruggie-indexer<span class="w"> </span>path/to/directory/<span class="w"> </spa
 </code></pre></div>
 <ul>
 <li><strong>Default:</strong> Enabled (<code>--dir-meta</code>). All directory sidecars are written normally.</li>
-<li><strong><code>--no-dir-meta</code>:</strong> Suppresses directory-level <code>_directorymeta2.json</code> sidecars during <code>--inplace</code> output. Per-file <code>_meta2.json</code> sidecars are unaffected.</li>
-<li>Auto-generated aggregate output files (those ending in <code>_directorymeta2.json</code> produced by the output path defaulting logic) are also suppressed.</li>
+<li><strong><code>--no-dir-meta</code>:</strong> Suppresses directory-level <code>_directorymeta3.json</code> sidecars during <code>--inplace</code> output. Per-file <code>_meta3.json</code> sidecars are unaffected.</li>
+<li>Auto-generated aggregate output files (those ending in <code>_directorymeta3.json</code> produced by the output path defaulting logic) are also suppressed.</li>
 <li>Explicitly specified <code>--outfile</code> paths are never suppressed, regardless of this flag.</li>
 <li>Stdout output is never affected by this flag.</li>
 <li>Maps to the <code>write_directory_meta</code> configuration key.</li>
 </ul>
+<h2 id="encoding-detection-options">Encoding Detection Options</h2>
+<h3 id="-no-detect-encoding"><code>--no-detect-encoding</code></h3>
+<p>Disable all encoding detection. When set, the <code>encoding</code> field is omitted from the output for all entries. This is equivalent to setting <code>detect_encoding = false</code> in the configuration file.</p>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>--no-detect-encoding
+</code></pre></div>
+<h3 id="-no-detect-charset"><code>--no-detect-charset</code></h3>
+<p>Disable <code>chardet</code>-based character set detection while retaining BOM and line-ending detection. When set, the <code>EncodingObject</code> is still populated for files with a BOM or detectable line endings, but <code>detected_encoding</code> and <code>confidence</code> are always <code>null</code>.</p>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>--no-detect-charset
+</code></pre></div>
+<p><code>--no-detect-encoding</code> takes precedence over <code>--no-detect-charset</code> — if both are specified, the <code>encoding</code> field is omitted entirely.</p>
 <h2 id="metadata-options">Metadata Options</h2>
 <p>These options control embedded metadata extraction and sidecar metadata processing.</p>
 <div class="admonition warning">
@@ -3161,22 +3249,22 @@ shruggie-indexer<span class="w"> </span>index<span class="w"> </span>-h
 </table>
 <h2 id="rollback-options">Rollback Options</h2>
 <p>These options apply to the <code>rollback</code> subcommand.</p>
-<h3 id="meta2_path-positional-argument"><code>META2_PATH</code> (positional argument)</h3>
-<p>Path to a <code>_meta2.json</code> sidecar file, an aggregate <code>_directorymeta2.json</code> output file, or a directory containing <code>_meta2.json</code> sidecar files. Required.</p>
+<h3 id="meta_path-positional-argument"><code>META_PATH</code> (positional argument)</h3>
+<p>Path to a <code>_meta3.json</code> sidecar file (or legacy <code>_meta2.json</code>), an aggregate <code>_directorymeta3.json</code> output file, or a directory containing sidecar files. Required.</p>
 <h3 id="-t-target-path"><code>-t, --target PATH</code></h3>
-<p>Target directory for restored files. When omitted, defaults to the parent directory of <code>META2_PATH</code> (if it is a file) or to <code>META2_PATH</code> itself (if it is a directory).</p>
+<p>Target directory for restored files. When omitted, defaults to the parent directory of <code>META_PATH</code> (if it is a file) or to <code>META_PATH</code> itself (if it is a directory).</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Restore into a specific directory</span>
 shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>sidecars/<span class="w"> </span>--target<span class="w"> </span>restored/
 
-<span class="c1"># Default: restore into the meta2 file&#39;s parent directory</span>
-shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yABC.jpg_meta2.json
+<span class="c1"># Default: restore into the sidecar file&#39;s parent directory</span>
+shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yABC.jpg_meta3.json
 </code></pre></div>
 <h3 id="-source-path"><code>--source PATH</code></h3>
-<p>Explicit source directory containing the content files to restore. When omitted, the rollback engine searches for files adjacent to the meta2 sidecar. Use this when the aggregate output file is in a different directory from the content files.</p>
-<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>output/photos_directorymeta2.json<span class="w"> </span>--source<span class="w"> </span>vault/<span class="w"> </span>--target<span class="w"> </span>restored/
+<p>Explicit source directory containing the content files to restore. When omitted, the rollback engine searches for files adjacent to the sidecar. Use this when the aggregate output file is in a different directory from the content files.</p>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>output/photos_directorymeta3.json<span class="w"> </span>--source<span class="w"> </span>vault/<span class="w"> </span>--target<span class="w"> </span>restored/
 </code></pre></div>
 <h3 id="-recursive"><code>--recursive</code></h3>
-<p>When <code>META2_PATH</code> is a directory, search subdirectories for <code>_meta2.json</code> sidecar files. Has no effect when <code>META2_PATH</code> is a file. Default: disabled.</p>
+<p>When <code>META_PATH</code> is a directory, search subdirectories for sidecar files. Has no effect when <code>META_PATH</code> is a file. Default: disabled.</p>
 <h3 id="-flat"><code>--flat</code></h3>
 <p>Restore files using their original names only (<code>name.text</code>), without reconstructing the original directory structure from <code>file_system.relative</code>. All files are placed directly in the target directory.</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Structured (default): restored/photos/vacation/beach.jpg</span>
@@ -3203,13 +3291,13 @@ shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>meta2.js
 </ul>
 <h3 id="rollback-examples">Rollback Examples</h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># Restore a single renamed file</span>
-shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yABC.jpg_meta2.json
+shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yABC.jpg_meta3.json
 
 <span class="c1"># Restore an entire directory of sidecars</span>
 shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/<span class="w"> </span>--target<span class="w"> </span>restored/
 
 <span class="c1"># Restore from aggregate output with explicit source</span>
-shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>output/photos_directorymeta2.json<span class="w"> </span>--source<span class="w"> </span>vault/<span class="w"> </span>--target<span class="w"> </span>restored/
+shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>output/photos_directorymeta3.json<span class="w"> </span>--source<span class="w"> </span>vault/<span class="w"> </span>--target<span class="w"> </span>restored/
 
 <span class="c1"># Flat restore (no directory structure)</span>
 shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/<span class="w"> </span>--flat<span class="w"> </span>--target<span class="w"> </span>flat_output/

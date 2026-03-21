@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -1955,7 +1955,7 @@
 
 
 <h1 id="rollback-guide">Rollback Guide</h1>
-<p>The rollback feature reverses shruggie-indexer rename and de-duplication operations by reading <code>_meta2.json</code> sidecar files and restoring files to their original names, directory structure, and timestamps. It also reconstructs absorbed sidecar metadata files that were consumed by MetaMergeDelete.</p>
+<p>The rollback feature reverses shruggie-indexer rename and de-duplication operations by reading <code>_meta3.json</code> sidecar files and restoring files to their original names, directory structure, and timestamps. It also reconstructs absorbed sidecar metadata files that were consumed by MetaMergeDelete.</p>
 <p>Rollback is available via the CLI (<code>shruggie-indexer rollback</code>), the GUI (Rollback operation type), and the Python API (<code>plan_rollback()</code>, <code>execute_rollback()</code>).</p>
 <div class="admonition tip">
 <p class="admonition-title">Non-Destructive</p>
@@ -1974,12 +1974,12 @@
 <h3 id="single-renamed-file">Single Renamed File</h3>
 <p>You indexed and renamed a file:</p>
 <div class="highlight"><pre><span></span><code>vault/yA8A8C089A6A8583B24C85F5A4A41F5AC.exe          ← renamed content
-vault/yA8A8C089A6A8583B24C85F5A4A41F5AC.exe_meta2.json  ← sidecar manifest
+vault/yA8A8C089A6A8583B24C85F5A4A41F5AC.exe_meta3.json  ← sidecar manifest
 </code></pre></div>
 <p>The sidecar records that the original filename was <code>setup-installer.exe</code>. To restore it:</p>
-<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yA8A8C089A6A8583B24C85F5A4A41F5AC.exe_meta2.json
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yA8A8C089A6A8583B24C85F5A4A41F5AC.exe_meta3.json
 </code></pre></div>
-<p>Result (default target = parent of meta2 file):</p>
+<p>Result (default target = parent of sidecar file):</p>
 <div class="highlight"><pre><span></span><code>vault/setup-installer.exe   ← restored with original name
 </code></pre></div>
 <p>The <code>mtime</code> and <code>atime</code> on the restored file are set from the sidecar's timestamp fields.</p>
@@ -1987,13 +1987,13 @@ vault/yA8A8C089A6A8583B24C85F5A4A41F5AC.exe_meta2.json  ← sidecar manifest
 <p>You indexed an entire directory tree with <code>--rename --inplace</code>:</p>
 <div class="highlight"><pre><span></span><code>vault/
 ├── yAAA.jpg
-├── yAAA.jpg_meta2.json
+├── yAAA.jpg_meta3.json
 ├── yBBB.png
-├── yBBB.png_meta2.json
+├── yBBB.png_meta3.json
 └── x1234/
     ├── yCCC.txt
-    ├── yCCC.txt_meta2.json
-    └── x1234_directorymeta2.json
+    ├── yCCC.txt_meta3.json
+    └── x1234_directorymeta3.json
 </code></pre></div>
 <p>The sidecars record original names and <code>file_system.relative</code> paths. To restore the full tree:</p>
 <div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/<span class="w"> </span>--target<span class="w"> </span>restored/
@@ -2009,7 +2009,7 @@ vault/yA8A8C089A6A8583B24C85F5A4A41F5AC.exe_meta2.json  ← sidecar manifest
 <p>The directory structure is faithfully reconstructed from the <code>file_system.relative</code> field of each entry.</p>
 <h3 id="deduplicated-files">Deduplicated Files</h3>
 <p>You had three identical copies of <code>report.pdf</code> that were de-duplicated during rename. The canonical entry's sidecar contains a <code>duplicates</code> array with the other two entries:</p>
-<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yDDD.pdf_meta2.json<span class="w"> </span>--target<span class="w"> </span>restored/
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yDDD.pdf_meta3.json<span class="w"> </span>--target<span class="w"> </span>restored/
 </code></pre></div>
 <p>Result — all three copies are restored:</p>
 <div class="highlight"><pre><span></span><code>restored/
@@ -2019,18 +2019,18 @@ vault/yA8A8C089A6A8583B24C85F5A4A41F5AC.exe_meta2.json  ← sidecar manifest
 </code></pre></div>
 <p>Each restored copy has the same bytes (copied from the single canonical file) but its own original name, path, and timestamps.</p>
 <p>To restore only canonical entries without duplicates:</p>
-<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yDDD.pdf_meta2.json<span class="w"> </span>--skip-duplicates<span class="w"> </span>--target<span class="w"> </span>restored/
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yDDD.pdf_meta3.json<span class="w"> </span>--skip-duplicates<span class="w"> </span>--target<span class="w"> </span>restored/
 </code></pre></div>
 <h3 id="aggregate-output">Aggregate Output</h3>
-<p>You produced an aggregate output file (<code>_directorymeta2.json</code>) containing the full directory tree. The content files are in a separate vault directory:</p>
-<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>output/photos_directorymeta2.json<span class="w"> </span><span class="se">\</span>
+<p>You produced an aggregate output file (<code>_directorymeta3.json</code>) containing the full directory tree. The content files are in a separate vault directory:</p>
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>output/photos_directorymeta3.json<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--source<span class="w"> </span>vault/<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--target<span class="w"> </span>restored/
 </code></pre></div>
 <p>The <code>--source</code> flag tells the engine where to find the content files (by <code>storage_name</code>). The tree structure is reconstructed from the aggregate's nested <code>items[]</code> hierarchy.</p>
 <h3 id="non-renamed-files">Non-Renamed Files</h3>
 <p>Not all indexed files are renamed. If a file was indexed without <code>--rename</code>, the sidecar still records its metadata. Rollback handles this transparently — the <code>LocalSourceResolver</code> looks for the file by <code>storage_name</code> first, then falls back to <code>name.text</code>. Non-renamed files are simply copied with their original name:</p>
-<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/readme.txt_meta2.json<span class="w"> </span>--target<span class="w"> </span>restored/
+<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/readme.txt_meta3.json<span class="w"> </span>--target<span class="w"> </span>restored/
 </code></pre></div>
 <p>Result:</p>
 <div class="highlight"><pre><span></span><code>restored/readme.txt   ← same name, timestamps restored from sidecar
@@ -2080,7 +2080,7 @@ share a common root. Restored directory tree may be incoherent. Consider using
 </thead>
 <tbody>
 <tr>
-<td>Single meta2 file (<code>/vault/yAAA.jpg_meta2.json</code>)</td>
+<td>Single sidecar file (<code>/vault/yAAA.jpg_meta3.json</code>)</td>
 <td><code>/vault/</code> (parent of the file)</td>
 </tr>
 <tr>
@@ -2088,14 +2088,14 @@ share a common root. Restored directory tree may be incoherent. Consider using
 <td><code>/vault/</code> (the directory itself)</td>
 </tr>
 <tr>
-<td>Aggregate output file (<code>/output/photos_directorymeta2.json</code>)</td>
+<td>Aggregate output file (<code>/output/photos_directorymeta3.json</code>)</td>
 <td><code>/output/</code> (parent of the file)</td>
 </tr>
 </tbody>
 </table>
 <p>This enables single-command in-place rollback:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># No --target needed — restores into the same directory</span>
-shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yABC.jpg_meta2.json
+shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yABC.jpg_meta3.json
 </code></pre></div>
 <h3 id="vault-delivery-use-case">Vault Delivery Use Case</h3>
 <p>The <code>shruggie-vault</code> project uses the rollback API programmatically to deliver files to end users in their original form. The typical flow is:</p>
@@ -2108,7 +2108,7 @@ shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yA
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">shruggie_indexer</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_meta2</span><span class="p">,</span> <span class="n">plan_rollback</span><span class="p">,</span> <span class="n">execute_rollback</span>
 
-<span class="n">entries</span> <span class="o">=</span> <span class="n">load_meta2</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/vault/yABC.jpg_meta2.json&quot;</span><span class="p">))</span>
+<span class="n">entries</span> <span class="o">=</span> <span class="n">load_meta2</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/vault/yABC.jpg_meta3.json&quot;</span><span class="p">))</span>
 <span class="n">plan</span> <span class="o">=</span> <span class="n">plan_rollback</span><span class="p">(</span>
     <span class="n">entries</span><span class="p">,</span>
     <span class="n">target_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/delivery/output&quot;</span><span class="p">),</span>
@@ -2151,10 +2151,14 @@ shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yA
 <h3 id="json-style-preservation">JSON Style Preservation</h3>
 <p>JSON sidecar files are restored using the formatting style recorded during indexing. The <code>attributes.json_style</code> field controls the output:</p>
 <ul>
-<li><strong><code>"pretty"</code></strong> — Indented JSON (<code>indent=2</code>), matching the original's whitespace convention.</li>
+<li><strong><code>"pretty"</code></strong> — Indented JSON, matching the original's whitespace convention. The indent level is controlled by the <code>attributes.json_indent</code> field (default: <code>2</code>).</li>
 <li><strong><code>"compact"</code></strong> — Minified JSON (no whitespace), preserving the original's compact representation.</li>
 <li><strong>Absent</strong> — Defaults to compact serialization for backward compatibility with entries created before <code>json_style</code> tracking was added.</li>
 </ul>
+<div class="admonition note">
+<p class="admonition-title">json_indent (v3)</p>
+<p>v3 sidecars record the original indent level in <code>attributes.json_indent</code>. When restoring pretty-printed JSON, rollback uses this value instead of always assuming <code>indent=2</code>. v2 entries without <code>json_indent</code> continue to default to 2.</p>
+</div>
 <p>This prevents compact JSON sidecars (e.g., minified <code>.info.json</code> files) from inflating in size during rollback.</p>
 <p>Sidecar reconstruction is on by default. Use <code>--no-restore-sidecars</code> to skip it.</p>
 <h3 id="sidecar-restoration-fidelity">Sidecar Restoration Fidelity</h3>
@@ -2190,6 +2194,10 @@ shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yA
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="admonition-title">Encoding-Aware Restoration (v3)</p>
+<p>v3 entries may include an <code>encoding</code> object recording the original file's BOM, line endings, and detected character encoding. When present, rollback uses this information to improve text fidelity — restoring the correct BOM prefix and line-ending style (<code>\r\n</code> vs. <code>\n</code>) rather than defaulting to platform conventions. This narrows the gap between "data-equivalent" and "byte-identical" for text-format sidecars.</p>
+</div>
 <div class="admonition note">
 <p class="admonition-title"><code>.url</code> sidecar restoration</p>
 <p><code>.url</code> (Windows shortcut) sidecar files are now stored as full text content — including the <code>[InternetShortcut]</code> INI header and <code>URL=</code> key — rather than extracting only the bare URL string. Restored <code>.url</code> files are functional Windows shortcuts that open in the default browser when double-clicked. This is a change from earlier versions, which performed lossy URL extraction that produced non-functional plaintext files on restore.</p>
@@ -2250,12 +2258,12 @@ shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yA
 <li><strong>Source not found</strong> — If the content file cannot be located, the entry is skipped with a warning. Other entries continue processing.</li>
 <li><strong>Copy failure</strong> — If <code>shutil.copy2()</code> fails (permissions, disk full), the error is logged and the entry is marked as failed. Other entries continue processing.</li>
 <li><strong>Path traversal</strong> — If <code>file_system.relative</code> contains <code>..</code> segments that would escape the target directory, the entry is rejected.</li>
-<li><strong>v1 sidecars</strong> — If a sidecar lacks <code>schema_version</code> or has <code>schema_version != 2</code>, loading fails with a clear error directing the user to the future <code>migrate</code> tool.</li>
+<li><strong>v1/v2 sidecars</strong> — If a sidecar has an unsupported <code>schema_version</code> (neither 2 nor 3) or lacks <code>schema_version</code> entirely, loading fails with a clear error directing the user to the <code>migrate</code> tool.</li>
 </ul>
 <hr />
 <h2 id="cli-quick-reference">CLI Quick Reference</h2>
 <div class="highlight"><pre><span></span><code><span class="c1"># Restore a single renamed file</span>
-shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yABC.jpg_meta2.json
+shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yABC.jpg_meta3.json
 
 <span class="c1"># Restore into a specific directory</span>
 shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/<span class="w"> </span>--target<span class="w"> </span>restored/
@@ -2267,7 +2275,7 @@ shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/<s
 shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/<span class="w"> </span>--dry-run<span class="w"> </span>-v
 
 <span class="c1"># Restore from aggregate with explicit source</span>
-shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>output/photos_directorymeta2.json<span class="w"> </span>--source<span class="w"> </span>vault/<span class="w"> </span>--target<span class="w"> </span>restored/
+shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>output/photos_directorymeta3.json<span class="w"> </span>--source<span class="w"> </span>vault/<span class="w"> </span>--target<span class="w"> </span>restored/
 
 <span class="c1"># Skip duplicates, force overwrite</span>
 shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/<span class="w"> </span>--skip-duplicates<span class="w"> </span>--force<span class="w"> </span>--target<span class="w"> </span>restored/
@@ -2278,14 +2286,14 @@ shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/<s
 <p>See the <a href="../cli-reference/#rollback-options">CLI Reference</a> for the full option set.</p>
 <hr />
 <h2 id="legacy-compatibility">Legacy Compatibility</h2>
-<p>Rollback automatically handles <code>_meta2.json</code> files produced by older indexer versions that computed <code>file_system.relative</code> from the <em>parent</em> of the target directory (prepending the target's own name as a prefix).</p>
+<p>Rollback automatically handles <code>_meta2.json</code> and <code>_meta3.json</code> files produced by older and current indexer versions. Older v2 sidecars that computed <code>file_system.relative</code> from the <em>parent</em> of the target directory (prepending the target's own name as a prefix) are detected and corrected.</p>
 <p>When all loaded entries share a common first path component matching the source directory name, rollback detects this as a legacy prefix and strips it before planning. An informational log message is emitted:</p>
 <div class="highlight"><pre><span></span><code>INFO: Detected legacy relative path prefix &#39;data&#39;. Stripping prefix for rollback.
 </code></pre></div>
 <p>This ensures files are restored directly under the target directory without an extra nesting level, regardless of which indexer version produced the sidecar files.</p>
 <hr />
 <h2 id="session-id-validation">Session-ID Validation</h2>
-<p>When <code>_meta2.json</code> files from multiple indexing sessions coexist in the same directory (e.g., stale metadata from a prior run was not cleaned up), rollback detects content-hash collisions — entries where the same file content appears with the same <code>attributes.storage_name</code> but different <code>file_system.relative</code> paths. Two entries that share a content hash but have <strong>different</strong> storage names (e.g., byte-identical <code>slippers.gif</code> and <code>slippers.png</code>) are treated as distinct canonical files and are <strong>not</strong> flagged as collisions.</p>
+<p>When <code>_meta3.json</code> or <code>_meta2.json</code> files from multiple indexing sessions coexist in the same directory (e.g., stale metadata from a prior run was not cleaned up), rollback detects content-hash collisions — entries where the same file content appears with the same <code>attributes.storage_name</code> but different <code>file_system.relative</code> paths. Two entries that share a content hash but have <strong>different</strong> storage names (e.g., byte-identical <code>slippers.gif</code> and <code>slippers.png</code>) are treated as distinct canonical files and are <strong>not</strong> flagged as collisions.</p>
 <p>When a collision is detected, rollback applies tiebreaking rules:</p>
 <ol>
 <li><strong>Majority session wins</strong> — The entry whose <code>session_id</code> matches the most common session across all loaded entries is kept.</li>
@@ -2296,7 +2304,7 @@ shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/<s
 <hr />
 <h2 id="known-limitations">Known Limitations</h2>
 <ul>
-<li><strong>Empty directories are not reconstructed.</strong> The indexer catalogues <em>files</em> and their containing directory hierarchy. Directories that contain no files (directly or transitively) produce no entries in <code>_meta2.json</code> output and therefore cannot be restored by rollback. This is intentional — shruggie-indexer focuses on the preservation and cataloguing of files, not the replication of directory trees.</li>
+<li><strong>Empty directories are not reconstructed.</strong> The indexer catalogues <em>files</em> and their containing directory hierarchy. Directories that contain no files (directly or transitively) produce no entries in sidecar output and therefore cannot be restored by rollback. This is intentional — shruggie-indexer focuses on the preservation and cataloguing of files, not the replication of directory trees.</li>
 </ul>
 
 

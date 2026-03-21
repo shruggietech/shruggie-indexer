@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -1058,6 +1058,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#encodingobject" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EncodingObject
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1173,6 +1184,17 @@
     <span class="md-ellipsis">
       
         Annotated Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v2-to-v3-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v2 to v3 Migration
       
     </span>
   </a>
@@ -1814,6 +1836,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#encodingobject" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EncodingObject
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1936,6 +1969,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v2-to-v3-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v2 to v3 Migration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#validation-examples" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1967,12 +2011,12 @@
 
 
 <h1 id="schema-reference">Schema Reference</h1>
-<p>The v2 output schema defines the structure of every index entry produced by shruggie-indexer. It consolidates related fields into logical sub-objects, eliminates redundancies from the legacy format, and includes a <code>schema_version</code> discriminator for forward compatibility.</p>
+<p>The v3 output schema defines the structure of every index entry produced by shruggie-indexer. It extends the v2 schema with encoding metadata, timestamp provenance, and indent-aware restoration while retaining full backward compatibility.</p>
 <h2 id="canonical-schema">Canonical Schema</h2>
-<p>The authoritative machine-readable schema is hosted at:</p>
+<p>The authoritative machine-readable schemas are hosted at:</p>
 <ul>
-<li><strong>Canonical URL:</strong> <a href="https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json">schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json</a></li>
-<li><strong>Local copy:</strong> <a href="shruggie-indexer-v2.schema.json">shruggie-indexer-v2.schema.json</a></li>
+<li><strong>v3 (current):</strong> <a href="https://schemas.shruggie.tech/data/shruggie-indexer-v3.schema.json">schemas.shruggie.tech/data/shruggie-indexer-v3.schema.json</a> — <a href="shruggie-indexer-v3.schema.json">local copy</a></li>
+<li><strong>v2 (legacy):</strong> <a href="https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json">schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json</a> — <a href="shruggie-indexer-v2.schema.json">local copy</a></li>
 </ul>
 <h2 id="design-principles">Design Principles</h2>
 <table>
@@ -2003,6 +2047,10 @@
 <td><strong>P5 — Explicit algorithm</strong></td>
 <td><code>id_algorithm</code> records which hash algorithm produced the <code>id</code>, eliminating reverse-matching.</td>
 </tr>
+<tr>
+<td><strong>P6 — Encoding fidelity</strong></td>
+<td>v3 captures BOM, line endings, and character encoding so the rollback engine can restore sidecar files byte-identically.</td>
+</tr>
 </tbody>
 </table>
 <h2 id="top-level-indexentry-fields">Top-Level IndexEntry Fields</h2>
@@ -2019,9 +2067,9 @@
 <tbody>
 <tr>
 <td><code>schema_version</code></td>
-<td><code>integer</code> (const <code>2</code>)</td>
+<td><code>integer</code> (const <code>3</code>)</td>
 <td>Yes</td>
-<td>Always <code>2</code>. Placed first in serialized output.</td>
+<td>Always <code>3</code>. Placed first in serialized output.</td>
 </tr>
 <tr>
 <td><code>id</code></td>
@@ -2102,6 +2150,12 @@
 <td>Metadata records (file) or <code>null</code> (directory).</td>
 </tr>
 <tr>
+<td><code>encoding</code></td>
+<td><code>EncodingObject</code></td>
+<td>No</td>
+<td>Source file encoding metadata (BOM, line endings, charset). Absent for binary files.</td>
+</tr>
+<tr>
 <td><code>duplicates</code></td>
 <td><code>array[IndexEntry]</code></td>
 <td>No</td>
@@ -2125,7 +2179,7 @@
 <div class="highlight"><pre><span></span><code><span class="p">[</span><span class="s2">&quot;schema_version&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;id&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;id_algorithm&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="p">,</span>
 <span class="w"> </span><span class="s2">&quot;extension&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;size&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;hashes&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;file_system&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;timestamps&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;attributes&quot;</span><span class="p">]</span>
 </code></pre></div>
-<p><code>session_id</code>, <code>indexed_at</code>, and <code>duplicates</code> are declared properties but are <strong>not</strong> in the <code>required</code> array. <code>session_id</code> and <code>indexed_at</code> are present when the indexer is invoked through the standard CLI, GUI, or API entry points. <code>duplicates</code> is present only on canonical entries that absorbed one or more byte-identical files during a rename operation. Entries constructed directly (e.g., in tests) may omit all three.</p>
+<p><code>session_id</code>, <code>indexed_at</code>, <code>encoding</code>, and <code>duplicates</code> are declared properties but are <strong>not</strong> in the <code>required</code> array. <code>session_id</code> and <code>indexed_at</code> are present when the indexer is invoked through the standard CLI, GUI, or API entry points. <code>encoding</code> is present when the source file has detectable text encoding signals; absent for binary files. <code>duplicates</code> is present only on canonical entries that absorbed one or more byte-identical files during a rename operation. Entries constructed directly (e.g., in tests) may omit all three optional fields.</p>
 <h3 id="field-behavior-by-type">Field behavior by type</h3>
 <table>
 <thead>
@@ -2305,6 +2359,12 @@
 <td>Yes</td>
 <td>Last access time. May be approximate on Linux with <code>relatime</code>.</td>
 </tr>
+<tr>
+<td><code>created_source</code></td>
+<td><code>string</code> (enum)</td>
+<td>No</td>
+<td>Provenance of the <code>created</code> timestamp: <code>"birthtime"</code> (true creation time) or <code>"ctime_fallback"</code> (inode change time used as fallback on platforms without birth time).</td>
+</tr>
 </tbody>
 </table>
 <h3 id="parentobject">ParentObject</h3>
@@ -2333,6 +2393,45 @@
 </tr>
 </tbody>
 </table>
+<h3 id="encodingobject">EncodingObject</h3>
+<p>Source file encoding metadata captured during ingestion. All properties are optional — the object may contain any combination of fields. Uses <code>additionalProperties: false</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bom</code></td>
+<td><code>string</code> (enum)</td>
+<td>No</td>
+<td>Detected byte-order mark type: <code>"utf-8"</code>, <code>"utf-16-le"</code>, <code>"utf-16-be"</code>, <code>"utf-32-le"</code>, or <code>"utf-32-be"</code>. Absent when no BOM is present.</td>
+</tr>
+<tr>
+<td><code>line_endings</code></td>
+<td><code>string</code> (enum)</td>
+<td>No</td>
+<td>Detected line-ending convention: <code>"lf"</code>, <code>"crlf"</code>, or <code>"mixed"</code>. Absent for binary files or files with no line endings.</td>
+</tr>
+<tr>
+<td><code>detected_encoding</code></td>
+<td><code>string</code></td>
+<td>No</td>
+<td>Best-guess character encoding name from <code>chardet</code> (e.g., <code>"utf-8"</code>, <code>"windows-1252"</code>, <code>"ascii"</code>).</td>
+</tr>
+<tr>
+<td><code>confidence</code></td>
+<td><code>number</code> (0.0–1.0)</td>
+<td>No</td>
+<td><code>chardet</code> detection confidence score. Present only when <code>detected_encoding</code> is present.</td>
+</tr>
+</tbody>
+</table>
+<p>The rollback engine uses <code>EncodingObject</code> fields to restore BOM bytes, line endings, and character encoding when rebuilding sidecar files.</p>
 <h2 id="filesystem-location-fields">Filesystem Location Fields</h2>
 <p>The <code>file_system</code> object provides path and hierarchy information.</p>
 <table>
@@ -2459,6 +2558,12 @@
 <td>The metadata content (type depends on <code>attributes.format</code>).</td>
 </tr>
 <tr>
+<td><code>encoding</code></td>
+<td><code>EncodingObject</code></td>
+<td>Sidecar only</td>
+<td>Source encoding metadata for text sidecars. Absent for binary sidecars or when encoding detection is disabled.</td>
+</tr>
+<tr>
 <td><code>file_system</code></td>
 <td><code>object</code></td>
 <td>Sidecar only</td>
@@ -2549,6 +2654,12 @@
 <td><code>string</code> (enum)</td>
 <td>No</td>
 <td>Detected JSON formatting style of the original sidecar file: <code>"pretty"</code> (indented) or <code>"compact"</code> (minified). Present only when <code>format</code> is <code>"json"</code>. Used by the rollback engine to restore the original whitespace convention.</td>
+</tr>
+<tr>
+<td><code>json_indent</code></td>
+<td><code>string</code></td>
+<td>No</td>
+<td>Original JSON indentation string for hash-perfect restoration. Captures the exact whitespace used (e.g., <code>"  "</code> for 2 spaces, <code>"    "</code> for 4 spaces, <code>"\t"</code> for tabs). Present only when <code>format</code> is <code>"json"</code> and <code>json_style</code> is <code>"pretty"</code>.</td>
 </tr>
 <tr>
 <td><code>link_metadata</code></td>
@@ -2693,31 +2804,31 @@
 </tbody>
 </table>
 <h2 id="annotated-example">Annotated Example</h2>
-<p>The following is a real v2-compliant output entry for an executable file:</p>
+<p>The following is a v3-compliant output entry for a text file with encoding metadata:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;yA8A8C089A6A8583B24C85F5A4A41F5AC&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;id_algorithm&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;md5&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;flashplayer.exe&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;readme.txt&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;hashes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">&quot;md5&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;3470F718BA9457335A59CE06239A9250&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;sha256&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;4DC834B31A1A5967F7A97AAD3D62EE91CCCC99B2034748135AFC193889B9A0EB&quot;</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;extension&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;exe&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;mime_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;application/octet-stream&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;extension&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;txt&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;mime_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text/plain&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;size&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;15.28 MB&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16027648</span>
+<span class="w">    </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.25 KB&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1250</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;hashes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;md5&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;A8A8C089A6A8583B24C85F5A4A41F5AC&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;sha256&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;B6BA115C2B43D87AADDF0060C44726E7AF1A12C9501FC63DE652A9517D7367DB&quot;</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;file_system&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;relative&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;.test/flashplayer.exe&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;relative&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;.test/readme.txt&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;parent&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;x3B4F479E9F880E438882FC34B67D352C&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -2732,27 +2843,70 @@
 <span class="w">  </span><span class="nt">&quot;timestamps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;created&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;iso&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-02-15T09:28:17.4084620-05:00&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;unix&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1771165697408</span><span class="w"> </span><span class="p">},</span>
 <span class="w">    </span><span class="nt">&quot;modified&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;iso&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2023-08-03T19:47:44.0000000-04:00&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;unix&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1691106464000</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;accessed&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;iso&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-02-15T09:28:18.1093900-05:00&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;unix&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1771165698109</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="nt">&quot;accessed&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;iso&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-02-15T09:28:18.1093900-05:00&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;unix&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1771165698109</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;created_source&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;birthtime&quot;</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;attributes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;is_link&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;storage_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;yA8A8C089A6A8583B24C85F5A4A41F5AC.exe&quot;</span>
+<span class="w">    </span><span class="nt">&quot;storage_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;yA8A8C089A6A8583B24C85F5A4A41F5AC.txt&quot;</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;items&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;encoding&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;bom&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;line_endings&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;crlf&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;detected_encoding&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;confidence&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.99</span>
+<span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
 <p>Key observations:</p>
 <ul>
+<li><code>schema_version</code> is <code>3</code> — identifies this as a v3 entry</li>
 <li><code>id</code> is <code>"y"</code> + the MD5 content hash (matching <code>id_algorithm: "md5"</code>)</li>
 <li><code>storage_name</code> is <code>id</code> + <code>"."</code> + <code>extension</code></li>
-<li><code>name.hashes</code> are hashes of the UTF-8 bytes of <code>"flashplayer.exe"</code> (different from content <code>hashes</code>)</li>
+<li><code>name.hashes</code> are hashes of the UTF-8 bytes of <code>"readme.txt"</code> (different from content <code>hashes</code>)</li>
 <li><code>file_system.relative</code> uses forward slashes regardless of platform</li>
 <li><code>hashes.sha512</code> is absent (not <code>null</code>) because SHA-512 was not computed</li>
+<li><code>timestamps.created_source</code> records that the creation time came from the filesystem's birth time</li>
+<li><code>encoding</code> captures the BOM type, line-ending convention, character encoding, and detection confidence</li>
 <li><code>items</code> and <code>metadata</code> are explicitly <code>null</code> (file with no metadata extraction requested)</li>
+<li>For binary files, <code>encoding</code> would be absent entirely</li>
 </ul>
+<h2 id="v2-to-v3-migration">v2 to v3 Migration</h2>
+<p>v3 is a strict superset of v2. All v2 required fields remain required in v3. The new fields are optional:</p>
+<table>
+<thead>
+<tr>
+<th>New field</th>
+<th>Location</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>encoding</code></td>
+<td><code>IndexEntry</code>, <code>MetadataEntry</code></td>
+<td>Source encoding metadata (BOM, line endings, charset).</td>
+</tr>
+<tr>
+<td><code>created_source</code></td>
+<td><code>TimestampsObject</code></td>
+<td>Provenance of the <code>created</code> timestamp.</td>
+</tr>
+<tr>
+<td><code>json_indent</code></td>
+<td><code>MetadataAttributes</code></td>
+<td>Original JSON indentation string for exact restoration.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Upgrading v2 → v3:</strong> Change <code>schema_version</code> from <code>2</code> to <code>3</code>. Optionally populate the new fields. This is a lossless upgrade — no v2 data is discarded.</p>
+<p><strong>Downgrading v3 → v2:</strong> Strip <code>encoding</code>, <code>created_source</code>, and <code>json_indent</code>. Change <code>schema_version</code> from <code>3</code> to <code>2</code>. The encoding and provenance information is lost, but no v2 field is affected.</p>
+<p><strong>Sidecar coexistence:</strong> v1 (<code>_meta.json</code>), v2 (<code>_meta2.json</code>), and v3 (<code>_meta3.json</code>) sidecar files can coexist on disk. The exclusion logic ensures all three generations are excluded from directory traversal.</p>
+<p><strong>Consumer guidance:</strong> Consumers dispatching on <code>schema_version</code> should add a <code>case 3:</code> branch. The v3 field set is a strict superset of v2; consumers that parse v3 entries can reuse their v2 parsing logic and optionally inspect the new fields.</p>
 <h2 id="validation-examples">Validation Examples</h2>
-<p>The <a href="examples/">examples/</a> directory contains real-world v2-compliant output files:</p>
+<p>The <a href="examples/">examples/</a> directory contains real-world output files:</p>
 <ul>
 <li><a href="examples/flashplayer.exe_meta2.json">flashplayer.exe_meta2.json</a></li>
 <li><a href="examples/deduplicated_meta2.json">deduplicated_meta2.json</a> — demonstrates the <code>duplicates</code> field for provenance-preserving de-duplication</li>

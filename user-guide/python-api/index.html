@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -2527,7 +2527,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> A fully populated <code>IndexEntry</code> conforming to the v2 schema.</p>
+<p><strong>Returns:</strong> A fully populated <code>IndexEntry</code> conforming to the v3 schema.</p>
 <p><strong>Raises:</strong></p>
 <table>
 <thead>
@@ -2662,7 +2662,7 @@
 </tbody>
 </table>
 <h3 id="serialize_entry"><code>serialize_entry()</code></h3>
-<p>Converts an <code>IndexEntry</code> to a JSON string conforming to the v2 schema.</p>
+<p>Converts an <code>IndexEntry</code> to a JSON string conforming to the v3 schema.</p>
 <div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">serialize_entry</span><span class="p">(</span>
     <span class="n">entry</span><span class="p">:</span> <span class="n">IndexEntry</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
@@ -2769,15 +2769,15 @@
 <li><code>meta_merge_delete=True</code> → <code>meta_merge=True</code></li>
 <li><code>meta_merge=True</code> → <code>extract_exif=True</code></li>
 </ul>
-<p>The <code>write_directory_meta</code> field (default <code>True</code>) controls whether <code>_directorymeta2.json</code> directory sidecar files are emitted during output. Set to <code>False</code> to suppress directory-level sidecars while retaining per-file sidecars. Corresponds to the CLI <code>--no-dir-meta</code> flag.</p>
+<p>The <code>write_directory_meta</code> field (default <code>True</code>) controls whether <code>_directorymeta3.json</code> directory sidecar files are emitted during output. Set to <code>False</code> to suppress directory-level sidecars while retaining per-file sidecars. Corresponds to the CLI <code>--no-dir-meta</code> flag.</p>
 </div>
 <h2 id="data-models">Data Models</h2>
-<p>All data classes are defined in <code>models/schema.py</code> and map directly to the <a href="../../schema/">v2 JSON Schema</a> types.</p>
+<p>All data classes are defined in <code>models/schema.py</code> and map directly to the <a href="../../schema/">v3 JSON Schema</a> types.</p>
 <h3 id="indexentry"><code>IndexEntry</code></h3>
 <p>The root data class representing a single indexed file or directory.</p>
 <div class="highlight"><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">IndexEntry</span><span class="p">:</span>
-    <span class="n">schema_version</span><span class="p">:</span> <span class="nb">int</span>       <span class="c1"># Always 2</span>
+    <span class="n">schema_version</span><span class="p">:</span> <span class="nb">int</span>       <span class="c1"># Always 3</span>
     <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span>                   <span class="c1"># Prefixed hash: y... (file), x... (directory)</span>
     <span class="n">id_algorithm</span><span class="p">:</span> <span class="nb">str</span>         <span class="c1"># &quot;md5&quot; or &quot;sha256&quot;</span>
     <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span>                 <span class="c1"># &quot;file&quot; or &quot;directory&quot;</span>
@@ -2788,6 +2788,7 @@
     <span class="n">file_system</span><span class="p">:</span> <span class="n">FileSystemObject</span>
     <span class="n">timestamps</span><span class="p">:</span> <span class="n">TimestampsObject</span>
     <span class="n">attributes</span><span class="p">:</span> <span class="n">AttributesObject</span>
+    <span class="n">encoding</span><span class="p">:</span> <span class="n">EncodingObject</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Text-file encoding metadata (v3)</span>
     <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">IndexEntry</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">metadata</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">MetadataEntry</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">mime_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
@@ -2827,8 +2828,8 @@
 </tr>
 <tr>
 <td><code>TimestampsObject</code></td>
-<td><code>created</code>, <code>modified</code>, <code>accessed</code></td>
-<td>Three standard filesystem timestamps, each a <code>TimestampPair</code>.</td>
+<td><code>created</code>, <code>modified</code>, <code>accessed</code>, <code>created_source</code></td>
+<td>Three standard filesystem timestamps (each a <code>TimestampPair</code>) plus provenance indicator for the creation timestamp.</td>
 </tr>
 <tr>
 <td><code>ParentObject</code></td>
@@ -2842,13 +2843,18 @@
 </tr>
 <tr>
 <td><code>AttributesObject</code></td>
-<td><code>is_link</code>, <code>storage_name</code></td>
-<td>Item attributes including symlink status and deterministic rename target.</td>
+<td><code>is_link</code>, <code>storage_name</code>, <code>json_style</code>, <code>json_indent</code>, <code>link_metadata</code></td>
+<td>Item attributes including symlink status, deterministic rename target, and metadata-specific fields.</td>
 </tr>
 <tr>
 <td><code>MetadataEntry</code></td>
-<td><code>id</code>, <code>origin</code>, <code>name</code>, <code>hashes</code>, <code>attributes</code>, <code>data</code>, ...</td>
+<td><code>id</code>, <code>origin</code>, <code>name</code>, <code>hashes</code>, <code>attributes</code>, <code>data</code>, <code>encoding</code>, ...</td>
 <td>A single metadata record (sidecar or generated).</td>
+</tr>
+<tr>
+<td><code>EncodingObject</code></td>
+<td><code>bom</code>, <code>line_endings</code>, <code>detected_encoding</code>, <code>confidence</code></td>
+<td>Encoding metadata for text-based files (v3).</td>
 </tr>
 </tbody>
 </table>
@@ -2970,7 +2976,7 @@
 <span class="p">)</span>
 </code></pre></div>
 <h3 id="load_meta2path-recursivefalse"><code>load_meta2(path, *, recursive=False)</code></h3>
-<p>Load and parse a <code>_meta2.json</code> file into a flat list of <code>IndexEntry</code> objects.</p>
+<p>Load and parse a <code>_meta3.json</code> (or legacy <code>_meta2.json</code>) file into a flat list of <code>IndexEntry</code> objects.</p>
 <div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_meta2</span><span class="p">(</span>
     <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
@@ -3002,7 +3008,7 @@
 <ol>
 <li><strong>Per-file sidecar</strong> — A single <code>IndexEntry</code> object → returns <code>[entry]</code>.</li>
 <li><strong>Aggregate output</strong> — A directory entry with nested <code>items[]</code> → walks the tree, returns all file-type entries flattened.</li>
-<li><strong>Directory path</strong> — Discovers all <code>*_meta2.json</code> files (recursively if <code>recursive=True</code>), loads each, returns combined flat list.</li>
+<li><strong>Directory path</strong> — Discovers all <code>*_meta3.json</code> and <code>*_meta2.json</code> files (recursively if <code>recursive=True</code>), loads each, returns combined flat list.</li>
 </ol>
 <p>Duplicate entries from the <code>duplicates</code> array of each canonical entry are extracted and included in the returned list with annotations distinguishing them from canonical entries.</p>
 <p><strong>Raises:</strong></p>
@@ -3016,7 +3022,7 @@
 <tbody>
 <tr>
 <td><code>IndexerConfigError</code></td>
-<td>Invalid JSON or <code>schema_version</code> is not 2.</td>
+<td>Invalid JSON or unsupported <code>schema_version</code>.</td>
 </tr>
 <tr>
 <td><code>IndexerTargetError</code></td>
@@ -3025,7 +3031,7 @@
 </tbody>
 </table>
 <h3 id="discover_meta2_filesdirectory-recursivefalse"><code>discover_meta2_files(directory, *, recursive=False)</code></h3>
-<p>Find all <code>*_meta2.json</code> files in a directory.</p>
+<p>Find all <code>*_meta3.json</code> and <code>*_meta2.json</code> files in a directory.</p>
 <div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">discover_meta2_files</span><span class="p">(</span>
     <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
@@ -3356,7 +3362,7 @@
 <ol>
 <li>Look for <code>storage_name</code> in <code>search_dir</code> (renamed file).</li>
 <li>Look for <code>name.text</code> in <code>search_dir</code>, verify hash if found (non-renamed file).</li>
-<li>If strategies 1–2 fail and the entry has an origin-directory annotation (set by <code>load_meta2()</code> during loading), repeat strategies 1–2 in the origin directory. This enables recursive rollback — when <code>search_dir</code> is the tree root but the content file resides in a subdirectory alongside its <code>_meta2.json</code> sidecar, the fallback finds it.</li>
+<li>If strategies 1–2 fail and the entry has an origin-directory annotation (set by <code>load_meta2()</code> during loading), repeat strategies 1–2 in the origin directory. This enables recursive rollback — when <code>search_dir</code> is the tree root but the content file resides in a subdirectory alongside its sidecar, the fallback finds it.</li>
 <li>Return <code>None</code> if no match succeeds.</li>
 </ol>
 <div class="highlight"><pre><span></span><code><span class="n">resolver</span> <span class="o">=</span> <span class="n">LocalSourceResolver</span><span class="p">(</span><span class="n">verify_hash</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -3373,7 +3379,7 @@
 <span class="p">)</span>
 
 <span class="c1"># Load a single sidecar</span>
-<span class="n">entries</span> <span class="o">=</span> <span class="n">load_meta2</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/vault/yABC.jpg_meta2.json&quot;</span><span class="p">))</span>
+<span class="n">entries</span> <span class="o">=</span> <span class="n">load_meta2</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/vault/yABC.jpg_meta3.json&quot;</span><span class="p">))</span>
 
 <span class="c1"># Plan a flat restore (single file, no directory structure)</span>
 <span class="n">plan</span> <span class="o">=</span> <span class="n">plan_rollback</span><span class="p">(</span>
