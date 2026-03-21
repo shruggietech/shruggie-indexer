@@ -24,6 +24,7 @@ a = Analysis(
         "shruggie_indexer.config.types",
         "shruggie_indexer.core",
         "shruggie_indexer.core.dedup",
+        "shruggie_indexer.core.encoding",
         "shruggie_indexer.core.entry",
         "shruggie_indexer.core.exif",
         "shruggie_indexer.core.hashing",

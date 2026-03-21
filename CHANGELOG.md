@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **GUI: MetaMergeDelete output field reports false `_directorymeta3.json` output** — When running MetaMergeDelete with multi-file output mode and the "Write directory metadata" checkbox unchecked, the Output field incorrectly reports upon completion that an output was written to the default `_directorymeta3.json` location. Multi-file sidecars are written as expected, but no directory summary file is produced when directory metadata output is suppressed (this is the correct behavior). The Output field completion summary must be updated to omit the `_directorymeta3.json` path when directory metadata writing is disabled.
 - **Core: Windows directory shortcut (`.lnk`) files incorrectly associated as sidecars** — Testing performed subsequent to `v0.1.2` release discovered that Windows `.lnk` directory shortcut files are misidentified as sidecars of unrelated sibling files in the same directory. The `.lnk` binary content is correctly saved and rollback properly restores the file, but the sidecar association logic incorrectly pairs the shortcut with a miscellaneous sibling file that shares no filename similarity or other discernible relationship. The sidecar matching heuristic needs investigation and correction to prevent false `.lnk` associations.
 
+## [0.2.0] - 2026-03-20
+
+### Known Issues
+
+- **GUI: MetaMergeDelete output field reports false `_directorymeta3.json` output** — When running MetaMergeDelete with multi-file output mode and the "Write directory metadata" checkbox unchecked, the Output field incorrectly reports upon completion that an output was written to the default `_directorymeta3.json` location. Actual file operations are correct; only the GUI completion summary is affected.
+- **Core: Windows directory shortcut (`.lnk`) files incorrectly associated as sidecars** — Windows `.lnk` directory shortcut files are misidentified as sidecars of unrelated sibling files. The `.lnk` binary content is correctly saved and rollback properly restores the file, but the sidecar association is incorrect.
+
 ### Fixed
 
 - **CLI/Build: PyInstaller binary produced no output** — The standalone `shruggie-indexer.exe` binary silently exited with code 0 for all invocations (no args, `--help`, `-h`, `--file`, etc.) because the PyInstaller spec file pointed at `cli/main.py`, which defines the Click command group but never calls it. The pip-installed console script and `python -m shruggie_indexer` paths worked correctly because their wrappers explicitly call `main()`. Fixed by redirecting the spec entry point from `cli/main.py` to `__main__.py` (which has the proper `if __name__ == "__main__"` guard), adding a defensive `if __name__ == "__main__"` guard to `cli/main.py`, and expanding `hiddenimports` from `["shruggie_indexer"]` to all 28 submodules (lazy imports inside command handlers are invisible to PyInstaller's static analysis). Spec: §13.4.
@@ -301,7 +308,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform build-and-release CI that publishes standalone executables for Windows, Linux, and macOS.
 
 
-[Unreleased]: https://github.com/shruggietech/shruggie-indexer/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/shruggietech/shruggie-indexer/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/shruggietech/shruggie-indexer/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/shruggietech/shruggie-indexer/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/shruggietech/shruggie-indexer/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/shruggietech/shruggie-indexer/releases/tag/v0.1.0

@@ -1,6 +1,6 @@
 # shruggie-indexer
 
-**shruggie-indexer** produces structured JSON index entries for files and directories, capturing hash-based identities, filesystem timestamps, EXIF metadata, sidecar metadata, and storage attributes. Every entry conforms to the [v2 JSON Schema](schema/shruggie-indexer-v2.schema.json) and includes deterministic, content-derived identifiers that are stable across runs and platforms. The tool ships as a CLI utility, a Python library, and a standalone GUI application — all powered by the same core indexing engine.
+**shruggie-indexer** produces structured JSON index entries for files and directories, capturing hash-based identities, filesystem timestamps, EXIF metadata, sidecar metadata, and storage attributes. Every entry conforms to the [v3 JSON Schema](schema/shruggie-indexer-v3.schema.json) and includes deterministic, content-derived identifiers that are stable across runs and platforms. The tool ships as a CLI utility, a Python library, and a standalone GUI application — all powered by the same core indexing engine.
 
 ## Key Features
 
@@ -16,7 +16,7 @@
 
 **Cross-platform** — Windows, Linux, and macOS are fully supported with platform-aware handling of timestamps, symlinks, and filesystem attributes.
 
-**Structured v2 JSON output** — Output follows a well-defined schema with typed sub-objects (`HashSet`, `NameObject`, `SizeObject`, `TimestampPair`, `TimestampsObject`, `ParentObject`) and a `schema_version` discriminator for forward compatibility.
+**Structured v3 JSON output** — Output follows a well-defined schema with typed sub-objects (`HashSet`, `NameObject`, `SizeObject`, `TimestampPair`, `TimestampsObject`, `ParentObject`) and a `schema_version` discriminator for forward compatibility.
 
 ## Quick Example
 
@@ -30,7 +30,7 @@ Output (abbreviated):
 
 ```json
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "id": "yA8A8C089A6A8583B24C85F5A4A41F5AC",
   "id_algorithm": "md5",
   "type": "file",
@@ -61,14 +61,14 @@ Output (abbreviated):
 
 - **[Getting Started](getting-started/installation.md)** — Install shruggie-indexer, set up ExifTool, and index your first file in minutes.
 - **[User Guide](user-guide/index.md)** — Desktop application guide, CLI reference, configuration guide, Python API documentation, and platform-specific notes.
-- **[Schema Reference](schema/index.md)** — Full v2 JSON Schema documentation with type definitions, field tables, and annotated examples.
+- **[Schema Reference](schema/index.md)** — Full v3 JSON Schema documentation with type definitions, field tables, and annotated examples.
 - **[Porting Reference](porting-reference/index.md)** — Historical reference materials from the original PowerShell implementation.
 - **[Changelog](changelog.md)** — Version history and release notes.
 
 ## Quick Links
 
 - [GitHub Repository](https://github.com/shruggietech/shruggie-indexer)
-- [V2 JSON Schema (canonical)](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json)
+- [V3 JSON Schema (canonical)](https://schemas.shruggie.tech/data/shruggie-indexer-v3.schema.json)
 - [Rollback Guide](user-guide/rollback.md) — Restore renamed and de-duplicated files to their original state.
 - Technical Specification:
     - [Markdown (GitHub)](https://github.com/shruggietech/shruggie-indexer/blob/main/shruggie-indexer-spec.md)

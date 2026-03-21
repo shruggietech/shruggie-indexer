@@ -6,7 +6,7 @@
 
 Filesystem indexer with hash-based identity, metadata extraction, and structured JSON output.
 
-`shruggie-indexer` scans files and directories to produce deterministic, schema-validated JSON index entries. Each entry captures cryptographic hashes (MD5, SHA-256, optional SHA-512), filesystem timestamps, EXIF metadata (via exiftool), sidecar file content, and a computed storage name — all structured under the [v2 JSON Schema](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json).
+`shruggie-indexer` scans files and directories to produce deterministic, schema-validated JSON index entries. Each entry captures cryptographic hashes (MD5, SHA-256, optional SHA-512), filesystem timestamps, EXIF metadata (via exiftool), sidecar file content, and a computed storage name — all structured under the [v3 JSON Schema](https://schemas.shruggie.tech/data/shruggie-indexer-v3.schema.json).
 
 ## Installation
 
