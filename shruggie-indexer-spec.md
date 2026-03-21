@@ -1026,7 +1026,7 @@ The site is configured by `mkdocs.yml` at the repository root. Key configuration
 |---------|-------|---------|
 | `site_name` | `shruggie-indexer` | Displayed in the site header and browser title. |
 | `site_description` | Project tagline for SEO and social metadata. | |
-| `site_url` | The GitHub Pages URL for the project. | Base URL for canonical links and sitemap generation. |
+| `site_url` | `https://indexer.sh/` | Base URL for canonical links and sitemap generation. Custom domain; see [§3.7.7](#377-custom-domain). |
 | `docs_dir` | `docs` | MkDocs reads all documentation source from the `docs/` directory. |
 | `theme.name` | `material` | Activates the Material for MkDocs theme. |
 | `theme.features` | Navigation tabs, instant loading, search highlighting, content tabs. | Provides a polished, responsive documentation experience. |
@@ -1121,6 +1121,33 @@ docs = [
 ```
 
 These packages are NOT required for using, developing, or testing `shruggie-indexer` itself. They are required only for building or previewing the documentation site. The `venv-setup` scripts ([§3.5](#35-scripts-and-build-tooling)) do not install the `docs` extra by default — documentation authors install it explicitly with `pip install -e ".[docs]"`.
+
+<a id="377-custom-domain"></a>
+#### 3.7.7. Custom Domain
+
+> **Added 2026-03-21.**
+
+The documentation site is served under the custom domain **`indexer.sh`** rather than the default `shruggietech.github.io` URL. GitHub Pages requires a `CNAME` file at the root of the published branch (`gh-pages`) to activate a custom domain.
+
+Because the deployment workflow uses `mkdocs gh-deploy --force` ([§3.7.5](#375-deployment)), the entire `gh-pages` branch is replaced on every deploy. Any `CNAME` file configured through the GitHub UI is lost. To prevent this, a `CNAME` file is maintained inside the `docs/` directory:
+
+```
+docs/CNAME
+```
+
+Contents (bare domain, no protocol prefix):
+
+```
+indexer.sh
+```
+
+MkDocs copies non-Markdown files from `docs/` into the built `site/` directory as static assets ([§3.7.2](#372-non-markdown-asset-handling)), so `docs/CNAME` becomes `site/CNAME` in the build output and survives every force-push to `gh-pages`.
+
+**Constraints:**
+
+- `docs/CNAME` MUST exist and MUST contain the bare custom domain. Removing or omitting this file causes the custom domain to revert to `*.github.io` on the next deploy.
+- `site_url` in `mkdocs.yml` MUST match the custom domain (`https://indexer.sh/`) so that canonical links, sitemaps, and social metadata reference the correct URL.
+- DNS configuration for the custom domain is managed outside of this repository (via the domain registrar and/or GitHub repository settings).
 
 <a id="4-architecture"></a>
 ## 4. Architecture

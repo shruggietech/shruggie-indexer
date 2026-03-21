@@ -5,7 +5,7 @@ site_name: shruggie-indexer
 site_description: >-
   Filesystem indexer with hash-based identity, metadata extraction,
   and structured JSON output.
-site_url: https://shruggietech.github.io/shruggie-indexer/
+site_url: https://indexer.sh/
 repo_url: https://github.com/shruggietech/shruggie-indexer
 repo_name: shruggietech/shruggie-indexer
 docs_dir: docs
