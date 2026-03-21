@@ -1579,7 +1579,7 @@ class OperationsPage(ctk.CTkFrame):
         self._write_dir_meta_cb.pack(anchor="w")
         _Tooltip(
             self._write_dir_meta_cb,
-            "When unchecked, _directorymeta2.json files are suppressed.\n"
+            "When unchecked, _directorymeta3.json files are suppressed.\n"
             "Per-file sidecar files are unaffected.",
         )
         self._write_dir_meta_info_label = ctk.CTkLabel(
@@ -1627,13 +1627,13 @@ class OperationsPage(ctk.CTkFrame):
         )
         self._rb_meta2_entry = _CtkEntry(
             meta2_frame,
-            placeholder_text="Select a _meta2.json file or folder...",
+            placeholder_text="Select a _meta3.json file or folder...",
         )
         self._rb_meta2_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
         _Tooltip(
             self._rb_meta2_entry,
-            "Path to a _meta2.json sidecar file, aggregate output file, "
-            "or directory containing _meta2.json sidecars.",
+            "Path to a _meta3.json sidecar file, aggregate output file, "
+            "or directory containing _meta3.json sidecars.",
         )
 
         # Bind validation on text change
@@ -1656,7 +1656,7 @@ class OperationsPage(ctk.CTkFrame):
             command=self._browse_rb_meta2_file,
         )
         self._rb_meta2_file_btn.pack(side="right", padx=(2, 0))
-        _Tooltip(self._rb_meta2_file_btn, "Browse for a _meta2.json sidecar file.")
+        _Tooltip(self._rb_meta2_file_btn, "Browse for a _meta3.json sidecar file.")
 
         # Source path entry row (optional)
         source_frame = ctk.CTkFrame(c, fg_color="transparent")
@@ -1923,9 +1923,9 @@ class OperationsPage(ctk.CTkFrame):
         if target_kind == "directory":
             normalized = str(p).rstrip("/\\")
             if not normalized or normalized == "/":
-                return str(Path.home() / "root_directorymeta2.json")
-            return normalized + "_directorymeta2.json"
-        return str(p) + "_meta2.json"
+                return str(Path.home() / "root_directorymeta3.json")
+            return normalized + "_directorymeta3.json"
+        return str(p) + "_meta3.json"
 
     # -- Target / Type validation -------------------------------------------
 
@@ -3974,7 +3974,7 @@ class ShruggiIndexerApp(ctk.CTk):
                 not config.write_directory_meta
                 and entry.type == "directory"
                 and config.output_file is not None
-                and str(config.output_file).endswith("_directorymeta2.json")
+                and str(config.output_file).endswith("_directorymeta3.json")
             ):
                 logger.info("Directory aggregate output suppressed (--no-dir-meta).")
                 write_aggregate = False
@@ -4182,7 +4182,7 @@ class ShruggiIndexerApp(ctk.CTk):
         (written alongside the target).  Child sidecars are unaffected.
 
         When *write_directory_meta* is ``False``, directory-level sidecar
-        files (``_directorymeta2.json``) are suppressed.  Per-file sidecars
+        files (``_directorymeta3.json``) are suppressed.  Per-file sidecars
         are unaffected.
         """
         if entry.type == "file":

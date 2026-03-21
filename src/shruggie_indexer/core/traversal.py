@@ -130,7 +130,7 @@ def list_children(
 
     # ── Layer 1: Exclude indexer output artifacts (always active) ──────
     # Files matching metadata_exclude_patterns (e.g. _meta.json,
-    # _meta2.json, _directorymeta2.json) are unconditionally removed.
+    # _meta2.json, _meta3.json, _directorymeta3.json) are unconditionally removed.
     # These are output artifacts from prior indexer runs and must never
     # be indexed as standalone items.  (Spec §7.5, Batch 6 Section 1.)
     exclude_meta = config.metadata_exclude_patterns
@@ -171,7 +171,7 @@ def _matches_metadata_exclude(
     """Check whether a filename matches any metadata exclusion pattern.
 
     Layer 1 filter: removes indexer output artifacts (_meta.json,
-    _meta2.json, _directorymeta2.json, etc.) unconditionally.
+    _meta2.json, _meta3.json, _directorymeta3.json, etc.) unconditionally.
     """
     return any(pattern.search(filename) for pattern in exclude_patterns)
 

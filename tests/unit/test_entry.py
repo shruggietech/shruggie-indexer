@@ -47,7 +47,7 @@ class TestBuildFileEntry:
         entry = build_file_entry(sample_file, config)
 
         assert isinstance(entry, IndexEntry)
-        assert entry.schema_version == 2
+        assert entry.schema_version == 3
         assert entry.type == "file"
         assert entry.id.startswith("y")
         assert entry.name.text == "sample.txt"
@@ -332,7 +332,7 @@ class TestIndexedAtTimestamp:
 
         pair = TimestampPair(iso="2024-01-01T00:00:00.000000+00:00", unix=1704067200000)
         entry = IndexEntry(
-            schema_version=2,
+            schema_version=3,
             id="yD41D8CD98F00B204E9800998ECF8427E",
             id_algorithm="md5",
             type="file",

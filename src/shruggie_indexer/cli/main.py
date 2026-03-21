@@ -466,7 +466,7 @@ def _post_index_pipeline(
         not config.write_directory_meta
         and entry.type == "directory"
         and config.output_file is not None
-        and str(config.output_file).endswith("_directorymeta2.json")
+        and str(config.output_file).endswith("_directorymeta3.json")
     ):
         logger.info("Directory aggregate output suppressed (--no-dir-meta).")
         config_for_write = replace(config, output_file=None)
@@ -547,7 +547,7 @@ def _post_index_pipeline(
     "dir_meta",
     default=None,
     help=(
-        "Write directory-level _directorymeta2.json files. "
+        "Write directory-level _directorymeta3.json files. "
         "--no-dir-meta suppresses directory sidecars "
         "while leaving per-file sidecars unaffected."
     ),
@@ -847,7 +847,7 @@ def _write_inplace_tree(
     (written alongside the target).  Child sidecars are unaffected.
 
     When *write_directory_meta* is ``False``, directory-level sidecar
-    files (``_directorymeta2.json``) are suppressed.  Per-file sidecars
+    files (``_directorymeta3.json``) are suppressed.  Per-file sidecars
     are unaffected.
     """
     if entry.type == "file":

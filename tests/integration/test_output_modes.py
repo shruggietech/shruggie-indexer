@@ -35,7 +35,7 @@ class TestOutputModes:
 
         output = captured.getvalue().strip()
         parsed = json.loads(output)
-        assert parsed["schema_version"] == 2
+        assert parsed["schema_version"] == 3
 
     def test_outfile_write(
         self, sample_file: Path, tmp_path: Path, mock_exiftool: None,
@@ -49,21 +49,21 @@ class TestOutputModes:
 
         assert outfile.exists()
         parsed = json.loads(outfile.read_text(encoding="utf-8"))
-        assert parsed["schema_version"] == 2
+        assert parsed["schema_version"] == 3
 
     def test_inplace_creates_sidecar(
         self, sample_file: Path, mock_exiftool: None,
     ) -> None:
-        """write_inplace creates a _meta2.json sidecar alongside the file."""
+        """write_inplace creates a _meta3.json sidecar alongside the file."""
         config = _cfg()
         entry = index_path(sample_file, config)
 
         write_inplace(entry, sample_file, "file")
 
-        sidecar = sample_file.parent / (sample_file.name + "_meta2.json")
+        sidecar = sample_file.parent / (sample_file.name + "_meta3.json")
         assert sidecar.exists()
         parsed = json.loads(sidecar.read_text(encoding="utf-8"))
-        assert parsed["schema_version"] == 2
+        assert parsed["schema_version"] == 3
 
     def test_combined_stdout_and_outfile(
         self, sample_file: Path, tmp_path: Path, mock_exiftool: None,
@@ -78,8 +78,8 @@ class TestOutputModes:
             write_output(entry, config)
 
         # Both destinations should have valid output.
-        assert json.loads(captured.getvalue().strip())["schema_version"] == 2
-        assert json.loads(outfile.read_text(encoding="utf-8"))["schema_version"] == 2
+        assert json.loads(captured.getvalue().strip())["schema_version"] == 3
+        assert json.loads(outfile.read_text(encoding="utf-8"))["schema_version"] == 3
 
     def test_empty_directory_output(
         self, tmp_path: Path, mock_exiftool: None,
@@ -97,7 +97,7 @@ class TestOutputModes:
 
         json_str = serialize_entry(entry)
         parsed = json.loads(json_str)
-        assert parsed["schema_version"] == 2
+        assert parsed["schema_version"] == 3
         assert parsed["items"] == []
 
 
@@ -107,7 +107,7 @@ class TestWriteDirectoryMetaFlag:
     def test_dir_sidecar_suppressed_inplace(
         self, sample_tree: Path, mock_exiftool: None,
     ) -> None:
-        """--no-dir-meta suppresses in-place _directorymeta2.json files."""
+        """--no-dir-meta suppresses in-place _directorymeta3.json files."""
         from shruggie_indexer.cli.main import _write_inplace_tree
 
         config = _cfg(output_inplace=True, write_directory_meta=False)
@@ -118,12 +118,12 @@ class TestWriteDirectoryMetaFlag:
             write_directory_meta=False,
         )
 
-        # No _directorymeta2.json should exist anywhere
-        dir_sidecars = list(sample_tree.rglob("*_directorymeta2.json"))
+        # No _directorymeta3.json should exist anywhere
+        dir_sidecars = list(sample_tree.rglob("*_directorymeta3.json"))
         assert dir_sidecars == [], f"Unexpected dir sidecars: {dir_sidecars}"
 
         # Per-file sidecars should exist
-        file_sidecars = list(sample_tree.rglob("*_meta2.json"))
+        file_sidecars = list(sample_tree.rglob("*_meta3.json"))
         assert len(file_sidecars) > 0
 
     def test_dir_sidecar_written_when_enabled(
@@ -140,8 +140,8 @@ class TestWriteDirectoryMetaFlag:
             write_directory_meta=True,
         )
 
-        # At least one _directorymeta2.json should exist (subdir)
-        dir_sidecars = list(sample_tree.rglob("*_directorymeta2.json"))
+        # At least one _directorymeta3.json should exist (subdir)
+        dir_sidecars = list(sample_tree.rglob("*_directorymeta3.json"))
         assert len(dir_sidecars) > 0
 
     def test_stdout_unaffected_by_no_dir_meta(
@@ -160,7 +160,7 @@ class TestWriteDirectoryMetaFlag:
 
         output = captured.getvalue().strip()
         parsed = json.loads(output)
-        assert parsed["schema_version"] == 2
+        assert parsed["schema_version"] == 3
         assert parsed["type"] == "directory"
         assert "items" in parsed
 
@@ -180,15 +180,15 @@ class TestWriteDirectoryMetaFlag:
 
         assert outfile.exists()
         parsed = json.loads(outfile.read_text(encoding="utf-8"))
-        assert parsed["schema_version"] == 2
+        assert parsed["schema_version"] == 3
 
     def test_auto_generated_aggregate_suppressed(
         self, sample_tree: Path, tmp_path: Path, mock_exiftool: None,
     ) -> None:
-        """Auto-generated _directorymeta2.json is suppressed by --no-dir-meta."""
+        """Auto-generated _directorymeta3.json is suppressed by --no-dir-meta."""
         from dataclasses import replace as dc_replace
 
-        auto_path = tmp_path / "sample_tree_directorymeta2.json"
+        auto_path = tmp_path / "sample_tree_directorymeta3.json"
         config = _cfg(
             output_stdout=False,
             output_file=auto_path,
@@ -201,7 +201,7 @@ class TestWriteDirectoryMetaFlag:
             not config.write_directory_meta
             and entry.type == "directory"
             and config.output_file is not None
-            and str(config.output_file).endswith("_directorymeta2.json")
+            and str(config.output_file).endswith("_directorymeta3.json")
         ):
             config_for_write = dc_replace(config, output_file=None)
         else:
@@ -228,4 +228,4 @@ class TestWriteDirectoryMetaFlag:
         output = captured.getvalue().strip()
         parsed = json.loads(output)
         assert parsed["type"] == "file"
-        assert parsed["schema_version"] == 2
+        assert parsed["schema_version"] == 3

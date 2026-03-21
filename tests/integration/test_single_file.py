@@ -38,7 +38,7 @@ class TestSingleFileEndToEnd:
         entry = index_path(sample_file, config)
 
         assert isinstance(entry, IndexEntry)
-        assert entry.schema_version == 2
+        assert entry.schema_version == 3
         assert entry.type == "file"
 
     def test_v2_structure_has_all_required_keys(
@@ -96,7 +96,7 @@ class TestSingleFileEndToEnd:
     def test_schema_version_value(
         self, sample_file: Path, mock_exiftool: None,
     ) -> None:
-        """schema_version is always 2."""
+        """schema_version is always 3."""
         config = _cfg()
         entry = index_path(sample_file, config)
-        assert entry.schema_version == 2
+        assert entry.schema_version == 3

@@ -134,16 +134,16 @@ class TestBuildSidecarPath:
     """Tests for build_sidecar_path()."""
 
     def test_sidecar_path_file(self) -> None:
-        """File sidecar: sunset.jpg -> sunset.jpg_meta2.json."""
+        """File sidecar: sunset.jpg -> sunset.jpg_meta3.json."""
         p = Path("/photos/sunset.jpg")
         result = build_sidecar_path(p, "file")
-        assert result == Path("/photos/sunset.jpg_meta2.json")
+        assert result == Path("/photos/sunset.jpg_meta3.json")
 
     def test_sidecar_path_directory(self) -> None:
-        """Directory sidecar: vacation/ -> vacation/vacation_directorymeta2.json."""
+        """Directory sidecar: vacation/ -> vacation/vacation_directorymeta3.json."""
         p = Path("/photos/vacation")
         result = build_sidecar_path(p, "directory")
-        assert result == Path("/photos/vacation/vacation_directorymeta2.json")
+        assert result == Path("/photos/vacation/vacation_directorymeta3.json")
 
 
 # ---------------------------------------------------------------------------

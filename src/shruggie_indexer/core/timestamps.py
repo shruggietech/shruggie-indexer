@@ -126,8 +126,17 @@ def extract_timestamps(
         unix=_stat_to_unix_ms(stat_result.st_mtime),
     )
 
+    # Determine creation time provenance.
+    created_source: str | None = None
+    try:
+        _ = stat_result.st_birthtime  # type: ignore[attr-defined]
+        created_source = "birthtime"
+    except AttributeError:
+        created_source = "ctime_fallback"
+
     return TimestampsObject(
         accessed=accessed,
         created=created,
         modified=modified,
+        created_source=created_source,
     )

@@ -402,7 +402,7 @@ class TestStaleMetadataCleanup:
         content = tmp_path / "file.txt"
         content.write_text("content", encoding="utf-8")
         # Current-run sidecar (should survive).
-        current = tmp_path / "file.txt_meta2.json"
+        current = tmp_path / "file.txt_meta3.json"
         current.write_text("{}", encoding="utf-8")
         # Stale sidecar from a prior run with a different naming convention.
         stale = tmp_path / "OldName_meta2.json"
@@ -443,18 +443,18 @@ class TestStaleMetadataCleanup:
     def test_preserves_current_run_sidecars(
         self, tmp_path: Path, mmd_config,
     ) -> None:
-        """Current-run _meta2.json and _directorymeta2.json output files
+        """Current-run _meta3.json and _directorymeta3.json output files
         are NOT deleted."""
         # File and its current-run sidecar.
         content = tmp_path / "photo.jpg"
         content.write_text("image", encoding="utf-8")
-        file_sidecar = tmp_path / "photo.jpg_meta2.json"
+        file_sidecar = tmp_path / "photo.jpg_meta3.json"
         file_sidecar.write_text("{}", encoding="utf-8")
 
         # Subdirectory with current-run directory sidecar.
         subdir = tmp_path / "images"
         subdir.mkdir()
-        dir_sidecar = subdir / "images_directorymeta2.json"
+        dir_sidecar = subdir / "images_directorymeta3.json"
         dir_sidecar.write_text("{}", encoding="utf-8")
 
         entry = _make_dir_entry(".", items=[
@@ -480,7 +480,7 @@ class TestStaleMetadataCleanup:
         })
 
         # After rename, sidecar is named after storage_name.
-        renamed_sidecar = tmp_path / "xABC123.jpg_meta2.json"
+        renamed_sidecar = tmp_path / "xABC123.jpg_meta3.json"
         renamed_sidecar.write_text("{}", encoding="utf-8")
 
         entry = _make_dir_entry(".", items=[
@@ -621,7 +621,7 @@ class TestStaleMetadataCleanup:
             "output_file": str(tmp_path / "output.json"),
         })
 
-        artifact = tmp_path / "file.txt_meta2.json"
+        artifact = tmp_path / "file.txt_meta3.json"
         artifact.write_text("{}", encoding="utf-8")
 
         entry = _make_dir_entry(".", items=[

@@ -261,7 +261,7 @@ DEFAULT_METADATA_IDENTIFY: dict[str, tuple[re.Pattern[str], ...]] = {
 # ---------------------------------------------------------------------------
 
 DEFAULT_METADATA_EXCLUDE_PATTERN_STRINGS: tuple[str, ...] = (
-    r"_(meta2?|directorymeta2?)\.json$",
+    r"_(meta[23]?|directorymeta[23]?)\.json$",
     r"\.(cover|thumb|thumb(s|db|index|nail))$",
     r"^(thumb|thumb(s|db|index|nail))\.db$",
 )

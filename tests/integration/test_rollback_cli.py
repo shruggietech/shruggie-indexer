@@ -433,7 +433,7 @@ class TestRollbackBackwardCompat:
 
         assert result.exit_code == 0
         parsed = json.loads(result.output)
-        assert parsed["schema_version"] == 2
+        assert parsed["schema_version"] == 3
         assert parsed["type"] == "file"
 
 

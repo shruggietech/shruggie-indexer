@@ -153,8 +153,8 @@ def validate_extension(suffix: str | None, config: IndexerConfig) -> str | None:
 def build_sidecar_path(item_path: Path, item_type: str) -> Path:
     """Construct the path for an in-place sidecar output file.
 
-    For files: ``<item_path>_meta2.json``
-    For directories: ``<item_path>/<dirname>_directorymeta2.json``
+    For files: ``<item_path>_meta3.json``
+    For directories: ``<item_path>/<dirname>_directorymeta3.json``
 
     Args:
         item_path: Absolute path to the indexed item.
@@ -164,8 +164,8 @@ def build_sidecar_path(item_path: Path, item_type: str) -> Path:
         The sidecar output :class:`~pathlib.Path`.
     """
     if item_type == "directory":
-        return item_path / f"{item_path.name}_directorymeta2.json"
-    return item_path.parent / f"{item_path.name}_meta2.json"
+        return item_path / f"{item_path.name}_directorymeta3.json"
+    return item_path.parent / f"{item_path.name}_meta3.json"
 
 
 def build_storage_path(item_path: Path, storage_name: str) -> Path:

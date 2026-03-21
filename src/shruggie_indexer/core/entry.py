@@ -338,7 +338,7 @@ def build_file_entry(
 
     # Step 13 — Assembly
     return IndexEntry(
-        schema_version=2,
+        schema_version=3,
         id=entry_id,
         id_algorithm=config.id_algorithm,
         type="file",
@@ -594,7 +594,7 @@ def build_directory_entry(
     storage_name = _build_storage_name(entry_id, None)
 
     return IndexEntry(
-        schema_version=2,
+        schema_version=3,
         id=entry_id,
         id_algorithm=config.id_algorithm,
         type="directory",
@@ -656,7 +656,7 @@ def _build_shallow_directory_entry(
     storage_name = _build_storage_name(entry_id, None)
 
     return IndexEntry(
-        schema_version=2,
+        schema_version=3,
         id=entry_id,
         id_algorithm=config.id_algorithm,
         type="directory",
@@ -734,13 +734,13 @@ def index_path(
 # ---------------------------------------------------------------------------
 
 _STALE_METADATA_RE = re.compile(
-    r"_(meta2?|directorymeta2?)\.json$", re.IGNORECASE,
+    r"_(meta[23]?|directorymeta[23]?)\.json$", re.IGNORECASE,
 )
 """Matches indexer metadata output filenames:
 
-``_meta.json``, ``_meta2.json``, ``_directorymeta.json``,
-``_directorymeta2.json``.  Used to identify stale artifacts from prior
-indexer runs during Stage 7 cleanup.
+``_meta.json``, ``_meta2.json``, ``_meta3.json``, ``_directorymeta.json``,
+``_directorymeta2.json``, ``_directorymeta3.json``.  Used to identify stale
+artifacts from prior indexer runs during Stage 7 cleanup.
 """
 
 
@@ -764,7 +764,7 @@ def _collect_protected_sidecars(
         if entry.attributes and entry.attributes.storage_name:
             parent_dir = item_path.parent
             protected.add(
-                parent_dir / f"{entry.attributes.storage_name}_meta2.json"
+                parent_dir / f"{entry.attributes.storage_name}_meta3.json"
             )
     elif entry.type == "directory":
         # The root directory entry (relative == ".") has no sidecar
@@ -810,7 +810,8 @@ def cleanup_stale_metadata(
     After MetaMergeDelete's Stage 6 (consumed-sidecar deletion), scans all
     directories traversed during the current run for files matching the
     indexer metadata naming convention (``_meta.json``, ``_meta2.json``,
-    ``_directorymeta.json``, ``_directorymeta2.json``).  Files that are
+    ``_meta3.json``, ``_directorymeta.json``, ``_directorymeta2.json``,
+    ``_directorymeta3.json``).  Files that are
     NOT current-run output sidecars are identified as stale and deleted.
 
     This addresses the gap where Layer 1 exclusion prevents re-indexing

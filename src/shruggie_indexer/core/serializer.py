@@ -70,6 +70,7 @@ _TOP_LEVEL_KEY_ORDER: tuple[str, ...] = (
     "file_system",
     "timestamps",
     "attributes",
+    "encoding",
     "items",
     "metadata",
     "duplicates",

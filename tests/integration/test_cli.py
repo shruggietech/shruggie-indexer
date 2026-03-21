@@ -83,7 +83,7 @@ class TestCliDefaultInvocation:
         result = _invoke(runner, [str(tmp_path)])
         assert result.exit_code == 0
         parsed = json.loads(result.output)
-        assert parsed["schema_version"] == 2
+        assert parsed["schema_version"] == 3
 
 
 class TestCliTargetModes:
@@ -141,7 +141,7 @@ class TestCliOutfile:
         assert result.exit_code == 0
         assert outfile.exists()
         parsed = json.loads(outfile.read_text(encoding="utf-8"))
-        assert parsed["schema_version"] == 2
+        assert parsed["schema_version"] == 3
 
 
 class TestCliInplace:
@@ -154,7 +154,7 @@ class TestCliInplace:
 
         result = _invoke(runner, [str(target), "--inplace"])
         assert result.exit_code == 0
-        sidecar = tmp_path / "target.txt_meta2.json"
+        sidecar = tmp_path / "target.txt_meta3.json"
         assert sidecar.exists()
 
 
