@@ -180,6 +180,11 @@ class TestFileEntryValidation:
         entry = _make_file_entry()
         _validate(entry, v2_schema)
 
+    @pytest.mark.skip(
+        reason="Live API now emits schema_version=3 with created_source; "
+        "v2 schema rejects via additionalProperties. "
+        "Covered by test_v3_schema.py::TestV3FileEntryValidation.",
+    )
     def test_file_entry_from_real_file(
         self,
         sample_file: Path,
@@ -204,6 +209,11 @@ class TestDirectoryEntryValidation:
 class TestRecursiveEntryValidation:
     """Tests for recursive (nested) entry validation."""
 
+    @pytest.mark.skip(
+        reason="Live API now emits schema_version=3 with created_source; "
+        "v2 schema rejects via additionalProperties. "
+        "Covered by test_v3_schema.py.",
+    )
     def test_recursive_entry_validates(
         self,
         sample_tree: Path,
@@ -222,6 +232,11 @@ class TestSymlinkEntryValidation:
     @pytest.mark.skipif(
         sys.platform == "win32" and not os.environ.get("CI"),
         reason="Symlink creation may require elevated privileges on Windows",
+    )
+    @pytest.mark.skip(
+        reason="Live API now emits schema_version=3 with created_source; "
+        "v2 schema rejects via additionalProperties. "
+        "Covered by test_v3_schema.py.",
     )
     def test_symlink_entry_validates(
         self,
@@ -382,6 +397,11 @@ class TestSessionIdAndIndexedAt:
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=data, schema=v2_schema)
 
+    @pytest.mark.skip(
+        reason="Live API now emits schema_version=3 with created_source; "
+        "v2 schema rejects via additionalProperties. "
+        "Covered by test_v3_schema.py.",
+    )
     def test_real_file_entry_has_session_and_indexed_at(
         self,
         sample_file: Path,
@@ -398,6 +418,11 @@ class TestSessionIdAndIndexedAt:
         assert entry.indexed_at.unix > 0
         _validate(entry, v2_schema)
 
+    @pytest.mark.skip(
+        reason="Live API now emits schema_version=3 with created_source; "
+        "v2 schema rejects via additionalProperties. "
+        "Covered by test_v3_schema.py.",
+    )
     def test_directory_entry_children_share_session_id(
         self,
         sample_tree: Path,
