@@ -434,8 +434,8 @@ def _post_index_pipeline(
 
     # ── In-place output ─────────────────────────────────────────────
     # Written BEFORE rename so the rename phase can also rename
-    # the sidecar file from {original}_meta2.json to
-    # {storage_name}_meta2.json.  (Batch 6, §4.)
+    # the sidecar file from {original}_meta3.json to
+    # {storage_name}_meta3.json.  (Batch 6, §4.)
     if config.output_inplace:
         inplace_root = target_path if entry.type == "directory" else target_path.parent
         _write_inplace_tree(

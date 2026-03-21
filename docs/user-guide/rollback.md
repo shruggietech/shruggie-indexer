@@ -210,9 +210,9 @@ The `shruggie-vault` project uses the rollback API programmatically to deliver f
 
 ```python
 from pathlib import Path
-from shruggie_indexer import load_meta2, plan_rollback, execute_rollback
+from shruggie_indexer import load_sidecar, plan_rollback, execute_rollback
 
-entries = load_meta2(Path("/vault/yABC.jpg_meta3.json"))
+entries = load_sidecar(Path("/vault/yABC.jpg_meta3.json"))
 plan = plan_rollback(
     entries,
     target_dir=Path("/delivery/output"),

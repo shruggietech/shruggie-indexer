@@ -193,7 +193,7 @@ def rollback_cmd(
     """Restore files from shruggie-indexer metadata to their original names and directory structure."""
     from shruggie_indexer.core.rollback import (
         execute_rollback,
-        load_meta2,
+        load_sidecar,
         plan_rollback,
     )
     from shruggie_indexer.exceptions import (
@@ -247,7 +247,7 @@ def rollback_cmd(
             sys.exit(ExitCode.TARGET_ERROR)
 
         # 2. Load
-        entries = load_meta2(meta2, recursive=recursive)
+        entries = load_sidecar(meta2, recursive=recursive)
 
         # 3. Resolve source directory
         #    When --source is not specified, default to the directory containing

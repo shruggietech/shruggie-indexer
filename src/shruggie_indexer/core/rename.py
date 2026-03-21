@@ -9,8 +9,8 @@ disk — but the original name is preserved in the ``IndexEntry.name.text``
 field of the in-place sidecar file that is always written alongside a rename.
 
 When in-place sidecar output is active, the rename phase also renames the
-previously-written ``_meta2.json`` sidecar from ``{original}_meta2.json``
-to ``{storage_name}_meta2.json`` (Batch 6, Section 4).  This ensures the
+previously-written ``_meta3.json`` sidecar from ``{original}_meta3.json``
+to ``{storage_name}_meta3.json`` (Batch 6, Section 4).  This ensures the
 sidecar sits alongside the renamed file and is discoverable by consumers.
 
 See spec section 6.10 for full behavioral guidance.
@@ -167,11 +167,11 @@ def rename_inplace_sidecar(
     original_path: Path,
     entry: IndexEntry,
 ) -> Path | None:
-    """Rename the in-place ``_meta2.json`` sidecar to match the storage name.
+    """Rename the in-place ``_meta3.json`` sidecar to match the storage name.
 
     After a file is renamed from ``photo.jpg`` to ``yABC123.jpg``, the
-    previously-written sidecar ``photo.jpg_meta2.json`` must be renamed
-    to ``yABC123.jpg_meta2.json`` so that it is discoverable next to the
+    previously-written sidecar ``photo.jpg_meta3.json`` must be renamed
+    to ``yABC123.jpg_meta3.json`` so that it is discoverable next to the
     renamed file.  (Batch 6, Section 4.)
 
     The sidecar's JSON content is not modified — it still contains the
@@ -186,8 +186,8 @@ def rename_inplace_sidecar(
         sidecar did not exist on disk.
     """
     storage_name = entry.attributes.storage_name
-    old_sidecar = original_path.parent / f"{original_path.name}_meta2.json"
-    new_sidecar = original_path.parent / f"{storage_name}_meta2.json"
+    old_sidecar = original_path.parent / f"{original_path.name}_meta3.json"
+    new_sidecar = original_path.parent / f"{storage_name}_meta3.json"
 
     if not old_sidecar.exists():
         return None

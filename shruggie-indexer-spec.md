@@ -4,9 +4,9 @@
 - **Project:** `shruggie-indexer`
 - **Repository:** [shruggietech/shruggie-indexer](https://github.com/shruggietech/shruggie-indexer)
 - **License:** Apache 2.0 ([full text](https://www.apache.org/licenses/LICENSE-2.0))
-- **Version:** 0.2.0
+- **Version:** 0.2.1
 - **Author:** William Thompson (ShruggieTech LLC)
-- **Date:** 2026-03-20
+- **Date:** 2026-03-21
 - **Status:** AMENDED
 - **Audience:** AI-first, Human-second
 
@@ -767,7 +767,7 @@ The `core/` subpackage contains all indexing logic. Every module in `core/` corr
 | `serializer.py` | Cat 9 (JSON Serialization & Output Routing) | Converts `IndexEntry` model instances to JSON. Routes output to stdout, a single aggregate file, or per-item in-place sidecar files (`_meta2.json` / `_directorymeta2.json`), depending on the active output mode. Handles pretty-printing vs. compact output. Uses `orjson` as the primary serializer with a `json.dumps()` stdlib fallback for resilience. |
 | `rename.py` | Cat 10 (File Rename & In-Place Write) | Implements the `StorageName` rename operation: renames files and directories from their original names to their hash-based `storage_name` values. Handles collision detection, dry-run mode, and rollback on partial failure. |
 | `dedup.py` | Cat 11 (De-Duplication) | Provenance-preserving de-duplication. Provides `DedupRegistry` (canonical-copy tracking by `storage_name`), `DedupResult`, `DedupStats`, `DedupAction` data classes, `scan_tree()` (recursive duplicate discovery), `apply_dedup()` (merge duplicates into canonical entries), and `cleanup_duplicate_files()` (disk deletion of absorbed duplicates and orphaned sidecars). Designed for standalone importability by downstream consumers (specifically `metadexer`'s catalog module). |
-| `rollback.py` | Cat 12 (Rollback) | Core rollback engine that reverses rename and de-duplication operations by reading `_meta2.json` sidecar files. Provides `load_meta2()` (JSON→`IndexEntry` deserialization with 3 input shapes: per-file sidecar, aggregate directory, directory of sidecars), `discover_meta2_files()` (recursive/non-recursive sidecar discovery), `plan_rollback()` (10-step planner with flat/structured modes, conflict detection, path safety, and duplicate/sidecar restoration planning), `execute_rollback()` (4-phase executor: mkdir→restore→duplicate→sidecar with dry-run, cancellation, and progress reporting), and `verify_file_hash()` (content verification). Uses the `SourceResolver` protocol for locating source files with `LocalSourceResolver` as the default implementation. Follows the same plan-then-execute architecture as `dedup.py`. Designed for standalone importability by downstream projects. |
+| `rollback.py` | Cat 12 (Rollback) | Core rollback engine that reverses rename and de-duplication operations by reading sidecar files (`_meta2.json` and `_meta3.json`). Provides `load_sidecar()` (JSON→`IndexEntry` deserialization with 3 input shapes: per-file sidecar, aggregate directory, directory of sidecars; accepts schema versions 2 and 3), `discover_sidecar_files()` (recursive/non-recursive sidecar discovery for both v2 and v3 naming), `plan_rollback()` (10-step planner with flat/structured modes, conflict detection, path safety, and duplicate/sidecar restoration planning), `execute_rollback()` (4-phase executor: mkdir→restore→duplicate→sidecar with dry-run, cancellation, and progress reporting), and `verify_file_hash()` (content verification). Uses the `SourceResolver` protocol for locating source files with `LocalSourceResolver` as the default implementation. Follows the same plan-then-execute architecture as `dedup.py`. Designed for standalone importability by downstream projects. The legacy names `load_meta2()` and `discover_meta2_files()` are retained as deprecated aliases. |
 
 The `core/__init__.py` file SHOULD re-export the primary orchestration functions (e.g., `index_path`, `index_file`, `index_directory`) so that internal callers can write `from shruggie_indexer.core import index_path` without reaching into individual modules. The individual modules remain importable for callers who need fine-grained access (e.g., `from shruggie_indexer.core.hashing import hash_file`).
 
@@ -3865,10 +3865,10 @@ The default `LocalSourceResolver` searches the local filesystem:
 
 1. Look for `storage_name` in `search_dir` (renamed file).
 2. Look for `name.text` in `search_dir`, verify hash if found (non-renamed file).
-3. If strategies 1–2 fail and the entry has an origin-directory annotation (set by `load_meta2()` during loading), repeat strategies 1–2 in the origin directory. This enables recursive rollback: when `search_dir` is the tree root but the content file resides in a subdirectory alongside its `_meta2.json` sidecar, the origin-directory fallback finds it.
+3. If strategies 1–2 fail and the entry has an origin-directory annotation (set by `load_sidecar()` during loading), repeat strategies 1–2 in the origin directory. This enables recursive rollback: when `search_dir` is the tree root but the content file resides in a subdirectory alongside its sidecar, the origin-directory fallback finds it.
 4. Return `None` if no match succeeds.
 
-The origin-directory annotation is stored in a module-level `_origin_dirs: dict[int, Path]` mapping `id(entry)` → `Path`. The `load_meta2()` function populates this annotation for every entry it deserializes, recording the parent directory of the `_meta2.json` file that contained the entry. Stale annotations are cleaned up at the start of each `plan_rollback()` call.
+The origin-directory annotation is stored in a module-level `_origin_dirs: dict[int, Path]` mapping `id(entry)` → `Path`. The `load_sidecar()` function populates this annotation for every entry it deserializes, recording the parent directory of the sidecar file that contained the entry. Stale annotations are cleaned up at the start of each `plan_rollback()` call.
 
 > **Updated 2026-06-14:** Added Strategy 3 (origin-directory fallback) and the `_origin_dirs` annotation mechanism. Previously, `LocalSourceResolver` only searched `search_dir`, causing recursive rollback to fail for content files in subdirectories.
 
@@ -5619,7 +5619,7 @@ The CLI body follows the same thin-orchestration pattern as `index_cmd()`:
 1. Configure logging.
 2. Install signal handlers for cooperative cancellation.
 3. Resolve `--target` default (parent of `META2_PATH` for files, `META2_PATH` itself for directories).
-4. Load entries via `load_meta2()`.
+4. Load entries via `load_sidecar()`.
 5. Plan via `plan_rollback()`.
 6. Report plan warnings to stderr.
 7. Execute via `execute_rollback()` (or dry-run).
@@ -5674,9 +5674,11 @@ from shruggie_indexer.core.rollback import (
     RollbackResult,
     SourceResolver,
     LocalSourceResolver,
-    discover_meta2_files,
+    discover_meta2_files,      # deprecated alias for discover_sidecar_files
+    discover_sidecar_files,
     execute_rollback,
-    load_meta2,
+    load_meta2,                # deprecated alias for load_sidecar
+    load_sidecar,
     plan_rollback,
     verify_file_hash,
 )
@@ -5736,9 +5738,11 @@ __all__ = [
     "RollbackResult",
     "SourceResolver",
     "LocalSourceResolver",
-    "discover_meta2_files",
+    "discover_meta2_files",      # deprecated alias
+    "discover_sidecar_files",
     "execute_rollback",
-    "load_meta2",
+    "load_meta2",                # deprecated alias
+    "load_sidecar",
     "plan_rollback",
     "verify_file_hash",
     # Exceptions
@@ -5758,6 +5762,10 @@ __all__ = [
 > `LocalSourceResolver`, `discover_meta2_files`, `execute_rollback`,
 > `load_meta2`, `plan_rollback`, `verify_file_hash`) and `RollbackError`
 > added to `__all__`.
+
+> **Updated 2026-03-21:** Added `discover_sidecar_files` and `load_sidecar`
+> to the import block and `__all__`. The prior names `discover_meta2_files`
+> and `load_meta2` are retained as deprecated aliases.
 
 The `__all__` list is exhaustive — it defines the complete set of names available via `from shruggie_indexer import *`. Names not in `__all__` are not part of the public API and may change without notice between versions. Consumers who import from subpackages (`from shruggie_indexer.core.hashing import hash_file`) do so at their own risk — those paths are internal and may be restructured.
 
@@ -9628,6 +9636,21 @@ Exercises the CLI interface ([§8](#8-cli-interface)) by invoking `click`'s test
 | `-q` quiet mode | `shruggie-indexer -q path/` | No log output on stderr (except fatal errors). |
 | Exit code 0 | Successful single-file index | `result.returncode == 0`. |
 | Exit code 1 | Directory with one unreadable file | `result.returncode == 1` (partial failure). Output still produced for readable files. |
+
+<a id="test_roundtrippy"></a>
+#### test_roundtrip.py
+
+> **Added 2026-03-21.**
+
+Exercises the full index → rename → rollback round-trip cycle. Uses the `@pytest.mark.integration` and `@pytest.mark.rollback` markers.
+
+| Test case | Input | Expected behavior |
+|-----------|-------|-------------------|
+| v3 round-trip | Index a file with `--inplace --rename`, then rollback | File restored to original name and content. Sidecar cleaned up. |
+| Mixed v2/v3 discovery | Directory containing both `_meta2.json` and `_meta3.json` sidecars | `discover_sidecar_files()` returns both. `load_sidecar()` accepts both schema versions. |
+| v3 inplace sidecar rename | Index with `--inplace --rename` | Sidecar uses `_meta3.json` suffix (not `_meta2.json`). Rollback via the renamed sidecar succeeds. |
+
+These tests detect the class of regression that shipped in v0.2.0 where v2-era hardcoded references prevented the rollback engine from operating on v3 sidecars.
 
 <a id="144-output-schema-conformance-tests"></a>
 ### 14.4. Output Schema Conformance Tests

@@ -49,7 +49,7 @@ from shruggie_indexer import (
 )
 from shruggie_indexer.core.rollback import (
     execute_rollback,
-    load_meta2,
+    load_sidecar,
     plan_rollback,
 )
 from shruggie_indexer.config.defaults import (
@@ -1821,11 +1821,11 @@ class OperationsPage(ctk.CTkFrame):
     # -- Rollback browse helpers --------------------------------------------
 
     def _browse_rb_meta2_file(self) -> None:
-        """Open file picker for a _meta2.json sidecar."""
-        logger.debug("Rollback browse: meta2 file dialog opened")
+        """Open file picker for a sidecar file."""
+        logger.debug("Rollback browse: sidecar file dialog opened")
         path = filedialog.askopenfilename(
-            title="Select Meta2 Sidecar File",
-            filetypes=[("Meta2 JSON", "*_meta2.json *.json"), ("All files", "*.*")],
+            title="Select Sidecar File",
+            filetypes=[("Sidecar JSON", "*_meta3.json *_meta2.json *.json"), ("All files", "*.*")],
         )
         if path:
             logger.debug("Rollback browse meta2 file result: %s", path)
@@ -3938,8 +3938,8 @@ class ShruggiIndexerApp(ctk.CTk):
 
             # ── In-place sidecar output ─────────────────────────────────
             # Written BEFORE rename so the rename phase can also rename
-            # the sidecar file from {original}_meta2.json to
-            # {storage_name}_meta2.json.  (Batch 6, §4.)
+            # the sidecar file from {original}_meta3.json to
+            # {storage_name}_meta3.json.  (Batch 6, §4.)
             if config.output_inplace:
                 inplace_root = target if entry.type == "directory" else target.parent
                 self._write_inplace_tree(
@@ -4066,9 +4066,9 @@ class ShruggiIndexerApp(ctk.CTk):
 
             logger.debug("Resolved source_dir: %s", source_dir)
 
-            # ── Load meta2 entries ──────────────────────────────────────
-            logger.info("Loading meta2 entries from: %s", meta2)
-            entries = load_meta2(meta2, recursive=options.get("recursive", False))
+            # ── Load sidecar entries ─────────────────────────────────
+            logger.info("Loading sidecar entries from: %s", meta2)
+            entries = load_sidecar(meta2, recursive=options.get("recursive", False))
             logger.info("Loaded %d entries", len(entries))
 
             # ── Plan rollback ───────────────────────────────────────────

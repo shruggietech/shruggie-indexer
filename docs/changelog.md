@@ -8,10 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### To-Do
+## [0.2.1] - 2026-03-21
+
+### Known Issues
 
 - **GUI: MetaMergeDelete output field reports false `_directorymeta3.json` output** — When running MetaMergeDelete with multi-file output mode and the "Write directory metadata" checkbox unchecked, the Output field incorrectly reports upon completion that an output was written to the default `_directorymeta3.json` location. Multi-file sidecars are written as expected, but no directory summary file is produced when directory metadata output is suppressed (this is the correct behavior). The Output field completion summary must be updated to omit the `_directorymeta3.json` path when directory metadata writing is disabled.
 - **Core: Windows directory shortcut (`.lnk`) files incorrectly associated as sidecars** — Testing performed subsequent to `v0.1.2` release discovered that Windows `.lnk` directory shortcut files are misidentified as sidecars of unrelated sibling files in the same directory. The `.lnk` binary content is correctly saved and rollback properly restores the file, but the sidecar association logic incorrectly pairs the shortcut with a miscellaneous sibling file that shares no filename similarity or other discernible relationship. The sidecar matching heuristic needs investigation and correction to prevent false `.lnk` associations.
+
+### Fixed
+
+- **Core: Rollback engine unable to discover v3 sidecars** — `discover_meta2_files()` used a hardcoded `*_meta2.json` glob pattern, finding zero sidecars in directories processed by v0.2.0. Replaced with version-agnostic `discover_sidecar_files()` that discovers both `_meta2.json` and `_meta3.json` sidecars. The old function name is retained as a deprecated alias.
+- **Core: Rollback loader rejecting v3 schema version** — `load_meta2()` contained a hard gate accepting only `schema_version == 2`, causing all v3 sidecar files to raise `IndexerConfigError`. Updated to accept versions 2 and 3. Replaced with `load_sidecar()` as the primary API; the old function name is retained as a deprecated alias.
+- **Core: In-place sidecar rename using v2 naming convention** — `rename_inplace_sidecar()` constructed paths using `_meta2.json` suffixes, so the rename phase looked for a non-existent file while the actual `_meta3.json` sidecar was left orphaned with its original-name base. Updated to use `_meta3.json` naming.
+
+### Added
+
+- **Tests: Index-then-rollback round-trip integration test** — New `tests/integration/test_roundtrip.py` with three test cases exercising the full index-rename-rollback cycle, mixed v2/v3 sidecar discovery, and v3 inplace sidecar rename verification. These tests detect the class of regression that shipped in v0.2.0.
+- **Build: PyInstaller chardet hook for mypyc-compiled extensions** — New `hooks/hook-chardet.py` hook that discovers and bundles chardet v7's mypyc runtime module and data files. Resolves `ModuleNotFoundError` for the mypyc support module in standalone executables built with PyInstaller.
+
+### Changed
+
+- **Public API: Rollback function renames** — `discover_meta2_files()` renamed to `discover_sidecar_files()` and `load_meta2()` renamed to `load_sidecar()`. The old names are retained as deprecated aliases and remain in `__all__`.
 
 ## [0.2.0] - 2026-03-20
 

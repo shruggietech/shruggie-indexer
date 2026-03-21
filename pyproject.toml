@@ -71,6 +71,7 @@ markers = [
     "sidecar: Tests for sidecar discovery, exclusion, and merge behavior",
     "mmd: Tests for MetaMergeDelete pipeline",
     "integration: Full pipeline integration tests (slower)",
+    "rollback: Rollback engine and round-trip integration tests",
     "destructive: Tests that modify the filesystem (use tmp copies)",
 ]
 

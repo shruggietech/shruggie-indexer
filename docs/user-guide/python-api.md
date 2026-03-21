@@ -38,8 +38,8 @@ from shruggie_indexer import (
     RollbackResult,
     SourceResolver,
     LocalSourceResolver,
-    load_meta2,
-    discover_meta2_files,
+    load_sidecar,              # was load_meta2 (deprecated alias retained)
+    discover_sidecar_files,    # was discover_meta2_files (deprecated alias retained)
     plan_rollback,
     execute_rollback,
     verify_file_hash,
@@ -354,20 +354,23 @@ from shruggie_indexer import (
     SourceResolver,
     LocalSourceResolver,
     # Core functions
-    load_meta2,
-    discover_meta2_files,
+    load_sidecar,              # was load_meta2 (deprecated alias retained)
+    discover_sidecar_files,    # was discover_meta2_files (deprecated alias retained)
     plan_rollback,
     execute_rollback,
     verify_file_hash,
 )
 ```
 
-### `load_meta2(path, *, recursive=False)`
+### `load_sidecar(path, *, recursive=False)`
 
 Load and parse a `_meta3.json` (or legacy `_meta2.json`) file into a flat list of `IndexEntry` objects.
 
+!!! note "Renamed in v0.2.1"
+    Previously `load_meta2()`. The old name is retained as a deprecated alias.
+
 ```python
-def load_meta2(
+def load_sidecar(
     path: Path,
     *,
     recursive: bool = False,
@@ -394,19 +397,22 @@ Duplicate entries from the `duplicates` array of each canonical entry are extrac
 | `IndexerConfigError` | Invalid JSON or unsupported `schema_version`. |
 | `IndexerTargetError` | Path does not exist. |
 
-### `discover_meta2_files(directory, *, recursive=False)`
+### `discover_sidecar_files(directory, *, recursive=False)`
 
 Find all `*_meta3.json` and `*_meta2.json` files in a directory.
 
+!!! note "Renamed in v0.2.1"
+    Previously `discover_meta2_files()`. The old name is retained as a deprecated alias.
+
 ```python
-def discover_meta2_files(
+def discover_sidecar_files(
     directory: Path,
     *,
     recursive: bool = False,
 ) -> list[Path]: ...
 ```
 
-Returns a sorted list of discovered meta2 file paths. When `recursive=False` (default), only the immediate directory is searched.
+Returns a sorted list of discovered sidecar file paths. When `recursive=False` (default), only the immediate directory is searched.
 
 ### `plan_rollback()`
 
@@ -429,7 +435,7 @@ def plan_rollback(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `entries` | `list[IndexEntry]` | — | Flat list from `load_meta2()`. |
+| `entries` | `list[IndexEntry]` | — | Flat list from `load_sidecar()`. |
 | `target_dir` | `Path` | — | Root directory for restored files. Created if absent. |
 | `source_dir` | `Path \| None` | `None` | Directory to search for content files. |
 | `resolver` | `SourceResolver \| None` | `None` | Source file locator. Defaults to `LocalSourceResolver()`. |
@@ -549,7 +555,7 @@ Default implementation that searches the local filesystem:
 
 1. Look for `storage_name` in `search_dir` (renamed file).
 2. Look for `name.text` in `search_dir`, verify hash if found (non-renamed file).
-3. If strategies 1–2 fail and the entry has an origin-directory annotation (set by `load_meta2()` during loading), repeat strategies 1–2 in the origin directory. This enables recursive rollback — when `search_dir` is the tree root but the content file resides in a subdirectory alongside its sidecar, the fallback finds it.
+3. If strategies 1–2 fail and the entry has an origin-directory annotation (set by `load_sidecar()` during loading), repeat strategies 1–2 in the origin directory. This enables recursive rollback — when `search_dir` is the tree root but the content file resides in a subdirectory alongside its sidecar, the fallback finds it.
 4. Return `None` if no match succeeds.
 
 ```python
@@ -564,14 +570,14 @@ The `SourceResolver` protocol enables downstream tools like `shruggie-vault` to 
 ```python
 from pathlib import Path
 from shruggie_indexer import (
-    load_meta2,
+    load_sidecar,
     plan_rollback,
     execute_rollback,
     LocalSourceResolver,
 )
 
 # Load a single sidecar
-entries = load_meta2(Path("/vault/yABC.jpg_meta3.json"))
+entries = load_sidecar(Path("/vault/yABC.jpg_meta3.json"))
 
 # Plan a flat restore (single file, no directory structure)
 plan = plan_rollback(

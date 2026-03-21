@@ -1,10 +1,11 @@
 """Core rollback engine for shruggie-indexer.
 
-Reverses indexer rename and de-duplication operations by reading ``_meta2.json``
-sidecar files and restoring files to their original names, directory structure,
-and timestamps.  Also reconstructs absorbed sidecar metadata files that were
-consumed by MetaMergeDelete, and restores deduplicated files by copying
-canonical bytes to each duplicate's original path.
+Reverses indexer rename and de-duplication operations by reading sidecar
+files (``_meta2.json`` or ``_meta3.json``) and restoring files to their
+original names, directory structure, and timestamps.  Also reconstructs
+absorbed sidecar metadata files that were consumed by MetaMergeDelete,
+and restores deduplicated files by copying canonical bytes to each
+duplicate's original path.
 
 This module is designed for standalone importability by downstream projects
 (specifically ``shruggie-vault``).  It operates on :class:`IndexEntry` objects
@@ -14,7 +15,7 @@ layer code.
 Architecture follows the **plan-then-execute** pattern established by
 :mod:`~shruggie_indexer.core.dedup`:
 
-1.  :func:`load_meta2` — parse ``_meta2.json`` files into a flat
+1.  :func:`load_sidecar` — parse sidecar files into a flat
     ``list[IndexEntry]``.
 2.  :func:`plan_rollback` — compute the full operation graph without
     touching the filesystem.
@@ -22,7 +23,7 @@ Architecture follows the **plan-then-execute** pattern established by
 
 Usage::
 
-    entries = load_meta2(Path("vault/yAAA.jpg_meta2.json"))
+    entries = load_sidecar(Path("vault/yAAA.jpg_meta3.json"))
     plan = plan_rollback(entries, target_dir=Path("restored/"))
     result = execute_rollback(plan)
 """
@@ -68,8 +69,10 @@ __all__ = [
     "RollbackStats",
     "SourceResolver",
     "discover_meta2_files",
+    "discover_sidecar_files",
     "execute_rollback",
     "load_meta2",
+    "load_sidecar",
     "plan_rollback",
     "verify_file_hash",
 ]
@@ -436,12 +439,15 @@ def _entry_from_dict(d: dict[str, Any]) -> IndexEntry:
 # ---------------------------------------------------------------------------
 
 
-def discover_meta2_files(
+def discover_sidecar_files(
     directory: Path,
     *,
     recursive: bool = False,
 ) -> list[Path]:
-    """Find all ``*_meta2.json`` files in a directory.
+    """Find all sidecar files (``*_meta2.json`` and ``*_meta3.json``) in a directory.
+
+    Discovers both v2 and v3 sidecar files, supporting directories processed
+    by any indexer version.
 
     Args:
         directory: The directory to search.
@@ -449,11 +455,21 @@ def discover_meta2_files(
             When ``False`` (default), search only the immediate directory.
 
     Returns:
-        Sorted list of discovered meta2 file paths.
+        Sorted list of discovered sidecar file paths.
     """
-    if recursive:
-        return sorted(directory.rglob("*_meta2.json"))
-    return sorted(directory.glob("*_meta2.json"))
+    glob_fn = directory.rglob if recursive else directory.glob
+    v2 = list(glob_fn("*_meta2.json"))
+    v3 = list(glob_fn("*_meta3.json"))
+    return sorted(v2 + v3)
+
+
+def discover_meta2_files(
+    directory: Path,
+    *,
+    recursive: bool = False,
+) -> list[Path]:
+    """Deprecated alias for :func:`discover_sidecar_files`."""
+    return discover_sidecar_files(directory, recursive=recursive)
 
 
 def _flatten_tree(entry: IndexEntry, out: list[IndexEntry]) -> None:
@@ -477,19 +493,19 @@ def _extract_duplicates(entries: list[IndexEntry]) -> list[IndexEntry]:
     return result
 
 
-def load_meta2(
+def load_sidecar(
     path: Path,
     *,
     recursive: bool = False,
 ) -> list[IndexEntry]:
-    """Load and parse a ``_meta2.json`` file into a flat list of IndexEntry objects.
+    """Load and parse a sidecar file into a flat list of IndexEntry objects.
 
     Handles three input shapes:
 
     1. **Per-file sidecar:** single IndexEntry object → returns ``[entry]``.
     2. **Aggregate output** (directory entry with ``items[]``): walks the tree,
        returns all ``type == "file"`` entries flattened.
-    3. **Directory path:** discovers all ``*_meta2.json`` files (recursively if
+    3. **Directory path:** discovers all sidecar files (recursively if
        *recursive* is ``True``), loads each, returns combined flat list.
 
     Duplicate entries from the ``duplicates`` array of each canonical entry
@@ -497,8 +513,8 @@ def load_meta2(
     annotation distinguishing them from canonical entries.
 
     Args:
-        path: Path to a ``_meta2.json`` file, aggregate output file, or
-            directory containing ``_meta2.json`` sidecars.
+        path: Path to a sidecar file (``_meta2.json`` or ``_meta3.json``),
+            aggregate output file, or directory containing sidecar files.
         recursive: When ``True`` and *path* is a directory, search
             subdirectories for sidecars.
 
@@ -507,7 +523,7 @@ def load_meta2(
 
     Raises:
         IndexerConfigError: If the file is not valid JSON.
-        IndexerConfigError: If ``schema_version`` is not 2.
+        IndexerConfigError: If ``schema_version`` is not 2 or 3.
         IndexerTargetError: If *path* does not exist.
     """
     if not path.exists():
@@ -516,11 +532,11 @@ def load_meta2(
 
     # Shape 3: directory → discover and combine
     if path.is_dir():
-        files = discover_meta2_files(path, recursive=recursive)
+        files = discover_sidecar_files(path, recursive=recursive)
         combined: list[IndexEntry] = []
         for f in files:
-            sub_entries = load_meta2(f, recursive=False)
-            # Annotate each entry with the directory its meta2 came from
+            sub_entries = load_sidecar(f, recursive=False)
+            # Annotate each entry with the directory its sidecar came from
             # so LocalSourceResolver can find content files alongside the
             # sidecar during recursive rollback.
             for e in sub_entries:
@@ -538,9 +554,9 @@ def load_meta2(
 
     # Schema version gate
     version = data.get("schema_version")
-    if version != 2:
+    if version not in {2, 3}:
         msg = (
-            f"Unsupported schema version in {path}: expected 2, got {version}. "
+            f"Unsupported schema version in {path}: expected 2 or 3, got {version}. "
             "v1 sidecar files must be migrated to v2 format before rollback."
         )
         raise IndexerConfigError(msg)
@@ -552,7 +568,7 @@ def load_meta2(
         flat: list[IndexEntry] = []
         _flatten_tree(entry, flat)
         entries = _extract_duplicates(flat)
-        # Annotate all entries with the meta2 file's parent directory
+        # Annotate all entries with the sidecar file's parent directory
         for e in entries:
             _origin_dirs[id(e)] = path.parent
         return entries
@@ -566,6 +582,15 @@ def load_meta2(
 
     # Unexpected type — return empty
     return []
+
+
+def load_meta2(
+    path: Path,
+    *,
+    recursive: bool = False,
+) -> list[IndexEntry]:
+    """Deprecated alias for :func:`load_sidecar`."""
+    return load_sidecar(path, recursive=recursive)
 
 
 # ---------------------------------------------------------------------------
