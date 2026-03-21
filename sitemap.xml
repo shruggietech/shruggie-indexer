@@ -1,99 +1,99 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/</loc>
+         <loc>https://indexer.sh/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/changelog/</loc>
+         <loc>https://indexer.sh/changelog/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/getting-started/exiftool/</loc>
+         <loc>https://indexer.sh/getting-started/exiftool/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/getting-started/installation/</loc>
+         <loc>https://indexer.sh/getting-started/installation/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/getting-started/quickstart/</loc>
+         <loc>https://indexer.sh/getting-started/quickstart/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/</loc>
+         <loc>https://indexer.sh/porting-reference/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/Base64DecodeString_DependencyCatalog/</loc>
+         <loc>https://indexer.sh/porting-reference/Base64DecodeString_DependencyCatalog/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/Date2UnixTime_DependencyCatalog/</loc>
+         <loc>https://indexer.sh/porting-reference/Date2UnixTime_DependencyCatalog/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/DirectoryId_DependencyCatalog/</loc>
+         <loc>https://indexer.sh/porting-reference/DirectoryId_DependencyCatalog/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/FileId_DependencyCatalog/</loc>
+         <loc>https://indexer.sh/porting-reference/FileId_DependencyCatalog/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/MakeIndex_DependencyCatalog/</loc>
+         <loc>https://indexer.sh/porting-reference/MakeIndex_DependencyCatalog/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/MakeIndex_OperationsCatalog/</loc>
+         <loc>https://indexer.sh/porting-reference/MakeIndex_OperationsCatalog/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/MetaFileRead_DependencyCatalog/</loc>
+         <loc>https://indexer.sh/porting-reference/MetaFileRead_DependencyCatalog/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/TempClose_DependencyCatalog/</loc>
+         <loc>https://indexer.sh/porting-reference/TempClose_DependencyCatalog/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/TempOpen_DependencyCatalog/</loc>
+         <loc>https://indexer.sh/porting-reference/TempOpen_DependencyCatalog/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/porting-reference/Vbs_DependencyCatalog/</loc>
+         <loc>https://indexer.sh/porting-reference/Vbs_DependencyCatalog/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/schema/</loc>
+         <loc>https://indexer.sh/schema/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/user-guide/</loc>
+         <loc>https://indexer.sh/user-guide/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/user-guide/cli-reference/</loc>
+         <loc>https://indexer.sh/user-guide/cli-reference/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/user-guide/configuration/</loc>
+         <loc>https://indexer.sh/user-guide/configuration/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/user-guide/gui/</loc>
+         <loc>https://indexer.sh/user-guide/gui/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/user-guide/platform-notes/</loc>
+         <loc>https://indexer.sh/user-guide/platform-notes/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/user-guide/python-api/</loc>
+         <loc>https://indexer.sh/user-guide/python-api/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
     <url>
-         <loc>https://shruggietech.github.io/shruggie-indexer/user-guide/rollback/</loc>
+         <loc>https://indexer.sh/user-guide/rollback/</loc>
          <lastmod>2026-03-21</lastmod>
     </url>
 </urlset>
