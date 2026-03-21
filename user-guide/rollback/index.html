@@ -2106,9 +2106,9 @@ shruggie-indexer<span class="w"> </span>rollback<span class="w"> </span>vault/yA
 <li><strong>Deliver</strong> — The file at the delivery path has its original name and timestamps.</li>
 </ol>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">shruggie_indexer</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_meta2</span><span class="p">,</span> <span class="n">plan_rollback</span><span class="p">,</span> <span class="n">execute_rollback</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shruggie_indexer</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_sidecar</span><span class="p">,</span> <span class="n">plan_rollback</span><span class="p">,</span> <span class="n">execute_rollback</span>
 
-<span class="n">entries</span> <span class="o">=</span> <span class="n">load_meta2</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/vault/yABC.jpg_meta3.json&quot;</span><span class="p">))</span>
+<span class="n">entries</span> <span class="o">=</span> <span class="n">load_sidecar</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/vault/yABC.jpg_meta3.json&quot;</span><span class="p">))</span>
 <span class="n">plan</span> <span class="o">=</span> <span class="n">plan_rollback</span><span class="p">(</span>
     <span class="n">entries</span><span class="p">,</span>
     <span class="n">target_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/delivery/output&quot;</span><span class="p">),</span>
