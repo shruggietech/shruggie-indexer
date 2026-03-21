@@ -37,10 +37,10 @@ shruggie-indexer index [OPTIONS] [TARGET]
 Restore files from shruggie-indexer metadata to their original names and directory structure.
 
 ```
-shruggie-indexer rollback [OPTIONS] META2_PATH
+shruggie-indexer rollback [OPTIONS] META_PATH
 ```
 
-`META2_PATH` is a required positional argument specifying a `_meta2.json` file, aggregate output file, or directory containing `_meta2.json` sidecars.
+`META_PATH` is a required positional argument specifying a `_meta3.json` (or legacy `_meta2.json`) file, aggregate output file, or directory containing sidecar files.
 
 See [Rollback Options](#rollback-options) below for the full option set.
 
@@ -114,18 +114,18 @@ Write individual sidecar JSON files alongside each indexed item.
 shruggie-indexer path/to/directory/ --inplace
 ```
 
-For files, the sidecar is named `<filename>_meta2.json`. For directories, the sidecar is named `<dirname>_directorymeta2.json` and placed inside the directory. The root target directory does not receive an in-place sidecar — the aggregate output file (`--outfile`) serves that purpose.
+For files, the sidecar is named `<filename>_meta3.json`. For directories, the sidecar is named `<dirname>_directorymeta3.json` and placed inside the directory. The root target directory does not receive an in-place sidecar — the aggregate output file (`--outfile`) serves that purpose.
 
 | Item | Sidecar path |
-|------|-------------|
-| `photos/sunset.jpg` | `photos/sunset.jpg_meta2.json` |
-| `photos/vacation/` | `photos/vacation/vacation_directorymeta2.json` |
+|------|--------------|
+| `photos/sunset.jpg` | `photos/sunset.jpg_meta3.json` |
+| `photos/vacation/` | `photos/vacation/vacation_directorymeta3.json` |
 
 Disables stdout output by default (use `--stdout` to re-enable).
 
 ### `--dir-meta` / `--no-dir-meta`
 
-Control whether `_directorymeta2.json` directory sidecar files are written.
+Control whether `_directorymeta3.json` directory sidecar files are written.
 
 ```bash
 # Suppress directory metadata — only per-file sidecars are written
@@ -136,11 +136,31 @@ shruggie-indexer path/to/directory/ --inplace --dir-meta
 ```
 
 - **Default:** Enabled (`--dir-meta`). All directory sidecars are written normally.
-- **`--no-dir-meta`:** Suppresses directory-level `_directorymeta2.json` sidecars during `--inplace` output. Per-file `_meta2.json` sidecars are unaffected.
-- Auto-generated aggregate output files (those ending in `_directorymeta2.json` produced by the output path defaulting logic) are also suppressed.
+- **`--no-dir-meta`:** Suppresses directory-level `_directorymeta3.json` sidecars during `--inplace` output. Per-file `_meta3.json` sidecars are unaffected.
+- Auto-generated aggregate output files (those ending in `_directorymeta3.json` produced by the output path defaulting logic) are also suppressed.
 - Explicitly specified `--outfile` paths are never suppressed, regardless of this flag.
 - Stdout output is never affected by this flag.
 - Maps to the `write_directory_meta` configuration key.
+
+## Encoding Detection Options
+
+### `--no-detect-encoding`
+
+Disable all encoding detection. When set, the `encoding` field is omitted from the output for all entries. This is equivalent to setting `detect_encoding = false` in the configuration file.
+
+```bash
+shruggie-indexer path/to/target --no-detect-encoding
+```
+
+### `--no-detect-charset`
+
+Disable `chardet`-based character set detection while retaining BOM and line-ending detection. When set, the `EncodingObject` is still populated for files with a BOM or detectable line endings, but `detected_encoding` and `confidence` are always `null`.
+
+```bash
+shruggie-indexer path/to/target --no-detect-charset
+```
+
+`--no-detect-encoding` takes precedence over `--no-detect-charset` — if both are specified, the `encoding` field is omitted entirely.
 
 ## Metadata Options
 
@@ -386,33 +406,33 @@ The three output flags (`--stdout`, `--outfile`, `--inplace`) combine into the f
 
 These options apply to the `rollback` subcommand.
 
-### `META2_PATH` (positional argument)
+### `META_PATH` (positional argument)
 
-Path to a `_meta2.json` sidecar file, an aggregate `_directorymeta2.json` output file, or a directory containing `_meta2.json` sidecar files. Required.
+Path to a `_meta3.json` sidecar file (or legacy `_meta2.json`), an aggregate `_directorymeta3.json` output file, or a directory containing sidecar files. Required.
 
 ### `-t, --target PATH`
 
-Target directory for restored files. When omitted, defaults to the parent directory of `META2_PATH` (if it is a file) or to `META2_PATH` itself (if it is a directory).
+Target directory for restored files. When omitted, defaults to the parent directory of `META_PATH` (if it is a file) or to `META_PATH` itself (if it is a directory).
 
 ```bash
 # Restore into a specific directory
 shruggie-indexer rollback sidecars/ --target restored/
 
-# Default: restore into the meta2 file's parent directory
-shruggie-indexer rollback vault/yABC.jpg_meta2.json
+# Default: restore into the sidecar file's parent directory
+shruggie-indexer rollback vault/yABC.jpg_meta3.json
 ```
 
 ### `--source PATH`
 
-Explicit source directory containing the content files to restore. When omitted, the rollback engine searches for files adjacent to the meta2 sidecar. Use this when the aggregate output file is in a different directory from the content files.
+Explicit source directory containing the content files to restore. When omitted, the rollback engine searches for files adjacent to the sidecar. Use this when the aggregate output file is in a different directory from the content files.
 
 ```bash
-shruggie-indexer rollback output/photos_directorymeta2.json --source vault/ --target restored/
+shruggie-indexer rollback output/photos_directorymeta3.json --source vault/ --target restored/
 ```
 
 ### `--recursive`
 
-When `META2_PATH` is a directory, search subdirectories for `_meta2.json` sidecar files. Has no effect when `META2_PATH` is a file. Default: disabled.
+When `META_PATH` is a directory, search subdirectories for sidecar files. Has no effect when `META_PATH` is a file. Default: disabled.
 
 ### `--flat`
 
@@ -458,13 +478,13 @@ The rollback subcommand supports the same logging options as `index`:
 
 ```bash
 # Restore a single renamed file
-shruggie-indexer rollback vault/yABC.jpg_meta2.json
+shruggie-indexer rollback vault/yABC.jpg_meta3.json
 
 # Restore an entire directory of sidecars
 shruggie-indexer rollback vault/ --target restored/
 
 # Restore from aggregate output with explicit source
-shruggie-indexer rollback output/photos_directorymeta2.json --source vault/ --target restored/
+shruggie-indexer rollback output/photos_directorymeta3.json --source vault/ --target restored/
 
 # Flat restore (no directory structure)
 shruggie-indexer rollback vault/ --flat --target flat_output/

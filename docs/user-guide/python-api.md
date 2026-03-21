@@ -76,7 +76,7 @@ def index_path(
 | `cancel_event` | `threading.Event \| None` | Checked between items during directory traversal. When set, raises `IndexerCancellationError`. Ignored for single-file targets. |
 | `session_id` | `str \| None` | UUID4 identifying this indexing session. When `None`, a new UUID4 is auto-generated. All entries produced by a single call share the same session ID. |
 
-**Returns:** A fully populated `IndexEntry` conforming to the v2 schema.
+**Returns:** A fully populated `IndexEntry` conforming to the v3 schema.
 
 **Raises:**
 
@@ -139,7 +139,7 @@ def build_directory_entry(
 
 ### `serialize_entry()`
 
-Converts an `IndexEntry` to a JSON string conforming to the v2 schema.
+Converts an `IndexEntry` to a JSON string conforming to the v3 schema.
 
 ```python
 def serialize_entry(
@@ -219,11 +219,11 @@ new_config = replace(config, id_algorithm="sha256")
     - `meta_merge_delete=True` → `meta_merge=True`
     - `meta_merge=True` → `extract_exif=True`
 
-    The `write_directory_meta` field (default `True`) controls whether `_directorymeta2.json` directory sidecar files are emitted during output. Set to `False` to suppress directory-level sidecars while retaining per-file sidecars. Corresponds to the CLI `--no-dir-meta` flag.
+    The `write_directory_meta` field (default `True`) controls whether `_directorymeta3.json` directory sidecar files are emitted during output. Set to `False` to suppress directory-level sidecars while retaining per-file sidecars. Corresponds to the CLI `--no-dir-meta` flag.
 
 ## Data Models
 
-All data classes are defined in `models/schema.py` and map directly to the [v2 JSON Schema](../schema/index.md) types.
+All data classes are defined in `models/schema.py` and map directly to the [v3 JSON Schema](../schema/index.md) types.
 
 ### `IndexEntry`
 
@@ -232,7 +232,7 @@ The root data class representing a single indexed file or directory.
 ```python
 @dataclass
 class IndexEntry:
-    schema_version: int       # Always 2
+    schema_version: int       # Always 3
     id: str                   # Prefixed hash: y... (file), x... (directory)
     id_algorithm: str         # "md5" or "sha256"
     type: str                 # "file" or "directory"
@@ -243,6 +243,7 @@ class IndexEntry:
     file_system: FileSystemObject
     timestamps: TimestampsObject
     attributes: AttributesObject
+    encoding: EncodingObject | None = None  # Text-file encoding metadata (v3)
     items: list[IndexEntry] | None = None
     metadata: list[MetadataEntry] | None = None
     mime_type: str | None = None
@@ -259,11 +260,12 @@ class IndexEntry:
 | `NameObject` | `text`, `hashes` | Name with associated hash digests. `text` and `hashes` are co-nullable. |
 | `SizeObject` | `text`, `bytes` | Human-readable and machine-readable size. |
 | `TimestampPair` | `iso`, `unix` | ISO 8601 string and Unix milliseconds. |
-| `TimestampsObject` | `created`, `modified`, `accessed` | Three standard filesystem timestamps, each a `TimestampPair`. |
+| `TimestampsObject` | `created`, `modified`, `accessed`, `created_source` | Three standard filesystem timestamps (each a `TimestampPair`) plus provenance indicator for the creation timestamp. |
 | `ParentObject` | `id`, `name` | Parent directory identity and name. |
 | `FileSystemObject` | `relative`, `parent` | Filesystem location with forward-slash relative path. |
-| `AttributesObject` | `is_link`, `storage_name` | Item attributes including symlink status and deterministic rename target. |
-| `MetadataEntry` | `id`, `origin`, `name`, `hashes`, `attributes`, `data`, ... | A single metadata record (sidecar or generated). |
+| `AttributesObject` | `is_link`, `storage_name`, `json_style`, `json_indent`, `link_metadata` | Item attributes including symlink status, deterministic rename target, and metadata-specific fields. |
+| `MetadataEntry` | `id`, `origin`, `name`, `hashes`, `attributes`, `data`, `encoding`, ... | A single metadata record (sidecar or generated). |
+| `EncodingObject` | `bom`, `line_endings`, `detected_encoding`, `confidence` | Encoding metadata for text-based files (v3). |
 
 ### `ProgressEvent`
 
@@ -362,7 +364,7 @@ from shruggie_indexer import (
 
 ### `load_meta2(path, *, recursive=False)`
 
-Load and parse a `_meta2.json` file into a flat list of `IndexEntry` objects.
+Load and parse a `_meta3.json` (or legacy `_meta2.json`) file into a flat list of `IndexEntry` objects.
 
 ```python
 def load_meta2(
@@ -381,7 +383,7 @@ Handles three input shapes:
 
 1. **Per-file sidecar** — A single `IndexEntry` object → returns `[entry]`.
 2. **Aggregate output** — A directory entry with nested `items[]` → walks the tree, returns all file-type entries flattened.
-3. **Directory path** — Discovers all `*_meta2.json` files (recursively if `recursive=True`), loads each, returns combined flat list.
+3. **Directory path** — Discovers all `*_meta3.json` and `*_meta2.json` files (recursively if `recursive=True`), loads each, returns combined flat list.
 
 Duplicate entries from the `duplicates` array of each canonical entry are extracted and included in the returned list with annotations distinguishing them from canonical entries.
 
@@ -389,12 +391,12 @@ Duplicate entries from the `duplicates` array of each canonical entry are extrac
 
 | Exception | Condition |
 |-----------|-----------|
-| `IndexerConfigError` | Invalid JSON or `schema_version` is not 2. |
+| `IndexerConfigError` | Invalid JSON or unsupported `schema_version`. |
 | `IndexerTargetError` | Path does not exist. |
 
 ### `discover_meta2_files(directory, *, recursive=False)`
 
-Find all `*_meta2.json` files in a directory.
+Find all `*_meta3.json` and `*_meta2.json` files in a directory.
 
 ```python
 def discover_meta2_files(
@@ -547,7 +549,7 @@ Default implementation that searches the local filesystem:
 
 1. Look for `storage_name` in `search_dir` (renamed file).
 2. Look for `name.text` in `search_dir`, verify hash if found (non-renamed file).
-3. If strategies 1–2 fail and the entry has an origin-directory annotation (set by `load_meta2()` during loading), repeat strategies 1–2 in the origin directory. This enables recursive rollback — when `search_dir` is the tree root but the content file resides in a subdirectory alongside its `_meta2.json` sidecar, the fallback finds it.
+3. If strategies 1–2 fail and the entry has an origin-directory annotation (set by `load_meta2()` during loading), repeat strategies 1–2 in the origin directory. This enables recursive rollback — when `search_dir` is the tree root but the content file resides in a subdirectory alongside its sidecar, the fallback finds it.
 4. Return `None` if no match succeeds.
 
 ```python
@@ -569,7 +571,7 @@ from shruggie_indexer import (
 )
 
 # Load a single sidecar
-entries = load_meta2(Path("/vault/yABC.jpg_meta2.json"))
+entries = load_meta2(Path("/vault/yABC.jpg_meta3.json"))
 
 # Plan a flat restore (single file, no directory structure)
 plan = plan_rollback(

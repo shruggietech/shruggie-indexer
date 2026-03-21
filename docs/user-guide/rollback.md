@@ -1,6 +1,6 @@
 # Rollback Guide
 
-The rollback feature reverses shruggie-indexer rename and de-duplication operations by reading `_meta2.json` sidecar files and restoring files to their original names, directory structure, and timestamps. It also reconstructs absorbed sidecar metadata files that were consumed by MetaMergeDelete.
+The rollback feature reverses shruggie-indexer rename and de-duplication operations by reading `_meta3.json` sidecar files and restoring files to their original names, directory structure, and timestamps. It also reconstructs absorbed sidecar metadata files that were consumed by MetaMergeDelete.
 
 Rollback is available via the CLI (`shruggie-indexer rollback`), the GUI (Rollback operation type), and the Python API (`plan_rollback()`, `execute_rollback()`).
 
@@ -28,16 +28,16 @@ You indexed and renamed a file:
 
 ```
 vault/yA8A8C089A6A8583B24C85F5A4A41F5AC.exe          ← renamed content
-vault/yA8A8C089A6A8583B24C85F5A4A41F5AC.exe_meta2.json  ← sidecar manifest
+vault/yA8A8C089A6A8583B24C85F5A4A41F5AC.exe_meta3.json  ← sidecar manifest
 ```
 
 The sidecar records that the original filename was `setup-installer.exe`. To restore it:
 
 ```bash
-shruggie-indexer rollback vault/yA8A8C089A6A8583B24C85F5A4A41F5AC.exe_meta2.json
+shruggie-indexer rollback vault/yA8A8C089A6A8583B24C85F5A4A41F5AC.exe_meta3.json
 ```
 
-Result (default target = parent of meta2 file):
+Result (default target = parent of sidecar file):
 
 ```
 vault/setup-installer.exe   ← restored with original name
@@ -52,13 +52,13 @@ You indexed an entire directory tree with `--rename --inplace`:
 ```
 vault/
 ├── yAAA.jpg
-├── yAAA.jpg_meta2.json
+├── yAAA.jpg_meta3.json
 ├── yBBB.png
-├── yBBB.png_meta2.json
+├── yBBB.png_meta3.json
 └── x1234/
     ├── yCCC.txt
-    ├── yCCC.txt_meta2.json
-    └── x1234_directorymeta2.json
+    ├── yCCC.txt_meta3.json
+    └── x1234_directorymeta3.json
 ```
 
 The sidecars record original names and `file_system.relative` paths. To restore the full tree:
@@ -85,7 +85,7 @@ The directory structure is faithfully reconstructed from the `file_system.relati
 You had three identical copies of `report.pdf` that were de-duplicated during rename. The canonical entry's sidecar contains a `duplicates` array with the other two entries:
 
 ```bash
-shruggie-indexer rollback vault/yDDD.pdf_meta2.json --target restored/
+shruggie-indexer rollback vault/yDDD.pdf_meta3.json --target restored/
 ```
 
 Result — all three copies are restored:
@@ -102,15 +102,15 @@ Each restored copy has the same bytes (copied from the single canonical file) bu
 To restore only canonical entries without duplicates:
 
 ```bash
-shruggie-indexer rollback vault/yDDD.pdf_meta2.json --skip-duplicates --target restored/
+shruggie-indexer rollback vault/yDDD.pdf_meta3.json --skip-duplicates --target restored/
 ```
 
 ### Aggregate Output
 
-You produced an aggregate output file (`_directorymeta2.json`) containing the full directory tree. The content files are in a separate vault directory:
+You produced an aggregate output file (`_directorymeta3.json`) containing the full directory tree. The content files are in a separate vault directory:
 
 ```bash
-shruggie-indexer rollback output/photos_directorymeta2.json \
+shruggie-indexer rollback output/photos_directorymeta3.json \
     --source vault/ \
     --target restored/
 ```
@@ -122,7 +122,7 @@ The `--source` flag tells the engine where to find the content files (by `storag
 Not all indexed files are renamed. If a file was indexed without `--rename`, the sidecar still records its metadata. Rollback handles this transparently — the `LocalSourceResolver` looks for the file by `storage_name` first, then falls back to `name.text`. Non-renamed files are simply copied with their original name:
 
 ```bash
-shruggie-indexer rollback vault/readme.txt_meta2.json --target restored/
+shruggie-indexer rollback vault/readme.txt_meta3.json --target restored/
 ```
 
 Result:
@@ -188,15 +188,15 @@ The `--target` flag is optional. When omitted, the target defaults to:
 
 | Input shape | Default target |
 |---|---|
-| Single meta2 file (`/vault/yAAA.jpg_meta2.json`) | `/vault/` (parent of the file) |
+| Single sidecar file (`/vault/yAAA.jpg_meta3.json`) | `/vault/` (parent of the file) |
 | Directory of sidecars (`/vault/`) | `/vault/` (the directory itself) |
-| Aggregate output file (`/output/photos_directorymeta2.json`) | `/output/` (parent of the file) |
+| Aggregate output file (`/output/photos_directorymeta3.json`) | `/output/` (parent of the file) |
 
 This enables single-command in-place rollback:
 
 ```bash
 # No --target needed — restores into the same directory
-shruggie-indexer rollback vault/yABC.jpg_meta2.json
+shruggie-indexer rollback vault/yABC.jpg_meta3.json
 ```
 
 ### Vault Delivery Use Case
@@ -212,7 +212,7 @@ The `shruggie-vault` project uses the rollback API programmatically to deliver f
 from pathlib import Path
 from shruggie_indexer import load_meta2, plan_rollback, execute_rollback
 
-entries = load_meta2(Path("/vault/yABC.jpg_meta2.json"))
+entries = load_meta2(Path("/vault/yABC.jpg_meta3.json"))
 plan = plan_rollback(
     entries,
     target_dir=Path("/delivery/output"),
@@ -242,9 +242,12 @@ When MetaMergeDelete absorbs sidecar files (e.g., `.info.json`, `.description`),
 
 JSON sidecar files are restored using the formatting style recorded during indexing. The `attributes.json_style` field controls the output:
 
-- **`"pretty"`** — Indented JSON (`indent=2`), matching the original's whitespace convention.
+- **`"pretty"`** — Indented JSON, matching the original's whitespace convention. The indent level is controlled by the `attributes.json_indent` field (default: `2`).
 - **`"compact"`** — Minified JSON (no whitespace), preserving the original's compact representation.
 - **Absent** — Defaults to compact serialization for backward compatibility with entries created before `json_style` tracking was added.
+
+!!! note "json_indent (v3)"
+    v3 sidecars record the original indent level in `attributes.json_indent`. When restoring pretty-printed JSON, rollback uses this value instead of always assuming `indent=2`. v2 entries without `json_indent` continue to default to 2.
 
 This prevents compact JSON sidecars (e.g., minified `.info.json` files) from inflating in size during rollback.
 
@@ -260,6 +263,9 @@ Restored sidecar files are **data-equivalent** to the originals but not necessar
 | Text (`"text"`) | Data-equivalent | Minor whitespace differences (trailing newlines, line-ending normalization) may occur. Content is semantically identical. |
 | JSON (`"json"`) | Data-equivalent | JSON structure is preserved exactly. Whitespace convention (compact vs. indented) is restored via `json_style`, but minor formatting differences (key order, trailing newlines) may occur. |
 | Lines (`"lines"`) | Data-equivalent | Lines are rejoined with `\n`. Original line endings and trailing whitespace may differ. |
+
+!!! note "Encoding-Aware Restoration (v3)"
+    v3 entries may include an `encoding` object recording the original file's BOM, line endings, and detected character encoding. When present, rollback uses this information to improve text fidelity — restoring the correct BOM prefix and line-ending style (`\r\n` vs. `\n`) rather than defaulting to platform conventions. This narrows the gap between "data-equivalent" and "byte-identical" for text-format sidecars.
 
 !!! note "`.url` sidecar restoration"
     `.url` (Windows shortcut) sidecar files are now stored as full text content — including the `[InternetShortcut]` INI header and `URL=` key — rather than extracting only the bare URL string. Restored `.url` files are functional Windows shortcuts that open in the default browser when double-clicked. This is a change from earlier versions, which performed lossy URL extraction that produced non-functional plaintext files on restore.
@@ -310,7 +316,7 @@ When the target path already exists:
 - **Source not found** — If the content file cannot be located, the entry is skipped with a warning. Other entries continue processing.
 - **Copy failure** — If `shutil.copy2()` fails (permissions, disk full), the error is logged and the entry is marked as failed. Other entries continue processing.
 - **Path traversal** — If `file_system.relative` contains `..` segments that would escape the target directory, the entry is rejected.
-- **v1 sidecars** — If a sidecar lacks `schema_version` or has `schema_version != 2`, loading fails with a clear error directing the user to the future `migrate` tool.
+- **v1/v2 sidecars** — If a sidecar has an unsupported `schema_version` (neither 2 nor 3) or lacks `schema_version` entirely, loading fails with a clear error directing the user to the `migrate` tool.
 
 ---
 
@@ -318,7 +324,7 @@ When the target path already exists:
 
 ```bash
 # Restore a single renamed file
-shruggie-indexer rollback vault/yABC.jpg_meta2.json
+shruggie-indexer rollback vault/yABC.jpg_meta3.json
 
 # Restore into a specific directory
 shruggie-indexer rollback vault/ --target restored/
@@ -330,7 +336,7 @@ shruggie-indexer rollback vault/ --flat --target flat_output/
 shruggie-indexer rollback vault/ --dry-run -v
 
 # Restore from aggregate with explicit source
-shruggie-indexer rollback output/photos_directorymeta2.json --source vault/ --target restored/
+shruggie-indexer rollback output/photos_directorymeta3.json --source vault/ --target restored/
 
 # Skip duplicates, force overwrite
 shruggie-indexer rollback vault/ --skip-duplicates --force --target restored/
@@ -345,7 +351,7 @@ See the [CLI Reference](cli-reference.md#rollback-options) for the full option s
 
 ## Legacy Compatibility
 
-Rollback automatically handles `_meta2.json` files produced by older indexer versions that computed `file_system.relative` from the *parent* of the target directory (prepending the target's own name as a prefix).
+Rollback automatically handles `_meta2.json` and `_meta3.json` files produced by older and current indexer versions. Older v2 sidecars that computed `file_system.relative` from the *parent* of the target directory (prepending the target's own name as a prefix) are detected and corrected.
 
 When all loaded entries share a common first path component matching the source directory name, rollback detects this as a legacy prefix and strips it before planning. An informational log message is emitted:
 
@@ -359,7 +365,7 @@ This ensures files are restored directly under the target directory without an e
 
 ## Session-ID Validation
 
-When `_meta2.json` files from multiple indexing sessions coexist in the same directory (e.g., stale metadata from a prior run was not cleaned up), rollback detects content-hash collisions — entries where the same file content appears with the same `attributes.storage_name` but different `file_system.relative` paths. Two entries that share a content hash but have **different** storage names (e.g., byte-identical `slippers.gif` and `slippers.png`) are treated as distinct canonical files and are **not** flagged as collisions.
+When `_meta3.json` or `_meta2.json` files from multiple indexing sessions coexist in the same directory (e.g., stale metadata from a prior run was not cleaned up), rollback detects content-hash collisions — entries where the same file content appears with the same `attributes.storage_name` but different `file_system.relative` paths. Two entries that share a content hash but have **different** storage names (e.g., byte-identical `slippers.gif` and `slippers.png`) are treated as distinct canonical files and are **not** flagged as collisions.
 
 When a collision is detected, rollback applies tiebreaking rules:
 
@@ -373,4 +379,4 @@ Discarded entries are logged at WARNING level with a message that accurately des
 
 ## Known Limitations
 
-- **Empty directories are not reconstructed.** The indexer catalogues *files* and their containing directory hierarchy. Directories that contain no files (directly or transitively) produce no entries in `_meta2.json` output and therefore cannot be restored by rollback. This is intentional — shruggie-indexer focuses on the preservation and cataloguing of files, not the replication of directory trees.
+- **Empty directories are not reconstructed.** The indexer catalogues *files* and their containing directory hierarchy. Directories that contain no files (directly or transitively) produce no entries in sidecar output and therefore cannot be restored by rollback. This is intentional — shruggie-indexer focuses on the preservation and cataloguing of files, not the replication of directory trees.

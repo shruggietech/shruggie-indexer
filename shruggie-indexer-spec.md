@@ -4,9 +4,9 @@
 - **Project:** `shruggie-indexer`
 - **Repository:** [shruggietech/shruggie-indexer](https://github.com/shruggietech/shruggie-indexer)
 - **License:** Apache 2.0 ([full text](https://www.apache.org/licenses/LICENSE-2.0))
-- **Version:** 0.1.2
+- **Version:** 0.2.0
 - **Author:** William Thompson (ShruggieTech LLC)
-- **Date:** 2026-03-05
+- **Date:** 2026-03-20
 - **Status:** AMENDED
 - **Audience:** AI-first, Human-second
 
@@ -191,9 +191,9 @@ This specification covers the following:
 
   > **Historical note:** The original PowerShell `MakeIndex` function depended on eight external pslib functions (`Base64DecodeString`, `Date2UnixTime`, `DirectoryId`, `FileId`, `MetaFileRead`, `TempOpen`, `TempClose`, `Vbs`) and two external binaries (`exiftool`, `jq`). The Python tool eliminates six of the eight function dependencies and the `jq` binary dependency through standard library equivalents and architectural improvements. See [§2.6](#26-intentional-deviations-from-the-original) for the full rationale.
 
-- **Output schema (v2).** The complete JSON output schema for index entries as defined by the [shruggie-indexer v2 schema](https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json). The v2 schema consolidates related fields into logical sub-objects (e.g., `TimestampPair`, `NameObject`, `HashSet`, `SizeObject`), adds explicit provenance tracking for metadata entries, includes a `schema_version` discriminator, and provides the structural foundation for MetaMergeDelete reversal operations. A v1-to-v2 migration utility for converting existing v1 index assets to the v2 format is planned but deferred to post-MVP.
+- **Output schema (v3).** The complete JSON output schema for index entries as defined by the [shruggie-indexer v3 schema](https://schemas.shruggie.tech/data/shruggie-indexer-v3.schema.json). The v3 schema extends v2 with encoding metadata (`EncodingObject`), timestamp provenance (`created_source`), and indent-aware restoration (`json_indent`) while retaining the structural foundation established in v2: logical sub-objects (`TimestampPair`, `NameObject`, `HashSet`, `SizeObject`), explicit provenance tracking for metadata entries, a `schema_version` discriminator, and the structural basis for MetaMergeDelete reversal operations. The v2 schema remains the validation target for legacy sidecar files. A v1-to-v2 migration utility for converting existing v1 index assets to the v2 format is planned but deferred to post-MVP.
 
-  > **Historical note:** The v1 schema (`MakeIndex_OutputSchema.json`) documents the original MakeIndex output structure and remains available as a porting reference. The v2 schema is a ground-up restructuring that eliminates the v1 schema's flat field layout and structural redundancy.
+  > **Historical note:** The v1 schema (`MakeIndex_OutputSchema.json`) documents the original MakeIndex output structure and remains available as a porting reference. The v2 schema was a ground-up restructuring that eliminated the v1 schema's flat field layout and structural redundancy. The v3 schema is an additive extension of v2.
 
 - **Sidecar metadata configuration.** The sidecar metadata file discovery and classification system defines regex patterns for identifying sidecar file types (Description, DesktopIni, GenericMetadata, Hash, JsonMetadata, Link, Screenshot, Subtitles, Thumbnail, Torrent), per-type behavioral attributes (expected data formats, valid parent relationships), the exiftool file-type exclusion list, extension group classifications (Archive, Audio, Font, Image, Link, Subtitles, Video), and indexer include/exclude patterns. The regex patterns — including an extensive BCP 47 language code alternation for subtitle detection — are externalized into the typed configuration system and are user-modifiable.
 
@@ -421,7 +421,7 @@ The original PowerShell source code is closed-source and is not included in the 
 
 > **Historical note (G4):** The original hardcoded all configuration in the `$global:MetadataFileParser` PowerShell object and in literal values scattered across the function body. The externalized configuration system is a deliberate architectural improvement.
 
-**G5 — Dependency minimization.** The tool declares a small, deliberately chosen set of required runtime dependencies — `click` (CLI parsing), `orjson` (JSON serialization performance), `pyexiftool` (batch exiftool invocation with safe Unicode argument passing), and `tqdm` (progress reporting) — alongside `exiftool` as the sole required external binary. These four packages are listed in `[project.dependencies]` in `pyproject.toml` and are installed by a bare `pip install shruggie-indexer`. Each was promoted from optional to required because it replaces functionality that would otherwise need to be built from scratch or re-implemented with inferior characteristics (see DEV-15, DEV-16, and the per-package rationale in [§12.3](#123-third-party-python-packages)). The GUI package (`customtkinter`) remains optional and is declared as an extra. Development and testing tools (`rich`, `pytest`, `ruff`, etc.) are also declared as extras. The core indexing engine has no other third-party runtime dependencies beyond the four listed above.
+**G5 — Dependency minimization.** The tool declares a small, deliberately chosen set of required runtime dependencies — `chardet` (character encoding detection), `click` (CLI parsing), `orjson` (JSON serialization performance), `pyexiftool` (batch exiftool invocation with safe Unicode argument passing), and `tqdm` (progress reporting) — alongside `exiftool` as the sole required external binary. These five packages are listed in `[project.dependencies]` in `pyproject.toml` and are installed by a bare `pip install shruggie-indexer`. Each was promoted from optional to required because it replaces functionality that would otherwise need to be built from scratch or re-implemented with inferior characteristics (see DEV-15, DEV-16, and the per-package rationale in [§12.3](#123-third-party-python-packages)). The GUI package (`customtkinter`) remains optional and is declared as an extra. Development and testing tools (`rich`, `pytest`, `ruff`, etc.) are also declared as extras. The core indexing engine has no other third-party runtime dependencies beyond the five listed above.
 
 **G6 — AI-agent implementability.** Every section of this specification provides sufficient detail for an AI implementation agent to produce correct, complete code for the described component within a single context window, without interactive clarification. Cross-references between sections are explicit. Ambiguous behavioral questions are resolved in the specification text rather than left to implementer judgment. This is the document's primary design constraint and the reason for its level of explicitness.
 
@@ -1506,25 +1506,29 @@ The v2 schema is governed by five design principles that drove the restructuring
 <a id="canonical-schema-location"></a>
 #### Canonical schema location
 
-The canonical v2 JSON Schema is hosted at:
+The canonical v3 JSON Schema is hosted at:
 
 ```
-https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json
+https://schemas.shruggie.tech/data/shruggie-indexer-v3.schema.json
 ```
 
-This document uses JSON Schema Draft-07 (`https://json-schema.org/draft-07/schema#`). The schema `$id` is set to the canonical URL. The schema `title` is `IndexEntry`.
+The v2 schema remains available at `https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json` for consumers that have not migrated. Both schemas use JSON Schema Draft-07 (`https://json-schema.org/draft-07/schema#`). The schema `$id` is set to the canonical URL. The schema `title` is `IndexEntry`.
 
 <a id="schema-version"></a>
 #### Schema version
 
-Every v2 output document includes a `schema_version` field with the integer value `2`. This field is the first property in the serialized JSON output (by convention, not by requirement — JSON objects are unordered, but the serializer SHOULD place `schema_version` first for readability). The value is a `const` constraint in the JSON Schema: `{ "type": "integer", "const": 2 }`. Consumers SHOULD check this field before attempting to parse the remainder of the document and SHOULD reject documents with an unrecognized schema version.
+> **Updated 2026-03-20:** Schema version bumped from `2` to `3` for v0.2.0. See [§5.4](#54-identity-fields) for the `schema_version` field definition.
+
+Every v3 output document includes a `schema_version` field with the integer value `3`. This field is the first property in the serialized JSON output (by convention, not by requirement — JSON objects are unordered, but the serializer SHOULD place `schema_version` first for readability). The value is a `const` constraint in the JSON Schema: `{ "type": "integer", "const": 3 }`. Consumers SHOULD check this field before attempting to parse the remainder of the document and SHOULD reject documents with an unrecognized schema version. Legacy v2 output uses `const: 2`.
 
 The v1 schema has no version discriminator. The absence of a `schema_version` field (or the presence of the v1-specific `_id` field with its `y`/`x` prefix) is sufficient to identify a v1 document, but consumers SHOULD NOT rely on field absence for version detection — the eventual v1-to-v2 migration utility will handle schema identification as part of its conversion logic.
 
 <a id="52-reusable-type-definitions"></a>
 ### 5.2. Reusable Type Definitions
 
-The v2 schema defines six reusable type definitions in the `definitions` block of the JSON Schema. These are the building blocks from which the top-level `IndexEntry` properties and the nested `MetadataEntry` objects are composed. Each definition is referenced via `$ref` wherever it appears.
+> **Updated 2026-03-20:** Added `EncodingObject` (§5.2.7) for v3 encoding metadata.
+
+The v3 schema defines seven reusable type definitions in the `definitions` block of the JSON Schema. These are the building blocks from which the top-level `IndexEntry` properties and the nested `MetadataEntry` objects are composed. Each definition is referenced via `$ref` wherever it appears.
 
 The Python implementation SHOULD model these definitions as individual `dataclass` types (or Pydantic models behind an import guard) in `models/schema.py`. This mirrors the schema's compositional structure and gives every sub-object a named type for static analysis, IDE support, and independent testability. See [§3.2](#32-source-package-layout) for the module location rationale.
 
@@ -1612,6 +1616,8 @@ A `TimestampPair` expresses a single timestamp in both ISO 8601 local-time and U
 <a id="525-timestampsobject"></a>
 #### 5.2.5. TimestampsObject
 
+> **Updated 2026-03-20:** Added `created_source` field for v3 timestamp provenance.
+
 A `TimestampsObject` groups the three standard filesystem timestamps.
 
 | Property | Type | Required | Description |
@@ -1619,6 +1625,7 @@ A `TimestampsObject` groups the three standard filesystem timestamps.
 | `created` | `TimestampPair` | Yes | When the item was created on the filesystem. |
 | `modified` | `TimestampPair` | Yes | When the item's content was last modified. |
 | `accessed` | `TimestampPair` | Yes | When the item was last accessed (read). See platform caveat below. |
+| `created_source` | `string` (enum) | No | Provenance of the `created` timestamp: `"birthtime"` (true creation time via `st_birthtime`) or `"ctime_fallback"` (inode change time used as fallback on platforms without birth time). See [§15.5](#155-creation-time-portability). |
 
 `additionalProperties` is `false`.
 
@@ -1644,8 +1651,32 @@ The parent `id` is computed using the same two-layer directory hashing scheme as
 
 > **Deviation from v1 field cardinality:** v1's `ParentIds` provides the parent's full hash-based ID set (MD5, SHA256, optionally SHA1 and SHA512) as a separate object. v2 provides only the single selected `parent.id` string and the parent's `name` (with its name hashes). If a consumer needs the parent's alternative algorithm ID, they can recompute it from the parent name hashes using the documented directory ID scheme. This reduces per-entry size and eliminates a field whose values were derivable from other present fields.
 
+<a id="527-encodingobject"></a>
+#### 5.2.7. EncodingObject
+
+> **Added 2026-03-20:** New reusable type for v3 encoding metadata.
+
+An `EncodingObject` captures source file encoding metadata detected during ingestion. It is used on the top-level `IndexEntry` (for the indexed file's encoding) and on sidecar `MetadataEntry` objects (for the sidecar file's encoding). All properties are optional — the object may contain any combination of fields depending on what was detected. The object uses `additionalProperties: false`.
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `bom` | `string` (enum) | No | Detected byte-order mark type: `"utf-8"`, `"utf-16-le"`, `"utf-16-be"`, `"utf-32-le"`, or `"utf-32-be"`. Absent when no BOM is present. |
+| `line_endings` | `string` (enum) | No | Detected line-ending convention: `"lf"`, `"crlf"`, or `"mixed"`. Absent for binary files or files with no line endings. |
+| `detected_encoding` | `string` | No | Best-guess character encoding name from `chardet` (e.g., `"utf-8"`, `"windows-1252"`, `"ascii"`). Absent when charset detection is disabled or the file is binary. |
+| `confidence` | `number` (0.0–1.0) | No | `chardet` detection confidence score. Present only when `detected_encoding` is present. |
+
+**Co-presence invariant:** `confidence` MUST be present when `detected_encoding` is present, and MUST be absent when `detected_encoding` is absent.
+
+**Population scope:** The `EncodingObject` is populated for text files only. It is absent (field omitted, not `null`) for directories, symlinks, binary files, and when encoding detection is disabled via `--no-detect-encoding`. When charset detection is disabled via `--no-detect-charset`, only `bom` and `line_endings` are populated; `detected_encoding` and `confidence` are absent.
+
+**Rollback use:** The rollback engine uses `EncodingObject` fields to restore BOM bytes, line endings, and character encoding when rebuilding sidecar files from stored `MetadataEntry` data. See [§6.11](#611-rollback-operations) for the restoration logic.
+
+> **New in v3.** This type has no v1 or v2 equivalent. The v1 `Encoding` field (dropped in v2, see [§5.11](#511-dropped-and-restructured-fields)) was a .NET `System.Text.Encoding` serialization with no Python counterpart. `EncodingObject` is a Python-native structure designed for cross-platform encoding fidelity.
+
 <a id="53-top-level-indexentry-fields"></a>
 ### 5.3. Top-Level IndexEntry Fields
+
+> **Updated 2026-03-20:** Schema version bumped to `3`. Added `encoding` field.
 
 > **Updated 2026-02-25:** Added `session_id` and `indexed_at` fields per Pending Updates (2026-02-24), Section 1. Both are optional and not in the `required` array.
 
@@ -1653,7 +1684,7 @@ An `IndexEntry` is a JSON object conforming to the root schema. It describes a s
 
 | Property | Type | Required | Section |
 |----------|------|----------|---------|
-| `schema_version` | `integer` (const `2`) | Yes | [§5.4](#54-identity-fields) |
+| `schema_version` | `integer` (const `3`) | Yes | [§5.4](#54-identity-fields) |
 | `id` | `string` | Yes | [§5.4](#54-identity-fields) |
 | `id_algorithm` | `string` (enum) | Yes | [§5.4](#54-identity-fields) |
 | `type` | `string` (enum) | Yes | [§5.4](#54-identity-fields) |
@@ -1669,6 +1700,7 @@ An `IndexEntry` is a JSON object conforming to the root schema. It describes a s
 | `attributes` | `object` | Yes | [§5.8](#58-attribute-fields) |
 | `items` | `array` of `IndexEntry` or `null` | No | [§5.9](#59-recursive-items-field) |
 | `metadata` | `array` of `MetadataEntry` or `null` | No | [§5.10](#510-metadata-array-and-metadataentry-fields) |
+| `encoding` | `EncodingObject` or absent | No | [§5.2.7](#527-encodingobject) |
 | `duplicates` | `array` of `IndexEntry` or absent | No | [§5.10a](#510a-duplicates-array) |
 
 `additionalProperties` is `false` at the root level — all permitted keys are explicitly enumerated in the canonical schema. The `required` array in the canonical schema is:
@@ -1680,7 +1712,7 @@ An `IndexEntry` is a JSON object conforming to the root schema. It describes a s
 ]
 ```
 
-The `items`, `metadata`, `session_id`, `indexed_at`, `duplicates`, and `mime_type` fields are not in the `required` array. They MAY be omitted entirely (not just set to `null`) when not applicable. However, the implementation SHOULD include them with explicit `null` values for consistency — an `IndexEntry` for a file emits `"items": null`, `"metadata": null` rather than omitting the keys. This makes every entry structurally uniform, which simplifies consumer parsing. The `session_id`, `indexed_at`, and `duplicates` fields follow a different convention: they are conditionally included (present when the indexer populates them, absent when not). The `to_dict()` serializer omits these fields when their value is `None` (or empty), rather than emitting `null`. This keeps output compact for consumers that do not use session tracking or de-duplication.
+The `items`, `metadata`, `session_id`, `indexed_at`, `duplicates`, `encoding`, and `mime_type` fields are not in the `required` array. They MAY be omitted entirely (not just set to `null`) when not applicable. However, the implementation SHOULD include them with explicit `null` values for consistency — an `IndexEntry` for a file emits `"items": null`, `"metadata": null` rather than omitting the keys. This makes every entry structurally uniform, which simplifies consumer parsing. The `session_id`, `indexed_at`, `duplicates`, and `encoding` fields follow a different convention: they are conditionally included (present when the indexer populates them, absent when not). The `to_dict()` serializer omits these fields when their value is `None` (or empty), rather than emitting `null`. This keeps output compact for consumers that do not use session tracking, de-duplication, or encoding detection.
 
 <a id="54-identity-fields"></a>
 ### 5.4. Identity Fields
@@ -1690,14 +1722,16 @@ These fields establish the item's unique identity and schema context.
 <a id="schema_version"></a>
 #### `schema_version`
 
+> **Updated 2026-03-20:** Bumped from `const: 2` to `const: 3` for v0.2.0.
+
 | Attribute | Value |
 |-----------|-------|
 | Type | `integer` |
-| Constraint | `const: 2` |
+| Constraint | `const: 3` |
 | Required | Yes |
 | v1 equivalent | None (v1 has no version discriminator) |
 
-Always the integer `2`. The serializer SHOULD place this field first in the serialized JSON output for readability, though JSON objects are unordered and consumers MUST NOT depend on field order.
+Always the integer `3` for v3 output. Legacy v2 output used `2`. The serializer SHOULD place this field first in the serialized JSON output for readability, though JSON objects are unordered and consumers MUST NOT depend on field order.
 
 <a id="id"></a>
 #### `id`
@@ -1934,13 +1968,15 @@ The `file_system` top-level property groups filesystem location and hierarchy in
 <a id="timestamps"></a>
 #### `timestamps`
 
+> **Updated 2026-03-20:** `TimestampsObject` now includes the optional `created_source` field documenting creation time provenance.
+
 | Attribute | Value |
 |-----------|-------|
 | Type | `TimestampsObject` |
 | Required | Yes |
 | v1 equivalent | `TimeAccessed` + `UnixTimeAccessed` + `TimeCreated` + `UnixTimeCreated` + `TimeModified` + `UnixTimeModified` |
 
-The three standard filesystem timestamps, each as a `TimestampPair` ([§5.2.4](#524-timestamppair)) providing both ISO 8601 and Unix millisecond representations.
+The three standard filesystem timestamps, each as a `TimestampPair` ([§5.2.4](#524-timestamppair)) providing both ISO 8601 and Unix millisecond representations. The optional `created_source` field ([§5.2.5](#525-timestampsobject)) indicates the provenance of the `created` timestamp — `"birthtime"` when `st_birthtime` is available, or `"ctime_fallback"` when `st_ctime` was used instead. See [§15.5](#155-creation-time-portability) for cross-platform discussion.
 
 **v1 comparison:** v1 uses six separate top-level fields for three timestamps (two formats each). v2 nests them in a single `TimestampsObject` containing three `TimestampPair` values. The semantic content is identical; the structural organization is consolidated.
 
@@ -2021,6 +2057,8 @@ The `metadata` array MAY be empty (an empty array `[]`) when metadata processing
 
 A `MetadataEntry` is a self-contained record describing a single metadata source associated with the parent `IndexEntry`. The v2 `MetadataEntry` is significantly richer than its v1 counterpart, carrying enough information to support MetaMergeDelete reversal operations.
 
+> **Updated 2026-03-20:** `MetadataEntry` now includes the optional `encoding` field for sidecar entries, and `attributes` gains the optional `json_indent` field.
+
 **Top-level properties of `MetadataEntry`:**
 
 | Property | Type | Required | Description |
@@ -2032,6 +2070,7 @@ A `MetadataEntry` is a self-contained record describing a single metadata source
 | `file_system` | `object` or absent | No | Sidecar only. Contains `relative` (relative path to original sidecar file). |
 | `size` | `SizeObject` or absent | No | Sidecar only. Size of the original sidecar file. |
 | `timestamps` | `TimestampsObject` or absent | No | Sidecar only. Timestamps of the original sidecar file. |
+| `encoding` | `EncodingObject` or absent | No | Sidecar only. Encoding metadata of the original sidecar file ([§5.2.7](#527-encodingobject)). Enables hash-perfect text restoration during rollback. |
 | `attributes` | `object` | Yes | Classification, format, and transform info. See below. |
 | `data` | `null`, `string`, `object`, or `array` | Yes | The metadata content. |
 
@@ -2042,10 +2081,10 @@ The `required` array for `MetadataEntry` is: `["id", "origin", "name", "hashes",
 
 The `origin` field is the primary structural discriminator for a `MetadataEntry`. It determines which optional fields are present and how the entry should be interpreted.
 
-| `origin` | ID prefix | `file_system` | `size` | `timestamps` | Description |
-|----------|-----------|---------------|--------|-------------|-------------|
-| `"generated"` | `z` | Absent | Absent | Absent | Created by a tool during indexing (e.g., exiftool output). Never existed as a standalone file. |
-| `"sidecar"` | `y` | Present | Present | Present | Absorbed from an external metadata file discovered alongside the indexed item. Carries full filesystem provenance for MetaMergeDelete reversal. |
+| `origin` | ID prefix | `file_system` | `size` | `timestamps` | `encoding` | Description |
+|----------|-----------|---------------|--------|-------------|------------|-------------|
+| `"generated"` | `z` | Absent | Absent | Absent | Absent | Created by a tool during indexing (e.g., exiftool output). Never existed as a standalone file. |
+| `"sidecar"` | `y` | Present | Present | Present | Present | Absorbed from an external metadata file discovered alongside the indexed item. Carries full filesystem provenance for MetaMergeDelete reversal. |
 
 **v1 comparison:** v1's `MetadataEntry` has `Source` and `Type` fields that partially encode provenance, but does not distinguish generated from sidecar metadata structurally. v1 has no filesystem provenance fields for sidecar entries — the original sidecar file's path, size, and timestamps are lost after MetaMerge. v2's explicit `origin` discriminator and the sidecar-only provenance fields are the structural foundation for reversible MetaMergeDelete operations.
 
@@ -2061,6 +2100,7 @@ The `attributes` sub-object classifies the metadata entry's content type, serial
 | `source_media_type` | `string` | No | MIME type of the original source data when the stored format differs from the original (e.g., `"image/png"` for a Base64-encoded screenshot). |
 | `transforms` | `array` of `string` | Yes | Ordered list of transformations applied. Empty array means no transforms. |
 | `json_style` | `string` (enum) | No | Detected JSON formatting style of the original sidecar file: `"pretty"` (indented) or `"compact"` (minified). Present only when `format` is `"json"`. Used by the rollback engine to restore the original whitespace convention. |
+| `json_indent` | `string` | No | The exact indentation string used in the original JSON sidecar file (e.g., `"  "` for 2-space, `"    "` for 4-space, `"\t"` for tab). Present only when `format` is `"json"` and `json_style` is `"pretty"`. Enables hash-perfect JSON restoration during rollback by preserving the original indent width and character. |
 | `link_metadata` | `object` | No | Structured metadata extracted from a Windows `.lnk` shortcut file. Contains string-valued fields such as `target_path`, `working_directory`, `arguments`, `icon_location`, `description`, and `hotkey`. Present only when `type` is `"shortcut"` and the `LnkParse3` library is available. Provides API-inspectable link details alongside the byte-perfect Base64 representation in `data`. |
 
 The `required` array for `attributes` is: `["type", "format", "transforms"]`.
@@ -2158,7 +2198,9 @@ This section documents every v1 field that is absent from v2 and every v1 field 
 <a id="dropped-fields"></a>
 #### Dropped fields
 
-**`Encoding`** — Dropped (DEV-12 in [§2.6](#26-intentional-deviations-from-the-original)). The v1 `Encoding` field contains a serialization of the .NET `System.Text.Encoding` object produced by the `GetFileEncoding` sub-function. This includes properties like `IsSingleByte`, `Preamble`, `BodyName`, `EncodingName`, `HeaderName`, `WebName`, `WindowsCodePage`, `IsBrowserDisplay`, `IsBrowserSave`, `IsMailNewsDisplay`, `IsMailNewsSave`, `EncoderFallback`, `DecoderFallback`, `IsReadOnly`, and `CodePage`. The field is deeply coupled to the .NET type system and has limited utility outside .NET consumers. Python has no standard library facility that produces the same output structure. BOM detection can be performed via `chardet` or manual byte inspection, but the full .NET encoding profile is not reproducible. The field is dropped without replacement. If encoding detection becomes a requirement in a future version, a new field with a Python-native structure would be added.
+**`Encoding`** — Dropped (DEV-12 in [§2.6](#26-intentional-deviations-from-the-original)). The v1 `Encoding` field contains a serialization of the .NET `System.Text.Encoding` object produced by the `GetFileEncoding` sub-function. This includes properties like `IsSingleByte`, `Preamble`, `BodyName`, `EncodingName`, `HeaderName`, `WebName`, `WindowsCodePage`, `IsBrowserDisplay`, `IsBrowserSave`, `IsMailNewsDisplay`, `IsMailNewsSave`, `EncoderFallback`, `DecoderFallback`, `IsReadOnly`, and `CodePage`. The field is deeply coupled to the .NET type system and has limited utility outside .NET consumers. Python has no standard library facility that produces the same output structure. BOM detection can be performed via `chardet` or manual byte inspection, but the full .NET encoding profile is not reproducible. The field was dropped without replacement in v2.
+
+> **Updated 2026-03-20:** v3 reintroduces encoding metadata in a Python-native form via the `EncodingObject` type ([§5.2.7](#527-encodingobject)). The v3 `encoding` field on `IndexEntry` and `MetadataEntry` captures BOM type, line-ending convention, detected character encoding, and detection confidence — the information needed for hash-perfect reversal. This is structurally distinct from the dropped v1 .NET `Encoding` object: it serves a different purpose (reversal fidelity, not .NET type serialization) and uses a flat, language-agnostic schema.
 
 **`BaseName`** — Dropped. The v1 `BaseName` field contains the filename without its extension (the "stem"). This value is trivially derivable from `name.text` by stripping the `extension` — e.g., for `name.text = "report.pdf"` and `extension = "pdf"`, the base name is `"report"`. Storing a derivable value as a separate field adds no information and inflates the output. Consumers who need the base name can compute it: `name.text.rsplit('.', 1)[0]` (or simply `name.text` when `extension` is `null`).
 
@@ -2179,7 +2221,7 @@ This section documents every v1 field that is absent from v2 and every v1 field 
 | `Extension` | `extension` | Renamed (lowercase). |
 | `BaseName` | Dropped | Derivable from `name.text` and `extension`. |
 | `StorageName` | `attributes.storage_name` | Nested into `attributes` object. |
-| `Encoding` | Dropped | .NET-specific. No replacement. |
+| `Encoding` | `encoding` (v3) | Dropped in v2. Reintroduced in v3 as `EncodingObject` (§5.2.7). |
 | `Size` | `size.bytes` | Nested into `SizeObject`. `size.text` added. |
 | `IsDirectory` | `type` | Replaced by string enum. |
 | `IsLink` | `attributes.is_link` | Nested into `attributes` object. |
@@ -2228,7 +2270,9 @@ This section documents every v1 field that is absent from v2 and every v1 field 
 <a id="build-time-validation"></a>
 #### Build-time validation
 
-The canonical v2 JSON Schema (`shruggie-indexer-v2.schema.json`) MUST be used as the validation target for output conformance testing (see [§14.4](#144-output-schema-conformance-tests)). The test suite SHOULD include a schema conformance test that:
+> **Updated 2026-03-20:** The validation target is now the v3 schema. The encoding conditional-inclusion invariant has been added to the serialization invariants.
+
+The canonical v3 JSON Schema (`shruggie-indexer-v3.schema.json`) MUST be used as the validation target for output conformance testing (see [§14.4](#144-output-schema-conformance-tests)). The test suite SHOULD include a schema conformance test that:
 
 1. Generates index entries for a representative set of inputs (files of various types, directories, symlinks, items with sidecar metadata, items without metadata).
 2. Validates each generated entry against the canonical JSON Schema using a Draft-07-compliant validator (e.g., `jsonschema` Python package).
@@ -2239,7 +2283,7 @@ This ensures that the implementation's serialization logic stays in sync with th
 <a id="runtime-validation"></a>
 #### Runtime validation
 
-The core indexing engine (`core/entry.py`) does NOT perform JSON Schema validation at runtime — this would add unacceptable overhead for large directory trees. Instead, the implementation relies on **structural correctness by construction**: the `IndexEntry`, `HashSet`, `NameObject`, `SizeObject`, `TimestampPair`, `TimestampsObject`, `ParentObject`, and `MetadataEntry` dataclasses enforce type constraints and required fields through their constructors. If a field is required by the schema, the corresponding dataclass field has no default value (forcing the caller to provide it). If a field is nullable, the corresponding dataclass field is typed `Optional[T]` with a default of `None`.
+The core indexing engine (`core/entry.py`) does NOT perform JSON Schema validation at runtime — this would add unacceptable overhead for large directory trees. Instead, the implementation relies on **structural correctness by construction**: the `IndexEntry`, `HashSet`, `NameObject`, `SizeObject`, `TimestampPair`, `TimestampsObject`, `ParentObject`, `EncodingObject`, and `MetadataEntry` dataclasses enforce type constraints and required fields through their constructors. If a field is required by the schema, the corresponding dataclass field has no default value (forcing the caller to provide it). If a field is nullable, the corresponding dataclass field is typed `Optional[T]` with a default of `None`.
 
 For consumers who want runtime validation (e.g., when ingesting index output from untrusted sources), optional Pydantic models are available behind an import guard in `models/schema.py`. These models mirror the dataclass definitions but add Pydantic's runtime type checking, pattern validation, and `model_validate_json()` for schema-validating a JSON string on ingestion. The Pydantic models are not used by the core engine. See [§3.2](#32-source-package-layout) for the module layout.
 
@@ -2256,33 +2300,47 @@ The serializer (`core/serializer.py`) MUST enforce the following invariants when
 
 4. **Optional `HashSet` fields.** `HashSet.sha512` MUST be omitted from the JSON output (not emitted as `null`) when it was not computed. This matches the JSON Schema expectation that `sha512` is simply not present rather than present-but-null.
 
-5. **Sidecar-only MetadataEntry fields.** `MetadataEntry.file_system`, `MetadataEntry.size`, and `MetadataEntry.timestamps` MUST be present for sidecar entries (`origin: "sidecar"`) and MUST be absent (not `null`) for generated entries (`origin: "generated"`). This is a structural invariant enforced by the `origin` discriminator.
+5. **Sidecar-only MetadataEntry fields.** `MetadataEntry.file_system`, `MetadataEntry.size`, `MetadataEntry.timestamps`, and `MetadataEntry.encoding` MUST be present for sidecar entries (`origin: "sidecar"`) and MUST be absent (not `null`) for generated entries (`origin: "generated"`). This is a structural invariant enforced by the `origin` discriminator.
+
+6. **Encoding conditional inclusion.** `IndexEntry.encoding` MUST be present when encoding detection is active and the entry type is `"file"`. It MUST be absent (not `null`) for directories, symlinks, and when encoding detection is disabled via `--no-detect-encoding`. When present and the `EncodingObject` has a `null` `detected_encoding` field (chardet was disabled or inconclusive), the `confidence` field MUST also be `null`. The co-presence invariant between `detected_encoding` and `confidence` is enforced by the `EncodingObject` constructor ([§5.2.7](#527-encodingobject)).
 
 <a id="513-backward-compatibility-considerations"></a>
 ### 5.13. Backward Compatibility Considerations
 
-The v2 schema is a breaking change from v1. Consumers of existing v1 index assets cannot parse v2 output without modification, and vice versa.
+> **Updated 2026-03-20:** v3 compatibility guidance added. Sidecar naming updated to `_meta3.json`/`_directorymeta3.json`.
+
+The v2 schema is a breaking change from v1. The v3 schema is a strict superset of v2 — all v2 fields are preserved with the same semantics; v3 adds new optional fields (`encoding`, `created_source`, `json_indent`) and bumps `schema_version` to `3`. Consumers of v2 output that ignore unknown fields can parse v3 output without modification.
 
 <a id="migration-path"></a>
 #### Migration path
 
 The planned v1-to-v2 migration utility (post-MVP, see [§1.2](#12-scope)) will convert existing `_meta.json` and `_directorymeta.json` v1 files to the v2 format. The migration is lossy in one direction: v1 fields that are dropped in v2 (`Encoding`, `BaseName`, `SHA1` hashes) are discarded. The migration is enriching in the other direction: v2 fields that have no v1 equivalent (`schema_version`, `id_algorithm`, `type`, `mime_type`, `size.text`, `file_system.relative`, and all `MetadataEntry` provenance fields) are populated with computed or default values where possible and `null` where not.
 
+For v2-to-v3 migration, the transformation is minimal: set `schema_version` to `3` and optionally populate the new v3 fields (`encoding`, `created_source`, `json_indent`) from the original files. Since v3 is a strict superset of v2, no fields are dropped or restructured. A dedicated migration utility is low priority because v2 consumers can ignore unknown v3 fields.
+
 <a id="filename-convention"></a>
 #### Filename convention
 
-v1 index sidecar files use the suffixes `_meta.json` (for files) and `_directorymeta.json` (for directories). v2 index sidecar files use the suffixes `_meta2.json` and `_directorymeta2.json`. The `2` in the v2 suffixes prevents collision with existing v1 files and allows both versions to coexist on disk during a migration period. This convention is enforced by the serializer when writing in-place output files.
+v1 index sidecar files use the suffixes `_meta.json` (for files) and `_directorymeta.json` (for directories). v2 index sidecar files use the suffixes `_meta2.json` and `_directorymeta2.json`. v3 index sidecar files use the suffixes `_meta3.json` and `_directorymeta3.json`. The version number in the suffix prevents collision between schema versions and allows v1, v2, and v3 files to coexist on disk during migration periods. This convention is enforced by the serializer when writing in-place output files.
 
 <a id="consumer-guidance"></a>
 #### Consumer guidance
 
 Consumers adapting from v1 to v2 parsing should:
 
-1. Check for the presence of `schema_version`. If present and equal to `2`, parse as v2. If absent, parse as v1.
+1. Check for the presence of `schema_version`. If present and equal to `3`, parse as v3. If equal to `2`, parse as v2. If absent, parse as v1.
 2. Replace all PascalCase field accessors with snake_case equivalents (e.g., `entry["IsDirectory"]` → `entry["type"] == "directory"`).
 3. Navigate nested sub-objects for fields that were previously top-level (e.g., `entry["Size"]` → `entry["size"]["bytes"]`).
 4. Handle the absence of `Encoding`, `BaseName`, and `SHA1` fields.
 5. For `MetadataEntry` processing, switch from `Source`/`Type` string matching to `origin` enum checking and `attributes.type` matching.
+
+Consumers adapting from v2 to v3 parsing should:
+
+1. Dispatch on `schema_version == 3` to enter v3 code paths.
+2. Optionally consume the new `encoding` field on `IndexEntry` and `MetadataEntry` for reversal or archival purposes.
+3. Optionally consume `timestamps.created_source` for cross-platform timestamp provenance.
+4. Optionally consume `attributes.json_indent` for faithful JSON sidecar restoration.
+5. Ignore unknown fields gracefully — v3 is designed so that v2 consumers that skip unrecognized keys continue to function correctly.
 
 <a id="6-core-operations"></a>
 ## 6. Core Operations
@@ -2738,7 +2796,7 @@ A dangling symlink (one whose target does not exist) is treated as an item-level
 <a id="purpose-4"></a>
 #### Purpose
 
-Extracts filesystem timestamps from stat results and produces both Unix-millisecond integers and ISO 8601 formatted strings for each of the three standard timestamp types: accessed, created, and modified. The output populates the `timestamps` field of the v2 schema (`TimestampsObject` containing three `TimestampPair` values — see [§5.7](#57-timestamp-fields)).
+Extracts filesystem timestamps from stat results and produces both Unix-millisecond integers and ISO 8601 formatted strings for each of the three standard timestamp types: accessed, created, and modified. The output populates the `timestamps` field of the v3 schema (`TimestampsObject` containing three `TimestampPair` values and the optional `created_source` indicator — see [§5.7](#57-timestamp-fields)).
 
 <a id="public-interface-3"></a>
 #### Public interface
@@ -2753,7 +2811,9 @@ def extract_timestamps(
 
     Returns a TimestampsObject containing accessed, created, and
     modified TimestampPairs, each with both ISO 8601 and Unix
-    millisecond representations.
+    millisecond representations. The optional created_source field
+    indicates whether the creation time came from st_birthtime or
+    st_ctime.
 
     When is_symlink is True, the stat_result is expected to come
     from os.lstat() (symlink metadata) rather than os.stat()
@@ -2789,12 +2849,14 @@ The implementation wraps the `st_birthtime` access in a try/except for `Attribut
 
 ```python
 # Illustrative — not the exact implementation.
-def _get_creation_time(stat_result: os.stat_result) -> float:
+def _get_creation_time(stat_result: os.stat_result) -> tuple[float, str]:
     try:
-        return stat_result.st_birthtime
+        return stat_result.st_birthtime, "birthtime"
     except AttributeError:
-        return stat_result.st_ctime
+        return stat_result.st_ctime, "ctime_fallback"
 ```
+
+The second element of the returned tuple is the `created_source` value recorded in the `TimestampsObject` ([§5.2.5](#525-timestampsobject)). This resolves the cross-platform ambiguity documented in [§15.5](#155-creation-time-portability).
 
 No warning is emitted for the `st_ctime` fallback — it is expected behavior on most Linux systems and would produce noise without actionable information.
 
@@ -2835,6 +2897,7 @@ TimestampsObject(
     accessed=TimestampPair(...),
     created=TimestampPair(...),
     modified=TimestampPair(...),
+    created_source=created_source,  # "birthtime" or "ctime_fallback"
 )
 ```
 
@@ -3188,10 +3251,12 @@ For each successfully read sidecar, the module constructs a `MetadataEntry` ([§
 | `attributes.transforms` | Applied transforms (e.g., `["base64_encode"]`, `["json_compact"]`) |
 | `attributes.source_media_type` | MIME type of binary sidecars (e.g., `"image/jpeg"` for thumbnails); `null` for text-based sidecars |
 | `attributes.json_style` | `"pretty"` or `"compact"` when `format` is `"json"`; absent otherwise. Detected by heuristic: if the raw file content contains `\n ` or `\n\t`, the style is `"pretty"`; otherwise `"compact"`. |
+| `attributes.json_indent` | The exact indentation string used in the original JSON sidecar file (e.g., `"  "` for 2-space, `"    "` for 4-space, `"\t"` for tab). Present only when `format` is `"json"` and `json_style` is `"pretty"`. Detected by extracting the leading whitespace of the first indented line in the raw file content. Used for hash-perfect JSON restoration during rollback. |
 | `attributes.link_metadata` | Structured link details for `.lnk` shortcut files when `LnkParse3` is available; absent otherwise. |
+| `encoding` | `detect_encoding(sidecar_path)` — encoding metadata of the original sidecar file ([§5.2.7](#527-encodingobject)). Present for all sidecar entries when encoding detection is active. Enables hash-perfect text restoration during rollback. |
 | `data` | Parsed content (varies by format) |
 
-The provenance fields (`file_system`, `size`, `timestamps`) are the v2 additions that enable MetaMergeDelete reversal ([§5.10](#510-metadata-array-and-metadataentry-fields), principle P3). They are present only for sidecar entries (`origin: "sidecar"`) and absent for generated entries.
+The provenance fields (`file_system`, `size`, `timestamps`, `encoding`) are the v2/v3 additions that enable MetaMergeDelete reversal ([§5.10](#510-metadata-array-and-metadataentry-fields), principle P3). They are present only for sidecar entries (`origin: "sidecar"`) and absent for generated entries.
 
 <a id="metamergedelete-queue"></a>
 #### MetaMergeDelete queue
@@ -3214,7 +3279,7 @@ The original's `$global:DeleteQueue` pattern is preserved but with explicit para
 <a id="purpose-7"></a>
 #### Purpose
 
-Orchestrates the assembly of a complete `IndexEntry` (the v2 schema object defined in [§5](#5-output-schema)) from a filesystem path. This is the hub of the hub-and-spoke architecture described in [§4.2](#42-module-decomposition) — `entry.py` is the sole module that calls into the component modules (`paths`, `hashing`, `timestamps`, `exif`, `sidecar`) and wires their outputs together into the final schema object. No component module calls another component module directly; all coordination flows through `entry.py`.
+Orchestrates the assembly of a complete `IndexEntry` (the v3 schema object defined in [§5](#5-output-schema)) from a filesystem path. This is the hub of the hub-and-spoke architecture described in [§4.2](#42-module-decomposition) — `entry.py` is the sole module that calls into the component modules (`paths`, `hashing`, `timestamps`, `exif`, `sidecar`, `encoding`) and wires their outputs together into the final schema object. No component module calls another component module directly; all coordination flows through `entry.py`.
 
 <a id="public-interface-6"></a>
 #### Public interface
@@ -3236,7 +3301,7 @@ def build_file_entry(
                   enumerate the parent directory.
         delete_queue: MetaMergeDelete accumulator (see §6.7).
 
-    Returns a fully populated IndexEntry conforming to the v2 schema.
+    Returns a fully populated IndexEntry conforming to the v3 schema.
     """
 
 def build_directory_entry(
@@ -3264,7 +3329,7 @@ def build_directory_entry(
         cancel_event: Optional threading.Event checked before each
             child item. When set, raises IndexerCancellationError.
 
-    Returns a fully populated IndexEntry conforming to the v2 schema.
+    Returns a fully populated IndexEntry conforming to the v3 schema.
 
     Raises:
         IndexerCancellationError: cancel_event was set during
@@ -3314,11 +3379,13 @@ def index_path(
 
 **Step 10 — Metadata assembly.** Combine the exiftool entry (if any) and sidecar entries into the `metadata` array. If metadata processing was active but produced no results, `metadata` is an empty list `[]`. If metadata processing was not active (neither exif nor sidecar flags enabled), `metadata` is `null`. See [§5.10](#510-metadata-array-and-metadataentry-fields) for the semantic distinction.
 
+**Step 10a — Encoding detection.** If `config.detect_encoding` is `True` and the file is not a symlink, call `encoding.detect_encoding(path, config)` to produce an `EncodingObject` ([§5.2.7](#527-encodingobject)). If `config.detect_encoding` is `False` (via `--no-detect-encoding`), set `encoding` to absent. Encoding detection is also skipped for symlinks and directories. See [§6.12](#612-encoding-detection) for the detection module contract.
+
 **Step 11 — Storage name.** Construct `attributes.storage_name` from the `id` and `extension`: `f"{id}.{extension}"` for files with extensions, or just `id` for files without.
 
 **Step 12 — Session and observation time.** Set `session_id` to the value passed by the caller (may be `None`). Generate `indexed_at` by calling `_make_indexed_at()`, which captures the current UTC time as a `TimestampPair`. The `indexed_at` value is unique per entry — it records the moment *this specific* entry was constructed, not the session start time.
 
-**Step 13 — Assembly.** Construct the final `IndexEntry` with all fields populated. Set `schema_version` to `2`, `type` to `"file"`, `items` to `null`.
+**Step 13 — Assembly.** Construct the final `IndexEntry` with all fields populated. Set `schema_version` to `3`, `type` to `"file"`, `items` to `null`. Set `encoding` to the `EncodingObject` from Step 10a (or absent if encoding detection was skipped).
 
 > **Historical note:** The original's `MakeObject` contains a `switch` statement with five near-identical branches (`makeobjectfile`, `makeobjectdirectory`, `makeobjectdirectoryrecursive`, plus defaults) that all construct the same `[PSCustomObject]@{...}` with minor variations. The tool uses a single construction path per item type — `build_file_entry()` for files and `build_directory_entry()` for directories — with no switch duplication.
 
@@ -3424,11 +3491,11 @@ Serialization converts an `IndexEntry` dataclass to JSON via a two-step process:
 
 The serialization helper applies the invariants defined in [§5.12](#512-schema-validation-and-enforcement):
 
-1. `schema_version` is placed first in the output by using an `OrderedDict` or a custom key-sorting function. JSON objects are unordered, but the serializer places `schema_version` first by convention for human readability.
+1. `schema_version` is placed first in the output by using an `OrderedDict` or a custom key-sorting function. JSON objects are unordered, but the serializer places `schema_version` first by convention for human readability. The `encoding` field, when present, appears after `metadata` and before `duplicates` in the serialized key order.
 
 2. Optional `HashSet.sha512` fields are omitted (not emitted as `null`) when their value is `None`.
 
-3. Sidecar-only `MetadataEntry` fields (`file_system`, `size`, `timestamps`) are present for sidecar entries and absent for generated entries, controlled by the `origin` discriminator.
+3. Sidecar-only `MetadataEntry` fields (`file_system`, `size`, `timestamps`, `encoding`) are present for sidecar entries and absent for generated entries, controlled by the `origin` discriminator.
 
 4. `ensure_ascii=False` is passed to `json.dumps()` to produce UTF-8 output with non-ASCII characters preserved, matching the original's `Out-File -Encoding UTF8`.
 
@@ -3473,22 +3540,22 @@ All output files are written as UTF-8 without a BOM, using `Path.write_text(json
 
 > **Updated 2026-02-25:** Documents the `{dirname}_directorymeta2.json` naming convention for in-place directory sidecars.
 
-The `write_inplace()` function writes directory sidecars using the `{dirname}_directorymeta2.json` convention inside the directory itself (via `paths.build_sidecar_path()`). For example, the directory `photos/vacation/` receives a sidecar at `photos/vacation/vacation_directorymeta2.json`.
+The `write_inplace()` function writes directory sidecars using the `{dirname}_directorymeta3.json` convention inside the directory itself (via `paths.build_sidecar_path()`). For example, the directory `photos/vacation/` receives a sidecar at `photos/vacation/vacation_directorymeta3.json`.
 
 > **Updated 2026-02-25:** The root directory entry (the traversal target itself) is excluded from in-place sidecar output. The root directory's in-place sidecar would be written inside the target directory with the same filename as the aggregate output written alongside it, producing a redundant duplicate. The `_write_inplace_tree()` helper in both GUI and CLI skips the root entry; child directories are unaffected.
 
-The aggregate output file written alongside the target directory (via `--outfile`) uses the `{dirname}_directorymeta2.json` naming convention. In-place directory sidecars for child directories use the same naming — they differ only in scope and location:
+The aggregate output file written alongside the target directory (via `--outfile`) uses the `{dirname}_directorymeta3.json` naming convention. In-place directory sidecars for child directories use the same naming — they differ only in scope and location:
 
 | Output type | Location | Example | Scope |
 |-------------|----------|---------|-------|
-| Aggregate (`--outfile`) | Alongside the target directory | `photos/vacation_directorymeta2.json` | Full entry tree |
-| In-place (`--inplace`) | Inside each child directory | `photos/vacation/images/images_directorymeta2.json` | Subtree for that directory |
+| Aggregate (`--outfile`) | Alongside the target directory | `photos/vacation_directorymeta3.json` | Full entry tree |
+| In-place (`--inplace`) | Inside each child directory | `photos/vacation/images/images_directorymeta3.json` | Subtree for that directory |
 
 #### In-place sidecar rename coordination
 
 > **Updated 2026-02-25:** Documents the sidecar rename coordination when the rename phase is active.
 
-When the `--rename` flag is active, in-place `_meta2.json` sidecar files are initially written during traversal using the original filename (e.g., `sunset.jpg_meta2.json`). During the rename phase ([§6.10](#610-file-rename-and-in-place-write-operations)), the sidecar is renamed alongside the content file to match the new `storage_name` (e.g., `yA8A8C089A6A8583B24C85F5A4A41F5AC.jpg_meta2.json`). A `DEBUG`-level log message is emitted for each sidecar rename:
+When the `--rename` flag is active, in-place `_meta3.json` sidecar files are initially written during traversal using the original filename (e.g., `sunset.jpg_meta3.json`). During the rename phase ([§6.10](#610-file-rename-and-in-place-write-operations)), the sidecar is renamed alongside the content file to match the new `storage_name` (e.g., `yA8A8C089A6A8583B24C85F5A4A41F5AC.jpg_meta3.json`). A `DEBUG`-level log message is emitted for each sidecar rename:
 
 ```
 Inplace sidecar renamed: {original_sidecar} → {renamed_sidecar}
@@ -3500,12 +3567,12 @@ This write-then-rename approach ensures that partial results survive process int
 
 > **Added 2026-03-01:** Documents the `write_directory_meta` suppression behavior.
 
-When `config.write_directory_meta` is `False`, the output routing layer suppresses all `_directorymeta2.json` output:
+When `config.write_directory_meta` is `False`, the output routing layer suppresses all `_directorymeta3.json` output:
 
 | Output channel | Suppression behavior |
 |---------------|---------------------|
-| `--inplace` | The `_write_inplace_tree()` helper skips `serialize_entry()` / `Path.write_text()` for entries where `entry.type == "directory"` (excluding the root, which is already skipped). Per-file `_meta2.json` sidecars are unaffected. |
-| `--outfile` (auto-generated) | When the output file path was auto-generated by the `--outfile` defaulting logic and ends with `_directorymeta2.json`, the aggregate write is suppressed (output file set to `None` via `dataclasses.replace()`). |
+| `--inplace` | The `_write_inplace_tree()` helper skips `serialize_entry()` / `Path.write_text()` for entries where `entry.type == "directory"` (excluding the root, which is already skipped). Per-file `_meta3.json` sidecars are unaffected. |
+| `--outfile` (auto-generated) | When the output file path was auto-generated by the `--outfile` defaulting logic and ends with `_directorymeta3.json`, the aggregate write is suppressed (output file set to `None` via `dataclasses.replace()`). |
 | `--outfile` (explicit) | An explicitly user-specified `--outfile` path is never suppressed, regardless of `write_directory_meta`. The user's explicit intent takes priority. |
 | `--stdout` | Stdout output is never suppressed by this setting. The complete entry tree is always written to stdout when `--stdout` is active. |
 
@@ -3598,9 +3665,9 @@ The `dry_run` parameter causes the function to compute and return the target pat
 
 > **Updated 2026-02-25:** Documents sidecar rename behavior during the file rename phase.
 
-When the rename phase renames a content file from its original name to its `storage_name`, it also renames the file's in-place `_meta2.json` sidecar from `{original_name}_meta2.json` to `{storage_name}_meta2.json`. This preserves the file-sidecar association on disk — after rename, each content file is still paired with its corresponding sidecar.
+When the rename phase renames a content file from its original name to its `storage_name`, it also renames the file's in-place `_meta3.json` sidecar from `{original_name}_meta3.json` to `{storage_name}_meta3.json`. This preserves the file-sidecar association on disk — after rename, each content file is still paired with its corresponding sidecar.
 
-For example, when `sunset.jpg` is renamed to `yA8A8C089A6A8583B24C85F5A4A41F5AC.jpg`, the sidecar `sunset.jpg_meta2.json` is renamed to `yA8A8C089A6A8583B24C85F5A4A41F5AC.jpg_meta2.json`.
+For example, when `sunset.jpg` is renamed to `yA8A8C089A6A8583B24C85F5A4A41F5AC.jpg`, the sidecar `sunset.jpg_meta3.json` is renamed to `yA8A8C089A6A8583B24C85F5A4A41F5AC.jpg_meta3.json`.
 
 If a rename collision causes the content file rename to be skipped ([collision detection](#collision-detection)), the sidecar rename is also skipped — the sidecar retains the original filename as its base.
 
@@ -3640,13 +3707,13 @@ Key behaviors:
 
 > **Added 2026-03-03:** Documents the stale metadata cleanup phase added to the MetaMergeDelete pipeline.
 
-After the Stage 6 consumed-sidecar deletion, the MetaMergeDelete pipeline performs a final cleanup pass to remove stale metadata artifacts from prior indexer runs. These are files matching the `metadata_exclude_patterns` regex (`_meta.json`, `_meta2.json`, `_directorymeta.json`, `_directorymeta2.json`) that were excluded from traversal at Layer 1 ([§7.5](#75-sidecar-suffix-patterns-and-type-identification)) and therefore never entered the delete queue — they accumulate silently across repeated runs.
+After the Stage 6 consumed-sidecar deletion, the MetaMergeDelete pipeline performs a final cleanup pass to remove stale metadata artifacts from prior indexer runs. These are files matching the `metadata_exclude_patterns` regex (`_meta.json`, `_meta2.json`, `_meta3.json`, `_directorymeta.json`, `_directorymeta2.json`, `_directorymeta3.json`) that were excluded from traversal at Layer 1 ([§7.5](#75-sidecar-suffix-patterns-and-type-identification)) and therefore never entered the delete queue — they accumulate silently across repeated runs.
 
 The cleanup is implemented by `cleanup_stale_metadata()` in `core/entry.py` and called from the top-level orchestrators (`cli/main.py`, `gui/app.py`) after the Stage 6 delete-queue drain. It operates as follows:
 
-1. **Collect protected paths.** When `output_inplace` is active, walk the completed entry tree and compute the set of sidecar file paths written during the current run. Both the original-name sidecar (`{filename}_meta2.json`) and the storage-name sidecar (`{storage_name}_meta2.json`) are protected for each file entry, ensuring no current-run output is accidentally deleted regardless of whether rename succeeded or failed. Directory sidecars (`{dirname}_directorymeta2.json`) are protected when `write_directory_meta` is enabled.
+1. **Collect protected paths.** When `output_inplace` is active, walk the completed entry tree and compute the set of sidecar file paths written during the current run. Both the original-name sidecar (`{filename}_meta3.json`) and the storage-name sidecar (`{storage_name}_meta3.json`) are protected for each file entry, ensuring no current-run output is accidentally deleted regardless of whether rename succeeded or failed. Directory sidecars (`{dirname}_directorymeta3.json`) are protected when `write_directory_meta` is enabled.
 2. **Collect traversed directories.** Walk the entry tree to identify every directory that was traversed during indexing. For single-file indexing, the containing directory is used.
-3. **Scan and delete.** For each traversed directory, enumerate files matching the stale metadata regex (`_(meta2?|directorymeta2?)\.json$`). Any matching file that is NOT in the protected set is a stale artifact. Delete it with an `INFO`-level log message: `Stale metadata artifact removed: {path}`. If deletion fails, log at `WARNING` and continue — the loop does not abort.
+3. **Scan and delete.** For each traversed directory, enumerate files matching the stale metadata regex (`_(meta[23]?|directorymeta[23]?)\.json$`). Any matching file that is NOT in the protected set is a stale artifact. Delete it with an `INFO`-level log message: `Stale metadata artifact removed: {path}`. If deletion fails, log at `WARNING` and continue — the loop does not abort.
 
 Key behaviors:
 
@@ -3665,7 +3732,7 @@ When the rename flag is active, a de-duplication pass runs between entry constru
 
 **Phase 2 — Apply.** `apply_dedup(actions)` iterates the action list and, for each action: (1) appends the duplicate entry to the canonical entry's `duplicates` list, and (2) removes the duplicate entry from its parent directory's `items` list. This phase mutates the entry tree in place.
 
-**Phase 3 — Cleanup.** After the rename phase completes, `cleanup_duplicate_files(actions, root_path)` iterates the action list and deletes each duplicate's file from disk. Orphaned sidecar files (`{filename}_meta2.json`) are also deleted. In dry-run mode, cleanup is skipped entirely — no files are deleted, but the entry tree still reflects the de-duplication (duplicates appear in the `duplicates` array and are removed from `items`).
+**Phase 3 — Cleanup.** After the rename phase completes, `cleanup_duplicate_files(actions, root_path)` iterates the action list and deletes each duplicate's file from disk. Orphaned sidecar files (`{filename}_meta3.json`) are also deleted. In dry-run mode, cleanup is skipped entirely — no files are deleted, but the entry tree still reflects the de-duplication (duplicates appear in the `duplicates` array and are removed from `items`).
 
 **Design constraints:**
 
@@ -3678,7 +3745,7 @@ When the rename flag is active, a de-duplication pass runs between entry constru
 <a id="revert-capability"></a>
 #### Revert capability
 
-The rollback feature ([§8.12](#812-rollback-subcommand), `core/rollback.py`) reverses rename and de-duplication operations by reading `_meta2.json` sidecar files and restoring files to their original names, directory structure, and timestamps. The in-place sidecar files serve as the rollback manifest: the `name.text` field records the original filename, `file_system.relative` records the original path, and `timestamps` records the original filesystem timestamps. See [§18.1.2](#1812-rename-revert-operation) for the historical context.
+The rollback feature ([§8.12](#812-rollback-subcommand), `core/rollback.py`) reverses rename and de-duplication operations by reading `_meta2.json` or `_meta3.json` sidecar files and restoring files to their original names, directory structure, and timestamps. The in-place sidecar files serve as the rollback manifest: the `name.text` field records the original filename, `file_system.relative` records the original path, and `timestamps` records the original filesystem timestamps. See [§18.1.2](#1812-rename-revert-operation) for the historical context.
 
 <a id="611-rollback-operations"></a>
 ### 6.11. Rollback Operations
@@ -3694,11 +3761,11 @@ The rollback engine accepts three input shapes:
 
 | Input shape | Description |
 |---|---|
-| Per-file sidecar | A single `_meta2.json` file containing one `IndexEntry`. |
-| Aggregate output | A `_directorymeta2.json` file containing a directory entry with nested `items[]`. The tree is flattened to extract all file-type entries. |
-| Directory of sidecars | A directory containing `*_meta2.json` files. Each is loaded independently. When `recursive=True`, subdirectories are also searched. |
+| Per-file sidecar | A single `_meta2.json` or `_meta3.json` file containing one `IndexEntry`. |
+| Aggregate output | A `_directorymeta2.json` or `_directorymeta3.json` file containing a directory entry with nested `items[]`. The tree is flattened to extract all file-type entries. |
+| Directory of sidecars | A directory containing `*_meta2.json` and/or `*_meta3.json` files. Each is loaded independently. When `recursive=True`, subdirectories are also searched. |
 
-All inputs MUST have `schema_version == 2`. v1 sidecars are not supported — loading raises `IndexerConfigError` with a message directing the user to the future `migrate` tool.
+All inputs MUST have `schema_version` equal to `2` or `3`. v1 sidecars are not supported — loading raises `IndexerConfigError` with a message directing the user to the future `migrate` tool.
 
 <a id="rollback-restore-modes"></a>
 #### Restore modes
@@ -3737,14 +3804,24 @@ For each `MetadataEntry` where `origin == "sidecar"`, the executor reconstructs 
 
 | `attributes.format` | Action |
 |---|---|
-| `"json"` | JSON-style-aware serialization (see below) → write as UTF-8 |
-| `"text"` | Write `data` as UTF-8 text |
+| `"json"` | JSON-style-aware serialization (see below) → encoding-aware write |
+| `"text"` | Encoding-aware write (see below) |
 | `"base64"` | `base64.b64decode(data)` → write as binary |
-| `"lines"` | `"\n".join(data)` → write as UTF-8 text |
+| `"lines"` | `"\n".join(data)` → encoding-aware write |
+
+**Encoding-aware text restoration.** When a `MetadataEntry` has an `encoding` field (v3 sidecar entries), the rollback engine applies `_apply_text_encoding()` to the decoded text content before writing. This function:
+
+1. **Source encoding.** Encodes the text string using the `encoding.detected_encoding` codec (e.g., `"utf-8"`, `"shift_jis"`). When `detected_encoding` is `null`, defaults to UTF-8.
+2. **BOM prepend.** If `encoding.bom` is not `null`, prepends the corresponding BOM bytes (`"utf-8-sig"` → `b"\xef\xbb\xbf"`, `"utf-16-le"` → `b"\xff\xfe"`, `"utf-16-be"` → `b"\xfe\xff"`).
+3. **Line-ending restoration.** Replaces `"\n"` in the encoded bytes with the convention recorded in `encoding.line_endings` (`"crlf"` → `b"\r\n"`, `"cr"` → `b"\r"`, `"lf"` → `b"\n"`, `null` → no replacement).
+
+The result is written as raw bytes (`Path.write_bytes()`), producing a byte-identical restoration when full encoding metadata is available.
+
+When `encoding` is absent (v2 entries or encoding detection was disabled), the fallback behavior is unchanged: text is written as UTF-8 via `Path.write_text(encoding="utf-8")`.
 
 **JSON style preservation.** When `attributes.json_style` is present, the rollback engine uses it to match the original file's formatting convention:
 
-- `"pretty"` → `json.dumps(data, indent=2, ensure_ascii=False)` (indented output).
+- `"pretty"` → `json.dumps(data, indent=json_indent or 2, ensure_ascii=False)` — uses `attributes.json_indent` when available for hash-perfect indent restoration, defaulting to 2-space indent when absent.
 - `"compact"` → `json.dumps(data, separators=(",", ":"), ensure_ascii=False)` (no whitespace).
 
 When `json_style` is absent (backward compatibility with entries created before this field existed), the engine defaults to compact serialization (`separators=(",", ":")`) to avoid inflating file sizes. This is a deliberate deviation from the previous default of `indent=2`, which caused compact JSON sidecars (e.g., minified `.info.json` files) to balloon in size during rollback.
@@ -3865,7 +3942,107 @@ Discarded entries are logged at `WARNING`.  The warning message accurately refle
 
 > **Added 2026-03-03.**
 
-**Empty directories are not reconstructed by rollback.**  The indexer catalogues *files* and their containing directory hierarchy.  Directories that contain no files (directly or transitively) produce no entries in `_meta2.json` output and therefore cannot be restored by rollback.  This is intentional — shruggie-indexer focuses on the preservation and cataloguing of files, not the replication of directory trees.  File tree replication (including empty directory preservation) is out of scope.
+**Empty directories are not reconstructed by rollback.**  The indexer catalogues *files* and their containing directory hierarchy.  Directories that contain no files (directly or transitively) produce no entries in `_meta2.json`/`_meta3.json` output and therefore cannot be restored by rollback.  This is intentional — shruggie-indexer focuses on the preservation and cataloguing of files, not the replication of directory trees.  File tree replication (including empty directory preservation) is out of scope.
+
+<a id="612-encoding-detection"></a>
+### 6.12. Encoding Detection
+
+> **Added 2026-03-20:** New section documenting the encoding detection module introduced in v3.
+
+**Module:** `core/encoding.py`
+
+#### Purpose
+
+Analyzes the raw bytes of a file to determine its byte-order mark (BOM), line-ending convention, and character encoding. The output populates the `encoding` field of `IndexEntry` and `MetadataEntry` objects ([§5.2.7](#527-encodingobject)). The information enables hash-perfect reversal when file content is stored as decoded text by downstream consumers.
+
+#### Public interface
+
+```python
+def detect_encoding(
+    path: Path,
+    config: IndexerConfig,
+    *,
+    raw_bytes: bytes | None = None,
+) -> EncodingObject:
+    """Detect encoding metadata for a file.
+
+    Args:
+        path: Absolute path to the file.
+        config: Configuration (controls detect_charset toggle).
+        raw_bytes: Pre-read file content. When None, reads up to
+                   64 KB from the file.
+
+    Returns an EncodingObject with bom, line_endings,
+    detected_encoding, and confidence fields populated.
+    """
+```
+
+When `raw_bytes` is provided (e.g., from the sidecar reader which already read the file), the detection avoids a redundant disk read. The 64 KB sample size is sufficient for chardet's statistical models and covers the BOM (max 4 bytes) and enough content for reliable line-ending detection.
+
+#### Detection scope
+
+| Entry type | `encoding` populated? |
+|------------|----------------------|
+| `type: "file"` | Yes (when `config.detect_encoding` is `True`) |
+| `type: "directory"` | No — directories have no file content. Field is absent. |
+| Symlinks | No — symlinks have no independent content. Field is absent. |
+| `MetadataEntry` (sidecar) | Yes — encoding metadata of the original sidecar file. |
+| `MetadataEntry` (generated) | No — generated metadata has no source file. Field is absent. |
+
+#### BOM detection
+
+The first 4 bytes of the file are checked against known BOM sequences:
+
+| BOM bytes | `bom` value |
+|-----------|-------------|
+| `EF BB BF` | `"utf-8-sig"` |
+| `FF FE` | `"utf-16-le"` |
+| `FE FF` | `"utf-16-be"` |
+| `FF FE 00 00` | `"utf-32-le"` |
+| `00 00 FE FF` | `"utf-32-be"` |
+| None matched | `null` |
+
+BOM detection is always performed (it is not affected by `--no-detect-charset`).
+
+#### Line-ending detection
+
+The raw bytes are scanned for line-ending sequences. The first occurrence determines the convention:
+
+| Pattern | `line_endings` value |
+|---------|---------------------|
+| `\r\n` found | `"crlf"` |
+| `\r` found (without following `\n`) | `"cr"` |
+| `\n` found (without preceding `\r`) | `"lf"` |
+| No line endings found | `null` |
+
+Line-ending detection is always performed (it is not affected by `--no-detect-charset`).
+
+#### Character encoding detection (chardet)
+
+When `config.detect_charset` is `True` (the default), the raw bytes are passed to `chardet.detect()` ([Appendix B](#appendix-b-chardet-reference)):
+
+```python
+result = chardet.detect(raw_bytes)
+detected_encoding = result["encoding"].lower() if result["encoding"] else None
+confidence = result["confidence"] if result["encoding"] else None
+```
+
+When `config.detect_charset` is `False` (via `--no-detect-charset`), both `detected_encoding` and `confidence` are set to `null`. BOM and line-ending detection still run — only the statistical chardet analysis is skipped.
+
+#### EncodingObject population
+
+The function assembles and returns:
+
+```python
+EncodingObject(
+    bom=bom_value,
+    line_endings=line_endings_value,
+    detected_encoding=detected_encoding,
+    confidence=confidence,
+)
+```
+
+The co-presence invariant between `detected_encoding` and `confidence` is enforced by the constructor ([§5.2.7](#527-encodingobject)).
 
 <a id="7-configuration"></a>
 ## 7. Configuration
@@ -3912,6 +4089,10 @@ class IndexerConfig:
     # Rename
     rename: bool = False
     dry_run: bool = False
+
+    # Encoding detection
+    detect_encoding: bool = True
+    detect_charset: bool = True
 
     # Filesystem exclusion filters
     filesystem_excludes: frozenset[str] = ...  # see §7.2
@@ -4051,7 +4232,9 @@ The tool MUST operate correctly using only compiled defaults — no configuratio
 | `meta_merge_delete` | `False` | Matches original: `-MetaMergeDelete` defaults to `$false`. |
 | `rename` | `False` | Matches original: `-Rename` defaults to `$false`. |
 | `dry_run` | `False` | New field (not in original). |
-| `write_directory_meta` | `True` | New field (not in original). When `False`, directory sidecar files (`_directorymeta2.json`) are not written during in-place output and auto-generated aggregate output files are suppressed. |
+| `detect_encoding` | `True` | New in v3. Encoding detection (BOM, line endings, chardet) is active by default. Disabled via `--no-detect-encoding`. |
+| `detect_charset` | `True` | New in v3. Chardet-based character encoding detection is active by default. Disabled via `--no-detect-charset`. When `detect_encoding` is `False`, this field is ignored. |
+| `write_directory_meta` | `True` | New field (not in original). When `False`, directory sidecar files (`_directorymeta3.json`) are not written during in-place output and auto-generated aggregate output files are suppressed. |
 
 <a id="extension-validation-pattern"></a>
 #### Extension validation pattern
@@ -4776,6 +4959,13 @@ Configuration:
   --config PATH           Path to a TOML configuration file. Overrides the
                           default file resolution.
 
+Encoding Detection:
+  --no-detect-encoding    Disable all encoding detection (BOM, line endings,
+                          chardet). The encoding field is omitted from output.
+  --no-detect-charset     Disable only chardet-based character encoding
+                          detection. BOM and line-ending detection remain active.
+                          The detected_encoding and confidence fields are null.
+
 Logging:
   -v, --verbose           Increase verbosity. Repeat for more detail (-vv, -vvv).
   -q, --quiet             Suppress all non-error output.
@@ -5010,6 +5200,35 @@ Both MD5 and SHA256 hashes are always computed regardless of this setting ([§6.
 Includes SHA-512 in the computed `HashSet` for all indexed items. SHA-512 is excluded from the default hash computation because it produces 128-character hex strings that significantly inflate output size without serving a practical purpose for most indexing use cases. When this flag is active, the `sha512` field of every `HashSet` in the output is populated; when inactive, the field is omitted ([§5.2.1](#521-hashset)).
 
 SHA-512 computation is folded into the same single-pass read used for MD5 and SHA-256 ([§6.3](#63-hashing-and-identity-generation)), so the marginal CPU cost is minimal. The flag controls output inclusion, not computation strategy.
+
+<a id="86a-encoding-detection-options"></a>
+### 8.6a. Encoding Detection Options
+
+> **Added 2026-03-20:** New CLI flags for controlling encoding detection behavior.
+
+<a id="no-detect-encoding"></a>
+#### `--no-detect-encoding`
+
+```python
+@click.option("--no-detect-encoding", is_flag=True, default=False)
+```
+
+Disables all encoding detection — BOM detection, line-ending detection, and chardet-based character encoding detection. When this flag is active, the `encoding` field is absent from all `IndexEntry` and `MetadataEntry` objects in the output. Sets `config.detect_encoding = False`.
+
+Use this flag when encoding metadata is not needed and the marginal I/O cost of reading the first 64 KB of each file should be avoided (e.g., large archives of binary files where encoding detection provides no value).
+
+<a id="no-detect-charset"></a>
+#### `--no-detect-charset`
+
+```python
+@click.option("--no-detect-charset", is_flag=True, default=False)
+```
+
+Disables only the chardet-based character encoding detection. BOM detection and line-ending detection remain active. When this flag is active, the `encoding` field is present but `detected_encoding` and `confidence` are both `null`. Sets `config.detect_charset = False`.
+
+Use this flag when BOM and line-ending metadata are valuable for reversal but the chardet statistical analysis is not needed (e.g., when all files are known to be UTF-8).
+
+When `--no-detect-encoding` is also specified, `--no-detect-charset` has no additional effect (all encoding detection is already disabled).
 
 <a id="87-verbosity-and-logging-options"></a>
 ### 8.7. Verbosity and Logging Options
@@ -5550,7 +5769,7 @@ For the v0.1.0 MVP release, the public API is provisional. Breaking changes may 
 <a id="dependency-isolation"></a>
 #### Dependency isolation
 
-The public API does not require any optional dependencies beyond the four required runtime packages (`click`, `orjson`, `pyexiftool`, `tqdm`). All exported names are importable after a standard `pip install shruggie-indexer`. The optional GUI dependency (`customtkinter`) is isolated behind an import guard in its module — it is never imported at the top-level `__init__.py` scope.
+The public API does not require any optional dependencies beyond the five required runtime packages (`chardet`, `click`, `orjson`, `pyexiftool`, `tqdm`). All exported names are importable after a standard `pip install shruggie-indexer`. The optional GUI dependency (`customtkinter`) is isolated behind an import guard in its module — it is never imported at the top-level `__init__.py` scope.
 
 This is an explicit design constraint: a consumer who `pip install shruggie-indexer` can immediately `from shruggie_indexer import index_path, load_config` and use the library without encountering `ImportError`. The GUI extra adds a presentation layer, not core functionality.
 
@@ -5909,7 +6128,7 @@ Callers who construct `IndexerConfig` directly MUST ensure that parameter implic
 <a id="94-data-classes-and-type-definitions"></a>
 ### 9.4. Data Classes and Type Definitions
 
-All data classes used in the public API are defined in `models/schema.py` ([§3.2](#32-source-package-layout)). They are the Python representation of the v2 JSON Schema types defined in [§5](#5-output-schema). Each class maps directly to a schema `$ref` definition or to the root `IndexEntry` type.
+All data classes used in the public API are defined in `models/schema.py` ([§3.2](#32-source-package-layout)). They are the Python representation of the v3 JSON Schema types defined in [§5](#5-output-schema). Each class maps directly to a schema `$ref` definition or to the root `IndexEntry` type.
 
 <a id="model-implementation-strategy"></a>
 #### Model implementation strategy
@@ -5940,9 +6159,9 @@ The root data class. Represents a single indexed file or directory.
 ```python
 @dataclass
 class IndexEntry:
-    """A single indexed file or directory (v2 schema)."""
+    """A single indexed file or directory (v3 schema)."""
 
-    schema_version: int  # Always 2
+    schema_version: int  # Always 3
     id: str              # Prefixed hash: y... (file), x... (directory)
     id_algorithm: str    # "md5" or "sha256"
     type: str            # "file" or "directory"
@@ -5959,6 +6178,7 @@ class IndexEntry:
     items: list[IndexEntry] | None = None    # Children (directory) or null (file)
     metadata: list[MetadataEntry] | None = None  # Metadata entries or null
     mime_type: str | None = None
+    encoding: EncodingObject | None = None   # Encoding metadata (file) or None
 ```
 
 All fields listed in [§5.3](#53-top-level-indexentry-fields) are present. Required schema fields have no default value; optional schema fields (`items`, `metadata`, `mime_type`) default to `None`. The field order matches the schema-defined serialization order.
@@ -6030,6 +6250,7 @@ class TimestampsObject:
     created: TimestampPair
     modified: TimestampPair
     accessed: TimestampPair
+    created_source: str | None = None  # "birthtime" or "ctime_fallback"
 ```
 
 <a id="parentobject"></a>
@@ -6042,6 +6263,25 @@ class ParentObject:
 
     id: str          # x-prefixed directory ID
     name: NameObject
+```
+
+<a id="encodingobject-1"></a>
+#### `EncodingObject`
+
+```python
+@dataclass
+class EncodingObject:
+    """Encoding metadata for file content (§5.2.7)."""
+
+    bom: str | None              # "utf-8-sig", "utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be", or null
+    line_endings: str | None     # "crlf", "lf", "cr", or null
+    detected_encoding: str | None  # Lowercase codec name or null
+    confidence: float | None     # 0.0-1.0 or null
+
+    def __post_init__(self) -> None:
+        """Enforce co-presence: detected_encoding and confidence are both null or both populated."""
+        if (self.detected_encoding is None) != (self.confidence is None):
+            raise ValueError("EncodingObject.detected_encoding and .confidence must be co-null")
 ```
 
 <a id="filesystemobject"></a>
@@ -6087,6 +6327,7 @@ class MetadataEntry:
     file_system: FileSystemObject | None = None
     size: SizeObject | None = None
     timestamps: TimestampsObject | None = None
+    encoding: EncodingObject | None = None
 ```
 
 <a id="metadataattributes"></a>
@@ -6101,6 +6342,9 @@ class MetadataAttributes:
     format: str                      # "json", "text", "base64", or "lines"
     transforms: list[str]            # Ordered transformation identifiers
     source_media_type: str | None = None  # MIME type of original source data
+    json_style: str | None = None    # "pretty" or "compact" (JSON sidecars only)
+    json_indent: str | None = None   # Indent string (JSON pretty sidecars only)
+    link_metadata: dict[str, str] | None = None  # .lnk structured metadata
 ```
 
 <a id="progressevent"></a>
@@ -8006,7 +8250,7 @@ The per-item errors were already logged individually as `ERROR` or `WARNING` mes
 
 This section catalogs every dependency — binary, standard library, and third-party — that `shruggie-indexer` consumes at runtime, during testing, or during build/packaging. It defines which dependencies are required, which are optional, how optional dependencies are declared and gated, and which original dependencies have been eliminated. The section serves both as a dependency manifest for implementers and as the normative reference for the `[project.dependencies]` and `[project.optional-dependencies]` tables in `pyproject.toml` ([§13.2](#132-pyprojecttoml-configuration)).
 
-The dependency architecture implements design goal G5 ([§2.3](#23-design-goals-and-non-goals)): the tool declares four required runtime Python dependencies — `click`, `orjson`, `pyexiftool`, and `tqdm` — plus `exiftool` as an external binary. A bare `pip install shruggie-indexer` installs all four packages. The GUI package (`customtkinter`) is declared as an optional extra. Development and testing tools are declared in the `dev` extra. See [§12.3](#123-third-party-python-packages) for the per-package rationale.
+The dependency architecture implements design goal G5 ([§2.3](#23-design-goals-and-non-goals)): the tool declares five required runtime Python dependencies — `chardet`, `click`, `orjson`, `pyexiftool`, and `tqdm` — plus `exiftool` as an external binary. A bare `pip install shruggie-indexer` installs all five packages. The GUI package (`customtkinter`) is declared as an optional extra. Development and testing tools are declared in the `dev` extra. See [§12.3](#123-third-party-python-packages) for the per-package rationale.
 
 Every dependency is explicitly declared: external binaries are probed at runtime ([§12.5](#125-dependency-verification-at-runtime)), standard library modules are imported at the top of each file, and third-party packages are declared in `pyproject.toml` with version constraints. Nothing is silently assumed to exist.
 
@@ -8078,10 +8322,13 @@ The core indexing engine (`core/`, `config/`, `models/`) uses only standard libr
 <a id="123-third-party-python-packages"></a>
 ### 12.3. Third-Party Python Packages
 
-The tool declares four required runtime dependencies in `[project.dependencies]` — a bare `pip install shruggie-indexer` installs all four. Each was promoted from optional to required because it provides functionality that would otherwise require significant reimplementation, degrade correctness (Unicode safety), or sacrifice order-of-magnitude performance gains that affect the tool’s primary value proposition:
+> **Updated 2026-03-20:** Added `chardet >= 7.0` as a fifth required runtime dependency to support character encoding detection for the v3 `EncodingObject` (§5.2.7, §6.12).
+
+The tool declares five required runtime dependencies in `[project.dependencies]` — a bare `pip install shruggie-indexer` installs all five. Each was promoted from optional to required because it provides functionality that would otherwise require significant reimplementation, degrade correctness (Unicode safety), or sacrifice order-of-magnitude performance gains that affect the tool’s primary value proposition:
 
 | Package | Version | Justification for required status |
 |---------|---------|-----------------------------------|
+| `chardet` | `>=7.0` | Provides character encoding detection for the v3 `EncodingObject` (§5.2.7). Enables hash-perfect text-file reversal by recording source encoding, allowing rollback to reproduce the original byte sequence. |
 | `click` | `>=8.1` | Replaces manual argparse reimplementation of decorator-based option groups, mutual exclusion, and composable help text. The CLI is a primary delivery surface (G3). |
 | `orjson` | `>=3.9` | Eliminates `dataclasses.asdict()` overhead and provides 5–10× serialization speedup. JSON output is the tool's sole product — serialization performance is core, not peripheral. |
 | `pyexiftool` | `>=0.5` | Enables `-stay_open` batch mode (DEV-16) for ~100× faster metadata extraction. Also provides inherent Unicode filename safety via stdin pipe protocol, eliminating the argfile character-encoding risks documented in exiftool's FAQ §18. |
@@ -8093,6 +8340,7 @@ Additional third-party packages are declared as optional extras in `[project.opt
 # pyproject.toml (illustrative excerpt — see §13.2 for the full file)
 
 [project.dependencies]
+chardet = ">=7.0"
 click = ">=8.1"
 orjson = ">=3.9"
 pyexiftool = ">=0.5"
@@ -8113,6 +8361,15 @@ all = ["shruggie-indexer[gui]"]
 
 <a id="per-package-details"></a>
 #### Per-package details — required dependencies
+
+**`chardet`** (required)
+
+| Field | Value |
+|-------|-------|
+| Version constraint | `>=7.0` |
+| Purpose | Character encoding detection for the v3 `EncodingObject` ([§5.2.7](#527-encodingobject), [§6.12](#612-encoding-detection)) |
+| Imported by | `core/encoding.py` |
+| Why required | The v3 schema introduces an `encoding` field on `IndexEntry` that records the source encoding of text-based files. Accurate encoding detection is essential for hash-perfect rollback — without knowing the original encoding, the rollback engine cannot reproduce the original byte sequence from stored text content. `chardet` is the de facto standard for encoding detection in Python, offering broad codec coverage and a confidence-scored API. Version 7.0+ uses mypyc-compiled extensions for improved performance. |
 
 **`click`** (required)
 
@@ -8500,7 +8757,7 @@ known-first-party = ["shruggie_indexer"]
 <a id="notable-design-decisions"></a>
 #### Notable design decisions
 
-**Four required runtime dependencies.** The `[project.dependencies]` list declares `click`, `orjson`, `pyexiftool`, and `tqdm` ([§12.3](#123-third-party-python-packages)). A bare `pip install shruggie-indexer` installs all four. This is the implementation of design goal G5 ([§2.3](#23-design-goals-and-non-goals)): the dependency set is small and deliberately chosen — each package replaces functionality that would otherwise require significant reimplementation, degrade correctness, or sacrifice order-of-magnitude performance. The GUI package (`customtkinter`) remains optional.
+**Five required runtime dependencies.** The `[project.dependencies]` list declares `chardet`, `click`, `orjson`, `pyexiftool`, and `tqdm` ([§12.3](#123-third-party-python-packages)). A bare `pip install shruggie-indexer` installs all five. This is the implementation of design goal G5 ([§2.3](#23-design-goals-and-non-goals)): the dependency set is small and deliberately chosen — each package replaces functionality that would otherwise require significant reimplementation, degrade correctness, or sacrifice order-of-magnitude performance. The GUI package (`customtkinter`) remains optional.
 
 **`[project.scripts]` vs. `[project.gui-scripts]`.** The CLI entry point is registered under `[project.scripts]`, which creates a platform-appropriate console script wrapper (`shruggie-indexer` on Linux/macOS, `shruggie-indexer.exe` on Windows). The GUI entry point is registered under `[project.gui-scripts]`, which on Windows creates a wrapper that does not allocate a console window — this prevents the "flash of black console window" that would occur if a GUI application were launched from a `[project.scripts]` entry point. On Linux and macOS, `[project.gui-scripts]` behaves identically to `[project.scripts]`. The distinction matters only for the `pip install` development workflow; the PyInstaller-built standalone executables handle console/no-console via their own `--windowed` flag ([§13.4](#134-standalone-executable-builds)).
 
@@ -8646,6 +8903,7 @@ a = Analysis(
         "shruggie_indexer.config.types",
         "shruggie_indexer.core",
         "shruggie_indexer.core.dedup",
+        "shruggie_indexer.core.encoding",
         "shruggie_indexer.core.entry",
         "shruggie_indexer.core.exif",
         "shruggie_indexer.core.hashing",
@@ -8756,6 +9014,8 @@ exe = EXE(
 **`excludes` lists.** Each spec file excludes packages that the other target requires but the current target does not. The CLI spec excludes `customtkinter`, `tkinter`, and `_tkinter` — the GUI toolkit and its underlying C extension are substantial (several MB) and are never imported by the CLI. The GUI spec excludes `click` — the GUI does not use the CLI's argument parser. These exclusions reduce bundle size and eliminate false-positive hidden-import detection.
 
 **`hiddenimports`.** PyInstaller's static analysis cannot always detect dynamic imports (e.g., the `try: import orjson` pattern in the serializer, or the `pyexiftool` batch mode backend). Additionally, lazy imports inside Click command handler bodies (deferred to avoid import-time overhead) are invisible to PyInstaller's module tracing. The `hiddenimports` list explicitly declares all submodules that PyInstaller should include. The CLI spec enumerates every `shruggie_indexer.*` submodule to ensure complete coverage of deferred imports in `index_cmd()` and `rollback_cmd()`. Packages listed in `hiddenimports` that are not installed in the build environment are silently skipped — they do not cause build failures.
+
+> **Updated 2026-03-20:** `chardet >= 7.0` (added as a required dependency for v3 encoding detection, [§12.3](#123-third-party-python-packages)) uses mypyc-compiled extensions for performance. PyInstaller's static analysis may fail to detect these compiled modules. If the release build produces an `ImportError` for `chardet` at runtime, add `chardet` (and its internal modules, e.g., `chardet.universaldetector`, `chardet.metadata.languages`) to the `hiddenimports` list. The project convention for release builds is that **all dependencies — required and optional — are bundled into the executable**; `chardet` is a required dependency and is therefore always included in the bundle.
 
 **`datas` list.** Both spec files declare an empty `datas` list. The indexer has no bundled data files (no templates, no asset images, no embedded configuration files). If a future enhancement requires bundled data (e.g., a default configuration file or GUI icon), the `datas` list is the correct mechanism for including it.
 
@@ -9372,14 +9632,16 @@ Exercises the CLI interface ([§8](#8-cli-interface)) by invoking `click`'s test
 <a id="144-output-schema-conformance-tests"></a>
 ### 14.4. Output Schema Conformance Tests
 
-Conformance tests validate that the JSON output produced by the indexer structurally matches the canonical v2 JSON Schema definition at `schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json`. These tests use the `jsonschema` package ([§12.3](#123-third-party-python-packages)) to perform Draft-07 validation against actual serializer output.
+> **Updated 2026-03-20:** Conformance tests now target the v3 schema (`shruggie-indexer-v3.schema.json`). The v2 schema fixture is retained for backward-compatibility validation.
+
+Conformance tests validate that the JSON output produced by the indexer structurally matches the canonical v3 JSON Schema definition at `schemas.shruggie.tech/data/shruggie-indexer-v3.schema.json`. These tests use the `jsonschema` package ([§12.3](#123-third-party-python-packages)) to perform Draft-07 validation against actual serializer output.
 
 Conformance tests are architecturally distinct from unit and integration tests: they do not test implementation logic. They test whether the output artifact — the final JSON bytes — conforms to the published contract. A conformance failure means the serializer is producing output that an external consumer would reject as invalid.
 
 <a id="schema-loading"></a>
 #### Schema loading
 
-The `tests/conformance/test_v2_schema.py` module loads the canonical schema once per test session. The schema SHOULD be loaded from a local copy committed to `tests/fixtures/` (for offline reproducibility) and validated periodically against the published URL to detect drift. The test module SHOULD NOT fetch the schema from the network on every test run — this makes the test suite dependent on network availability and introduces latency.
+The `tests/conformance/test_v3_schema.py` module loads the canonical schema once per test session. The schema SHOULD be loaded from a local copy committed to `tests/fixtures/` (for offline reproducibility) and validated periodically against the published URL to detect drift. The test module SHOULD NOT fetch the schema from the network on every test run — this makes the test suite dependent on network availability and introduces latency.
 
 ```python
 # Illustrative — not the exact implementation.
@@ -9387,14 +9649,14 @@ import json
 import jsonschema
 import pytest
 
-SCHEMA_PATH = Path(__file__).parent.parent / "fixtures" / "shruggie-indexer-v2.schema.json"
+SCHEMA_PATH = Path(__file__).parent.parent / "fixtures" / "shruggie-indexer-v3.schema.json"
 
 @pytest.fixture(scope="session")
-def v2_schema():
+def v3_schema():
     return json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
 
 def validate_entry(entry_json: str, schema: dict) -> None:
-    """Validate a JSON string against the v2 schema. Raises on failure."""
+    """Validate a JSON string against the v3 schema. Raises on failure."""
     instance = json.loads(entry_json)
     jsonschema.validate(instance=instance, schema=schema)
 ```
@@ -9404,14 +9666,14 @@ def validate_entry(entry_json: str, schema: dict) -> None:
 
 | Test case | Input | Validation |
 |-----------|-------|------------|
-| Single file entry | Index a text file, serialize to JSON | `jsonschema.validate()` passes against the v2 schema. |
+| Single file entry | Index a text file, serialize to JSON | `jsonschema.validate()` passes against the v3 schema. |
 | Directory entry (flat) | Index a flat directory | Schema validation passes on the root entry and each child in `items`. |
 | Directory entry (recursive) | Index a recursive directory tree | Schema validation passes at every level of the nested structure. |
 | Entry with metadata | Index a file with sidecar metadata, `meta_merge=True` | Schema validation passes; `metadata` array entries conform to `MetadataEntry` definition. |
 | Entry with exiftool metadata | Index a JPEG with `extract_exif=True` (requires exiftool) | Schema validation passes; generated `MetadataEntry` conforms. |
 | Symlink entry | Index a symlink | Schema validation passes; `is_link=True` is valid. |
 | All field types exercised | A purpose-built fixture that exercises every optional field and every sub-object type | Full schema coverage — every `$ref` in the schema is exercised at least once. |
-| Schema version discriminator | Any valid entry | `entry["schema_version"] == 2`. |
+| Schema version discriminator | Any valid entry | `entry["schema_version"] == 3`. |
 | No additional properties | Any valid entry | Validation with `additionalProperties: false` passes — no unexpected keys at any nesting level. |
 
 <a id="serialization-invariant-checks"></a>
@@ -9423,8 +9685,8 @@ Beyond schema validation, conformance tests verify the serialization invariants 
 |-----------|------|
 | Required fields always present | Parse the JSON output and verify that every field listed in the schema's `required` array is present as a key (even if the value is `null`). |
 | SHA-512 omission when not computed | When `compute_sha512=False`, verify that `sha512` key does NOT appear in any `hashes` object. |
-| Sidecar-only fields present for sidecars | For `MetadataEntry` objects with `origin="sidecar"`, verify that `file_system`, `size`, and `timestamps` are present. |
-| Generated-only fields absent for generated entries | For `MetadataEntry` objects with `origin="generated"`, verify that `file_system`, `size`, and `timestamps` are absent. |
+| Sidecar-only fields present for sidecars | For `MetadataEntry` objects with `origin="sidecar"`, verify that `file_system`, `size`, `timestamps`, and `encoding` are present. |
+| Generated-only fields absent for generated entries | For `MetadataEntry` objects with `origin="generated"`, verify that `file_system`, `size`, `timestamps`, and `encoding` are absent. |
 
 <a id="145-cross-platform-test-matrix"></a>
 ### 14.5. Cross-Platform Test Matrix
@@ -9875,9 +10137,9 @@ The practical impact is limited: most files processed by the indexer are media f
 <a id="output-implications"></a>
 #### Output implications
 
-The `timestamps.created` field in the v2 schema ([§5.7](#57-timestamp-fields)) always contains a value — it is never `null` due to platform limitations. The value is either the true creation time (from `st_birthtime`) or the best available approximation (from `st_ctime`). The output schema does not include a field indicating which source was used, because distinguishing the two would require consumers to handle the ambiguity and provides limited actionable value.
+> **Updated 2026-03-20:** The v3 schema resolves the creation-time provenance ambiguity described below. The `timestamps.created_source` field ([§5.2.5](#525-timestampsobject), [§5.7](#57-timestamp-fields)) now explicitly records whether the creation timestamp was derived from `"birthtime"` or `"ctime_fallback"`. Consumers who need to distinguish true creation time from a ctime approximation can inspect `created_source` directly.
 
-If a future version requires explicit provenance tracking for creation times, a `timestamps.created_source` field (with values like `"birthtime"` or `"ctime_fallback"`) could be added to the schema without breaking backward compatibility.
+The `timestamps.created` field in the v3 schema ([§5.7](#57-timestamp-fields)) always contains a value — it is never `null` due to platform limitations. The value is either the true creation time (from `st_birthtime`) or the best available approximation (from `st_ctime`). The `timestamps.created_source` field indicates which source was used, enabling consumers to handle the ambiguity programmatically.
 
 <a id="interaction-with-backward-compatibility-testing"></a>
 #### Interaction with backward compatibility testing
@@ -10708,7 +10970,9 @@ The `index_path()` function auto-generates a UUID4 when the caller does not prov
 <a id="182-schema-evolution"></a>
 ### 18.2. Schema Evolution
 
-The v2 output schema includes a `schema_version` discriminator field ([§5.3](#53-top-level-indexentry-fields)) whose express purpose is to enable schema evolution. The discriminator allows consumers to detect the schema version before parsing and to dispatch to version-specific parsing logic. This subsection describes the principles governing schema evolution, the known candidates for a future v3 schema, and the compatibility constraints that any schema change must satisfy.
+> **Updated 2026-03-20:** The v3 schema bump has been executed. `schema_version` is now `3`. The `encoding` and `timestamps.created_source` candidates from §18.2.2 are now implemented. The compatibility strategy in §18.2.3 has been updated to reflect v1/v2/v3 coexistence.
+
+The v3 output schema includes a `schema_version` discriminator field ([§5.3](#53-top-level-indexentry-fields)) whose express purpose is to enable schema evolution. The discriminator allows consumers to detect the schema version before parsing and to dispatch to version-specific parsing logic. This subsection describes the principles governing schema evolution, the history of candidate additions promoted to v3, and the compatibility constraints that any schema change must satisfy.
 
 <a id="1821-evolution-principles"></a>
 #### 18.2.1. Evolution Principles
@@ -10719,29 +10983,31 @@ The v2 output schema includes a `schema_version` discriminator field ([§5.3](#5
 
 **Deprecation before removal.** If a v2 field is to be removed in v3, a transition period should be provided: the field is marked as deprecated in v2.x documentation, emitted but ignored by the tool, and finally removed in v3. The migration utility pattern established for v1-to-v2 ([§18.1.1](#1811-v1-to-v2-migration-utility)) should be replicated for any future version transition.
 
-**Schema-version-specific serialization.** The serializer ([§6.9](#69-json-serialization-and-output-routing)) currently hardcodes `schema_version: 2`. If a future version supports emitting multiple schema versions (e.g., a `--schema-version 3` flag for early adopters), the serializer must dispatch to version-specific field sets and object structures. This is a non-trivial change and should be avoided unless there is a compelling reason to support concurrent version output.
+**Schema-version-specific serialization.** The serializer ([§6.9](#69-json-serialization-and-output-routing)) currently hardcodes `schema_version: 3`. If a future version supports emitting multiple schema versions (e.g., a `--schema-version 4` flag for early adopters), the serializer must dispatch to version-specific field sets and object structures. This is a non-trivial change and should be avoided unless there is a compelling reason to support concurrent version output.
 
 <a id="1822-candidate-v3-additions"></a>
 #### 18.2.2. Candidate v3 Additions
 
-The following fields have been identified during specification development as candidates for future schema versions. None of these are committed — they are recorded here so that future development can evaluate them against actual user needs.
+The following fields were identified during specification development as candidates for future schema versions. Items implemented in v3 are struck through.
 
-**`timestamps.created_source`** ([§15.5](#155-creation-time-portability)). A string field on `TimestampsObject` indicating the provenance of the creation timestamp — `"birthtime"` when derived from `st_birthtime` (macOS, Windows) or `"ctime_fallback"` when derived from `st_ctime` (Linux, where `ctime` represents the last inode change, not creation). This field would resolve the ambiguity documented in [§15.5](#155-creation-time-portability) about what `timestamps.created` actually represents on different platforms.
+**~~`timestamps.created_source`~~** ([§15.5](#155-creation-time-portability)). ~~A string field on `TimestampsObject` indicating the provenance of the creation timestamp — `"birthtime"` when derived from `st_birthtime` (macOS, Windows) or `"ctime_fallback"` when derived from `st_ctime` (Linux, where `ctime` represents the last inode change, not creation). This field would resolve the ambiguity documented in [§15.5](#155-creation-time-portability) about what `timestamps.created` actually represents on different platforms.~~ **Implemented in v0.2.0** as the `created_source` field on `TimestampsObject` ([§5.2.5](#525-timestampsobject), [§5.7](#57-timestamp-fields)).
 
 **~~`session_id`~~** ([§18.1.14](#18114-session-id-in-json-output)). ~~A UUID4 string linking the index entry to the invocation that produced it. See [§18.1.14](#18114-session-id-in-json-output) for the full description. This is additive and could be added to v2 without a version bump.~~ **Implemented in v0.1.1** as a v2-additive optional field on `IndexEntry` ([§5.4](#54-identity-fields)). The companion field `indexed_at` was also added. Both fields are omitted from the output when `None`, preserving backward compatibility with existing v2 consumers. No version bump was required.
 
-**`encoding`** ([§5.11](#511-dropped-and-restructured-fields)). If encoding detection becomes a requirement, a new field with a Python-native structure (not the .NET-specific `System.Text.Encoding` serialization from v1) would be added. The structure might include `bom` (detected BOM, if any), `detected_encoding` (best-guess encoding name from `chardet` or similar), and `confidence` (detection confidence score). This would be a new top-level field — not a restoration of the v1 `Encoding` field, which is explicitly dropped without replacement.
+**~~`encoding`~~** ([§5.11](#511-dropped-and-restructured-fields)). ~~If encoding detection becomes a requirement, a new field with a Python-native structure (not the .NET-specific `System.Text.Encoding` serialization from v1) would be added. The structure might include `bom` (detected BOM, if any), `detected_encoding` (best-guess encoding name from `chardet` or similar), and `confidence` (detection confidence score). This would be a new top-level field — not a restoration of the v1 `Encoding` field, which is explicitly dropped without replacement.~~ **Implemented in v0.2.0** as the `EncodingObject` type ([§5.2.7](#527-encodingobject)) and the `encoding` field on `IndexEntry` ([§5.3](#53-top-level-indexentry-fields)) and `MetadataEntry` ([§5.10](#510-metadataentry-fields-origin-behavior-and-attributes)). Detection logic is defined in [§6.12](#612-encoding-detection).
 
-**`type` enum extension** ([§5.4](#54-identity-fields)). The `type` field currently uses a two-value string enum (`"file"`, `"directory"`). The enum was designed as extensible ([§5.4](#54-identity-fields)) — a future version could add `"symlink"` as a distinct type rather than a boolean flag, allowing consumers to dispatch on item type without checking a separate symlink field. This would be a semantic change to the `type` field (expanding its value set) and should be handled carefully: existing consumers that switch on `type` and assume only two values would need updating.
+**`type` enum extension** ([§5.4](#54-identity-fields)). The `type` field currently uses a two-value string enum (`"file"`, `"directory"`). The enum was designed as extensible ([§5.4](#54-identity-fields)) — a future version could add `"symlink"` as a distinct type rather than a boolean flag, allowing consumers to dispatch on item type without checking a separate symlink field. This was evaluated for v3 but deferred due to scope: the change would alter the semantic meaning of the `type` field for existing consumers who assume a two-value enum, and the `is_link` boolean flag continues to serve the symlink detection use case adequately.
 
 <a id="1823-compatibility-strategy"></a>
 #### 18.2.3. Compatibility Strategy
 
-The v2 schema's design already accommodates the most likely evolution paths:
+> **Updated 2026-03-20:** Updated for v3 coexistence with v1 and v2.
 
-The `schema_version` discriminator enables version detection. The `type` field uses a string enum rather than a boolean, enabling value-set expansion. The `MetadataEntry.origin` field uses a string enum (`"sidecar"`, `"generated"`) that can be extended with new origin types. The `HashSet` object's `sha512` field demonstrates the pattern for optional algorithm-specific fields — additional algorithms can be added as new optional properties without breaking consumers that expect only `md5` and `sha256`.
+The v3 schema's design accommodates the most likely evolution paths:
 
-The v2 sidecar filename convention (`_meta2.json`, `_directorymeta2.json`) embeds the schema version in the filename. A v3 schema would use `_meta3.json` and `_directorymeta3.json`, allowing v2 and v3 sidecar files to coexist on disk. This is the same coexistence pattern used for the v1-to-v2 transition ([§5.13](#513-backward-compatibility-considerations)).
+The `schema_version` discriminator enables version detection. The `type` field uses a string enum rather than a boolean, enabling value-set expansion. The `MetadataEntry.origin` field uses a string enum (`"sidecar"`, `"generated"`) that can be extended with new origin types. The `HashSet` object's `sha512` field demonstrates the pattern for optional algorithm-specific fields — additional algorithms can be added as new optional properties without breaking consumers that expect only `md5` and `sha256`. The `EncodingObject` demonstrates the pattern for structuring detection metadata with confidence scores.
+
+The sidecar filename convention embeds the schema version in the filename. v1 uses `_meta.json`/`_directorymeta.json`, v2 uses `_meta2.json`/`_directorymeta2.json`, and v3 uses `_meta3.json`/`_directorymeta3.json`. All three generations of sidecar files can coexist on disk — the indexer reads any version it encounters during rollback ([§6.11](#611-rollback-operations)), and the stale metadata cleanup regex ([§6.10](#610-rename-coordination-and-deduplication-cleanup)) recognizes all three naming patterns.
 
 <a id="183-plugin-or-extension-architecture"></a>
 ### 18.3. Plugin or Extension Architecture

@@ -146,6 +146,9 @@ For most media files and documents (created once, metadata rarely changed), `st_
 
 The `timestamps.created` field is never `null` due to platform limitations — it always contains either the true creation time or the best available approximation.
 
+!!! note "created_source (v3)"
+    v3 schema entries include a `timestamps.created_source` field that records the provenance of the creation timestamp: `"birthtime"` when `st_birthtime` was available, or `"ctime"` when the `st_ctime` fallback was used. This lets downstream consumers distinguish true creation times from inode-change-time approximations without reimplementing platform detection logic.
+
 ## Symlink Handling
 
 ### Detection

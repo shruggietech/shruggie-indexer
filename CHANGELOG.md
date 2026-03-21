@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### To-Do
 
-- **GUI: MetaMergeDelete output field reports false `_directorymeta2.json` output** — When running MetaMergeDelete with multi-file output mode and the "Write directory metadata" checkbox unchecked, the Output field incorrectly reports upon completion that an output was written to the default `_directorymeta2.json` location. Multi-file sidecars are written as expected, but no directory summary file is produced when directory metadata output is suppressed (this is the correct behavior). The Output field completion summary must be updated to omit the `_directorymeta2.json` path when directory metadata writing is disabled.
+- **GUI: MetaMergeDelete output field reports false `_directorymeta3.json` output** — When running MetaMergeDelete with multi-file output mode and the "Write directory metadata" checkbox unchecked, the Output field incorrectly reports upon completion that an output was written to the default `_directorymeta3.json` location. Multi-file sidecars are written as expected, but no directory summary file is produced when directory metadata output is suppressed (this is the correct behavior). The Output field completion summary must be updated to omit the `_directorymeta3.json` path when directory metadata writing is disabled.
 - **Core: Windows directory shortcut (`.lnk`) files incorrectly associated as sidecars** — Testing performed subsequent to `v0.1.2` release discovered that Windows `.lnk` directory shortcut files are misidentified as sidecars of unrelated sibling files in the same directory. The `.lnk` binary content is correctly saved and rollback properly restores the file, but the sidecar association logic incorrectly pairs the shortcut with a miscellaneous sibling file that shares no filename similarity or other discernible relationship. The sidecar matching heuristic needs investigation and correction to prevent false `.lnk` associations.
 
 ### Fixed
@@ -25,6 +25,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Tests: CLI entry-point smoke tests** — New `tests/integration/test_cli_entrypoint.py` with 8 tests covering Click in-process invocation (`--help`, `-h`, `--version`, subcommand help), `python -m` out-of-process invocation, and direct script execution (simulating the PyInstaller path). Prevents regression of the silent-exit bug.
+
+## [0.2.0] - 2026-03-20
+
+### Added
+- **v3 output schema.** `schema_version` is now `3`. In-place sidecars use
+  `_meta3.json` and `_directorymeta3.json` suffixes. v2 and v1 sidecar files
+  are still recognized and excluded during traversal.
+- **`encoding` field on `IndexEntry`.** Optional top-level field capturing
+  BOM type, line-ending convention, detected character encoding, and detection
+  confidence. Enables hash-perfect reversal when file content is stored as
+  decoded text by downstream consumers. Populated for files by default;
+  absent for directories, symlinks, and when `--no-detect-encoding` is
+  specified.
+- **`encoding` field on `MetadataEntry`.** Sidecar-only field capturing the
+  same encoding metadata for ingested sidecar files. Enables hash-perfect
+  reversal of sidecar text content.
+- **`timestamps.created_source` field.** New optional field on
+  `TimestampsObject` indicating whether the creation timestamp was derived
+  from `st_birthtime` (true creation time) or `st_ctime` (inode change
+  time fallback). Resolves the cross-platform ambiguity documented in §15.5.
+- **`attributes.json_indent` field.** New optional field on
+  `MetadataAttributes` capturing the precise indentation string used in the
+  original JSON sidecar file (e.g., 2-space, 4-space, tab). Enables
+  hash-perfect JSON restoration during rollback.
+- **`core/encoding.py` module.** BOM detection, line-ending detection, and
+  chardet integration for character encoding identification.
+- **Encoding-aware rollback restoration.** The rollback engine now consumes
+  `encoding` metadata to restore BOM, line endings, and source encoding
+  during sidecar restoration. JSON sidecars are restored with the original
+  indent string when `json_indent` is available. Text-format sidecar
+  restoration is now byte-identical when full encoding metadata is present.
+- **`--no-detect-encoding` CLI flag.** Disables all encoding detection (BOM,
+  line endings, and chardet), omitting the `encoding` field from output.
+- **`--no-detect-charset` CLI flag.** Disables only chardet-based detection;
+  BOM and line-ending detection remain active.
+- **v3 JSON Schema.** Canonical schema at
+  `schemas.shruggie.tech/data/shruggie-indexer-v3.schema.json`.
+- **`chardet` dependency.** Added as a standard runtime dependency for
+  character encoding detection.
+
+### Changed
+- Sidecar exclusion patterns updated to match v1, v2, and v3 sidecar
+  filenames.
+- Serializer key ordering updated to include `encoding` field.
+- JSON style detection extended to capture indent string alongside
+  compact/pretty classification.
 
 ## [0.1.2] - 2026-03-05
 
@@ -261,7 +307,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform build-and-release CI that publishes standalone executables for Windows, Linux, and macOS.
 
 
-[Unreleased]: https://github.com/shruggietech/shruggie-indexer/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/shruggietech/shruggie-indexer/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/shruggietech/shruggie-indexer/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/shruggietech/shruggie-indexer/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/shruggietech/shruggie-indexer/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/shruggietech/shruggie-indexer/releases/tag/v0.1.0
