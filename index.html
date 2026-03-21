@@ -1528,7 +1528,7 @@
 
 
 <h1 id="shruggie-indexer">shruggie-indexer</h1>
-<p><strong>shruggie-indexer</strong> produces structured JSON index entries for files and directories, capturing hash-based identities, filesystem timestamps, EXIF metadata, sidecar metadata, and storage attributes. Every entry conforms to the <a href="schema/shruggie-indexer-v2.schema.json">v2 JSON Schema</a> and includes deterministic, content-derived identifiers that are stable across runs and platforms. The tool ships as a CLI utility, a Python library, and a standalone GUI application — all powered by the same core indexing engine.</p>
+<p><strong>shruggie-indexer</strong> produces structured JSON index entries for files and directories, capturing hash-based identities, filesystem timestamps, EXIF metadata, sidecar metadata, and storage attributes. Every entry conforms to the <a href="schema/shruggie-indexer-v3.schema.json">v3 JSON Schema</a> and includes deterministic, content-derived identifiers that are stable across runs and platforms. The tool ships as a CLI utility, a Python library, and a standalone GUI application — all powered by the same core indexing engine.</p>
 <h2 id="key-features">Key Features</h2>
 <p><strong>Deterministic hash-based identity</strong> — Each file receives a unique identifier derived from its content hashes (MD5 or SHA-256), prefixed by type (<code>y</code> for files, <code>x</code> for directories). The same file always produces the same ID.</p>
 <p><strong>Multi-algorithm hashing</strong> — MD5 and SHA-256 are computed in a single streaming pass over each file. Optional SHA-512 is available for high-strength verification workflows.</p>
@@ -1536,14 +1536,14 @@
 <p><strong>Sidecar metadata discovery and merging</strong> — Automatically discovers sidecar files (<code>.info.json</code>, <code>.description</code>, thumbnails, subtitles, hash files, and more) alongside indexed items. Sidecar content can be merged into parent entries or merged-and-deleted with full provenance tracking for reversal.</p>
 <p><strong>Configurable TOML-based settings</strong> — All behavior is configurable through a layered system: built-in defaults, user config files, project-local config files, and CLI flags. Sidecar patterns, exclusion lists, and extension validation are all user-modifiable without editing source code.</p>
 <p><strong>Cross-platform</strong> — Windows, Linux, and macOS are fully supported with platform-aware handling of timestamps, symlinks, and filesystem attributes.</p>
-<p><strong>Structured v2 JSON output</strong> — Output follows a well-defined schema with typed sub-objects (<code>HashSet</code>, <code>NameObject</code>, <code>SizeObject</code>, <code>TimestampPair</code>, <code>TimestampsObject</code>, <code>ParentObject</code>) and a <code>schema_version</code> discriminator for forward compatibility.</p>
+<p><strong>Structured v3 JSON output</strong> — Output follows a well-defined schema with typed sub-objects (<code>HashSet</code>, <code>NameObject</code>, <code>SizeObject</code>, <code>TimestampPair</code>, <code>TimestampsObject</code>, <code>ParentObject</code>) and a <code>schema_version</code> discriminator for forward compatibility.</p>
 <h2 id="quick-example">Quick Example</h2>
 <p>Index a file and print the result to stdout:</p>
 <div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/file.exe
 </code></pre></div>
 <p>Output (abbreviated):</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;yA8A8C089A6A8583B24C85F5A4A41F5AC&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;id_algorithm&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;md5&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span>
@@ -1573,14 +1573,14 @@
 <ul>
 <li><strong><a href="getting-started/installation/">Getting Started</a></strong> — Install shruggie-indexer, set up ExifTool, and index your first file in minutes.</li>
 <li><strong><a href="user-guide/">User Guide</a></strong> — Desktop application guide, CLI reference, configuration guide, Python API documentation, and platform-specific notes.</li>
-<li><strong><a href="schema/">Schema Reference</a></strong> — Full v2 JSON Schema documentation with type definitions, field tables, and annotated examples.</li>
+<li><strong><a href="schema/">Schema Reference</a></strong> — Full v3 JSON Schema documentation with type definitions, field tables, and annotated examples.</li>
 <li><strong><a href="porting-reference/">Porting Reference</a></strong> — Historical reference materials from the original PowerShell implementation.</li>
 <li><strong><a href="changelog/">Changelog</a></strong> — Version history and release notes.</li>
 </ul>
 <h2 id="quick-links">Quick Links</h2>
 <ul>
 <li><a href="https://github.com/shruggietech/shruggie-indexer">GitHub Repository</a></li>
-<li><a href="https://schemas.shruggie.tech/data/shruggie-indexer-v2.schema.json">V2 JSON Schema (canonical)</a></li>
+<li><a href="https://schemas.shruggie.tech/data/shruggie-indexer-v3.schema.json">V3 JSON Schema (canonical)</a></li>
 <li><a href="user-guide/rollback/">Rollback Guide</a> — Restore renamed and de-duplicated files to their original state.</li>
 <li>Technical Specification:<ul>
 <li><a href="https://github.com/shruggietech/shruggie-indexer/blob/main/shruggie-indexer-spec.md">Markdown (GitHub)</a></li>
