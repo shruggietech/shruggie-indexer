@@ -1879,3 +1879,236 @@ class TestLegacyPrefixDetection:
 
         assert e_root.file_system.relative == "root.txt"
         assert e_sub.file_system.relative == "sub/sub.txt"
+
+
+# ---------------------------------------------------------------------------
+# Encoding-Aware Restoration Tests (§7.2.F)
+# ---------------------------------------------------------------------------
+
+
+class TestBomRestoration:
+    """Tests for BOM restoration during sidecar rollback."""
+
+    def test_utf8_bom_prepended(self) -> None:
+        """Text sidecar with encoding.bom='utf-8' produces EF BB BF prefix."""
+        from shruggie_indexer.core.rollback import _apply_text_encoding
+        from shruggie_indexer.models.schema import EncodingObject
+
+        enc = EncodingObject(bom="utf-8", line_endings="lf")
+        result = _apply_text_encoding("hello\nworld", enc)
+        assert isinstance(result, bytes)
+        assert result.startswith(b"\xef\xbb\xbf")
+        assert result == b"\xef\xbb\xbfhello\nworld"
+
+    def test_utf16_le_bom_prepended(self) -> None:
+        """Text sidecar with encoding.bom='utf-16-le' produces FF FE prefix."""
+        from shruggie_indexer.core.rollback import _apply_text_encoding
+        from shruggie_indexer.models.schema import EncodingObject
+
+        enc = EncodingObject(bom="utf-16-le", detected_encoding="utf-16-le")
+        result = _apply_text_encoding("hi", enc)
+        assert result.startswith(b"\xff\xfe")
+
+    def test_no_bom_when_none(self) -> None:
+        """Text sidecar without BOM produces no BOM prefix."""
+        from shruggie_indexer.core.rollback import _apply_text_encoding
+        from shruggie_indexer.models.schema import EncodingObject
+
+        enc = EncodingObject(line_endings="lf")
+        result = _apply_text_encoding("hello", enc)
+        assert not result.startswith(b"\xef\xbb\xbf")
+        assert result == b"hello"
+
+
+class TestCrlfRestoration:
+    """Tests for CRLF line-ending restoration during sidecar rollback."""
+
+    def test_crlf_restored(self) -> None:
+        """Text sidecar with encoding.line_endings='crlf' produces \\r\\n."""
+        from shruggie_indexer.core.rollback import _apply_text_encoding
+        from shruggie_indexer.models.schema import EncodingObject
+
+        enc = EncodingObject(line_endings="crlf")
+        result = _apply_text_encoding("line1\nline2\nline3", enc)
+        assert result == b"line1\r\nline2\r\nline3"
+
+    def test_lf_preserved(self) -> None:
+        """Text sidecar with encoding.line_endings='lf' preserves LF."""
+        from shruggie_indexer.core.rollback import _apply_text_encoding
+        from shruggie_indexer.models.schema import EncodingObject
+
+        enc = EncodingObject(line_endings="lf")
+        result = _apply_text_encoding("line1\nline2", enc)
+        assert result == b"line1\nline2"
+
+    def test_no_encoding_preserves_lf(self) -> None:
+        """Null encoding (v2-era) preserves LF line endings."""
+        from shruggie_indexer.core.rollback import _apply_text_encoding
+
+        result = _apply_text_encoding("line1\nline2", None)
+        assert result == b"line1\nline2"
+
+
+class TestEncodingRestoration:
+    """Tests for source encoding restoration during sidecar rollback."""
+
+    def test_windows_1252_encoding(self) -> None:
+        """Text sidecar with detected_encoding='windows-1252' encodes correctly."""
+        from shruggie_indexer.core.rollback import _apply_text_encoding
+        from shruggie_indexer.models.schema import EncodingObject
+
+        enc = EncodingObject(detected_encoding="windows-1252")
+        # The euro sign (€) is 0x80 in Windows-1252 but multi-byte in UTF-8
+        result = _apply_text_encoding("\u20ac", enc)
+        assert result == b"\x80"
+
+    def test_utf8_default_when_no_encoding(self) -> None:
+        """Null encoding falls back to UTF-8."""
+        from shruggie_indexer.core.rollback import _apply_text_encoding
+
+        result = _apply_text_encoding("café", None)
+        assert result == "café".encode("utf-8")
+
+    def test_fallback_to_utf8_on_bad_encoding(self) -> None:
+        """Unrecognized encoding name falls back to UTF-8."""
+        from shruggie_indexer.core.rollback import _apply_text_encoding
+        from shruggie_indexer.models.schema import EncodingObject
+
+        enc = EncodingObject(detected_encoding="nonexistent-codec-xyz")
+        result = _apply_text_encoding("hello", enc)
+        assert result == b"hello"
+
+
+class TestJsonIndentRestoration:
+    """Tests for JSON indent-aware restoration during sidecar rollback."""
+
+    def test_four_space_indent(self) -> None:
+        """JSON sidecar with json_indent='    ' (4 spaces) uses 4-space indent."""
+        from shruggie_indexer.core.rollback import _restore_json
+        from shruggie_indexer.models.schema import MetadataAttributes
+
+        attrs = MetadataAttributes(
+            type="json_metadata", format="json", transforms=[],
+            json_style="pretty", json_indent="    ",
+        )
+        result = _restore_json({"key": "value"}, attrs)
+        assert '    "key"' in result
+
+    def test_tab_indent(self) -> None:
+        """JSON sidecar with json_indent='\\t' uses tab indent."""
+        from shruggie_indexer.core.rollback import _restore_json
+        from shruggie_indexer.models.schema import MetadataAttributes
+
+        attrs = MetadataAttributes(
+            type="json_metadata", format="json", transforms=[],
+            json_style="pretty", json_indent="\t",
+        )
+        result = _restore_json({"key": "value"}, attrs)
+        assert '\t"key"' in result
+
+    def test_two_space_indent_default(self) -> None:
+        """JSON sidecar with json_style='pretty' but no json_indent uses 2-space."""
+        from shruggie_indexer.core.rollback import _restore_json
+        from shruggie_indexer.models.schema import MetadataAttributes
+
+        attrs = MetadataAttributes(
+            type="json_metadata", format="json", transforms=[],
+            json_style="pretty",
+        )
+        result = _restore_json({"key": "value"}, attrs)
+        assert '  "key"' in result
+        assert '    "key"' not in result
+
+    def test_compact_json(self) -> None:
+        """JSON sidecar with json_style=None uses compact formatting."""
+        from shruggie_indexer.core.rollback import _restore_json
+        from shruggie_indexer.models.schema import MetadataAttributes
+
+        attrs = MetadataAttributes(
+            type="json_metadata", format="json", transforms=[],
+        )
+        result = _restore_json({"key": "value"}, attrs)
+        assert result == '{"key":"value"}'
+
+
+class TestLegacyV2SidecarRestoration:
+    """Tests for backward compatibility with v2-era sidecar entries."""
+
+    def test_v2_text_sidecar_unchanged(self) -> None:
+        """v2-era text sidecar (no encoding) restores as UTF-8 with LF."""
+        from shruggie_indexer.core.rollback import _decode_sidecar_data
+
+        meta = MetadataEntry(
+            id="yABCDEF0123456789ABCDEF0123456789",
+            origin="sidecar",
+            name=NameObject(text="video.description", hashes=_make_hashset()),
+            hashes=_make_hashset(),
+            attributes=MetadataAttributes(
+                type="description", format="text", transforms=[],
+            ),
+            data="hello\nworld",
+        )
+        data, is_binary = _decode_sidecar_data(meta)
+        assert isinstance(data, bytes)
+        assert data == b"hello\nworld"
+
+    def test_v2_json_sidecar_pretty_default(self) -> None:
+        """v2-era JSON sidecar with json_style='pretty' uses 2-space indent."""
+        from shruggie_indexer.core.rollback import _decode_sidecar_data
+
+        meta = MetadataEntry(
+            id="yABCDEF0123456789ABCDEF0123456789",
+            origin="sidecar",
+            name=NameObject(text="video.info.json", hashes=_make_hashset()),
+            hashes=_make_hashset(),
+            attributes=MetadataAttributes(
+                type="json_metadata", format="json", transforms=[],
+                json_style="pretty",
+            ),
+            data={"title": "Test"},
+        )
+        data, is_binary = _decode_sidecar_data(meta)
+        assert isinstance(data, bytes)
+        text = data.decode("utf-8")
+        assert '  "title"' in text
+
+
+class TestFullRoundTrip:
+    """End-to-end round-trip test: encode → restore → compare bytes."""
+
+    def test_bom_crlf_roundtrip(self) -> None:
+        """Ingest a text sidecar with BOM + CRLF, restore, compare bytes."""
+        from shruggie_indexer.core.rollback import _decode_sidecar_data
+
+        original_bytes = b"\xef\xbb\xbfline1\r\nline2\r\n"
+
+        # Simulate what the sidecar pipeline would produce:
+        # - BOM detected, line_endings=crlf, text decoded as UTF-8
+        from shruggie_indexer.models.schema import EncodingObject
+
+        enc = EncodingObject(
+            bom="utf-8",
+            line_endings="crlf",
+            detected_encoding="utf-8",
+            confidence=0.99,
+        )
+
+        # The sidecar pipeline would have stripped the BOM and
+        # normalized CRLF to LF during Python text-mode decode.
+        text_content = "line1\nline2\n"
+
+        meta = MetadataEntry(
+            id="yABCDEF0123456789ABCDEF0123456789",
+            origin="sidecar",
+            name=NameObject(text="test.description", hashes=_make_hashset()),
+            hashes=_make_hashset(),
+            attributes=MetadataAttributes(
+                type="description", format="text", transforms=[],
+            ),
+            data=text_content,
+            encoding=enc,
+        )
+
+        restored_data, is_binary = _decode_sidecar_data(meta)
+        assert isinstance(restored_data, bytes)
+        assert restored_data == original_bytes
