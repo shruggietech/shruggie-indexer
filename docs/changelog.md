@@ -21,14 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **CLI: `index_cmd()` complexity refactor** — Extracted three helper functions (`_resolve_log_file_from_config()`, `_build_cli_overrides()`, `_post_index_pipeline()`) from the 390-line `index_cmd()` function body to reduce cognitive complexity below Pylance's analysis threshold. No behavioral changes; the same logic executes in the same order.
+- Sidecar exclusion patterns updated to match v1, v2, and v3 sidecar
+  filenames.
+- Serializer key ordering updated to include `encoding` field.
+- JSON style detection extended to capture indent string alongside
+  compact/pretty classification.
 
 ### Added
 
-- **Tests: CLI entry-point smoke tests** — New `tests/integration/test_cli_entrypoint.py` with 8 tests covering Click in-process invocation (`--help`, `-h`, `--version`, subcommand help), `python -m` out-of-process invocation, and direct script execution (simulating the PyInstaller path). Prevents regression of the silent-exit bug.
-
-## [0.2.0] - 2026-03-20
-
-### Added
 - **v3 output schema.** `schema_version` is now `3`. In-place sidecars use
   `_meta3.json` and `_directorymeta3.json` suffixes. v2 and v1 sidecar files
   are still recognized and excluded during traversal.
@@ -64,13 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `schemas.shruggie.tech/data/shruggie-indexer-v3.schema.json`.
 - **`chardet` dependency.** Added as a standard runtime dependency for
   character encoding detection.
-
-### Changed
-- Sidecar exclusion patterns updated to match v1, v2, and v3 sidecar
-  filenames.
-- Serializer key ordering updated to include `encoding` field.
-- JSON style detection extended to capture indent string alongside
-  compact/pretty classification.
+- **Tests: CLI entry-point smoke tests** — New `tests/integration/test_cli_entrypoint.py` with 8 tests covering Click in-process invocation (`--help`, `-h`, `--version`, subcommand help), `python -m` out-of-process invocation, and direct script execution (simulating the PyInstaller path). Prevents regression of the silent-exit bug.
 
 ## [0.1.2] - 2026-03-05
 
@@ -307,8 +301,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform build-and-release CI that publishes standalone executables for Windows, Linux, and macOS.
 
 
-[Unreleased]: https://github.com/shruggietech/shruggie-indexer/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/shruggietech/shruggie-indexer/compare/v0.1.2...v0.2.0
+[Unreleased]: https://github.com/shruggietech/shruggie-indexer/compare/v0.1.2...HEAD
 [0.1.2]: https://github.com/shruggietech/shruggie-indexer/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/shruggietech/shruggie-indexer/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/shruggietech/shruggie-indexer/releases/tag/v0.1.0
