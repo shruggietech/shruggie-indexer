@@ -1,10 +1,9 @@
 # Sidecar Architecture Pivot: From Embedded Processing to Relationship Annotation
 
-**Document ID:** `20260321-005-sidecar-architecture-pivot.md`
-**Status:** Ratified — 2026-03-24
+**Document ID:** `20260321-005-sidecar-architecture-pivot.md`  
+**Status:** Ratified — 2026-03-24  
 **Scope:** Defines a fundamental architectural change to how `shruggie-indexer` handles sidecar files. Implications cascade into the `metadexer` ecosystem direction, the `shruggie-indexer` technical specification, the v4 output schema, and the `shruggie-catalog` specification (not yet written).
-
-**Audience:** AI coding agents operating in isolated windows. This document is self-contained context for implementing the changes described herein.
+**Audience:** AI coding agents operating in isolated windows. This document is self-contained context for implementing the changes described herein.  
 
 ---
 
