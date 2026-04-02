@@ -1,0 +1,65 @@
+{
+  "schema_version": 4,
+  "id": "y6A4F0C47B316A7F8A9DC2EBD7A10F43E",
+  "id_algorithm": "md5",
+  "type": "file",
+  "name": {
+    "text": "video.info.json",
+    "hashes": {
+      "md5": "A4AB8D40D5227B9C66A8D9F9A9EB5A3D",
+      "sha256": "EAF07D5F24FC1AE7D03D7F97442A8222AB428D249D93B6CFE9C92E1FE7F15BE6"
+    }
+  },
+  "extension": "json",
+  "mime_type": "application/json",
+  "size": {
+    "text": "8.11 KB",
+    "bytes": 8112
+  },
+  "hashes": {
+    "md5": "6A4F0C47B316A7F8A9DC2EBD7A10F43E",
+    "sha256": "C94C9D30B486E4F8E42D4ACAA293C543B93ECAA4BEACF5E07672F94A6B0A2C0C"
+  },
+  "file_system": {
+    "relative": "downloads/video.info.json",
+    "parent": {
+      "id": "xB6E7F18CE23647C08195CF871E6F34D1",
+      "name": {
+        "text": "downloads",
+        "hashes": {
+          "md5": "3B58A6FD7DAA2D5DE62884E07137B007",
+          "sha256": "9381F7E562B15473A58C80D2989514F90A4EAE5EE8F39CEAAE4EB00F8E6F560D"
+        }
+      }
+    }
+  },
+  "timestamps": {
+    "created": {
+      "iso": "2026-04-01T08:15:00.000000-05:00",
+      "unix": 1775049300000
+    },
+    "modified": {
+      "iso": "2026-04-01T08:15:00.000000-05:00",
+      "unix": 1775049300000
+    },
+    "accessed": {
+      "iso": "2026-04-01T08:16:12.000000-05:00",
+      "unix": 1775049372000
+    }
+  },
+  "attributes": {
+    "is_link": false,
+    "storage_name": "y6A4F0C47B316A7F8A9DC2EBD7A10F43E.json"
+  },
+  "metadata": null,
+  "relationships": [
+    {
+      "target_id": "y5EA6243D7C4D4DB3141BA7734D8CD243",
+      "type": "json_metadata",
+      "rule": "yt-dlp-info",
+      "rule_source": "builtin",
+      "confidence": 3,
+      "predicates": []
+    }
+  ]
+}

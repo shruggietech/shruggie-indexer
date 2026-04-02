@@ -760,22 +760,66 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#configuration-hierarchy" class="md-nav__link">
+  <a href="#v4-oriented-keys" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuration Hierarchy
+        v4-Oriented Keys
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Configuration Hierarchy">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sidecar-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sidecar Rules
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sidecar Rules">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#config-file-locations" class="md-nav__link">
+  <a href="#example-add-custom-rule" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Config file locations
+        Example: Add Custom Rule
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-override-built-in-rule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Override Built-In Rule
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-disable-built-in-rule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Disable Built-In Rule
       
     </span>
   </a>
@@ -788,260 +832,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#configuration-file-format" class="md-nav__link">
+  <a href="#rule-resolution-order" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuration File Format
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Configuration File Format">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#complete-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Complete example
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#default-configuration-values" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Default Configuration Values
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Default Configuration Values">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#scalar-defaults" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scalar defaults
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#extension-validation-pattern" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Extension validation pattern
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#logging-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Logging configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#metadata-exclusion-patterns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Metadata exclusion patterns
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#filesystem-exclusion-defaults" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Filesystem exclusion defaults
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#exiftool-exclusion-defaults" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ExifTool exclusion defaults
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#metadatafileparser-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MetadataFileParser Configuration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="MetadataFileParser Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#recognized-sidecar-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Recognized sidecar types
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#type-identification-patterns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Type identification patterns
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#type-behavioral-attributes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Type behavioral attributes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#exiftool-exclusion-lists" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ExifTool Exclusion Lists
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="ExifTool Exclusion Lists">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#extension-exclusions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Extension exclusions
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#key-exclusions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Key exclusions
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#override-and-merging-behavior" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Override and Merging Behavior
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Override and Merging Behavior">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#scalar-fields-last-writer-wins" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scalar fields: last-writer-wins
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#collection-fields-replace-by-default-append-on-request" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Collection fields: replace by default, append on request
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#unknown-fields" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Unknown fields
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#parameter-implications" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parameter Implications
+        Rule Resolution Order
       
     </span>
   </a>
@@ -1049,10 +843,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#validation-rules" class="md-nav__link">
+  <a href="#community-rule-packs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Validation Rules
+        Community Rule Packs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#legacy-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legacy Note
       
     </span>
   </a>
@@ -1727,22 +1532,66 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#configuration-hierarchy" class="md-nav__link">
+  <a href="#v4-oriented-keys" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuration Hierarchy
+        v4-Oriented Keys
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Configuration Hierarchy">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sidecar-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sidecar Rules
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sidecar Rules">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#config-file-locations" class="md-nav__link">
+  <a href="#example-add-custom-rule" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Config file locations
+        Example: Add Custom Rule
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-override-built-in-rule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Override Built-In Rule
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-disable-built-in-rule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Disable Built-In Rule
       
     </span>
   </a>
@@ -1755,260 +1604,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#configuration-file-format" class="md-nav__link">
+  <a href="#rule-resolution-order" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuration File Format
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Configuration File Format">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#complete-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Complete example
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#default-configuration-values" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Default Configuration Values
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Default Configuration Values">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#scalar-defaults" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scalar defaults
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#extension-validation-pattern" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Extension validation pattern
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#logging-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Logging configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#metadata-exclusion-patterns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Metadata exclusion patterns
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#filesystem-exclusion-defaults" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Filesystem exclusion defaults
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#exiftool-exclusion-defaults" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ExifTool exclusion defaults
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#metadatafileparser-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MetadataFileParser Configuration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="MetadataFileParser Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#recognized-sidecar-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Recognized sidecar types
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#type-identification-patterns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Type identification patterns
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#type-behavioral-attributes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Type behavioral attributes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#exiftool-exclusion-lists" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ExifTool Exclusion Lists
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="ExifTool Exclusion Lists">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#extension-exclusions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Extension exclusions
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#key-exclusions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Key exclusions
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#override-and-merging-behavior" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Override and Merging Behavior
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Override and Merging Behavior">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#scalar-fields-last-writer-wins" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scalar fields: last-writer-wins
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#collection-fields-replace-by-default-append-on-request" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Collection fields: replace by default, append on request
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#unknown-fields" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Unknown fields
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#parameter-implications" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parameter Implications
+        Rule Resolution Order
       
     </span>
   </a>
@@ -2016,10 +1615,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#validation-rules" class="md-nav__link">
+  <a href="#community-rule-packs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Validation Rules
+        Community Rule Packs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#legacy-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legacy Note
       
     </span>
   </a>
@@ -2047,662 +1657,87 @@
 
 
 <h1 id="configuration">Configuration</h1>
-<p>shruggie-indexer uses a layered configuration system. All behavior is configurable without editing source code, and the tool operates correctly with no configuration file — sensible defaults are built in.</p>
-<h2 id="configuration-hierarchy">Configuration Hierarchy</h2>
-<p>Configuration values are resolved in the following order. Higher-priority layers override lower-priority ones:</p>
-<table>
-<thead>
-<tr>
-<th>Priority</th>
-<th>Source</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1 (lowest)</td>
-<td>Compiled defaults</td>
-<td>Built into the tool. Always present.</td>
-</tr>
-<tr>
-<td>2</td>
-<td>User config file</td>
-<td>Platform-standard location (see below).</td>
-</tr>
-<tr>
-<td>3</td>
-<td>Project-local config file</td>
-<td><code>.shruggie-indexer.toml</code> in the target directory or its ancestors.</td>
-</tr>
-<tr>
-<td>4 (highest)</td>
-<td>CLI flags / API arguments</td>
-<td>Command-line options or <code>load_config(overrides=...)</code>.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="config-file-locations">Config file locations</h3>
-<table>
-<thead>
-<tr>
-<th>Platform</th>
-<th>User config path</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Linux</td>
-<td><code>~/.config/shruggie-tech/shruggie-indexer/config.toml</code></td>
-</tr>
-<tr>
-<td>macOS</td>
-<td><code>~/Library/Application Support/shruggie-tech/shruggie-indexer/config.toml</code></td>
-</tr>
-<tr>
-<td>Windows</td>
-<td><code>%LOCALAPPDATA%\shruggie-tech\shruggie-indexer\config.toml</code></td>
-</tr>
-</tbody>
-</table>
-<p>Project-local config files (<code>.shruggie-indexer.toml</code>) are searched starting from the target directory and walking up to the filesystem root.</p>
-<div class="admonition info">
-<p class="admonition-title">Migration from earlier versions</p>
-<p>Prior to the current version, configuration files were stored at different
-locations depending on the release:</p>
+<p>shruggie-indexer uses layered TOML configuration.</p>
+<p>Priority order (low to high):</p>
+<ol>
+<li>Compiled defaults</li>
+<li>User config file</li>
+<li>Project-local <code>.shruggie-indexer.toml</code></li>
+<li>CLI/API overrides</li>
+</ol>
+<h2 id="v4-oriented-keys">v4-Oriented Keys</h2>
 <ul>
-<li><strong>v0.1.1:</strong> <code>%APPDATA%\shruggie-tech\shruggie-indexer\config.toml</code> (Windows Roaming)</li>
-<li><strong>v0.1.0:</strong> <code>&lt;base&gt;/shruggie-indexer/config.toml</code> (without <code>shruggie-tech/</code> parent)</li>
+<li><code>no_sidecar_detection</code> (bool, default <code>false</code>): disable relationship classification</li>
+<li><code>cleanup_legacy_sidecars</code> (bool, default <code>false</code>): remove legacy output artifacts after successful v4 in-place writes</li>
+<li><code>write_directory_meta</code> (bool, default <code>true</code>): emit directory <code>_idxd.json</code> outputs in in-place mode</li>
 </ul>
-<p>The tool checks the canonical path first and transparently falls back to
-legacy paths. An INFO-level log message is emitted when a legacy path is
-used, recommending relocation. No files are deleted during migration.</p>
-</div>
-<p>To specify a config file explicitly from the command line:</p>
-<div class="highlight"><pre><span></span><code>shruggie-indexer<span class="w"> </span>path/to/target<span class="w"> </span>--config<span class="w"> </span>my-config.toml
-</code></pre></div>
-<h2 id="configuration-file-format">Configuration File Format</h2>
-<p>Configuration files use <a href="https://toml.io/">TOML</a> format, parsed by Python's built-in <code>tomllib</code> module (Python 3.11+).</p>
-<h3 id="complete-example">Complete example</h3>
-<p>The following shows all available configuration options with their default values:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># ── Traversal and identity ──────────────────────────────────</span>
-
-<span class="k">[traversal]</span>
+<p>Legacy merge/delete configuration keys from pre-v4 releases are no longer active.</p>
+<h2 id="example">Example</h2>
+<div class="highlight"><pre><span></span><code><span class="k">[traversal]</span>
 <span class="n">recursive</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-<span class="n">id_algorithm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;md5&quot;</span><span class="w">         </span><span class="c1"># &quot;md5&quot; or &quot;sha256&quot;</span>
+<span class="n">id_algorithm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;md5&quot;</span>
 <span class="n">compute_sha512</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 
-<span class="c1"># ── Output routing ──────────────────────────────────────────</span>
-
 <span class="k">[output]</span>
-<span class="n">stdout</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w">                </span><span class="c1"># Conditional default (see docs)</span>
-<span class="c1"># file = &quot;index.json&quot;       # No default; set to enable file output</span>
+<span class="n">stdout</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
 <span class="n">inplace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
-<span class="n">write_directory_meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w">  </span><span class="c1"># Suppress with false to skip _directorymeta2.json files</span>
-
-<span class="c1"># ── Metadata processing ────────────────────────────────────</span>
+<span class="n">write_directory_meta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
 
 <span class="k">[metadata]</span>
 <span class="n">extract_exif</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
-<span class="n">meta_merge</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
-<span class="n">meta_merge_delete</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
-
-<span class="c1"># ── Rename ──────────────────────────────────────────────────</span>
+<span class="n">no_sidecar_detection</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+<span class="n">cleanup_legacy_sidecars</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 
 <span class="k">[rename]</span>
 <span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 <span class="n">dry_run</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
-
-<span class="c1"># ── Logging ─────────────────────────────────────────────────</span>
-
-<span class="k">[logging]</span>
-<span class="n">file_enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="w">         </span><span class="c1"># Enable persistent log file output</span>
-<span class="c1"># file_path = &quot;&quot;             # Empty = default app data directory</span>
-
-<span class="c1"># ── Extension validation ───────────────────────────────────</span>
-
-<span class="k">[extensions]</span>
-<span class="n">validation_pattern</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;^(([a-z0-9]){1,2}|([a-z0-9])([a-z0-9\-]){1,12}([a-z0-9]))$&#39;</span>
-
-<span class="c1"># ── Filesystem exclusion filters ───────────────────────────</span>
-
-<span class="k">[filesystem_excludes]</span>
-<span class="n">names</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="s2">&quot;$recycle.bin&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;system volume information&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;desktop.ini&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;thumbs.db&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;.ds_store&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;.spotlight-v100&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;.trashes&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;.fseventsd&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;.temporaryitems&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;.documentrevisions-v100&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;.git&quot;</span><span class="p">,</span>
-<span class="p">]</span>
-<span class="n">globs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;.trash-*&quot;</span><span class="p">]</span>
-
-<span class="c1"># ── ExifTool configuration ─────────────────────────────────</span>
-
-<span class="k">[exiftool]</span>
-<span class="n">exclude_extensions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;csv&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;htm&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;html&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;json&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;tsv&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;xml&quot;</span><span class="p">]</span>
-<span class="c1"># exclude_keys = [...]          # Replace the entire key exclusion set (advanced)</span>
-<span class="c1"># exclude_keys_append = [...]   # Append additional keys to the default exclusion set</span>
-<span class="n">base_args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="s2">&quot;-extractEmbedded3&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;-scanForXMP&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;-unknown2&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;-json&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;-G3:1&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;-struct&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;-ignoreMinorErrors&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;-charset&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;filename=utf8&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;-api&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;requestall=3&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;-api&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;largefilesupport=1&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
-<span class="p">]</span>
-
-<span class="c1"># ── Extension groups ────────────────────────────────────────</span>
-
-<span class="c1"># Seven groups: archive, audio, font, image, link, subtitles, video</span>
-<span class="c1"># Each maps to a list of lowercase extensions (without leading dots).</span>
-<span class="c1"># See the technical specification §7.3 for the complete default lists.</span>
 </code></pre></div>
-<h2 id="default-configuration-values">Default Configuration Values</h2>
-<h3 id="scalar-defaults">Scalar defaults</h3>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Default</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>traversal.recursive</code></td>
-<td><code>true</code></td>
-<td>Recurse into subdirectories.</td>
-</tr>
-<tr>
-<td><code>traversal.id_algorithm</code></td>
-<td><code>"md5"</code></td>
-<td>Hash algorithm for the <code>id</code> field.</td>
-</tr>
-<tr>
-<td><code>traversal.compute_sha512</code></td>
-<td><code>false</code></td>
-<td>Compute SHA-512 (not computed by default for performance).</td>
-</tr>
-<tr>
-<td><code>output.stdout</code></td>
-<td><code>true</code> (conditional)</td>
-<td>Write to stdout when no other output is specified.</td>
-</tr>
-<tr>
-<td><code>output.inplace</code></td>
-<td><code>false</code></td>
-<td>Write in-place sidecar files.</td>
-</tr>
-<tr>
-<td><code>output.write_directory_meta</code></td>
-<td><code>true</code></td>
-<td>Write <code>_directorymeta2.json</code> directory sidecars. Set to <code>false</code> to suppress directory-level metadata while keeping per-file sidecars.</td>
-</tr>
-<tr>
-<td><code>metadata.extract_exif</code></td>
-<td><code>false</code></td>
-<td>Extract embedded metadata via ExifTool.</td>
-</tr>
-<tr>
-<td><code>metadata.meta_merge</code></td>
-<td><code>false</code></td>
-<td>Merge sidecar metadata into parent entries.</td>
-</tr>
-<tr>
-<td><code>metadata.meta_merge_delete</code></td>
-<td><code>false</code></td>
-<td>Merge and delete sidecar files.</td>
-</tr>
-<tr>
-<td><code>rename.enabled</code></td>
-<td><code>false</code></td>
-<td>Rename files to storage names.</td>
-</tr>
-<tr>
-<td><code>rename.dry_run</code></td>
-<td><code>false</code></td>
-<td>Preview rename operations.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="extension-validation-pattern">Extension validation pattern</h3>
-<p>The default pattern accepts extensions of 1–2 alphanumeric characters, or 3–14 characters where the first and last are alphanumeric and interior characters may include hyphens:</p>
-<div class="highlight"><pre><span></span><code>^(([a-z0-9]){1,2}|([a-z0-9])([a-z0-9\-]){1,12}([a-z0-9]))$
+<p>Note: CLI/API fields map directly to internal config names (<code>no_sidecar_detection</code>, <code>cleanup_legacy_sidecars</code>).</p>
+<h2 id="sidecar-rules">Sidecar Rules</h2>
+<p>User rules are declared under <code>[sidecar_rules.&lt;rule_name&gt;]</code>.</p>
+<p>Supported fields:</p>
+<ul>
+<li><code>match</code> (required when enabled)</li>
+<li><code>type</code> (required when enabled)</li>
+<li><code>scope</code> (<code>"file"</code> or <code>"directory"</code>, default <code>"file"</code>)</li>
+<li><code>requires_sibling</code></li>
+<li><code>requires_sibling_any</code></li>
+<li><code>excludes_sibling</code></li>
+<li><code>min_siblings</code> (reserved; ignored in current confidence computation)</li>
+<li><code>enabled</code> (default <code>true</code>)</li>
+<li><code>extends</code> (for override/disable workflows)</li>
+</ul>
+<h3 id="example-add-custom-rule">Example: Add Custom Rule</h3>
+<div class="highlight"><pre><span></span><code><span class="k">[sidecar_rules.custom-notes]</span>
+<span class="n">match</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;{stem}.notes.txt&quot;</span>
+<span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;generic_metadata&quot;</span>
+<span class="n">scope</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;file&quot;</span>
+<span class="n">requires_sibling</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;{stem}.*&quot;</span>
 </code></pre></div>
-<p>Extensions that fail validation are recorded in the output's <code>extension</code> field but are treated as unrecognized for ExifTool processing purposes.</p>
-<h3 id="logging-configuration">Logging configuration</h3>
-<p>The <code>[logging]</code> section controls persistent log file output. By default, shruggie-indexer does not write log files — diagnostic output goes to stderr (CLI) or the in-app log panel (GUI).</p>
-<table>
-<thead>
-<tr>
-<th>Key</th>
-<th>Default</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>logging.file_enabled</code></td>
-<td><code>false</code></td>
-<td>Enable persistent log file output.</td>
-</tr>
-<tr>
-<td><code>logging.file_path</code></td>
-<td><code>""</code> (empty)</td>
-<td>Path to the log file. Empty uses the default platform-specific directory.</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Default log directory by platform:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Platform</th>
-<th>Directory</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Windows</td>
-<td><code>%LOCALAPPDATA%\shruggie-tech\shruggie-indexer\logs\</code></td>
-</tr>
-<tr>
-<td>macOS</td>
-<td><code>~/Library/Application Support/shruggie-tech/shruggie-indexer/logs/</code></td>
-</tr>
-<tr>
-<td>Linux</td>
-<td><code>~/.config/shruggie-tech/shruggie-indexer/logs/</code></td>
-</tr>
-</tbody>
-</table>
-<p>Log files are named by date and session: <code>YYYY-MM-DD_HHMMSS.log</code>. The log file format includes timestamps, session ID, log level, logger name, and message:</p>
-<div class="highlight"><pre><span></span><code>2026-02-23 14:30:02  abc123  INFO      shruggie_indexer.core.hasher  Hashing file: photo.jpg
+<h3 id="example-override-built-in-rule">Example: Override Built-In Rule</h3>
+<div class="highlight"><pre><span></span><code><span class="k">[sidecar_rules.yt-dlp-info]</span>
+<span class="n">extends</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;yt-dlp-info&quot;</span>
+<span class="n">match</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;{stem}.info.json&quot;</span>
+<span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;json_metadata&quot;</span>
+<span class="n">scope</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;file&quot;</span>
+<span class="n">requires_sibling</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;{stem}.mp4&quot;</span>
 </code></pre></div>
-<p>The CLI equivalent is the <code>--log-file</code> flag. In the GUI, enable "Write log files" in Settings.</p>
-<h3 id="metadata-exclusion-patterns">Metadata exclusion patterns</h3>
-<p>The <code>metadata_exclude.patterns</code> setting controls which files are unconditionally excluded from indexing as standalone items. This prevents indexer output artifacts from being re-indexed on subsequent runs.</p>
-<p>The default pattern list:</p>
-<table>
-<thead>
-<tr>
-<th>Pattern</th>
-<th>Matches</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>_(meta2?\|directorymeta2?)\.json$</code></td>
-<td>Indexer output sidecars: <code>_meta.json</code>, <code>_meta2.json</code>, <code>images_directorymeta2.json</code>, etc.</td>
-</tr>
-</tbody>
-</table>
-<p>These patterns are end-anchored, so they match both bare filenames (e.g., <code>_meta2.json</code>) and prefixed filenames (e.g., <code>video.mp4_meta2.json</code>, <code>images_directorymeta2.json</code>).</p>
-<div class="admonition info">
-<p class="admonition-title">Two-layer exclusion mechanism</p>
-<p>shruggie-indexer applies two layers of file exclusion during traversal:</p>
-<p><strong>Layer 1 — Metadata exclude patterns</strong> (always active): Files matching <code>metadata_exclude.patterns</code> are removed from the item list during initial directory scanning. This prevents indexer output artifacts from being indexed as regular items.</p>
-<p><strong>Layer 2 — Sidecar identification patterns</strong> (active when MetaMerge is enabled): When MetaMerge or MetaMergeDelete is active, files matching recognized sidecar patterns (<code>.info.json</code>, <code>.description</code>, thumbnails, subtitles, etc.) are additionally excluded from the item list. These files are still available to the sidecar discovery system for merging into parent entries, but they are not indexed as standalone items.</p>
-<p>Both layers work together to ensure sidecar files appear exclusively through the metadata merge system and never as inflated item counts in the output.</p>
-</div>
-<div class="admonition note">
-<p class="admonition-title">MetaMergeDelete stale artifact cleanup (Stage 7)</p>
-<p>When MetaMergeDelete is active, a post-processing cleanup pass (Stage 7)
-scans all traversed directories for stale metadata artifacts — files
-matching <code>metadata_exclude.patterns</code> that survived from prior indexer
-runs. Because Layer 1 prevents these files from entering the sidecar
-discovery pipeline, they are never queued for deletion during normal
-processing. Stage 7 fills this gap by identifying and removing any
-matching file that is not a current-run output sidecar. See the spec
-§6.10 for details.</p>
-</div>
-<h3 id="filesystem-exclusion-defaults">Filesystem exclusion defaults</h3>
-<p>The default exclusion set covers system artifacts across all supported platforms:</p>
-<table>
-<thead>
-<tr>
-<th>Platform</th>
-<th>Excluded items</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Windows</td>
-<td><code>$RECYCLE.BIN</code>, <code>System Volume Information</code>, <code>desktop.ini</code>, <code>Thumbs.db</code></td>
-</tr>
-<tr>
-<td>macOS</td>
-<td><code>.DS_Store</code>, <code>.Spotlight-V100</code>, <code>.Trashes</code>, <code>.fseventsd</code>, <code>.TemporaryItems</code>, <code>.DocumentRevisions-V100</code></td>
-</tr>
-<tr>
-<td>Linux</td>
-<td><code>.Trash-*</code> (glob pattern)</td>
-</tr>
-<tr>
-<td>All</td>
-<td><code>.git</code></td>
-</tr>
-</tbody>
-</table>
-<p>All platform-specific exclusions are applied regardless of the current platform, ensuring clean output from cross-platform network shares and external drives.</p>
-<h3 id="exiftool-exclusion-defaults">ExifTool exclusion defaults</h3>
-<p>These file extensions are skipped for ExifTool invocation because ExifTool tends to dump the entire file content rather than extracting meaningful metadata:</p>
-<p><code>csv</code>, <code>htm</code>, <code>html</code>, <code>json</code>, <code>tsv</code>, <code>xml</code></p>
-<h2 id="metadatafileparser-configuration">MetadataFileParser Configuration</h2>
-<p>The metadata file parser configuration controls how sidecar files are discovered and classified. It defines the regex patterns that match sidecar filenames and the behavioral attributes for each type.</p>
-<h3 id="recognized-sidecar-types">Recognized sidecar types</h3>
-<table>
-<thead>
-<tr>
-<th>Type</th>
-<th>Description</th>
-<th>Data handling</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>description</code></td>
-<td>Text description files (youtube-dl <code>.description</code>)</td>
-<td>JSON → text → binary fallback</td>
-</tr>
-<tr>
-<td><code>desktop_ini</code></td>
-<td>Windows <code>desktop.ini</code> files</td>
-<td>Text</td>
-</tr>
-<tr>
-<td><code>generic_metadata</code></td>
-<td>Generic config/metadata (<code>.cfg</code>, <code>.conf</code>, <code>.yaml</code>, <code>.meta</code>)</td>
-<td>JSON → text → binary fallback</td>
-</tr>
-<tr>
-<td><code>hash</code></td>
-<td>Hash/checksum files (<code>.md5</code>, <code>.sha256</code>, <code>.crc32</code>)</td>
-<td>Lines (non-empty lines only)</td>
-</tr>
-<tr>
-<td><code>json_metadata</code></td>
-<td>JSON metadata (<code>.info.json</code>, <code>.meta.json</code>)</td>
-<td>JSON</td>
-</tr>
-<tr>
-<td><code>link</code></td>
-<td>URL shortcuts (<code>.url</code>) and pointer files</td>
-<td>Text cascade (JSON → text → binary fallback); full file content preserved</td>
-</tr>
-<tr>
-<td><code>shortcut</code></td>
-<td>Windows filesystem shortcuts (<code>.lnk</code>)</td>
-<td>Base64-encoded binary + optional structured <code>link_metadata</code></td>
-</tr>
-<tr>
-<td><code>screenshot</code></td>
-<td>Screen capture images</td>
-<td>Base64-encoded binary</td>
-</tr>
-<tr>
-<td><code>subtitles</code></td>
-<td>Subtitle tracks (<code>.srt</code>, <code>.sub</code>, <code>.vtt</code>, <code>.lrc</code>)</td>
-<td>JSON → text → binary fallback</td>
-</tr>
-<tr>
-<td><code>thumbnail</code></td>
-<td>Thumbnail/cover images (<code>.cover</code>, <code>.thumb</code>)</td>
-<td>Base64-encoded binary</td>
-</tr>
-<tr>
-<td><code>torrent</code></td>
-<td>Torrent/magnet link files</td>
-<td>Base64-encoded binary</td>
-</tr>
-</tbody>
-</table>
-<h3 id="type-identification-patterns">Type identification patterns</h3>
-<p>Each sidecar type is identified by one or more regex patterns matched against the sibling filename. The patterns are applied in the order listed above — the first match wins.</p>
-<p>Patterns are specified as regex strings in the configuration. All patterns are compiled with <code>re.IGNORECASE</code>. See the <a href="https://github.com/shruggietech/shruggie-indexer/blob/main/shruggie-indexer-spec.md">Technical Specification §7.3</a> for the complete default pattern inventory, including the BCP 47 language code alternation for subtitle detection.</p>
-<h3 id="type-behavioral-attributes">Type behavioral attributes</h3>
-<p>Each sidecar type has behavioral attributes that control how its content is read:</p>
-<table>
-<thead>
-<tr>
-<th>Attribute</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>expect_json</code></td>
-<td>Attempt JSON parsing first.</td>
-</tr>
-<tr>
-<td><code>expect_text</code></td>
-<td>Attempt UTF-8 text reading.</td>
-</tr>
-<tr>
-<td><code>expect_binary</code></td>
-<td>Attempt binary reading (Base64 encode).</td>
-</tr>
-<tr>
-<td><code>parent_can_be_file</code></td>
-<td>This sidecar type can be associated with a file.</td>
-</tr>
-<tr>
-<td><code>parent_can_be_directory</code></td>
-<td>This sidecar type can be associated with a directory.</td>
-</tr>
-</tbody>
-</table>
-<p>For types where multiple formats are expected, the reader attempts formats in order: JSON → text → binary, falling through on parse failures.</p>
-<h2 id="exiftool-exclusion-lists">ExifTool Exclusion Lists</h2>
-<h3 id="extension-exclusions">Extension exclusions</h3>
-<p><code>exiftool.exclude_extensions</code> controls which file types are skipped for ExifTool invocation. Default: <code>["csv", "htm", "html", "json", "tsv", "xml"]</code>.</p>
-<h3 id="key-exclusions">Key exclusions</h3>
-<p>After ExifTool returns metadata, certain operational and OS-specific keys are filtered out before storage. Because exiftool with <code>-G</code> flags emits group-prefixed keys (e.g. <code>System:FileName</code>), the filter matches by <strong>base key name</strong> (the portion after the last <code>:</code> separator).</p>
-<p>The key exclusion set is configurable via two TOML keys:</p>
-<table>
-<thead>
-<tr>
-<th>Config key</th>
-<th>Behavior</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>exiftool.exclude_keys = [...]</code></td>
-<td><strong>Replace</strong> — the specified list becomes the complete exclusion set.</td>
-</tr>
-<tr>
-<td><code>exiftool.exclude_keys_append = [...]</code></td>
-<td><strong>Append</strong> — entries are added to the compiled default set below.</td>
-</tr>
-</tbody>
-</table>
-<p>Example — append additional keys:</p>
-<div class="highlight"><pre><span></span><code><span class="k">[exiftool]</span>
-<span class="n">exclude_keys_append</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Copyright&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Artist&quot;</span><span class="p">]</span>
+<h3 id="example-disable-built-in-rule">Example: Disable Built-In Rule</h3>
+<div class="highlight"><pre><span></span><code><span class="k">[sidecar_rules.any-url]</span>
+<span class="n">extends</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;any-url&quot;</span>
+<span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 </code></pre></div>
-<p>Example — replace the entire set (advanced):</p>
-<div class="highlight"><pre><span></span><code><span class="k">[exiftool]</span>
-<span class="n">exclude_keys</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;SourceFile&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Directory&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FileName&quot;</span><span class="p">]</span>
-</code></pre></div>
-<p>The compiled default exclusion set:</p>
-<table>
-<thead>
-<tr>
-<th>Base key</th>
-<th>Category</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>ExifToolVersion</code></td>
-<td>ExifTool operational</td>
-</tr>
-<tr>
-<td><code>FileSequence</code></td>
-<td>ExifTool operational</td>
-</tr>
-<tr>
-<td><code>NewGUID</code></td>
-<td>ExifTool operational</td>
-</tr>
-<tr>
-<td><code>Now</code></td>
-<td>ExifTool operational</td>
-</tr>
-<tr>
-<td><code>ProcessingTime</code></td>
-<td>ExifTool operational</td>
-</tr>
-<tr>
-<td><code>Directory</code></td>
-<td>Filesystem path</td>
-</tr>
-<tr>
-<td><code>FileName</code></td>
-<td>Filesystem path</td>
-</tr>
-<tr>
-<td><code>FilePath</code></td>
-<td>Filesystem path</td>
-</tr>
-<tr>
-<td><code>BaseName</code></td>
-<td>Filesystem path</td>
-</tr>
-<tr>
-<td><code>SourceFile</code></td>
-<td>Filesystem path</td>
-</tr>
-<tr>
-<td><code>FilePermissions</code></td>
-<td>OS-specific</td>
-</tr>
-<tr>
-<td><code>FileSize</code></td>
-<td>Redundant (in <code>size</code> object)</td>
-</tr>
-<tr>
-<td><code>FileModifyDate</code></td>
-<td>Redundant (in <code>timestamps</code>)</td>
-</tr>
-<tr>
-<td><code>FileAccessDate</code></td>
-<td>Redundant (in <code>timestamps</code>)</td>
-</tr>
-<tr>
-<td><code>FileCreateDate</code></td>
-<td>Redundant (in <code>timestamps</code>)</td>
-</tr>
-<tr>
-<td><code>FileAttributes</code></td>
-<td>OS-specific</td>
-</tr>
-<tr>
-<td><code>FileDeviceNumber</code></td>
-<td>OS-specific</td>
-</tr>
-<tr>
-<td><code>FileInodeNumber</code></td>
-<td>OS-specific</td>
-</tr>
-<tr>
-<td><code>FileHardLinks</code></td>
-<td>OS-specific</td>
-</tr>
-<tr>
-<td><code>FileUserID</code></td>
-<td>OS-specific</td>
-</tr>
-<tr>
-<td><code>FileGroupID</code></td>
-<td>OS-specific</td>
-</tr>
-<tr>
-<td><code>FileDeviceID</code></td>
-<td>OS-specific</td>
-</tr>
-<tr>
-<td><code>FileBlockSize</code></td>
-<td>OS-specific</td>
-</tr>
-<tr>
-<td><code>FileBlockCount</code></td>
-<td>OS-specific</td>
-</tr>
-</tbody>
-</table>
-<p>All embedded metadata keys (e.g. <code>File:FileType</code>, <code>File:MIMEType</code>, <code>QuickTime:*</code>, <code>Composite:*</code>) are preserved.</p>
-<h2 id="override-and-merging-behavior">Override and Merging Behavior</h2>
-<h3 id="scalar-fields-last-writer-wins">Scalar fields: last-writer-wins</h3>
-<p>The highest-priority layer that specifies a value wins. Omitted fields in a configuration file preserve the value from the layer below (ultimately the compiled default).</p>
-<h3 id="collection-fields-replace-by-default-append-on-request">Collection fields: replace by default, append on request</h3>
-<p>Collection fields (lists and sets) use two strategies depending on the key name:</p>
-<table>
-<thead>
-<tr>
-<th>Config key</th>
-<th>Behavior</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>exclude_extensions = [...]</code></td>
-<td><strong>Replace</strong> — the specified list becomes the complete set.</td>
-</tr>
-<tr>
-<td><code>exclude_extensions_append = [...]</code></td>
-<td><strong>Append</strong> — entries are added to the existing set.</td>
-</tr>
-</tbody>
-</table>
-<p>This convention applies to all collection fields: <code>filesystem_excludes.names</code>, <code>filesystem_excludes.globs</code>, <code>exiftool.exclude_extensions</code>, <code>exiftool.exclude_keys</code>, <code>exiftool.base_args</code>, <code>metadata_exclude.patterns</code>, and <code>extension_groups.*</code>.</p>
-<h3 id="unknown-fields">Unknown fields</h3>
-<p>Unrecognized keys in configuration files are logged as a warning and ignored. They are not fatal errors, which allows forward compatibility when older tool versions encounter config files written for newer versions.</p>
-<h2 id="parameter-implications">Parameter Implications</h2>
-<p>Certain configuration values automatically enable dependent settings:</p>
-<table>
-<thead>
-<tr>
-<th>If this is <code>true</code>...</th>
-<th>...then this is forced to <code>true</code></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>rename.enabled</code></td>
-<td><code>output.inplace</code></td>
-</tr>
-<tr>
-<td><code>metadata.meta_merge_delete</code></td>
-<td><code>metadata.meta_merge</code></td>
-</tr>
-<tr>
-<td><code>metadata.meta_merge</code></td>
-<td><code>metadata.extract_exif</code></td>
-</tr>
-</tbody>
-</table>
-<p>These implications are applied during configuration construction, after all layers are merged. The CLI logs the activated implications at <code>INFO</code> level when verbose output is enabled.</p>
-<h2 id="validation-rules">Validation Rules</h2>
-<p>The configuration loader validates the fully-resolved configuration before returning:</p>
+<h2 id="rule-resolution-order">Rule Resolution Order</h2>
 <ol>
-<li><strong>MetaMergeDelete safety:</strong> If <code>meta_merge_delete</code> is <code>true</code>, at least one of <code>output.file</code> or <code>output.inplace</code> must also be <code>true</code>.</li>
-<li><strong>ID type validity:</strong> <code>id_algorithm</code> must be either <code>"md5"</code> or <code>"sha256"</code>.</li>
-<li><strong>Regex compilation:</strong> All regex strings in the metadata identification and exclusion pattern lists must compile without error.</li>
-<li><strong>Path conflicts:</strong> If <code>output.file</code> is specified, it must not point inside the target directory when <code>output.inplace</code> is also active.</li>
+<li>User rules</li>
+<li>Pack rules (<code>pack:&lt;name&gt;</code>)</li>
+<li>Built-in rules</li>
 </ol>
-<p>Validation failures produce a fatal <code>IndexerConfigError</code> (CLI exit code 2).</p>
+<p>First matching rule wins.</p>
+<h2 id="community-rule-packs">Community Rule Packs</h2>
+<p>Packs are TOML files loaded from the pack directory and evaluated between user and built-in rules. Pack CLI management is planned; current workflow is manual installation.</p>
+<h2 id="legacy-note">Legacy Note</h2>
+<p><code>metadata_identify</code> is legacy and ignored in v4; migrate to <code>sidecar_rules</code>.</p>
 
 
 

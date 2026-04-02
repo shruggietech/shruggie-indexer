@@ -684,67 +684,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Sections">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#desktop-application" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Desktop Application
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#cli-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CLI Reference
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#python-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Python API
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#platform-notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Platform Notes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
     </ul>
@@ -1507,67 +1446,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Sections">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#desktop-application" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Desktop Application
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#cli-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CLI Reference
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#python-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Python API
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#platform-notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Platform Notes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
     </ul>
@@ -1591,18 +1469,23 @@
 
 
 <h1 id="user-guide">User Guide</h1>
-<p>The User Guide provides comprehensive reference documentation for shruggie-indexer. Choose a section below based on what you need.</p>
+<p>The User Guide documents runtime behavior for the v4 architecture.</p>
+<p>Core model summary:</p>
+<ul>
+<li>Every discovered file is indexed as its own <code>IndexEntry</code>.</li>
+<li>Sidecar-like relationships are annotated via <code>relationships[]</code>.</li>
+<li>In-place outputs use <code>_idx.json</code> and <code>_idxd.json</code>.</li>
+<li>GUI operations are now <code>Index</code> and <code>Rollback</code> only.</li>
+</ul>
 <h2 id="sections">Sections</h2>
-<h3 id="desktop-application"><a href="gui/">Desktop Application</a></h3>
-<p>Visual guide to the desktop (GUI) application. Covers launching the app, navigating the interface, choosing operation types, understanding the output panel, keyboard shortcuts, and troubleshooting — written for users who prefer a graphical interface over the command line.</p>
-<h3 id="cli-reference"><a href="cli-reference/">CLI Reference</a></h3>
-<p>Complete documentation for every command-line option, flag, and argument. Includes the output scenarios table, exit codes, mutual exclusion rules, and signal handling behavior.</p>
-<h3 id="configuration"><a href="configuration/">Configuration</a></h3>
-<p>The TOML-based configuration system: file format, default values, the layered resolution hierarchy (CLI flags &gt; config file &gt; defaults), metadata file parser patterns, ExifTool exclusion lists, and override/merge behavior.</p>
-<h3 id="python-api"><a href="python-api/">Python API</a></h3>
-<p>Public API reference for using shruggie-indexer as a Python library. Covers <code>index_path()</code>, <code>load_config()</code>, <code>serialize_entry()</code>, and all data classes (<code>IndexEntry</code>, <code>HashSet</code>, <code>NameObject</code>, and more).</p>
-<h3 id="platform-notes"><a href="platform-notes/">Platform Notes</a></h3>
-<p>Cross-platform behavior details for Windows, Linux, and macOS — including creation time portability, symlink handling, filesystem attribute differences, and path normalization.</p>
+<ul>
+<li><a href="gui/">Desktop Application</a></li>
+<li><a href="cli-reference/">CLI Reference</a></li>
+<li><a href="configuration/">Configuration</a></li>
+<li><a href="python-api/">Python API</a></li>
+<li><a href="rollback/">Rollback Guide</a></li>
+<li><a href="platform-notes/">Platform Notes</a></li>
+</ul>
 
 
 

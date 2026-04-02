@@ -2,98 +2,98 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://indexer.sh/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/changelog/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/getting-started/exiftool/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/getting-started/installation/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/getting-started/quickstart/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/porting-reference/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/porting-reference/Base64DecodeString_DependencyCatalog/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/porting-reference/Date2UnixTime_DependencyCatalog/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/porting-reference/DirectoryId_DependencyCatalog/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/porting-reference/FileId_DependencyCatalog/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/porting-reference/MakeIndex_DependencyCatalog/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/porting-reference/MakeIndex_OperationsCatalog/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/porting-reference/MetaFileRead_DependencyCatalog/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/porting-reference/TempClose_DependencyCatalog/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/porting-reference/TempOpen_DependencyCatalog/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/porting-reference/Vbs_DependencyCatalog/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/schema/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/user-guide/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/user-guide/cli-reference/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/user-guide/configuration/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/user-guide/gui/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/user-guide/platform-notes/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/user-guide/python-api/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
     <url>
          <loc>https://indexer.sh/user-guide/rollback/</loc>
-         <lastmod>2026-03-21</lastmod>
+         <lastmod>2026-04-02</lastmod>
     </url>
 </urlset>

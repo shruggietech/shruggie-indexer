@@ -1737,7 +1737,7 @@
 <h1 id="exiftool-setup">ExifTool Setup</h1>
 <h2 id="what-is-exiftool">What Is ExifTool?</h2>
 <p><a href="https://exiftool.org/">ExifTool</a> by Phil Harvey is a platform-independent Perl library and command-line tool for reading, writing, and editing metadata in a wide variety of file formats — including EXIF, XMP, IPTC, GPS, and maker notes from camera manufacturers.</p>
-<p>shruggie-indexer uses ExifTool to extract embedded metadata from indexed files when the <code>--meta</code> flag is active. ExifTool is the sole external binary dependency and is required <strong>only</strong> for embedded metadata extraction. All other functionality — hashing, timestamp capture, sidecar file handling, renaming — works without it.</p>
+<p>shruggie-indexer uses ExifTool to extract embedded metadata from indexed files when the <code>--meta</code> flag is active. ExifTool is the sole external binary dependency and is required <strong>only</strong> for embedded metadata extraction. All other functionality — hashing, timestamp capture, relationship annotation, renaming, and rollback — works without it.</p>
 <h2 id="installation">Installation</h2>
 <h3 id="windows">Windows</h3>
 <p><strong>Option 1 — Direct download:</strong></p>
@@ -1776,7 +1776,7 @@
 <p>When ExifTool is not found on <code>PATH</code>, shruggie-indexer logs a single warning at startup:</p>
 <div class="highlight"><pre><span></span><code>WARNING: exiftool not found on PATH; embedded metadata extraction disabled
 </code></pre></div>
-<p>The indexing operation continues normally. The <code>metadata</code> array in output entries simply omits the <code>exiftool.json_metadata</code> entry that would otherwise be present. This is a <strong>graceful degradation</strong>, not a fatal error — the tool is fully functional for hashing, timestamping, sidecar handling, and renaming without ExifTool.</p>
+<p>The indexing operation continues normally. The <code>metadata</code> array in output entries simply omits the <code>exiftool.json_metadata</code> entry that would otherwise be present. This is a <strong>graceful degradation</strong>, not a fatal error — the tool is fully functional for hashing, timestamping, relationship annotation, and renaming without ExifTool.</p>
 <div class="admonition tip">
 <p class="admonition-title">Check once, not per-file</p>
 <p>The ExifTool availability check happens once at startup and the result is cached. You will not see repeated warnings for each file.</p>
@@ -1832,7 +1832,7 @@
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><a href="../quickstart/">Quick Start</a> — Try <code>--meta</code> with a real file.</li>
-<li><a href="../../user-guide/cli-reference/">CLI Reference</a> — Full <code>--meta</code>, <code>--meta-merge</code>, and <code>--meta-merge-delete</code> documentation.</li>
+<li><a href="../../user-guide/cli-reference/">CLI Reference</a> — Full <code>--meta</code>, <code>--no-sidecar-detection</code>, and output workflow documentation.</li>
 <li><a href="../../user-guide/configuration/">Configuration</a> — Customize ExifTool arguments and exclusion lists.</li>
 </ul>
 
