@@ -32,7 +32,12 @@ def _load_reference(name: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason="Reference data not yet generated")
+@pytest.mark.skip(
+    reason=(
+        "Intentional deferral: requires MakeIndex-derived reference fixtures "
+        "that are not yet published in tests/fixtures/reference."
+    )
+)
 def test_hash_identity_matches_reference() -> None:
     """Port's ``id`` field must match the reference entry's ``id``.
 
@@ -50,7 +55,12 @@ def test_hash_identity_matches_reference() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason="Reference data not yet generated")
+@pytest.mark.skip(
+    reason=(
+        "Intentional deferral: requires MakeIndex-derived reference fixtures "
+        "that are not yet published in tests/fixtures/reference."
+    )
+)
 def test_name_hash_matches_reference() -> None:
     """Port's ``name.hashes`` must match the reference entry's name hashes.
 
@@ -66,7 +76,12 @@ def test_name_hash_matches_reference() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason="Reference data not yet generated")
+@pytest.mark.skip(
+    reason=(
+        "Intentional deferral: requires MakeIndex-derived reference fixtures "
+        "that are not yet published in tests/fixtures/reference."
+    )
+)
 def test_directory_identity_matches_reference() -> None:
     """Port's two-layer directory ``id`` — ``hash(hash(name) + hash(parent))``
     — must match the reference.
@@ -83,7 +98,12 @@ def test_directory_identity_matches_reference() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason="Reference data not yet generated")
+@pytest.mark.skip(
+    reason=(
+        "Intentional deferral: requires MakeIndex-derived reference fixtures "
+        "that are not yet published in tests/fixtures/reference."
+    )
+)
 def test_timestamps_within_tolerance() -> None:
     """Port's timestamps must be within ±1 second (ISO) and ±1000 milliseconds
     (Unix) of the reference.
@@ -101,7 +121,12 @@ def test_timestamps_within_tolerance() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason="Reference data not yet generated")
+@pytest.mark.skip(
+    reason=(
+        "Intentional deferral: requires MakeIndex-derived reference fixtures "
+        "that are not yet published in tests/fixtures/reference."
+    )
+)
 def test_sidecar_discovery_matches_reference() -> None:
     """Port must discover the same set of sidecar files as the reference.
 
@@ -117,7 +142,12 @@ def test_sidecar_discovery_matches_reference() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason="Reference data not yet generated")
+@pytest.mark.skip(
+    reason=(
+        "Intentional deferral: requires MakeIndex-derived reference fixtures "
+        "that are not yet published in tests/fixtures/reference."
+    )
+)
 def test_sidecar_content_matches_reference() -> None:
     """Parsed sidecar metadata must match the reference entry's metadata
     content.

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://schemas.shruggie.tech/data/shruggie-indexer-v4.schema.json",
   "title": "IndexEntry",
   "description": "Schema version 4 of the shruggie-indexer output format. Every file is indexed as a first-class IndexEntry. Sidecar-like associations are represented using relationship annotations rather than sidecar-ingested metadata records.",
