@@ -19,7 +19,9 @@ class TestFlatDirectoryIndexing:
     """Tests for non-recursive directory indexing."""
 
     def test_flat_directory_indexing(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """Flat indexing of a directory produces a valid directory entry."""
         config = _cfg()
@@ -29,7 +31,9 @@ class TestFlatDirectoryIndexing:
         assert entry.items is not None
 
     def test_item_count_matches(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """Number of items matches the count of immediate children.
 
@@ -42,7 +46,9 @@ class TestFlatDirectoryIndexing:
         assert len(entry.items) == 3
 
     def test_child_files_are_typed_file(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """File children have type='file'."""
         config = _cfg()

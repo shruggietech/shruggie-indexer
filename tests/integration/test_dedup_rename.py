@@ -66,7 +66,9 @@ class TestSameDirDedup:
     """Same-directory de-duplication scenarios."""
 
     def test_scan_finds_duplicate(
-        self, same_dir_duplicates: Path, mock_exiftool: None,
+        self,
+        same_dir_duplicates: Path,
+        mock_exiftool: None,
     ) -> None:
         """scan_tree detects same-dir duplicates."""
         config = _cfg(rename=True, output_inplace=True)
@@ -78,7 +80,9 @@ class TestSameDirDedup:
         assert stats.duplicates_found == 1
 
     def test_apply_removes_from_items(
-        self, same_dir_duplicates: Path, mock_exiftool: None,
+        self,
+        same_dir_duplicates: Path,
+        mock_exiftool: None,
     ) -> None:
         """apply_dedup removes the duplicate from the parent's items."""
         config = _cfg(rename=True, output_inplace=True)
@@ -92,7 +96,9 @@ class TestSameDirDedup:
         assert len(entry.items) == original_count - 1
 
     def test_provenance_preserved_in_output(
-        self, same_dir_duplicates: Path, mock_exiftool: None,
+        self,
+        same_dir_duplicates: Path,
+        mock_exiftool: None,
     ) -> None:
         """The canonical entry's serialized output contains duplicates."""
         config = _cfg(rename=True, output_inplace=True)
@@ -117,7 +123,9 @@ class TestSameDirDedup:
         assert dup["hashes"] is not None
 
     def test_cleanup_deletes_file(
-        self, same_dir_duplicates: Path, mock_exiftool: None,
+        self,
+        same_dir_duplicates: Path,
+        mock_exiftool: None,
     ) -> None:
         """cleanup_duplicate_files removes the duplicate from disk."""
         config = _cfg(rename=True, output_inplace=True)
@@ -136,7 +144,9 @@ class TestCrossDirDedup:
     """Cross-directory de-duplication scenarios."""
 
     def test_scan_finds_cross_dir_duplicate(
-        self, cross_dir_duplicates: Path, mock_exiftool: None,
+        self,
+        cross_dir_duplicates: Path,
+        mock_exiftool: None,
     ) -> None:
         """scan_tree detects cross-directory duplicates."""
         config = _cfg(rename=True, output_inplace=True, recursive=True)
@@ -146,7 +156,9 @@ class TestCrossDirDedup:
         assert len(actions) == 1
 
     def test_cross_dir_provenance(
-        self, cross_dir_duplicates: Path, mock_exiftool: None,
+        self,
+        cross_dir_duplicates: Path,
+        mock_exiftool: None,
     ) -> None:
         """Cross-dir duplicate preserves provenance from different directory."""
         config = _cfg(rename=True, output_inplace=True, recursive=True)
@@ -164,7 +176,9 @@ class TestCrossDirDedup:
         assert dup.file_system.relative != canonical.file_system.relative
 
     def test_cross_dir_cleanup(
-        self, cross_dir_duplicates: Path, mock_exiftool: None,
+        self,
+        cross_dir_duplicates: Path,
+        mock_exiftool: None,
     ) -> None:
         """cleanup_duplicate_files deletes cross-dir duplicate."""
         config = _cfg(rename=True, output_inplace=True, recursive=True)
@@ -182,7 +196,9 @@ class TestDryRunDedup:
     """Dry-run interaction with de-duplication."""
 
     def test_dry_run_no_deletion(
-        self, same_dir_duplicates: Path, mock_exiftool: None,
+        self,
+        same_dir_duplicates: Path,
+        mock_exiftool: None,
     ) -> None:
         """In dry-run mode, files are not deleted."""
         config = _cfg(rename=True, output_inplace=True, dry_run=True)
@@ -199,7 +215,9 @@ class TestDryRunDedup:
             assert f.exists()
 
     def test_dry_run_output_contains_duplicates(
-        self, same_dir_duplicates: Path, mock_exiftool: None,
+        self,
+        same_dir_duplicates: Path,
+        mock_exiftool: None,
     ) -> None:
         """Dry-run output still contains duplicates array."""
         config = _cfg(rename=True, output_inplace=True, dry_run=True)
@@ -222,7 +240,9 @@ class TestNoDuplicates:
     """No duplicates — verify no false positives."""
 
     def test_no_actions_when_no_duplicates(
-        self, no_duplicates: Path, mock_exiftool: None,
+        self,
+        no_duplicates: Path,
+        mock_exiftool: None,
     ) -> None:
         """No duplicates means no actions."""
         config = _cfg(rename=True, output_inplace=True)
@@ -232,7 +252,9 @@ class TestNoDuplicates:
         assert actions == []
 
     def test_no_duplicates_field_in_output(
-        self, no_duplicates: Path, mock_exiftool: None,
+        self,
+        no_duplicates: Path,
+        mock_exiftool: None,
     ) -> None:
         """Output has no 'duplicates' key when there are none."""
         config = _cfg(rename=True, output_inplace=True)
@@ -247,7 +269,9 @@ class TestProvenanceRoundTrip:
     """Verify all fields survive the dedup merge round-trip."""
 
     def test_all_fields_preserved(
-        self, same_dir_duplicates: Path, mock_exiftool: None,
+        self,
+        same_dir_duplicates: Path,
+        mock_exiftool: None,
     ) -> None:
         """Every IndexEntry field in the duplicate is preserved."""
         config = _cfg(rename=True, output_inplace=True)

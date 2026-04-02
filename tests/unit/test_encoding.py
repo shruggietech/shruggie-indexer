@@ -7,11 +7,8 @@ edge cases (empty input, binary data), and BOM_BYTES reverse lookup.
 
 from __future__ import annotations
 
-import pytest
-
 from shruggie_indexer.core.encoding import (
     BOM_BYTES,
-    _detect_from_bytes,
     detect_bom,
     detect_bytes_encoding,
     detect_charset,
@@ -19,7 +16,6 @@ from shruggie_indexer.core.encoding import (
     detect_line_endings,
 )
 from shruggie_indexer.models.schema import EncodingObject
-
 
 # ---------------------------------------------------------------------------
 # BOM Detection
@@ -150,14 +146,14 @@ class TestDetectCharset:
             b"\x93smart quotes\x94 and \x96em dash\x97 "
             b"and \xe9 accent and \xf1 tilde. " * 10
         )
-        encoding, confidence = detect_charset(data)
+        encoding, _confidence = detect_charset(data)
         assert encoding is not None
         # chardet may report windows-1252 or iso-8859-1
         assert "1252" in encoding or "8859" in encoding
 
     def test_empty_data(self) -> None:
         """Empty data returns a valid result (chardet returns a default)."""
-        encoding, confidence = detect_charset(b"")
+        encoding, _confidence = detect_charset(b"")
         # chardet may return a default encoding for empty input; accept either
         assert encoding is None or isinstance(encoding, str)
 

@@ -23,7 +23,9 @@ class TestOutputModes:
     """Tests for the three output destinations."""
 
     def test_stdout_capture(
-        self, sample_file: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        mock_exiftool: None,
     ) -> None:
         """write_output with stdout=True writes valid JSON to stdout."""
         config = _cfg(output_stdout=True)
@@ -38,7 +40,10 @@ class TestOutputModes:
         assert parsed["schema_version"] == 4
 
     def test_outfile_write(
-        self, sample_file: Path, tmp_path: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        tmp_path: Path,
+        mock_exiftool: None,
     ) -> None:
         """write_output with output_file creates the output file."""
         outfile = tmp_path / "output.json"
@@ -52,7 +57,9 @@ class TestOutputModes:
         assert parsed["schema_version"] == 4
 
     def test_inplace_creates_sidecar(
-        self, sample_file: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        mock_exiftool: None,
     ) -> None:
         """write_inplace creates a _idx.json sidecar alongside the file."""
         config = _cfg()
@@ -66,7 +73,10 @@ class TestOutputModes:
         assert parsed["schema_version"] == 4
 
     def test_combined_stdout_and_outfile(
-        self, sample_file: Path, tmp_path: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        tmp_path: Path,
+        mock_exiftool: None,
     ) -> None:
         """Both stdout and outfile can be active simultaneously."""
         outfile = tmp_path / "both_output.json"
@@ -82,7 +92,9 @@ class TestOutputModes:
         assert json.loads(outfile.read_text(encoding="utf-8"))["schema_version"] == 4
 
     def test_empty_directory_output(
-        self, tmp_path: Path, mock_exiftool: None,
+        self,
+        tmp_path: Path,
+        mock_exiftool: None,
     ) -> None:
         """An empty directory produces valid output with items=[]."""
         empty_dir = tmp_path / "empty"
@@ -105,7 +117,9 @@ class TestWriteDirectoryMetaFlag:
     """Tests for --no-dir-meta suppression of directory sidecars."""
 
     def test_dir_sidecar_suppressed_inplace(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """--no-dir-meta suppresses in-place _idxd.json directory sidecars."""
         from shruggie_indexer.cli.main import _write_inplace_tree
@@ -114,7 +128,9 @@ class TestWriteDirectoryMetaFlag:
         entry = index_path(sample_tree, config)
 
         _write_inplace_tree(
-            entry, sample_tree, write_inplace,
+            entry,
+            sample_tree,
+            write_inplace,
             write_directory_meta=False,
         )
 
@@ -127,7 +143,9 @@ class TestWriteDirectoryMetaFlag:
         assert len(file_sidecars) > 0
 
     def test_dir_sidecar_written_when_enabled(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """With write_directory_meta=True, dir sidecars are written."""
         from shruggie_indexer.cli.main import _write_inplace_tree
@@ -136,7 +154,9 @@ class TestWriteDirectoryMetaFlag:
         entry = index_path(sample_tree, config)
 
         _write_inplace_tree(
-            entry, sample_tree, write_inplace,
+            entry,
+            sample_tree,
+            write_inplace,
             write_directory_meta=True,
         )
 
@@ -145,7 +165,9 @@ class TestWriteDirectoryMetaFlag:
         assert len(dir_sidecars) > 0
 
     def test_stdout_unaffected_by_no_dir_meta(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """Stdout output is NOT suppressed by --no-dir-meta."""
         config = _cfg(
@@ -165,7 +187,10 @@ class TestWriteDirectoryMetaFlag:
         assert "items" in parsed
 
     def test_explicit_outfile_unaffected(
-        self, sample_tree: Path, tmp_path: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        tmp_path: Path,
+        mock_exiftool: None,
     ) -> None:
         """An explicit --outfile path is NOT suppressed by --no-dir-meta."""
         outfile = tmp_path / "custom_output.json"
@@ -183,7 +208,10 @@ class TestWriteDirectoryMetaFlag:
         assert parsed["schema_version"] == 4
 
     def test_auto_generated_aggregate_suppressed(
-        self, sample_tree: Path, tmp_path: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        tmp_path: Path,
+        mock_exiftool: None,
     ) -> None:
         """Auto-generated _idxd.json is suppressed by --no-dir-meta."""
         from dataclasses import replace as dc_replace
@@ -212,7 +240,9 @@ class TestWriteDirectoryMetaFlag:
         assert not auto_path.exists()
 
     def test_single_file_target_unaffected(
-        self, sample_file: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        mock_exiftool: None,
     ) -> None:
         """--no-dir-meta has no effect on single-file targets."""
         config = _cfg(

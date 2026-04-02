@@ -111,9 +111,7 @@ def test_bench_flat_directory_traversal(tmp_path: Path, default_config: IndexerC
 
 
 @pytest.mark.slow
-def test_bench_recursive_directory_traversal(
-    tmp_path: Path, default_config: IndexerConfig
-) -> None:
+def test_bench_recursive_directory_traversal(tmp_path: Path, default_config: IndexerConfig) -> None:
     """Index a directory tree 5 levels deep with files at each level.
 
     Baseline expectation: no stack overflow, completes successfully.
@@ -153,10 +151,7 @@ def test_bench_exiftool_throughput(tmp_path: Path, default_config: IndexerConfig
     from shruggie_indexer.core.exif import extract_exif
 
     # Create minimal JPEG files (JFIF header stub).
-    jfif_header = (
-        b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
-        b"\xff\xd9"
-    )
+    jfif_header = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xd9"
     files = []
     for i in range(10):
         p = tmp_path / f"photo_{i:02d}.jpg"

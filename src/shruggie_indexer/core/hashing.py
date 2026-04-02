@@ -190,9 +190,7 @@ def hash_directory_id(
         if name_digest is None or parent_digest is None:
             continue
         combined = name_digest + parent_digest
-        digests[alg] = hashlib.new(
-            alg, combined.encode("utf-8")
-        ).hexdigest()
+        digests[alg] = hashlib.new(alg, combined.encode("utf-8")).hexdigest()
 
     return _make_hashset(digests)
 

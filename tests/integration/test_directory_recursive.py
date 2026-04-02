@@ -20,7 +20,9 @@ class TestRecursiveDirectoryIndexing:
     """Tests for recursive directory traversal."""
 
     def test_recursive_traversal_depth(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """Recursive mode populates nested items for subdirectories."""
         config = _cfg()
@@ -35,7 +37,9 @@ class TestRecursiveDirectoryIndexing:
         assert len(subdir.items) >= 1
 
     def test_nested_directory_has_own_id(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """Nested directories have their own unique 'x'-prefixed IDs."""
         config = _cfg()
@@ -48,7 +52,9 @@ class TestRecursiveDirectoryIndexing:
             assert subdir.id != entry.id
 
     def test_parent_references_populated(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """Nested file entries have non-null parent references."""
         config = _cfg()
@@ -65,7 +71,9 @@ class TestRecursiveDirectoryIndexing:
                 assert child.file_system.parent.id.startswith("x")
 
     def test_items_contain_expected_files(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """All expected files from the tree appear in the recursive output."""
         config = _cfg()

@@ -9,8 +9,7 @@ def main() -> None:
         from shruggie_indexer.cli.main import main as cli_main
     except ImportError:
         print(
-            "The CLI requires the 'click' package.\n"
-            "Install it with: pip install shruggie-indexer",
+            "The CLI requires the 'click' package.\nInstall it with: pip install shruggie-indexer",
             file=sys.stderr,
         )
         sys.exit(1)

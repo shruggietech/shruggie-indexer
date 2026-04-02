@@ -72,38 +72,40 @@ These are the arguments specified in §6.6 of the spec.  The config's
 when the config args are not sufficient.
 """
 
-EXIFTOOL_EXCLUDED_KEYS: frozenset[str] = frozenset({
-    # Original v1 jq deletion list
-    "ExifToolVersion",
-    "FileSequence",
-    "NewGUID",
-    "Directory",
-    "FileName",
-    "FilePath",
-    "BaseName",
-    "FilePermissions",
-    # Absolute path exposure
-    "SourceFile",
-    # Redundant — captured in IndexEntry size/timestamps objects
-    "FileSize",
-    "FileModifyDate",
-    "FileAccessDate",
-    "FileCreateDate",
-    # OS-specific filesystem attributes (not embedded metadata)
-    "FileAttributes",
-    "FileDeviceNumber",
-    "FileInodeNumber",
-    "FileHardLinks",
-    "FileUserID",
-    "FileGroupID",
-    "FileDeviceID",
-    "FileBlockSize",
-    "FileBlockCount",
-    # ExifTool operational metadata
-    "Now",
-    "ProcessingTime",
-    "Error",
-})
+EXIFTOOL_EXCLUDED_KEYS: frozenset[str] = frozenset(
+    {
+        # Original v1 jq deletion list
+        "ExifToolVersion",
+        "FileSequence",
+        "NewGUID",
+        "Directory",
+        "FileName",
+        "FilePath",
+        "BaseName",
+        "FilePermissions",
+        # Absolute path exposure
+        "SourceFile",
+        # Redundant — captured in IndexEntry size/timestamps objects
+        "FileSize",
+        "FileModifyDate",
+        "FileAccessDate",
+        "FileCreateDate",
+        # OS-specific filesystem attributes (not embedded metadata)
+        "FileAttributes",
+        "FileDeviceNumber",
+        "FileInodeNumber",
+        "FileHardLinks",
+        "FileUserID",
+        "FileGroupID",
+        "FileDeviceID",
+        "FileBlockSize",
+        "FileBlockCount",
+        # ExifTool operational metadata
+        "Now",
+        "ProcessingTime",
+        "Error",
+    }
+)
 """Keys filtered from exiftool output before returning.
 
 Keys are matched by their base name (the portion after the last ``:``).
@@ -176,9 +178,7 @@ def _probe_exiftool() -> None:
     if _exiftool_path is None:
         _pyexiftool_available = False
         _backend = None
-        logger.warning(
-            "exiftool not found on PATH — embedded metadata extraction disabled"
-        )
+        logger.warning("exiftool not found on PATH — embedded metadata extraction disabled")
         return
 
     # 2. Is pyexiftool importable?
@@ -195,9 +195,7 @@ def _probe_exiftool() -> None:
         logger.debug("EXIF backend: pyexiftool batch mode")
     else:
         _backend = "subprocess"
-        logger.info(
-            "pyexiftool not installed — using subprocess fallback for exiftool"
-        )
+        logger.info("pyexiftool not installed — using subprocess fallback for exiftool")
 
 
 def _ensure_probed() -> None:
@@ -274,7 +272,9 @@ def _extract_batch(path: Path, config: IndexerConfig) -> dict[str, Any] | None:
 
 
 def _recover_metadata_from_error(
-    exc: Exception, path: Path, exclude_keys: frozenset[str],
+    exc: Exception,
+    path: Path,
+    exclude_keys: frozenset[str],
 ) -> dict[str, Any] | None:
     """Attempt to extract valid metadata from an ExifToolExecuteError.
 
@@ -309,7 +309,8 @@ def _recover_metadata_from_error(
 
 
 def _log_exiftool_error_field(
-    data: dict[str, Any], path: Path,
+    data: dict[str, Any],
+    path: Path,
 ) -> None:
     """Log ExifTool:Error fields at INFO level when metadata was recovered.
 
@@ -326,7 +327,8 @@ def _log_exiftool_error_field(
             else:
                 logger.info(
                     "ExifTool: %s for %s; metadata recovered",
-                    value, path.name,
+                    value,
+                    path.name,
                 )
             break
 
@@ -400,7 +402,9 @@ def _extract_subprocess(path: Path, config: IndexerConfig) -> dict[str, Any] | N
 
 
 def _parse_json_output(
-    stdout: str, path: Path, exclude_keys: frozenset[str],
+    stdout: str,
+    path: Path,
+    exclude_keys: frozenset[str],
 ) -> dict[str, Any] | None:
     """Parse exiftool JSON output and extract the first element."""
     if not stdout or not stdout.strip():
@@ -441,17 +445,15 @@ def _base_key(key: str) -> str:
 
 
 def _filter_keys(
-    data: dict[str, Any], exclude_keys: frozenset[str],
+    data: dict[str, Any],
+    exclude_keys: frozenset[str],
 ) -> dict[str, Any]:
     """Remove excluded keys from exiftool output.
 
     Keys are matched by their base name (after the last ``:``) to
     handle group-prefixed output from ``-G`` flags.
     """
-    return {
-        k: v for k, v in data.items()
-        if _base_key(k) not in exclude_keys
-    }
+    return {k: v for k, v in data.items() if _base_key(k) not in exclude_keys}
 
 
 # ---------------------------------------------------------------------------
@@ -504,7 +506,8 @@ def extract_exif(
         if file_size > _EXIFTOOL_LARGE_FILE_BYTES:
             logger.info(
                 "ExifTool: using subprocess for large file (%d bytes): %s",
-                file_size, path.name,
+                file_size,
+                path.name,
             )
             return _extract_subprocess(path, config)
     except OSError:

@@ -40,7 +40,9 @@ class TestBuildFileEntry:
     """Tests for build_file_entry() — the 12-step orchestration."""
 
     def test_file_entry_construction(
-        self, sample_file: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        mock_exiftool: None,
     ) -> None:
         """Full file entry is constructed with all required fields."""
         config = _cfg()
@@ -61,7 +63,9 @@ class TestBuildFileEntry:
         assert entry.items is None
 
     def test_file_entry_metadata_none_when_disabled(
-        self, sample_file: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        mock_exiftool: None,
     ) -> None:
         """Metadata is None when Exif extraction is disabled."""
         config = _cfg(extract_exif=False)
@@ -73,7 +77,9 @@ class TestBuildDirectoryEntry:
     """Tests for build_directory_entry()."""
 
     def test_directory_entry_construction(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """Directory entry has correct type and contains child items."""
         config = _cfg()
@@ -87,7 +93,9 @@ class TestBuildDirectoryEntry:
         assert len(entry.items) > 0
 
     def test_recursive_directory_has_nested_items(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """Recursive mode populates nested directory items trees."""
         config = _cfg()
@@ -112,7 +120,9 @@ class TestSymlinkEntry:
         reason="Symlink creation may require elevated privileges on Windows",
     )
     def test_symlink_entry_is_link_true(
-        self, tmp_path: Path, mock_exiftool: None,
+        self,
+        tmp_path: Path,
+        mock_exiftool: None,
     ) -> None:
         """Symlink files have is_link=True and name-based hashes."""
         target = tmp_path / "real.txt"
@@ -131,7 +141,9 @@ class TestCancellation:
     """Tests for cooperative cancellation."""
 
     def test_cancellation_raises(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """Setting cancel_event raises IndexerCancellationError."""
         config = _cfg()
@@ -140,13 +152,16 @@ class TestCancellation:
 
         with pytest.raises(IndexerCancellationError):
             build_directory_entry(
-                sample_tree, config,
+                sample_tree,
+                config,
                 recursive=False,
                 cancel_event=cancel,
             )
 
     def test_cancel_during_file_hashing(
-        self, tmp_path: Path, mock_exiftool: None,
+        self,
+        tmp_path: Path,
+        mock_exiftool: None,
     ) -> None:
         """Pre-set cancel_event raises from build_file_entry (via hash_file)."""
         # Create a file larger than one chunk so the cancel check triggers.
@@ -164,7 +179,9 @@ class TestProgressCallback:
     """Tests for progress callback invocation."""
 
     def test_progress_callback_called(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """Progress callback is invoked at least once during directory indexing."""
         config = _cfg()
@@ -174,7 +191,8 @@ class TestProgressCallback:
             events.append(event)
 
         build_directory_entry(
-            sample_tree, config,
+            sample_tree,
+            config,
             recursive=False,
             progress_callback=on_progress,
         )
@@ -191,7 +209,9 @@ class TestMissingExiftoolDegradation:
     """Tests for graceful degradation when exiftool is absent."""
 
     def test_metadata_still_works_without_exiftool(
-        self, tmp_path: Path, mock_exiftool: None,
+        self,
+        tmp_path: Path,
+        mock_exiftool: None,
     ) -> None:
         """With extract_exif=True but no exiftool, metadata is empty list."""
         f = tmp_path / "test.txt"
@@ -209,7 +229,9 @@ class TestSessionIdThreading:
     """Tests for session_id propagation through entry builders."""
 
     def test_file_entry_session_id_populated(
-        self, sample_file: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        mock_exiftool: None,
     ) -> None:
         """build_file_entry passes session_id to the entry."""
         config = _cfg()
@@ -219,7 +241,9 @@ class TestSessionIdThreading:
         assert entry.session_id == sid
 
     def test_file_entry_session_id_none_by_default(
-        self, sample_file: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        mock_exiftool: None,
     ) -> None:
         """build_file_entry without session_id leaves it None."""
         config = _cfg()
@@ -228,13 +252,18 @@ class TestSessionIdThreading:
         assert entry.session_id is None
 
     def test_directory_entry_session_id_threaded(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """session_id is threaded to all children in build_directory_entry."""
         config = _cfg()
         sid = "aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee"
         entry = build_directory_entry(
-            sample_tree, config, recursive=True, session_id=sid,
+            sample_tree,
+            config,
+            recursive=True,
+            session_id=sid,
         )
 
         assert entry.session_id == sid
@@ -250,7 +279,9 @@ class TestIndexedAtTimestamp:
     """Tests for indexed_at timestamp generation."""
 
     def test_file_entry_has_indexed_at(
-        self, sample_file: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        mock_exiftool: None,
     ) -> None:
         """build_file_entry populates indexed_at."""
         config = _cfg()
@@ -261,7 +292,9 @@ class TestIndexedAtTimestamp:
         assert entry.indexed_at.unix > 0
 
     def test_directory_entry_has_indexed_at(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """build_directory_entry populates indexed_at."""
         config = _cfg()
@@ -272,7 +305,9 @@ class TestIndexedAtTimestamp:
         assert entry.indexed_at.unix > 0
 
     def test_indexed_at_varies_between_entries(
-        self, sample_tree: Path, mock_exiftool: None,
+        self,
+        sample_tree: Path,
+        mock_exiftool: None,
     ) -> None:
         """indexed_at values differ between parent and children."""
         config = _cfg()

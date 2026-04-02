@@ -20,8 +20,6 @@ import pytest
 
 from shruggie_indexer.core.rollback import (
     LocalSourceResolver,
-    RollbackStats,
-    _entry_from_dict,
     discover_meta2_files,
     execute_rollback,
     load_meta2,
@@ -333,7 +331,9 @@ class TestLocalSourceResolver:
         result = resolver.resolve(entry, FIXTURES / "non-renamed")
         assert result is not None
 
-    def test_hash_verification_mismatch_logs_warning(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_hash_verification_mismatch_logs_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Hash verification mismatch logs a warning but still returns path."""
         resolver = LocalSourceResolver(verify_hash=True)
         entry = _make_file_entry(
@@ -342,6 +342,7 @@ class TestLocalSourceResolver:
             md5="FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",  # Wrong hash
         )
         import logging
+
         with caplog.at_level(logging.WARNING, logger="shruggie_indexer.core.rollback"):
             result = resolver.resolve(entry, FIXTURES / "non-renamed")
         assert result is not None  # Still returns the path
@@ -755,6 +756,7 @@ class TestTargetDefault:
     def test_target_dir_is_required(self) -> None:
         """plan_rollback() signature requires target_dir (not optional)."""
         import inspect
+
         sig = inspect.signature(plan_rollback)
         param = sig.parameters["target_dir"]
         assert param.default is inspect.Parameter.empty
@@ -816,7 +818,10 @@ class TestExecuteRollback:
         assert abs(stat.st_mtime - expected_mtime) < 2
         assert abs(stat.st_atime - expected_atime) < 2
 
-        assert restored.read_bytes() == b"This is a test executable file content for rollback testing.\n"
+        assert (
+            restored.read_bytes()
+            == b"This is a test executable file content for rollback testing.\n"
+        )
 
     def test_directory_creation(self, tmp_path: Path) -> None:
         """Directories are created for structured restore."""
@@ -906,11 +911,14 @@ class TestExecuteRollback:
         )
         result = execute_rollback(plan)
         assert result.sidecars_restored == 1
-        assert (tmp_path / "notes.txt").read_text(encoding="utf-8") == "These are my notes about this file."
+        assert (tmp_path / "notes.txt").read_text(
+            encoding="utf-8"
+        ) == "These are my notes about this file."
 
     def test_sidecar_base64_restore(self, tmp_path: Path) -> None:
         """Sidecar with format=base64 is restored as binary."""
         import base64
+
         original_bytes = b"\x89PNG\r\n\x1a\nfake png data"
         encoded = base64.b64encode(original_bytes).decode("ascii")
 
@@ -994,6 +1002,7 @@ class TestExecuteRollback:
     def test_sidecar_lnk_restore_byte_perfect(self, tmp_path: Path) -> None:
         """Sidecar with .lnk base64 restores as byte-perfect binary copy."""
         import base64 as b64
+
         original_bytes = b"\x4c\x00\x00\x00" + b"\x00" * 72 + b"lnk_payload"
         encoded = b64.b64encode(original_bytes).decode("ascii")
         meta = _make_sidecar_metadata(
@@ -1327,7 +1336,9 @@ class TestLocalSourceResolverOriginFallback:
 class TestPlanRollbackLogging:
     """Verify that plan_rollback emits parameter summary at INFO level."""
 
-    def test_parameter_summary_logged(self, tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    def test_parameter_summary_logged(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """plan_rollback logs all resolved parameters at INFO level."""
         import logging
 
@@ -1378,7 +1389,6 @@ class TestSetWindowsCreationTime:
         assert ok is True
 
         # Verify via os.stat
-        import stat as stat_mod
 
         st = os.stat(test_file)
         # On Windows, st_ctime is the creation time
@@ -1408,8 +1418,12 @@ class TestContentHashCollisionDetection:
         """Entries with different hashes are all preserved."""
         from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
 
-        e1 = _make_file_entry(name="a.txt", relative="a.txt", md5="AAAA0000AAAA0000AAAA0000AAAA0000")
-        e2 = _make_file_entry(name="b.txt", relative="b.txt", md5="BBBB0000BBBB0000BBBB0000BBBB0000")
+        e1 = _make_file_entry(
+            name="a.txt", relative="a.txt", md5="AAAA0000AAAA0000AAAA0000AAAA0000"
+        )
+        e2 = _make_file_entry(
+            name="b.txt", relative="b.txt", md5="BBBB0000BBBB0000BBBB0000BBBB0000"
+        )
         result = _deduplicate_by_content_hash([e1, e2])
         assert len(result) == 2
 
@@ -1418,11 +1432,15 @@ class TestContentHashCollisionDetection:
         from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
 
         e1 = _make_file_entry(
-            name="a.txt", relative="dir/a.txt", md5="AAAA0000AAAA0000AAAA0000AAAA0000",
+            name="a.txt",
+            relative="dir/a.txt",
+            md5="AAAA0000AAAA0000AAAA0000AAAA0000",
             session_id="session-1",
         )
         e2 = _make_file_entry(
-            name="a.txt", relative="dir/a.txt", md5="AAAA0000AAAA0000AAAA0000AAAA0000",
+            name="a.txt",
+            relative="dir/a.txt",
+            md5="AAAA0000AAAA0000AAAA0000AAAA0000",
             session_id="session-2",
         )
         result = _deduplicate_by_content_hash([e1, e2])
@@ -1437,22 +1455,30 @@ class TestContentHashCollisionDetection:
 
         # 3 entries with majority session, 1 with minority
         e_majority_1 = _make_file_entry(
-            name="file1.txt", relative="file1.txt",
-            md5="1111000011110000111100001111AAAA", session_id=majority_sid,
+            name="file1.txt",
+            relative="file1.txt",
+            md5="1111000011110000111100001111AAAA",
+            session_id=majority_sid,
         )
         e_majority_2 = _make_file_entry(
-            name="file2.txt", relative="file2.txt",
-            md5="2222000022220000222200002222AAAA", session_id=majority_sid,
+            name="file2.txt",
+            relative="file2.txt",
+            md5="2222000022220000222200002222AAAA",
+            session_id=majority_sid,
         )
         e_majority_3 = _make_file_entry(
-            name="file3.txt", relative="file3.txt",
-            md5="3333000033330000333300003333AAAA", session_id=majority_sid,
+            name="file3.txt",
+            relative="file3.txt",
+            md5="3333000033330000333300003333AAAA",
+            session_id=majority_sid,
         )
         # Colliding entry from minority session — same hash as e_majority_1
         # but different relative
         e_minority = _make_file_entry(
-            name="file1.txt", relative="old/file1.txt",
-            md5="1111000011110000111100001111AAAA", session_id=minority_sid,
+            name="file1.txt",
+            relative="old/file1.txt",
+            md5="1111000011110000111100001111AAAA",
+            session_id=minority_sid,
         )
 
         result = _deduplicate_by_content_hash(
@@ -1467,12 +1493,14 @@ class TestContentHashCollisionDetection:
         from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
 
         e_with = _make_file_entry(
-            name="file.7z", relative="file.7z",
+            name="file.7z",
+            relative="file.7z",
             md5="AAAA0000AAAA0000AAAA0000AAAA0000",
             session_id="session-1",
         )
         e_without = _make_file_entry(
-            name="file.7z", relative="data/file.7z",
+            name="file.7z",
+            relative="data/file.7z",
             md5="AAAA0000AAAA0000AAAA0000AAAA0000",
         )
         result = _deduplicate_by_content_hash([e_without, e_with])
@@ -1484,11 +1512,13 @@ class TestContentHashCollisionDetection:
         from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
 
         e1 = _make_file_entry(
-            name="file.7z", relative="file.7z",
+            name="file.7z",
+            relative="file.7z",
             md5="AAAA0000AAAA0000AAAA0000AAAA0000",
         )
         e2 = _make_file_entry(
-            name="file.7z", relative="data/file.7z",
+            name="file.7z",
+            relative="data/file.7z",
             md5="AAAA0000AAAA0000AAAA0000AAAA0000",
         )
         result = _deduplicate_by_content_hash([e1, e2])
@@ -1501,12 +1531,14 @@ class TestContentHashCollisionDetection:
 
         sid = "aaaa1111-aaaa-4aaa-aaaa-aaaaaaaaaaaa"
         e1 = _make_file_entry(
-            name="file.7z", relative="file.7z",
+            name="file.7z",
+            relative="file.7z",
             md5="AAAA0000AAAA0000AAAA0000AAAA0000",
             session_id=sid,
         )
         e2 = _make_file_entry(
-            name="file.7z", relative="data/file.7z",
+            name="file.7z",
+            relative="data/file.7z",
             md5="AAAA0000AAAA0000AAAA0000AAAA0000",
             session_id=sid,
         )
@@ -1521,21 +1553,20 @@ class TestContentHashCollisionDetection:
         from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
 
         e1 = _make_file_entry(
-            name="file.7z", relative="file.7z",
+            name="file.7z",
+            relative="file.7z",
             md5="AAAA0000AAAA0000AAAA0000AAAA0000",
             session_id="session-1",
         )
         e2 = _make_file_entry(
-            name="file.7z", relative="data/file.7z",
+            name="file.7z",
+            relative="data/file.7z",
             md5="AAAA0000AAAA0000AAAA0000AAAA0000",
         )
         with caplog.at_level(logging.WARNING, logger="shruggie_indexer.core.rollback"):
             _deduplicate_by_content_hash([e1, e2])
 
-        warning_records = [
-            r for r in caplog.records
-            if "Duplicate content hash" in r.message
-        ]
+        warning_records = [r for r in caplog.records if "Duplicate content hash" in r.message]
         assert len(warning_records) == 1
         assert "Keeping" in warning_records[0].message
         assert "Discarding" in warning_records[0].message
@@ -1551,7 +1582,9 @@ class TestContentHashCollisionDetection:
         """Entries with hashes=None are never discarded."""
         from shruggie_indexer.core.rollback import _deduplicate_by_content_hash
 
-        e1 = _make_file_entry(name="a.txt", relative="a.txt", md5="AAAA0000AAAA0000AAAA0000AAAA0000")
+        e1 = _make_file_entry(
+            name="a.txt", relative="a.txt", md5="AAAA0000AAAA0000AAAA0000AAAA0000"
+        )
         e1_no_hash = IndexEntry(
             schema_version=2,
             id="xDIR",
@@ -1580,14 +1613,16 @@ class TestContentHashCollisionDetection:
 
         # Majority-session entry
         e_keep = _make_file_entry(
-            name="FeedsExport.7z", relative="FeedsExport.7z",
+            name="FeedsExport.7z",
+            relative="FeedsExport.7z",
             storage_name="yAAAA0000AAAA0000AAAA0000AAAA0000.7z",
             md5="AAAA0000AAAA0000AAAA0000AAAA0000",
             session_id=majority_sid,
         )
         # Another majority entry (establishes majority)
         e_other = _make_file_entry(
-            name="other.txt", relative="other.txt",
+            name="other.txt",
+            relative="other.txt",
             storage_name="yBBBB0000BBBB0000BBBB0000BBBB0000.txt",
             md5="BBBB0000BBBB0000BBBB0000BBBB0000",
             session_id=majority_sid,
@@ -1596,7 +1631,8 @@ class TestContentHashCollisionDetection:
 
         # Minority-session entry — same hash, different relative
         e_stale = _make_file_entry(
-            name="FeedsExport.7z", relative="data/FeedsExport.7z",
+            name="FeedsExport.7z",
+            relative="data/FeedsExport.7z",
             storage_name="yAAAA0000AAAA0000AAAA0000AAAA0000.7z",
             md5="AAAA0000AAAA0000AAAA0000AAAA0000",
             session_id=minority_sid,
@@ -1612,8 +1648,7 @@ class TestContentHashCollisionDetection:
 
         # The stale entry should be gone — no restore action for data/FeedsExport.7z
         target_paths = {
-            a.target_path for a in plan.actions
-            if a.action_type == "restore" and not a.skip_reason
+            a.target_path for a in plan.actions if a.action_type == "restore" and not a.skip_reason
         }
         assert target_dir / "FeedsExport.7z" in target_paths
         assert target_dir / "data" / "FeedsExport.7z" not in target_paths
@@ -1631,14 +1666,18 @@ class TestContentHashCollisionDetection:
         shared_md5 = "B4ADC74442D00EE0953105C01D42B72B"
 
         e_gif = _make_file_entry(
-            name="slippers.gif", relative="images/slippers.gif",
+            name="slippers.gif",
+            relative="images/slippers.gif",
             storage_name=f"y{shared_md5}.gif",
-            md5=shared_md5, session_id=sid,
+            md5=shared_md5,
+            session_id=sid,
         )
         e_png = _make_file_entry(
-            name="slippers.png", relative="images/slippers.png",
+            name="slippers.png",
+            relative="images/slippers.png",
             storage_name=f"y{shared_md5}.png",
-            md5=shared_md5, session_id=sid,
+            md5=shared_md5,
+            session_id=sid,
         )
 
         result = _deduplicate_by_content_hash([e_gif, e_png])
@@ -1647,7 +1686,8 @@ class TestContentHashCollisionDetection:
         assert e_png in result
 
     def test_same_hash_different_storage_name_no_warning(
-        self, caplog: pytest.LogCaptureFixture,
+        self,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Same hash, different storage names → no WARNING emitted."""
         import logging
@@ -1658,27 +1698,29 @@ class TestContentHashCollisionDetection:
         shared_md5 = "B4ADC74442D00EE0953105C01D42B72B"
 
         e_gif = _make_file_entry(
-            name="slippers.gif", relative="images/slippers.gif",
+            name="slippers.gif",
+            relative="images/slippers.gif",
             storage_name=f"y{shared_md5}.gif",
-            md5=shared_md5, session_id=sid,
+            md5=shared_md5,
+            session_id=sid,
         )
         e_png = _make_file_entry(
-            name="slippers.png", relative="images/slippers.png",
+            name="slippers.png",
+            relative="images/slippers.png",
             storage_name=f"y{shared_md5}.png",
-            md5=shared_md5, session_id=sid,
+            md5=shared_md5,
+            session_id=sid,
         )
 
         with caplog.at_level(logging.WARNING, logger="shruggie_indexer.core.rollback"):
             _deduplicate_by_content_hash([e_gif, e_png])
 
-        collision_warnings = [
-            r for r in caplog.records
-            if "Duplicate content hash" in r.message
-        ]
+        collision_warnings = [r for r in caplog.records if "Duplicate content hash" in r.message]
         assert len(collision_warnings) == 0
 
     def test_same_hash_different_storage_name_plan_rollback(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """plan_rollback preserves both files when hash matches but storage names differ."""
         sid = "aaaa1111-aaaa-4aaa-aaaa-aaaaaaaaaaaa"
@@ -1690,14 +1732,18 @@ class TestContentHashCollisionDetection:
         (source_dir / f"y{shared_md5}.png").write_bytes(b"image-data")
 
         e_gif = _make_file_entry(
-            name="slippers.gif", relative="images/slippers.gif",
+            name="slippers.gif",
+            relative="images/slippers.gif",
             storage_name=f"y{shared_md5}.gif",
-            md5=shared_md5, session_id=sid,
+            md5=shared_md5,
+            session_id=sid,
         )
         e_png = _make_file_entry(
-            name="slippers.png", relative="images/slippers.png",
+            name="slippers.png",
+            relative="images/slippers.png",
             storage_name=f"y{shared_md5}.png",
-            md5=shared_md5, session_id=sid,
+            md5=shared_md5,
+            session_id=sid,
         )
 
         target_dir = tmp_path / "restored"
@@ -1709,14 +1755,14 @@ class TestContentHashCollisionDetection:
         )
 
         restore_targets = {
-            a.target_path for a in plan.actions
-            if a.action_type == "restore" and not a.skip_reason
+            a.target_path for a in plan.actions if a.action_type == "restore" and not a.skip_reason
         }
         assert target_dir / "images" / "slippers.gif" in restore_targets
         assert target_dir / "images" / "slippers.png" in restore_targets
 
     def test_collision_warning_cross_session(
-        self, caplog: pytest.LogCaptureFixture,
+        self,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Cross-session collision → message says 'found in multiple sessions'."""
         import logging
@@ -1727,28 +1773,30 @@ class TestContentHashCollisionDetection:
         shared_storage = f"y{shared_md5}.7z"
 
         e1 = _make_file_entry(
-            name="file.7z", relative="file.7z",
+            name="file.7z",
+            relative="file.7z",
             storage_name=shared_storage,
-            md5=shared_md5, session_id="session-1",
+            md5=shared_md5,
+            session_id="session-1",
         )
         e2 = _make_file_entry(
-            name="file.7z", relative="old/file.7z",
+            name="file.7z",
+            relative="old/file.7z",
             storage_name=shared_storage,
-            md5=shared_md5, session_id="session-2",
+            md5=shared_md5,
+            session_id="session-2",
         )
 
         with caplog.at_level(logging.WARNING, logger="shruggie_indexer.core.rollback"):
             _deduplicate_by_content_hash([e1, e2])
 
-        warning_records = [
-            r for r in caplog.records
-            if "Duplicate content hash" in r.message
-        ]
+        warning_records = [r for r in caplog.records if "Duplicate content hash" in r.message]
         assert len(warning_records) == 1
         assert "found in multiple sessions" in warning_records[0].message
 
     def test_collision_warning_intra_session(
-        self, caplog: pytest.LogCaptureFixture,
+        self,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Intra-session collision → message says 'with conflicting paths in session'."""
         import logging
@@ -1760,23 +1808,24 @@ class TestContentHashCollisionDetection:
         shared_storage = f"y{shared_md5}.7z"
 
         e1 = _make_file_entry(
-            name="file.7z", relative="file.7z",
+            name="file.7z",
+            relative="file.7z",
             storage_name=shared_storage,
-            md5=shared_md5, session_id=sid,
+            md5=shared_md5,
+            session_id=sid,
         )
         e2 = _make_file_entry(
-            name="file.7z", relative="old/file.7z",
+            name="file.7z",
+            relative="old/file.7z",
             storage_name=shared_storage,
-            md5=shared_md5, session_id=sid,
+            md5=shared_md5,
+            session_id=sid,
         )
 
         with caplog.at_level(logging.WARNING, logger="shruggie_indexer.core.rollback"):
             _deduplicate_by_content_hash([e1, e2])
 
-        warning_records = [
-            r for r in caplog.records
-            if "Duplicate content hash" in r.message
-        ]
+        warning_records = [r for r in caplog.records if "Duplicate content hash" in r.message]
         assert len(warning_records) == 1
         assert "with conflicting paths in session" in warning_records[0].message
         assert sid in warning_records[0].message
@@ -1878,8 +1927,7 @@ class TestLegacyPrefixDetection:
             _strip_legacy_prefix([e1, e2], source_dir=Path("mydata"))
 
         info_records = [
-            r for r in caplog.records
-            if "legacy relative path prefix" in r.message.lower()
+            r for r in caplog.records if "legacy relative path prefix" in r.message.lower()
         ]
         assert len(info_records) == 1
         assert "'mydata'" in info_records[0].message
@@ -1898,12 +1946,14 @@ class TestLegacyPrefixDetection:
         (source_dir / "yBBBB0000BBBB0000BBBB0000BBBB0000.nfo").write_bytes(b"nfo")
 
         e1 = _make_file_entry(
-            name="slippers.gif", relative="data/images/slippers.gif",
+            name="slippers.gif",
+            relative="data/images/slippers.gif",
             storage_name="yAAAA0000AAAA0000AAAA0000AAAA0000.gif",
             md5="AAAA0000AAAA0000AAAA0000AAAA0000",
         )
         e2 = _make_file_entry(
-            name="123.nfo", relative="data/123.nfo",
+            name="123.nfo",
+            relative="data/123.nfo",
             storage_name="yBBBB0000BBBB0000BBBB0000BBBB0000.nfo",
             md5="BBBB0000BBBB0000BBBB0000BBBB0000",
         )
@@ -1917,8 +1967,7 @@ class TestLegacyPrefixDetection:
         )
 
         target_paths = {
-            a.target_path for a in plan.actions
-            if a.action_type == "restore" and not a.skip_reason
+            a.target_path for a in plan.actions if a.action_type == "restore" and not a.skip_reason
         }
         # Should be under target_dir directly, NOT target_dir/data/
         assert target_dir / "images" / "slippers.gif" in target_paths
@@ -2024,7 +2073,7 @@ class TestEncodingRestoration:
         from shruggie_indexer.core.rollback import _apply_text_encoding
 
         result = _apply_text_encoding("café", None)
-        assert result == "café".encode("utf-8")
+        assert result == "café".encode()
 
     def test_fallback_to_utf8_on_bad_encoding(self) -> None:
         """Unrecognized encoding name falls back to UTF-8."""
@@ -2045,7 +2094,9 @@ class TestJsonIndentRestoration:
         from shruggie_indexer.models.schema import MetadataAttributes
 
         attrs = MetadataAttributes(
-            type="json_metadata", format="json", transforms=[],
+            type="json_metadata",
+            format="json",
+            transforms=[],
         )
         attrs.json_style = "pretty"
         attrs.json_indent = "    "
@@ -2058,7 +2109,9 @@ class TestJsonIndentRestoration:
         from shruggie_indexer.models.schema import MetadataAttributes
 
         attrs = MetadataAttributes(
-            type="json_metadata", format="json", transforms=[],
+            type="json_metadata",
+            format="json",
+            transforms=[],
         )
         attrs.json_style = "pretty"
         attrs.json_indent = "\t"
@@ -2071,7 +2124,9 @@ class TestJsonIndentRestoration:
         from shruggie_indexer.models.schema import MetadataAttributes
 
         attrs = MetadataAttributes(
-            type="json_metadata", format="json", transforms=[],
+            type="json_metadata",
+            format="json",
+            transforms=[],
         )
         attrs.json_style = "pretty"
         result = _restore_json({"key": "value"}, attrs)
@@ -2084,7 +2139,9 @@ class TestJsonIndentRestoration:
         from shruggie_indexer.models.schema import MetadataAttributes
 
         attrs = MetadataAttributes(
-            type="json_metadata", format="json", transforms=[],
+            type="json_metadata",
+            format="json",
+            transforms=[],
         )
         result = _restore_json({"key": "value"}, attrs)
         assert result == '{"key":"value"}'
@@ -2103,11 +2160,13 @@ class TestLegacyV2SidecarRestoration:
             name=NameObject(text="video.description", hashes=_make_hashset()),
             hashes=_make_hashset(),
             attributes=MetadataAttributes(
-                type="description", format="text", transforms=[],
+                type="description",
+                format="text",
+                transforms=[],
             ),
             data="hello\nworld",
         )
-        data, is_binary = _decode_sidecar_data(meta)
+        data, _is_binary = _decode_sidecar_data(meta)
         assert isinstance(data, bytes)
         assert data == b"hello\nworld"
 
@@ -2121,12 +2180,14 @@ class TestLegacyV2SidecarRestoration:
             name=NameObject(text="video.info.json", hashes=_make_hashset()),
             hashes=_make_hashset(),
             attributes=MetadataAttributes(
-                type="json_metadata", format="json", transforms=[],
+                type="json_metadata",
+                format="json",
+                transforms=[],
             ),
             data={"title": "Test"},
         )
         meta.attributes.json_style = "pretty"
-        data, is_binary = _decode_sidecar_data(meta)
+        data, _is_binary = _decode_sidecar_data(meta)
         assert isinstance(data, bytes)
         text = data.decode("utf-8")
         assert '  "title"' in text
@@ -2162,12 +2223,14 @@ class TestFullRoundTrip:
             name=NameObject(text="test.description", hashes=_make_hashset()),
             hashes=_make_hashset(),
             attributes=MetadataAttributes(
-                type="description", format="text", transforms=[],
+                type="description",
+                format="text",
+                transforms=[],
             ),
             data=text_content,
         )
         meta.encoding = enc
 
-        restored_data, is_binary = _decode_sidecar_data(meta)
+        restored_data, _is_binary = _decode_sidecar_data(meta)
         assert isinstance(restored_data, bytes)
         assert restored_data == original_bytes

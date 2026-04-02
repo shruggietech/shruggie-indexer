@@ -29,11 +29,12 @@ Usage (catalog — cross-session)::
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from shruggie_indexer.models.schema import IndexEntry
 
 __all__ = [

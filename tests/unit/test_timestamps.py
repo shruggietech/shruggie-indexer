@@ -14,9 +14,7 @@ from shruggie_indexer.core.timestamps import extract_timestamps
 
 # ISO 8601 pattern: YYYY-MM-DDTHH:MM:SS with optional fractional seconds
 # and timezone offset.
-_ISO_PATTERN = re.compile(
-    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)$"
-)
+_ISO_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)$")
 
 
 def _make_stat(

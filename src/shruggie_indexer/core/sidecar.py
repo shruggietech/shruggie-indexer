@@ -120,6 +120,7 @@ def _read_text_with_encoding(
     raw = path.read_bytes()
 
     from shruggie_indexer.core.encoding import detect_bytes_encoding
+
     enc = detect_bytes_encoding(raw, detect_charset_enabled=detect_charset_enabled)
 
     # Decode with BOM handling (utf-8-sig strips BOM automatically).
@@ -225,11 +226,13 @@ def _extract_lnk_metadata(path: Path) -> dict[str, str] | None:
 # ---------------------------------------------------------------------------
 
 # Types that use the JSON → text → binary fallback chain.
-_FALLBACK_CHAIN_TYPES: frozenset[str] = frozenset({
-    "description",
-    "generic_metadata",
-    "subtitles",
-})
+_FALLBACK_CHAIN_TYPES: frozenset[str] = frozenset(
+    {
+        "description",
+        "generic_metadata",
+        "subtitles",
+    }
+)
 
 
 def _detect_text_encoding(
@@ -249,6 +252,7 @@ def _detect_text_encoding(
         return None
 
     from shruggie_indexer.core.encoding import detect_file_encoding
+
     return detect_file_encoding(
         path,
         detect_charset_enabled=config.detect_charset,
@@ -670,9 +674,7 @@ def discover_and_parse(
 
     for sibling_path in siblings:
         # Skip the item itself.
-        sibling_resolved = (
-            sibling_path.resolve() if sibling_path.exists() else sibling_path
-        )
+        sibling_resolved = sibling_path.resolve() if sibling_path.exists() else sibling_path
         if sibling_resolved == item_path_resolved:
             continue
 
@@ -706,7 +708,9 @@ def discover_and_parse(
         else:
             # Read the sidecar content using the type-specific strategy.
             data, fmt, transforms, extra_attrs, enc = _read_with_fallback(
-                sibling_path, sidecar_type, config,
+                sibling_path,
+                sidecar_type,
+                config,
             )
 
             # Build the MetadataEntry.

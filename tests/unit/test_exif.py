@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -59,7 +59,9 @@ class TestExtractExifSuccess:
     """Test successful metadata extraction with mocked exiftool."""
 
     def test_successful_extraction_subprocess(
-        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        sample_file: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Mocked subprocess backend returns filtered metadata."""
         import shruggie_indexer.core.exif as exif_mod
@@ -95,7 +97,9 @@ class TestExiftoolAbsent:
     """Test graceful degradation when exiftool is not installed."""
 
     def test_exiftool_absent_returns_none(
-        self, sample_file: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        mock_exiftool: None,
     ) -> None:
         """When exiftool is disabled, extract_exif returns None."""
         config = _cfg(extract_exif=True)
@@ -107,7 +111,9 @@ class TestExtensionGate:
     """Test extension exclusion filtering."""
 
     def test_excluded_extension_skipped(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Files with excluded extensions are skipped without calling exiftool."""
         import shruggie_indexer.core.exif as exif_mod
@@ -129,18 +135,22 @@ class TestKeyFiltering:
     """Test that excluded keys are removed from exiftool output."""
 
     def test_excluded_keys_removed(
-        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        sample_file: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """EXIFTOOL_EXCLUDED_KEYS entries are stripped from output."""
         import shruggie_indexer.core.exif as exif_mod
 
-        data = [{
-            "ExifToolVersion": 12.76,
-            "FileName": "test.txt",
-            "Directory": "/tmp",
-            "File:MIMEType": "text/plain",
-            "Custom:Tag": "value",
-        }]
+        data = [
+            {
+                "ExifToolVersion": 12.76,
+                "FileName": "test.txt",
+                "Directory": "/tmp",
+                "File:MIMEType": "text/plain",
+                "Custom:Tag": "value",
+            }
+        ]
 
         monkeypatch.setattr(exif_mod, "_exiftool_path", "exiftool")
         monkeypatch.setattr(exif_mod, "_pyexiftool_available", False)
@@ -163,31 +173,35 @@ class TestKeyFiltering:
         assert "Custom:Tag" in result
 
     def test_group_prefixed_keys_removed(
-        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        sample_file: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Group-prefixed keys (e.g. System:FileName) are matched by base name."""
         import shruggie_indexer.core.exif as exif_mod
 
-        data = [{
-            "SourceFile": "C:/Users/test/file.txt",
-            "ExifTool:ExifToolVersion": 12.76,
-            "ExifTool:Now": "2026:02:23 12:00:00-05:00",
-            "ExifTool:ProcessingTime": "0.005 s",
-            "System:FileName": "file.txt",
-            "System:Directory": "C:/Users/test",
-            "System:FileSize": "1234 bytes",
-            "System:FileModifyDate": "2026:02:23 12:00:00-05:00",
-            "System:FileAccessDate": "2026:02:23 12:00:00-05:00",
-            "System:FileCreateDate": "2026:02:23 12:00:00-05:00",
-            "System:FilePermissions": "rw-r--r--",
-            "System:FileAttributes": "Regular; Archive",
-            "File:FileType": "TXT",
-            "File:FileTypeExtension": "txt",
-            "File:MIMEType": "text/plain",
-            "File:Encoding": "utf-8",
-            "QuickTime:SomeTag": "preserved",
-            "Composite:Duration": 120.5,
-        }]
+        data = [
+            {
+                "SourceFile": "C:/Users/test/file.txt",
+                "ExifTool:ExifToolVersion": 12.76,
+                "ExifTool:Now": "2026:02:23 12:00:00-05:00",
+                "ExifTool:ProcessingTime": "0.005 s",
+                "System:FileName": "file.txt",
+                "System:Directory": "C:/Users/test",
+                "System:FileSize": "1234 bytes",
+                "System:FileModifyDate": "2026:02:23 12:00:00-05:00",
+                "System:FileAccessDate": "2026:02:23 12:00:00-05:00",
+                "System:FileCreateDate": "2026:02:23 12:00:00-05:00",
+                "System:FilePermissions": "rw-r--r--",
+                "System:FileAttributes": "Regular; Archive",
+                "File:FileType": "TXT",
+                "File:FileTypeExtension": "txt",
+                "File:MIMEType": "text/plain",
+                "File:Encoding": "utf-8",
+                "QuickTime:SomeTag": "preserved",
+                "Composite:Duration": 120.5,
+            }
+        ]
 
         monkeypatch.setattr(exif_mod, "_exiftool_path", "exiftool")
         monkeypatch.setattr(exif_mod, "_pyexiftool_available", False)
@@ -228,14 +242,31 @@ class TestKeyFiltering:
         """EXIFTOOL_EXCLUDED_KEYS includes all required base key names."""
         required = {
             # Original v1 jq deletion list
-            "ExifToolVersion", "FileSequence", "NewGUID", "Directory",
-            "FileName", "FilePath", "BaseName", "FilePermissions",
+            "ExifToolVersion",
+            "FileSequence",
+            "NewGUID",
+            "Directory",
+            "FileName",
+            "FilePath",
+            "BaseName",
+            "FilePermissions",
             # Expanded set
-            "SourceFile", "FileSize", "FileModifyDate", "FileAccessDate",
-            "FileCreateDate", "FileAttributes", "FileDeviceNumber",
-            "FileInodeNumber", "FileHardLinks", "FileUserID",
-            "FileGroupID", "FileDeviceID", "FileBlockSize",
-            "FileBlockCount", "Now", "ProcessingTime",
+            "SourceFile",
+            "FileSize",
+            "FileModifyDate",
+            "FileAccessDate",
+            "FileCreateDate",
+            "FileAttributes",
+            "FileDeviceNumber",
+            "FileInodeNumber",
+            "FileHardLinks",
+            "FileUserID",
+            "FileGroupID",
+            "FileDeviceID",
+            "FileBlockSize",
+            "FileBlockCount",
+            "Now",
+            "ProcessingTime",
             # ExifTool informational error field
             "Error",
         }
@@ -368,16 +399,20 @@ class TestConfigurableExcludeKeys:
         assert config.exiftool_exclude_keys == frozenset({"SourceFile"})
 
     def test_custom_exclusion_applied_in_extract(
-        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        sample_file: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Custom exclusion set is applied during extract_exif."""
         import shruggie_indexer.core.exif as exif_mod
 
-        data = [{
-            "File:MIMEType": "text/plain",
-            "Copyright": "2026 Test",
-            "SourceFile": "/tmp/test.txt",
-        }]
+        data = [
+            {
+                "File:MIMEType": "text/plain",
+                "Copyright": "2026 Test",
+                "SourceFile": "/tmp/test.txt",
+            }
+        ]
 
         monkeypatch.setattr(exif_mod, "_exiftool_path", "exiftool")
         monkeypatch.setattr(exif_mod, "_pyexiftool_available", False)
@@ -420,7 +455,9 @@ class TestTimeoutHandling:
     """Test subprocess timeout handling."""
 
     def test_timeout_returns_none(
-        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        sample_file: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """subprocess.TimeoutExpired results in None, not an exception."""
         import shruggie_indexer.core.exif as exif_mod
@@ -443,7 +480,9 @@ class TestMalformedJson:
     """Test malformed JSON handling."""
 
     def test_malformed_json_returns_none(
-        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        sample_file: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Invalid JSON from exiftool results in None."""
         import shruggie_indexer.core.exif as exif_mod
@@ -468,7 +507,9 @@ class TestBackendReset:
     """Test that batch backend failures result in reset."""
 
     def test_batch_error_resets_helper(
-        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        sample_file: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """When pyexiftool helper raises, it is set to None for retry."""
         import shruggie_indexer.core.exif as exif_mod
@@ -500,23 +541,27 @@ class TestNonZeroExitMetadataRecovery:
     captures this metadata instead of discarding it (§3.3).
     """
 
-    _7Z_EXIFTOOL_RESPONSE = [{
-        "SourceFile": "FeedsExport.7z",
-        "ExifTool:ExifToolVersion": 13.10,
-        "ExifTool:Now": "2026:02:23 19:35:11-05:00",
-        "ExifTool:Error": "Unknown file type",
-        "ExifTool:ProcessingTime": "0.366 s",
-        "System:FileSize": "728 MB",
-        "System:FileModifyDate": "2026:02:09 16:14:22-05:00",
-        "System:FileAccessDate": "2026:02:23 19:35:11-05:00",
-        "System:FileCreateDate": "2026:02:23 19:28:39-05:00",
-        "System:FileAttributes": "Regular; (none); Archive",
-        # MIMEType survives key filtering — validates metadata recovery.
-        "File:MIMEType": "application/x-7z-compressed",
-    }]
+    _7Z_EXIFTOOL_RESPONSE: ClassVar[list[dict[str, str | float]]] = [
+        {
+            "SourceFile": "FeedsExport.7z",
+            "ExifTool:ExifToolVersion": 13.10,
+            "ExifTool:Now": "2026:02:23 19:35:11-05:00",
+            "ExifTool:Error": "Unknown file type",
+            "ExifTool:ProcessingTime": "0.366 s",
+            "System:FileSize": "728 MB",
+            "System:FileModifyDate": "2026:02:09 16:14:22-05:00",
+            "System:FileAccessDate": "2026:02:23 19:35:11-05:00",
+            "System:FileCreateDate": "2026:02:23 19:28:39-05:00",
+            "System:FileAttributes": "Regular; (none); Archive",
+            # MIMEType survives key filtering — validates metadata recovery.
+            "File:MIMEType": "application/x-7z-compressed",
+        }
+    ]
 
     def test_batch_recovers_metadata_on_nonzero_exit(
-        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        sample_file: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Batch backend recovers valid JSON from ExifToolExecuteError."""
         import shruggie_indexer.core.exif as exif_mod
@@ -525,7 +570,7 @@ class TestNonZeroExitMetadataRecovery:
         stdout_json = json.dumps(self._7Z_EXIFTOOL_RESPONSE)
 
         class FakeExifToolExecuteError(Exception):
-            def __init__(self_inner) -> None:  # noqa: N805, ANN101
+            def __init__(self_inner) -> None:
                 super().__init__("execute returned a non-zero exit status: 1")
                 self_inner.returncode = 1
                 self_inner.stdout = stdout_json
@@ -559,7 +604,9 @@ class TestNonZeroExitMetadataRecovery:
         assert exif_mod._batch_helper is mock_helper
 
     def test_subprocess_recovers_metadata_on_nonzero_exit(
-        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        sample_file: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Subprocess fallback recovers valid JSON on exit code 1."""
         import shruggie_indexer.core.exif as exif_mod
@@ -585,7 +632,9 @@ class TestNonZeroExitMetadataRecovery:
         assert "ExifTool:Error" not in result
 
     def test_nonzero_exit_no_stdout_returns_none(
-        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        sample_file: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Non-zero exit with no stdout data returns None (true failure)."""
         import shruggie_indexer.core.exif as exif_mod
@@ -606,7 +655,9 @@ class TestNonZeroExitMetadataRecovery:
         assert result is None
 
     def test_batch_nonzero_no_stdout_resets_helper(
-        self, sample_file: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        sample_file: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Batch error with no recoverable stdout resets the helper."""
         import shruggie_indexer.core.exif as exif_mod

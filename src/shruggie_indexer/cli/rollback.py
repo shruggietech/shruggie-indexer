@@ -5,7 +5,7 @@ Provides a thin Click command that delegates to the core rollback engine
 resolution (e.g. ``--target`` defaults to the parent of the meta2 path), and
 human-readable output formatting.
 
-See spec sections 3.1–3.7 of batch 005 for the full design.
+See spec sections 3.1-3.7 of batch 005 for the full design.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ __all__ = ["rollback_cmd"]
 # ---------------------------------------------------------------------------
 
 
-def _print_plan_summary(plan) -> None:  # noqa: ANN001 — avoid core import at module level
+def _print_plan_summary(plan) -> None:
     """Print a human-readable summary of the rollback plan before execution."""
     stats = plan.stats
     lines: list[str] = []
@@ -44,16 +44,14 @@ def _print_plan_summary(plan) -> None:  # noqa: ANN001 — avoid core import at 
     if stats.directories_to_create:
         lines.append(f"  Directories to create:{stats.directories_to_create}")
     skipped_total = (
-        stats.skipped_unresolvable
-        + stats.skipped_conflict
-        + stats.skipped_already_exists
+        stats.skipped_unresolvable + stats.skipped_conflict + stats.skipped_already_exists
     )
     if skipped_total:
         lines.append(f"  Skipped:              {skipped_total}")
     click.echo("\n".join(lines), err=True)
 
 
-def _print_result_summary(result) -> None:  # noqa: ANN001
+def _print_result_summary(result) -> None:
     """Print a human-readable summary of the rollback execution result."""
     parts: list[str] = []
     parts.append(f"{result.restored} restored")
@@ -91,10 +89,7 @@ def _print_result_summary(result) -> None:  # noqa: ANN001
     "--target",
     type=click.Path(),
     default=None,
-    help=(
-        "Target directory for restored files. "
-        "[default: parent directory of META2_PATH]"
-    ),
+    help=("Target directory for restored files. [default: parent directory of META2_PATH]"),
 )
 @click.option(
     "--source",
@@ -107,18 +102,14 @@ def _print_result_summary(result) -> None:  # noqa: ANN001
     is_flag=True,
     default=False,
     help=(
-        "Search META2_PATH subdirectories for sidecar files "
-        "(only when META2_PATH is a directory)."
+        "Search META2_PATH subdirectories for sidecar files (only when META2_PATH is a directory)."
     ),
 )
 @click.option(
     "--flat",
     is_flag=True,
     default=False,
-    help=(
-        "Restore files using original names only, without "
-        "reconstructing directory structure."
-    ),
+    help=("Restore files using original names only, without reconstructing directory structure."),
 )
 @click.option(
     "--dry-run",
@@ -190,7 +181,13 @@ def rollback_cmd(
     quiet: bool,
     log_file: str | None,
 ) -> None:
-    """Restore files from shruggie-indexer metadata to their original names and directory structure."""
+    """Restore files from shruggie-indexer metadata to their original names.
+
+    Preserves original directory structure unless ``--flat`` is enabled.
+    """
+    # ── Logging ─────────────────────────────────────────────────────────
+    import logging as _logging
+
     from shruggie_indexer.core.rollback import (
         execute_rollback,
         load_sidecar,
@@ -201,9 +198,6 @@ def rollback_cmd(
         IndexerConfigError,
         IndexerTargetError,
     )
-
-    # ── Logging ─────────────────────────────────────────────────────────
-    import logging as _logging
 
     configure_logging(verbose=verbose, quiet=quiet, log_file=log_file)
     _logger = _logging.getLogger("shruggie_indexer")

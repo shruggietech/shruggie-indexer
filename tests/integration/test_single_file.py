@@ -31,7 +31,9 @@ class TestSingleFileEndToEnd:
     """End-to-end tests for indexing a single file."""
 
     def test_index_real_file(
-        self, sample_file: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        mock_exiftool: None,
     ) -> None:
         """Indexing a real temp file produces a valid IndexEntry."""
         config = _cfg()
@@ -42,7 +44,9 @@ class TestSingleFileEndToEnd:
         assert entry.type == "file"
 
     def test_structure_has_all_required_keys(
-        self, sample_file: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        mock_exiftool: None,
     ) -> None:
         """The entry's to_dict() has all 11 required top-level keys."""
         config = _cfg()
@@ -50,14 +54,24 @@ class TestSingleFileEndToEnd:
         d = entry.to_dict()
 
         required_keys = {
-            "schema_version", "id", "id_algorithm", "type", "name",
-            "extension", "size", "hashes", "file_system", "timestamps",
+            "schema_version",
+            "id",
+            "id_algorithm",
+            "type",
+            "name",
+            "extension",
+            "size",
+            "hashes",
+            "file_system",
+            "timestamps",
             "attributes",
         }
         assert required_keys.issubset(d.keys())
 
     def test_hash_correctness(
-        self, sample_file: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        mock_exiftool: None,
     ) -> None:
         """Hashes match hashlib-computed values for the same content."""
         config = _cfg()
@@ -72,7 +86,9 @@ class TestSingleFileEndToEnd:
         assert entry.hashes.sha256 == expected_sha256
 
     def test_timestamp_plausibility(
-        self, tmp_path: Path, mock_exiftool: None,
+        self,
+        tmp_path: Path,
+        mock_exiftool: None,
     ) -> None:
         """Timestamps are plausible (within a reasonable window of 'now')."""
         f = tmp_path / "fresh.txt"
@@ -86,7 +102,9 @@ class TestSingleFileEndToEnd:
         assert abs(now_ms - entry.timestamps.modified.unix) < 60_000
 
     def test_extension_extraction(
-        self, sample_file: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        mock_exiftool: None,
     ) -> None:
         """Extension is correctly extracted from the filename."""
         config = _cfg()
@@ -94,7 +112,9 @@ class TestSingleFileEndToEnd:
         assert entry.extension == "txt"
 
     def test_schema_version_value(
-        self, sample_file: Path, mock_exiftool: None,
+        self,
+        sample_file: Path,
+        mock_exiftool: None,
     ) -> None:
         """schema_version is always 4."""
         config = _cfg()

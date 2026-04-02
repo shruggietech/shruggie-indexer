@@ -6,10 +6,6 @@ behavior, stats calculation, empty-tree edge case, single-file edge case.
 
 from __future__ import annotations
 
-from typing import Any
-
-import pytest
-
 from shruggie_indexer.core.dedup import (
     DedupRegistry,
     apply_dedup,
@@ -81,7 +77,7 @@ def _make_dir_entry(
         hashes=None,
         file_system=FileSystemObject(relative=name, parent=None),
         timestamps=_make_ts(),
-        attributes=AttributesObject(is_link=False, storage_name=f"x0000000000000000000000000000000"),
+        attributes=AttributesObject(is_link=False, storage_name="x0000000000000000000000000000000"),
         items=items,
     )
 

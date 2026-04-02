@@ -14,10 +14,11 @@ See spec §6.7 and §7.5 for sidecar type definitions.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     import LnkParse3  # type: ignore[import-untyped]
 
 __all__ = [
@@ -129,9 +130,7 @@ def _extract_target_path(lnk: object, json_data: dict) -> str | None:
 
     # Network path
     common_suffix = _safe_str(link_info.get("common_path_suffix"))
-    net_name = _safe_str(
-        link_info.get("common_network_relative_link", {}).get("net_name")
-    )
+    net_name = _safe_str(link_info.get("common_network_relative_link", {}).get("net_name"))
     if net_name and common_suffix:
         return f"{net_name}\\{common_suffix}"
     if net_name:

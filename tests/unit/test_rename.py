@@ -8,8 +8,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import pytest
-
 from shruggie_indexer.core.rename import rename_item
 from shruggie_indexer.models.schema import (
     AttributesObject,
@@ -102,7 +100,7 @@ class TestCollisionDetection:
     """Tests for collision detection."""
 
     def test_collision_skips_with_warning(self, tmp_path: Path) -> None:
-        """Renaming when a different file occupies the target logs WARNING and returns original path."""
+        """Renaming skips when a different file already occupies the target path."""
         original = tmp_path / "original.txt"
         original.write_text("original content", encoding="utf-8")
 

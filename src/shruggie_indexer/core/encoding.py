@@ -77,7 +77,7 @@ def detect_line_endings(data: bytes) -> str | None:
     # Strip BOM prefix if present.
     for bom_bytes, _ in _BOM_TABLE:
         if data.startswith(bom_bytes):
-            data = data[len(bom_bytes):]
+            data = data[len(bom_bytes) :]
             break
 
     has_crlf = b"\r\n" in data
@@ -126,7 +126,7 @@ def detect_charset(data: bytes) -> tuple[str | None, float | None]:
 
     try:
         result = chardet.detect(data)
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.debug("chardet detection failed", exc_info=True)
         return None, None
 

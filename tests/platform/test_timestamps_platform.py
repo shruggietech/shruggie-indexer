@@ -107,8 +107,7 @@ def test_creation_time_accuracy(tmp_path: Path) -> None:
     stat = p.stat()
     creation = _get_creation_time(stat)
     assert before - 1.0 <= creation <= after + 1.0, (
-        f"Creation time {creation} not within tolerance of "
-        f"[{before - 1.0}, {after + 1.0}]"
+        f"Creation time {creation} not within tolerance of [{before - 1.0}, {after + 1.0}]"
     )
 
 
@@ -131,7 +130,7 @@ def test_timestamp_timezone_handling(tmp_path: Path) -> None:
         pair = getattr(ts, pair_name)
         # ISO string must contain a timezone offset ('+' or '-' or 'Z').
         iso = pair.iso
-        assert ("+" in iso or "-" in iso[10:] or iso.endswith("Z")), (
+        assert "+" in iso or "-" in iso[10:] or iso.endswith("Z"), (
             f"timestamps.{pair_name}.iso missing timezone offset: {iso}"
         )
         # Unix ms must be a positive integer.

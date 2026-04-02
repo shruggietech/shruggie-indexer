@@ -19,10 +19,10 @@ from click.testing import CliRunner
 from shruggie_indexer._version import __version__
 from shruggie_indexer.cli.main import main
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def runner() -> CliRunner:
@@ -33,6 +33,7 @@ def runner() -> CliRunner:
 # ---------------------------------------------------------------------------
 # Click entry-point tests (in-process)
 # ---------------------------------------------------------------------------
+
 
 class TestClickEntryPoint:
     """Verify the Click group is callable and produces expected output."""
@@ -73,6 +74,7 @@ class TestClickEntryPoint:
 # ``python -m`` entry-point test (out-of-process)
 # ---------------------------------------------------------------------------
 
+
 class TestModuleEntryPoint:
     """Verify ``python -m shruggie_indexer`` works correctly."""
 
@@ -85,9 +87,7 @@ class TestModuleEntryPoint:
             timeout=30,
         )
         assert result.returncode == 0, (
-            f"returncode={result.returncode}\n"
-            f"stdout={result.stdout}\n"
-            f"stderr={result.stderr}"
+            f"returncode={result.returncode}\nstdout={result.stdout}\nstderr={result.stderr}"
         )
         assert "usage" in result.stdout.lower()
 
@@ -107,17 +107,14 @@ class TestModuleEntryPoint:
 # Direct script entry-point test (simulates PyInstaller path)
 # ---------------------------------------------------------------------------
 
+
 class TestDirectScriptEntryPoint:
     """Verify ``python cli/main.py`` runs correctly (PyInstaller path)."""
 
     def test_cli_main_direct_help(self) -> None:
         """Running cli/main.py directly must produce help (via __name__ guard)."""
         cli_main_path = (
-            Path(__file__).resolve().parents[2]
-            / "src"
-            / "shruggie_indexer"
-            / "cli"
-            / "main.py"
+            Path(__file__).resolve().parents[2] / "src" / "shruggie_indexer" / "cli" / "main.py"
         )
         if not cli_main_path.exists():
             pytest.skip(f"cli/main.py not found at {cli_main_path}")
@@ -130,8 +127,6 @@ class TestDirectScriptEntryPoint:
             env={**__import__("os").environ, "PYTHONPATH": str(cli_main_path.parents[2])},
         )
         assert result.returncode == 0, (
-            f"returncode={result.returncode}\n"
-            f"stdout={result.stdout}\n"
-            f"stderr={result.stderr}"
+            f"returncode={result.returncode}\nstdout={result.stdout}\nstderr={result.stderr}"
         )
         assert len(result.stdout.strip()) > 0, "Direct script invocation produced no output"

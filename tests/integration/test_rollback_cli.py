@@ -90,7 +90,9 @@ class TestRollbackRenamedDirectory:
     """Index with rename → rollback → verify tree matches original."""
 
     def test_rollback_renamed_directory(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         workdir = _make_renamed_workdir(tmp_path)
         target = tmp_path / "restored"
@@ -114,7 +116,9 @@ class TestRollbackWithDedup:
     """Index with rename + dedup → rollback → verify all copies restored."""
 
     def test_rollback_with_dedup(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         workdir = tmp_path / "workdir"
         shutil.copytree(FIXTURES / "deduplicated", workdir)
@@ -139,7 +143,9 @@ class TestRollbackV4Output:
     """Rollback from v4 _idx.json output uses uniform file copy behavior."""
 
     def test_rollback_v4_idx_output(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         workdir = _make_v4_workdir(tmp_path)
         target = tmp_path / "restored_v4"
@@ -161,7 +167,9 @@ class TestRollbackAggregateOutput:
     """Rollback from aggregate output file + explicit --source."""
 
     def test_rollback_aggregate_output(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         # Copy aggregate meta2 and renamed files as source
         workdir = tmp_path / "workdir"
@@ -182,8 +190,10 @@ class TestRollbackAggregateOutput:
             [
                 "rollback",
                 str(workdir / "photos_directorymeta2.json"),
-                "--target", str(target),
-                "--source", str(source),
+                "--target",
+                str(target),
+                "--source",
+                str(source),
                 "--no-verify",
             ],
             catch_exceptions=False,
@@ -195,7 +205,9 @@ class TestRollbackFlatMode:
     """--flat restores files without directory structure."""
 
     def test_rollback_flat_mode(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         workdir = _make_renamed_workdir(tmp_path)
         target = tmp_path / "flat_output"
@@ -205,8 +217,10 @@ class TestRollbackFlatMode:
         result = runner.invoke(
             main,
             [
-                "rollback", str(meta2),
-                "--target", str(target),
+                "rollback",
+                str(meta2),
+                "--target",
+                str(target),
                 "--flat",
                 "--no-verify",
             ],
@@ -223,7 +237,9 @@ class TestRollbackFlatCollision:
     """--flat with name collisions produces warnings and skips."""
 
     def test_rollback_flat_collision(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         workdir = tmp_path / "workdir"
         shutil.copytree(FIXTURES / "renamed", workdir)
@@ -237,8 +253,10 @@ class TestRollbackFlatCollision:
         result = runner.invoke(
             main,
             [
-                "rollback", str(meta2),
-                "--target", str(target),
+                "rollback",
+                str(meta2),
+                "--target",
+                str(target),
                 "--flat",
                 "--no-verify",
             ],
@@ -253,7 +271,9 @@ class TestRollbackMixedSessionsWarning:
     """Structured mode with mixed session_id emits warning to stderr."""
 
     def test_rollback_mixed_sessions_warning(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         workdir = tmp_path / "workdir"
         shutil.copytree(FIXTURES / "mixed-sessions", workdir)
@@ -263,8 +283,10 @@ class TestRollbackMixedSessionsWarning:
         result = runner.invoke(
             main,
             [
-                "rollback", str(workdir),
-                "--target", str(target),
+                "rollback",
+                str(workdir),
+                "--target",
+                str(target),
                 "--no-verify",
             ],
             catch_exceptions=False,
@@ -278,7 +300,9 @@ class TestRollbackTargetDefaultFile:
     """Omitting --target for a single meta2 file defaults to its parent directory."""
 
     def test_rollback_target_default_file(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         workdir = _make_renamed_workdir(tmp_path)
         meta2 = workdir / "y0EA30B0C7E392876DAAA2D55EF6AEA3E.exe_meta2.json"
@@ -300,7 +324,9 @@ class TestRollbackTargetDefaultDir:
     """Omitting --target for a directory defaults to that directory."""
 
     def test_rollback_target_default_dir(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         workdir = tmp_path / "workdir"
         shutil.copytree(FIXTURES / "renamed", workdir)
@@ -323,7 +349,9 @@ class TestRollbackDryRun:
     """Dry-run produces log output, no filesystem writes."""
 
     def test_rollback_dry_run(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         workdir = _make_renamed_workdir(tmp_path)
         target = tmp_path / "dry_run_target"
@@ -333,8 +361,10 @@ class TestRollbackDryRun:
         result = runner.invoke(
             main,
             [
-                "rollback", str(meta2),
-                "--target", str(target),
+                "rollback",
+                str(meta2),
+                "--target",
+                str(target),
                 "--dry-run",
                 "--no-verify",
                 "-v",
@@ -353,7 +383,9 @@ class TestRollbackNoVerify:
     """--no-verify skips hash computation."""
 
     def test_rollback_no_verify(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         workdir = _make_renamed_workdir(tmp_path)
         target = tmp_path / "restored"
@@ -363,8 +395,10 @@ class TestRollbackNoVerify:
         result = runner.invoke(
             main,
             [
-                "rollback", str(meta2),
-                "--target", str(target),
+                "rollback",
+                str(meta2),
+                "--target",
+                str(target),
                 "--no-verify",
             ],
             catch_exceptions=False,
@@ -378,7 +412,9 @@ class TestRollbackForceOverwrite:
     """--force overwrites existing target files."""
 
     def test_rollback_force_overwrite(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         workdir = _make_renamed_workdir(tmp_path)
         target = tmp_path / "restored"
@@ -390,8 +426,10 @@ class TestRollbackForceOverwrite:
         result = runner.invoke(
             main,
             [
-                "rollback", str(meta2),
-                "--target", str(target),
+                "rollback",
+                str(meta2),
+                "--target",
+                str(target),
                 "--no-verify",
                 "--force",
             ],
@@ -410,7 +448,9 @@ class TestRollbackSkipDuplicates:
     """--skip-duplicates restores only canonical entries."""
 
     def test_rollback_skip_duplicates(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         workdir = tmp_path / "workdir"
         shutil.copytree(FIXTURES / "deduplicated", workdir)
@@ -421,8 +461,10 @@ class TestRollbackSkipDuplicates:
         result = runner.invoke(
             main,
             [
-                "rollback", str(meta2),
-                "--target", str(target),
+                "rollback",
+                str(meta2),
+                "--target",
+                str(target),
                 "--no-verify",
                 "--skip-duplicates",
             ],
@@ -440,7 +482,9 @@ class TestRollbackV1Rejection:
     """v1 sidecar input produces clear error and exit code 2."""
 
     def test_rollback_v1_rejection(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         workdir = tmp_path / "workdir"
         workdir.mkdir()
@@ -467,7 +511,9 @@ class TestRollbackBackwardCompat:
     """shruggie-indexer /path (no subcommand) still invokes index."""
 
     def test_rollback_backward_compat(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         target = tmp_path / "hello.txt"
         target.write_text("hello world", encoding="utf-8")
@@ -507,7 +553,9 @@ class TestRollbackTimestampRestoration:
     """Restored files have correct mtime and atime."""
 
     def test_rollback_timestamp_restoration(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         workdir = _make_renamed_workdir(tmp_path)
         target = tmp_path / "restored"
@@ -517,8 +565,10 @@ class TestRollbackTimestampRestoration:
         result = runner.invoke(
             main,
             [
-                "rollback", str(meta2),
-                "--target", str(target),
+                "rollback",
+                str(meta2),
+                "--target",
+                str(target),
                 "--no-verify",
             ],
             catch_exceptions=False,

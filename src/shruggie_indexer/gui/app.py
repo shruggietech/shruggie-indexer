@@ -25,12 +25,14 @@ import time
 import tkinter as tk
 import uuid
 import webbrowser
-from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
 from tkinter import filedialog, messagebox
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 import customtkinter as ctk
 
@@ -1435,15 +1437,15 @@ class OperationsPage(ctk.CTkFrame):
             padx=(0, 6),
         )
         self._type_var = ctk.StringVar(value="auto")
-        _TARGET_TYPE_LABELS = ["Auto", "File", "Directory"]
-        _TARGET_TYPE_MAP = {"Auto": "auto", "File": "file", "Directory": "directory"}
-        _TARGET_TYPE_RMAP = {v: k for k, v in _TARGET_TYPE_MAP.items()}
-        self._target_type_map = _TARGET_TYPE_MAP
-        self._target_type_rmap = _TARGET_TYPE_RMAP
+        target_type_labels = ["Auto", "File", "Directory"]
+        target_type_map = {"Auto": "auto", "File": "file", "Directory": "directory"}
+        target_type_rmap = {v: k for k, v in target_type_map.items()}
+        self._target_type_map = target_type_map
+        self._target_type_rmap = target_type_rmap
 
         self._type_menu = _CtkOptionMenu(
             opts_frame,
-            values=_TARGET_TYPE_LABELS,
+            values=target_type_labels,
             command=self._on_type_menu_changed,
             width=120,
         )

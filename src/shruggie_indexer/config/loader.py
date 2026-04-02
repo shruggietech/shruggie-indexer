@@ -241,8 +241,7 @@ def _merge_toml(config_dict: dict[str, Any], toml_data: dict[str, Any]) -> None:
     # Legacy metadata_identify section is ignored in v4.
     if "metadata_identify" in toml_data:
         logger.warning(
-            "Configuration key 'metadata_identify' is ignored in v4; "
-            "use sidecar_rules instead"
+            "Configuration key 'metadata_identify' is ignored in v4; use sidecar_rules instead"
         )
 
     # Metadata exclude patterns section

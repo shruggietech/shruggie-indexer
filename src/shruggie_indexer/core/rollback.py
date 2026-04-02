@@ -703,9 +703,7 @@ def _deduplicate_by_content_hash(
     session_counts: dict[str, int] = {}
     for entry in entries:
         if entry.session_id is not None:
-            session_counts[entry.session_id] = (
-                session_counts.get(entry.session_id, 0) + 1
-            )
+            session_counts[entry.session_id] = session_counts.get(entry.session_id, 0) + 1
 
     majority_session: str | None = None
     if session_counts:
@@ -760,14 +758,9 @@ def _deduplicate_by_content_hash(
             if entry is not winner:
                 discarded_ids.add(id(entry))
                 # Construct an accurate description of the collision scope
-                session_ids = {
-                    e.session_id for e in group if e.session_id is not None
-                }
+                session_ids = {e.session_id for e in group if e.session_id is not None}
                 if len(session_ids) > 1:
-                    scope_msg = (
-                        f"Duplicate content hash {content_hash} "
-                        f"found in multiple sessions."
-                    )
+                    scope_msg = f"Duplicate content hash {content_hash} found in multiple sessions."
                 elif len(session_ids) == 1:
                     scope_msg = (
                         f"Duplicate content hash {content_hash} "
@@ -780,9 +773,7 @@ def _deduplicate_by_content_hash(
                         f"with conflicting paths (no session IDs)."
                     )
                 logger.warning(
-                    "%s\n"
-                    "  Keeping: %s (session %s)\n"
-                    "  Discarding: %s (session %s)",
+                    "%s\n  Keeping: %s (session %s)\n  Discarding: %s (session %s)",
                     scope_msg,
                     winner.file_system.relative,
                     winner.session_id or "<none>",
@@ -814,9 +805,7 @@ def _resolve_hash_collision(
 
     # Rule 1: entries with session_ids — prefer majority
     if with_session and majority_session is not None:
-        majority_entries = [
-            e for e in with_session if e.session_id == majority_session
-        ]
+        majority_entries = [e for e in with_session if e.session_id == majority_session]
         if majority_entries:
             return majority_entries[0]
 
@@ -880,8 +869,7 @@ def _strip_legacy_prefix(
         return  # Common prefix is a legitimate subdirectory, not legacy
 
     logger.info(
-        "Detected legacy relative path prefix '%s'. "
-        "Stripping prefix for rollback.",
+        "Detected legacy relative path prefix '%s'. Stripping prefix for rollback.",
         prefix,
     )
 
@@ -889,7 +877,8 @@ def _strip_legacy_prefix(
         rel = entry.file_system.relative.replace("\\", "/")
         if rel == prefix:
             entry.file_system = FileSystemObject(
-                relative=".", parent=entry.file_system.parent,
+                relative=".",
+                parent=entry.file_system.parent,
             )
         elif rel.startswith(prefix + "/"):
             entry.file_system = FileSystemObject(
@@ -1065,7 +1054,11 @@ def plan_rollback(
 
         # Conflict check — target already exists on disk
         skip = _check_conflict(
-            target_path, entry, verify, force, stats,
+            target_path,
+            entry,
+            verify,
+            force,
+            stats,
         )
         if skip is not None:
             actions.append(
@@ -1107,8 +1100,16 @@ def plan_rollback(
                 if meta.origin != "sidecar":
                     continue
                 _plan_legacy_sidecar_restore(
-                    meta, entry, target_dir, flat, actions, stats,
-                    dirs_needed, flat_targets_seen, force, verify,
+                    meta,
+                    entry,
+                    target_dir,
+                    flat,
+                    actions,
+                    stats,
+                    dirs_needed,
+                    flat_targets_seen,
+                    force,
+                    verify,
                 )
 
     # Directory actions (structured mode only)
@@ -1118,8 +1119,12 @@ def plan_rollback(
                 RollbackAction(
                     source_path=None,
                     target_path=d,
-                    entry=entries[0] if entries else IndexEntry(
-                        schema_version=2, id="", id_algorithm="md5",
+                    entry=entries[0]
+                    if entries
+                    else IndexEntry(
+                        schema_version=2,
+                        id="",
+                        id_algorithm="md5",
                         type="directory",
                         name=NameObject(text=None, hashes=None),
                         extension=None,
@@ -1140,10 +1145,7 @@ def plan_rollback(
 
     # Mixed-session warning (structured mode only)
     if not flat:
-        session_ids = {
-            e.session_id for e in entries
-            if e.session_id is not None
-        }
+        session_ids = {e.session_id for e in entries if e.session_id is not None}
         if len(session_ids) > 1:
             n = len(entries)
             m = len(session_ids)
@@ -1404,16 +1406,10 @@ def execute_rollback(
     result = RollbackResult()
 
     # Sort actions by execution phase
-    mkdir_actions = [
-        a for a in plan.actions if a.action_type == "mkdir" and not a.skip_reason
-    ]
-    restore_actions = [
-        a for a in plan.actions if a.action_type == "restore" and not a.skip_reason
-    ]
+    mkdir_actions = [a for a in plan.actions if a.action_type == "mkdir" and not a.skip_reason]
+    restore_actions = [a for a in plan.actions if a.action_type == "restore" and not a.skip_reason]
     dup_actions = [
-        a
-        for a in plan.actions
-        if a.action_type == "duplicate_restore" and not a.skip_reason
+        a for a in plan.actions if a.action_type == "duplicate_restore" and not a.skip_reason
     ]
     sidecar_actions = [
         a for a in plan.actions if a.action_type == "sidecar_restore" and not a.skip_reason
@@ -1423,10 +1419,7 @@ def execute_rollback(
     result.skipped = len(skipped_actions)
 
     total_actionable = (
-        len(mkdir_actions)
-        + len(restore_actions)
-        + len(dup_actions)
-        + len(sidecar_actions)
+        len(mkdir_actions) + len(restore_actions) + len(dup_actions) + len(sidecar_actions)
     )
     completed = 0
 
@@ -1620,9 +1613,7 @@ def _execute_sidecar_write(
     payload = action.legacy_payload
     if payload is None:
         result.failed += 1
-        result.errors.append(
-            f"legacy sidecar restore {action.target_path}: missing payload"
-        )
+        result.errors.append(f"legacy sidecar restore {action.target_path}: missing payload")
         return
 
     sidecar_name = (

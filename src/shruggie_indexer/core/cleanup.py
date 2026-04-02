@@ -70,8 +70,7 @@ def _legacy_candidates(output_path: Path, item_type: str) -> list[Path]:
     if item_type == "directory":
         base_name = output_path.name.removesuffix(OUTPUT_SUFFIX_DIR)
         return [
-            output_path.parent / f"{base_name}{suffix}"
-            for suffix in _LEGACY_DIRECTORY_SUFFIXES
+            output_path.parent / f"{base_name}{suffix}" for suffix in _LEGACY_DIRECTORY_SUFFIXES
         ]
 
     base_name = output_path.name.removesuffix(OUTPUT_SUFFIX_FILE)

@@ -46,6 +46,7 @@ def no_sidecar_detection_config():
 
 # ── Helpers ─────────────────────────────────────────────────────────────
 
+
 def _collect_entries(entry):
     entries = [entry]
     if entry.items:
@@ -69,7 +70,9 @@ class TestListChildrenExcludePatterns:
     """Validate that list_children() filters indexer output artifacts."""
 
     def test_list_children_excludes_meta_json(
-        self, sidecar_testbed: Path, default_config,
+        self,
+        sidecar_testbed: Path,
+        default_config,
     ) -> None:
         """Legacy indexer output artifacts are excluded at traversal time."""
         files, _dirs = list_children(sidecar_testbed, default_config)
@@ -80,7 +83,9 @@ class TestListChildrenExcludePatterns:
         assert "video.mp4_meta2.json" not in file_names
 
     def test_list_children_excludes_directorymeta2_json(
-        self, sidecar_testbed: Path, default_config,
+        self,
+        sidecar_testbed: Path,
+        default_config,
     ) -> None:
         """list_children() does not return _directorymeta2.json."""
         files, _dirs = list_children(sidecar_testbed, default_config)
@@ -89,7 +94,9 @@ class TestListChildrenExcludePatterns:
         assert "_directorymeta2.json" not in file_names
 
     def test_list_children_subdir_excludes_meta_json(
-        self, sidecar_testbed: Path, default_config,
+        self,
+        sidecar_testbed: Path,
+        default_config,
     ) -> None:
         """list_children() in subdirectory also excludes _meta.json."""
         subdir = sidecar_testbed / "subdir"
@@ -111,7 +118,9 @@ class TestV4DiscoveryAndRelationships:
     """Validate all-files-included behavior and relationship annotation."""
 
     def test_index_includes_sidecar_like_files(
-        self, sidecar_testbed: Path, default_config,
+        self,
+        sidecar_testbed: Path,
+        default_config,
     ) -> None:
         entry = index_path(sidecar_testbed, default_config)
         by_name = _by_name(entry)
@@ -124,7 +133,9 @@ class TestV4DiscoveryAndRelationships:
         assert "photo.jpg.md5" in by_name
 
     def test_relationships_are_populated_for_matched_rules(
-        self, sidecar_testbed: Path, default_config,
+        self,
+        sidecar_testbed: Path,
+        default_config,
     ) -> None:
         entry = index_path(sidecar_testbed, default_config)
         by_name = _by_name(entry)
@@ -147,7 +158,9 @@ class TestV4DiscoveryAndRelationships:
         assert hash_rel[0].type == "hash"
 
     def test_no_sidecar_detection_disables_relationships(
-        self, sidecar_testbed: Path, no_sidecar_detection_config,
+        self,
+        sidecar_testbed: Path,
+        no_sidecar_detection_config,
     ) -> None:
         entry = index_path(sidecar_testbed, no_sidecar_detection_config)
         for child in _collect_entries(entry):

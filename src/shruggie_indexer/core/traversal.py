@@ -130,10 +130,7 @@ def list_children(
     exclude_meta = config.metadata_exclude_patterns
     if exclude_meta:
         pre_count = len(files)
-        files = [
-            f for f in files
-            if not _matches_metadata_exclude(f.name, exclude_meta)
-        ]
+        files = [f for f in files if not _matches_metadata_exclude(f.name, exclude_meta)]
         excluded = pre_count - len(files)
         if excluded:
             logger.debug(

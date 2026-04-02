@@ -158,13 +158,10 @@ def test_junction_detection_windows(tmp_path: Path) -> None:
     assert junction.is_dir(), "Junction should be traversable as a directory"
 
     # Python 3.12+ provides is_junction() for dedicated junction detection.
-    assert junction.is_junction(), (
-        "Junction not detected by Path.is_junction() on Python 3.12+"
-    )
+    assert junction.is_junction(), "Junction not detected by Path.is_junction() on Python 3.12+"
     # Junctions are NOT symlinks — is_symlink() returns False for junctions.
     assert not junction.is_symlink(), (
-        "Expected is_symlink() == False for junctions (they are a distinct "
-        "reparse point type)"
+        "Expected is_symlink() == False for junctions (they are a distinct reparse point type)"
     )
 
 

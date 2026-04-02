@@ -12,7 +12,6 @@ import pytest
 
 from shruggie_indexer.app_paths import get_app_data_dir, get_log_dir
 
-
 # ---------------------------------------------------------------------------
 # get_app_data_dir()
 # ---------------------------------------------------------------------------
@@ -33,7 +32,9 @@ class TestGetAppDataDir:
         assert result.parts[-1] == "shruggie-indexer"
 
     def test_windows_uses_localappdata(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
     ) -> None:
         """On Windows, resolves via LOCALAPPDATA environment variable."""
         monkeypatch.setattr("shruggie_indexer.app_paths.platform.system", lambda: "Windows")
@@ -43,7 +44,8 @@ class TestGetAppDataDir:
         assert result == Path(local_appdata) / "shruggie-tech" / "shruggie-indexer"
 
     def test_windows_fallback_without_env(
-        self, monkeypatch: pytest.MonkeyPatch,
+        self,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """On Windows, falls back to ~/AppData/Local when LOCALAPPDATA is unset."""
         monkeypatch.setattr("shruggie_indexer.app_paths.platform.system", lambda: "Windows")
@@ -53,7 +55,9 @@ class TestGetAppDataDir:
         assert result == expected_base / "shruggie-tech" / "shruggie-indexer"
 
     def test_linux_uses_xdg_config_home(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
     ) -> None:
         """On Linux, resolves via XDG_CONFIG_HOME."""
         monkeypatch.setattr("shruggie_indexer.app_paths.platform.system", lambda: "Linux")
@@ -63,7 +67,8 @@ class TestGetAppDataDir:
         assert result == Path(xdg_dir) / "shruggie-tech" / "shruggie-indexer"
 
     def test_linux_fallback_without_env(
-        self, monkeypatch: pytest.MonkeyPatch,
+        self,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """On Linux, falls back to ~/.config when XDG_CONFIG_HOME is unset."""
         monkeypatch.setattr("shruggie_indexer.app_paths.platform.system", lambda: "Linux")
@@ -73,14 +78,14 @@ class TestGetAppDataDir:
         assert result == expected_base / "shruggie-tech" / "shruggie-indexer"
 
     def test_macos_uses_library_application_support(
-        self, monkeypatch: pytest.MonkeyPatch,
+        self,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """On macOS, uses ~/Library/Application Support."""
         monkeypatch.setattr("shruggie_indexer.app_paths.platform.system", lambda: "Darwin")
         result = get_app_data_dir()
         expected = (
-            Path.home() / "Library" / "Application Support"
-            / "shruggie-tech" / "shruggie-indexer"
+            Path.home() / "Library" / "Application Support" / "shruggie-tech" / "shruggie-indexer"
         )
         assert result == expected
 
@@ -106,24 +111,27 @@ class TestGetLogDir:
         assert log_dir.name == "logs"
 
     def test_windows_log_dir(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
     ) -> None:
         """On Windows, log dir is under LOCALAPPDATA."""
         monkeypatch.setattr("shruggie_indexer.app_paths.platform.system", lambda: "Windows")
         local_appdata = str(tmp_path / "LocalAppData")
         monkeypatch.setenv("LOCALAPPDATA", local_appdata)
         result = get_log_dir()
-        assert result == (
-            Path(local_appdata) / "shruggie-tech" / "shruggie-indexer" / "logs"
-        )
+        assert result == (Path(local_appdata) / "shruggie-tech" / "shruggie-indexer" / "logs")
 
     def test_no_shruggie_tech_pascal_case(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
     ) -> None:
         """The path must never contain 'ShruggieTech' (PascalCase)."""
         for system in ("Windows", "Linux", "Darwin"):
             monkeypatch.setattr(
-                "shruggie_indexer.app_paths.platform.system", lambda s=system: s,
+                "shruggie_indexer.app_paths.platform.system",
+                lambda s=system: s,
             )
             if system == "Windows":
                 monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))

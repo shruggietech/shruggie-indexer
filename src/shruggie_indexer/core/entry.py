@@ -244,18 +244,22 @@ def build_file_entry(
 
     if is_symlink:
         content_hashes: HashSet | None = hash_string(
-            components.name, algorithms,
+            components.name,
+            algorithms,
         )
     else:
         try:
             content_hashes = hash_file(
-                path, algorithms, cancel_event=cancel_event,
+                path,
+                algorithms,
+                cancel_event=cancel_event,
             )
         except IndexerCancellationError:
             raise
         except OSError:
             logger.warning(
-                "Content hashing failed for %s — hashes set to null", path,
+                "Content hashing failed for %s — hashes set to null",
+                path,
             )
             content_hashes = None
 
@@ -274,7 +278,10 @@ def build_file_entry(
 
     # Step 7 — Parent identity
     parent_obj = _build_parent(
-        components.parent_name, components.parent_path, algorithms, config,
+        components.parent_name,
+        components.parent_path,
+        algorithms,
+        config,
     )
 
     # Step 8 — EXIF metadata
@@ -288,12 +295,16 @@ def build_file_entry(
             exif_data = extract_exif(path, config)
             if exif_data is not None:
                 exif_entry = _make_exif_metadata_entry(
-                    exif_data, algorithms, config,
+                    exif_data,
+                    algorithms,
+                    config,
                 )
                 mime_type = exif_data.get("File:MIMEType")
         except Exception:
             logger.warning(
-                "EXIF extraction failed for %s", path, exc_info=True,
+                "EXIF extraction failed for %s",
+                path,
+                exc_info=True,
             )
 
     # Step 9 — Encoding detection
@@ -386,7 +397,9 @@ def build_directory_entry(
 
     # Directory identity (name-based, not content-based)
     dir_identity = hash_directory_id(
-        components.name, components.parent_name, algorithms,
+        components.name,
+        components.parent_name,
+        algorithms,
     )
     entry_id = select_id(dir_identity, config.id_algorithm, "x")
 
@@ -394,7 +407,10 @@ def build_directory_entry(
     timestamps_obj = extract_timestamps(stat_result)
 
     parent_obj = _build_parent(
-        components.parent_name, components.parent_path, algorithms, config,
+        components.parent_name,
+        components.parent_path,
+        algorithms,
+        config,
     )
 
     # --- Child enumeration and construction ---
@@ -409,19 +425,24 @@ def build_directory_entry(
     _discovery_elapsed = time.monotonic() - _discovery_start
     logger.info(
         "Discovery complete: %d items found in %.3fs (%d files, %d directories)",
-        total_items, _discovery_elapsed, len(files), len(directories),
+        total_items,
+        _discovery_elapsed,
+        len(files),
+        len(directories),
     )
 
     # Progress: discovery phase
     if progress_callback is not None:
-        progress_callback(ProgressEvent(
-            phase="discovery",
-            items_total=total_items,
-            items_completed=0,
-            current_path=path,
-            message=f"Discovered {total_items} items in {components.name}",
-            level="info",
-        ))
+        progress_callback(
+            ProgressEvent(
+                phase="discovery",
+                items_total=total_items,
+                items_completed=0,
+                current_path=path,
+                message=f"Discovered {total_items} items in {components.name}",
+                level="info",
+            )
+        )
 
     child_entries: list[IndexEntry] = []
     items_completed = 0
@@ -430,14 +451,16 @@ def build_directory_entry(
     # switch the progress bar to determinate mode immediately, before
     # the first (potentially slow) build_file_entry call.
     if progress_callback is not None and total_items > 0:
-        progress_callback(ProgressEvent(
-            phase="processing",
-            items_total=total_items,
-            items_completed=0,
-            current_path=path,
-            message=None,
-            level="info",
-        ))
+        progress_callback(
+            ProgressEvent(
+                phase="processing",
+                items_total=total_items,
+                items_completed=0,
+                current_path=path,
+                message=None,
+                level="info",
+            )
+        )
 
     # Process file children first
     logger.info("Processing phase started: %d items", total_items)
@@ -459,7 +482,10 @@ def build_directory_entry(
             _item_elapsed = time.monotonic() - _item_start
             logger.debug(
                 "Completed [%d/%d]: %s in %.3fs",
-                items_completed + 1, total_items, child_path.name, _item_elapsed,
+                items_completed + 1,
+                total_items,
+                child_path.name,
+                _item_elapsed,
             )
         except IndexerCancellationError:
             raise
@@ -472,14 +498,16 @@ def build_directory_entry(
 
         items_completed += 1
         if progress_callback is not None:
-            progress_callback(ProgressEvent(
-                phase="processing",
-                items_total=total_items,
-                items_completed=items_completed,
-                current_path=child_path,
-                message=None,
-                level="info",
-            ))
+            progress_callback(
+                ProgressEvent(
+                    phase="processing",
+                    items_total=total_items,
+                    items_completed=items_completed,
+                    current_path=child_path,
+                    message=None,
+                    level="info",
+                )
+            )
 
     # Process directory children
     for child_path in directories:
@@ -500,7 +528,9 @@ def build_directory_entry(
                 )
             else:
                 child_entry = _build_shallow_directory_entry(
-                    child_path, config, index_root,
+                    child_path,
+                    config,
+                    index_root,
                     session_id=session_id,
                 )
             child_entries.append(child_entry)
@@ -515,14 +545,16 @@ def build_directory_entry(
 
         items_completed += 1
         if progress_callback is not None:
-            progress_callback(ProgressEvent(
-                phase="processing",
-                items_total=total_items,
-                items_completed=items_completed,
-                current_path=child_path,
-                message=None,
-                level="info",
-            ))
+            progress_callback(
+                ProgressEvent(
+                    phase="processing",
+                    items_total=total_items,
+                    items_completed=items_completed,
+                    current_path=child_path,
+                    message=None,
+                    level="info",
+                )
+            )
 
     # Size aggregation: sum of all child sizes (recursive totals)
     total_bytes = sum(child.size.bytes for child in child_entries)
@@ -577,7 +609,9 @@ def _build_shallow_directory_entry(
     stat_result = path.stat()
 
     dir_identity = hash_directory_id(
-        components.name, components.parent_name, algorithms,
+        components.name,
+        components.parent_name,
+        algorithms,
     )
     entry_id = select_id(dir_identity, config.id_algorithm, "x")
 
@@ -590,7 +624,10 @@ def _build_shallow_directory_entry(
     )
 
     parent_obj = _build_parent(
-        components.parent_name, components.parent_path, algorithms, config,
+        components.parent_name,
+        components.parent_path,
+        algorithms,
+        config,
     )
 
     storage_name = _build_storage_name(entry_id, None)
@@ -648,7 +685,9 @@ def index_path(
 
     if resolved.is_file():
         entry = build_file_entry(
-            resolved, config, delete_queue=delete_queue,
+            resolved,
+            config,
+            delete_queue=delete_queue,
             cancel_event=cancel_event,
             session_id=session_id,
         )
@@ -668,9 +707,7 @@ def index_path(
         _annotate_relationships(entry, config)
         return entry
 
-    raise IndexerTargetError(
-        f"Target is neither a file nor a directory: {resolved}"
-    )
+    raise IndexerTargetError(f"Target is neither a file nor a directory: {resolved}")
 
 
 # ---------------------------------------------------------------------------
@@ -678,7 +715,8 @@ def index_path(
 # ---------------------------------------------------------------------------
 
 _STALE_METADATA_RE = re.compile(
-    r"_(meta[23]?|directorymeta[23]?)\.json$", re.IGNORECASE,
+    r"_(meta[23]?|directorymeta[23]?)\.json$",
+    re.IGNORECASE,
 )
 """Matches indexer metadata output filenames:
 
@@ -707,9 +745,7 @@ def _collect_protected_sidecars(
         # Protect storage-name sidecar (post-rename).
         if entry.attributes and entry.attributes.storage_name:
             parent_dir = item_path.parent
-            protected.add(
-                parent_dir / f"{entry.attributes.storage_name}_meta3.json"
-            )
+            protected.add(parent_dir / f"{entry.attributes.storage_name}_meta3.json")
     elif entry.type == "directory":
         # The root directory entry (relative == ".") has no sidecar
         # written by _write_inplace_tree (it's skipped as _is_root).
@@ -719,7 +755,10 @@ def _collect_protected_sidecars(
         if entry.items:
             for child in entry.items:
                 _collect_protected_sidecars(
-                    child, root_path, config, protected,
+                    child,
+                    root_path,
+                    config,
+                    protected,
                 )
 
 
@@ -795,7 +834,8 @@ def cleanup_stale_metadata(
         except OSError as exc:
             logger.warning(
                 "Cannot scan directory for stale metadata: %s: %s",
-                dir_path, exc,
+                dir_path,
+                exc,
             )
             continue
         for child in children:
@@ -813,7 +853,8 @@ def cleanup_stale_metadata(
             except OSError as exc:
                 logger.warning(
                     "Failed to remove stale metadata artifact: %s: %s",
-                    child, exc,
+                    child,
+                    exc,
                 )
     return deleted
 
@@ -846,4 +887,3 @@ def _annotate_relationships(root: IndexEntry, config: IndexerConfig) -> None:
         relationships = relationship_map.get(entry.id)
         if relationships:
             entry.relationships = relationships
-
