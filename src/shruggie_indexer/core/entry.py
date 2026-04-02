@@ -302,7 +302,7 @@ def build_file_entry(
 
     # Step 9 — Sidecar metadata
     sidecar_entries: list[MetadataEntry] = []
-    if config.meta_merge:
+    if getattr(config, "meta_merge", False):
         if siblings is None:
             siblings = _enumerate_siblings(path)
         try:
@@ -330,7 +330,7 @@ def build_file_entry(
         )
 
     # Step 11 — Metadata assembly
-    metadata_active = config.extract_exif or config.meta_merge
+    metadata_active = config.extract_exif or getattr(config, "meta_merge", False)
     metadata = _assemble_metadata(exif_entry, sidecar_entries, metadata_active)
 
     # Step 12 — Storage name
@@ -338,7 +338,7 @@ def build_file_entry(
 
     # Step 13 — Assembly
     return IndexEntry(
-        schema_version=3,
+        schema_version=4,
         id=entry_id,
         id_algorithm=config.id_algorithm,
         type="file",
@@ -437,7 +437,7 @@ def build_directory_entry(
     # as standalone index entries.  We keep the unfiltered list as
     # ``siblings`` and iterate ``entry_files`` for child construction.
     siblings = files
-    if config.meta_merge and config.metadata_identify:
+    if getattr(config, "meta_merge", False) and config.metadata_identify:
         from shruggie_indexer.core.traversal import _matches_any_identify_pattern
 
         entry_files = [
@@ -494,7 +494,7 @@ def build_directory_entry(
     logger.info("Processing phase started: %d items", total_items)
     sidecar_type_cache: dict[Path, str | None] | None = None
     sidecar_entry_cache: dict[Path, MetadataEntry] | None = None
-    if config.meta_merge:
+    if getattr(config, "meta_merge", False):
         sidecar_type_cache = {}
         sidecar_entry_cache = {}
 
@@ -594,7 +594,7 @@ def build_directory_entry(
     storage_name = _build_storage_name(entry_id, None)
 
     return IndexEntry(
-        schema_version=3,
+        schema_version=4,
         id=entry_id,
         id_algorithm=config.id_algorithm,
         type="directory",
@@ -656,7 +656,7 @@ def _build_shallow_directory_entry(
     storage_name = _build_storage_name(entry_id, None)
 
     return IndexEntry(
-        schema_version=3,
+        schema_version=4,
         id=entry_id,
         id_algorithm=config.id_algorithm,
         type="directory",

@@ -73,6 +73,7 @@ _TOP_LEVEL_KEY_ORDER: tuple[str, ...] = (
     "encoding",
     "items",
     "metadata",
+    "relationships",
     "duplicates",
 )
 
@@ -87,9 +88,7 @@ def _clean_none_sha512(obj: Any) -> Any:
     """
     if isinstance(obj, dict):
         return {
-            k: _clean_none_sha512(v)
-            for k, v in obj.items()
-            if not (k == "sha512" and v is None)
+            k: _clean_none_sha512(v) for k, v in obj.items() if not (k == "sha512" and v is None)
         }
     if isinstance(obj, list):
         return [_clean_none_sha512(item) for item in obj]

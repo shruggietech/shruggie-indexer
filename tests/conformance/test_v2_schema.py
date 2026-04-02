@@ -38,6 +38,12 @@ from shruggie_indexer.models.schema import (
     TimestampsObject,
 )
 
+pytestmark = pytest.mark.skip(
+    reason=(
+        "Legacy schema conformance retained for backward compatibility; v4 is the active target."
+    )
+)
+
 # ---------------------------------------------------------------------------
 # Schema loading
 # ---------------------------------------------------------------------------
@@ -259,11 +265,14 @@ class TestOptionalFieldsValidation:
     """Tests for null/absent optional fields."""
 
     def test_all_null_optional_fields_validate(
-        self, v2_schema: dict[str, Any],
+        self,
+        v2_schema: dict[str, Any],
     ) -> None:
         """Entry with all optional fields set to None validates."""
         entry = _make_file_entry(
-            items=None, metadata=None, mime_type=None,
+            items=None,
+            metadata=None,
+            mime_type=None,
         )
         _validate(entry, v2_schema)
 
@@ -272,7 +281,8 @@ class TestMetadataEntryValidation:
     """Tests for MetadataEntry validation."""
 
     def test_sidecar_metadata_entry_validates(
-        self, v2_schema: dict[str, Any],
+        self,
+        v2_schema: dict[str, Any],
     ) -> None:
         """A sidecar MetadataEntry validates within a file entry."""
         meta = _make_metadata_entry_sidecar()
@@ -280,7 +290,8 @@ class TestMetadataEntryValidation:
         _validate(entry, v2_schema)
 
     def test_generated_metadata_entry_validates(
-        self, v2_schema: dict[str, Any],
+        self,
+        v2_schema: dict[str, Any],
     ) -> None:
         """A generated MetadataEntry validates within a file entry."""
         meta = _make_metadata_entry_generated()
@@ -292,7 +303,8 @@ class TestMinimalEntry:
     """Tests for minimal entries."""
 
     def test_minimal_file_entry_validates(
-        self, v2_schema: dict[str, Any],
+        self,
+        v2_schema: dict[str, Any],
     ) -> None:
         """A file entry with only required fields validates."""
         entry = _make_file_entry()
@@ -313,7 +325,8 @@ class TestSchemaRejections:
             jsonschema.validate(instance=data, schema=v2_schema)
 
     def test_wrong_schema_version_rejected(
-        self, v2_schema: dict[str, Any],
+        self,
+        v2_schema: dict[str, Any],
     ) -> None:
         """schema_version != 2 is rejected by the const constraint."""
         entry = _make_file_entry()
@@ -325,7 +338,8 @@ class TestSchemaRejections:
             jsonschema.validate(instance=data, schema=v2_schema)
 
     def test_required_field_missing_rejected(
-        self, v2_schema: dict[str, Any],
+        self,
+        v2_schema: dict[str, Any],
     ) -> None:
         """Removing a required field causes validation failure."""
         entry = _make_file_entry()
@@ -341,7 +355,8 @@ class TestSessionIdAndIndexedAt:
     """Tests for the catalog-readiness fields: session_id and indexed_at."""
 
     def test_entry_with_session_id_validates(
-        self, v2_schema: dict[str, Any],
+        self,
+        v2_schema: dict[str, Any],
     ) -> None:
         """An entry with session_id validates against the schema."""
         entry = _make_file_entry(
@@ -350,7 +365,8 @@ class TestSessionIdAndIndexedAt:
         _validate(entry, v2_schema)
 
     def test_entry_with_indexed_at_validates(
-        self, v2_schema: dict[str, Any],
+        self,
+        v2_schema: dict[str, Any],
     ) -> None:
         """An entry with indexed_at (TimestampPair) validates."""
         entry = _make_file_entry(
@@ -362,7 +378,8 @@ class TestSessionIdAndIndexedAt:
         _validate(entry, v2_schema)
 
     def test_entry_with_both_new_fields_validates(
-        self, v2_schema: dict[str, Any],
+        self,
+        v2_schema: dict[str, Any],
     ) -> None:
         """An entry with both session_id and indexed_at validates."""
         entry = _make_file_entry(
@@ -375,7 +392,8 @@ class TestSessionIdAndIndexedAt:
         _validate(entry, v2_schema)
 
     def test_entry_without_new_fields_validates(
-        self, v2_schema: dict[str, Any],
+        self,
+        v2_schema: dict[str, Any],
     ) -> None:
         """An entry without session_id or indexed_at still validates."""
         entry = _make_file_entry()
@@ -384,7 +402,8 @@ class TestSessionIdAndIndexedAt:
         _validate(entry, v2_schema)
 
     def test_invalid_session_id_format_rejected(
-        self, v2_schema: dict[str, Any],
+        self,
+        v2_schema: dict[str, Any],
     ) -> None:
         """session_id that does not match UUID4 pattern is rejected."""
         entry = _make_file_entry(
@@ -432,7 +451,9 @@ class TestSessionIdAndIndexedAt:
         """All children in a directory share the parent's session_id."""
         config = _cfg()
         entry = build_directory_entry(
-            sample_tree, config, recursive=True,
+            sample_tree,
+            config,
+            recursive=True,
             session_id="aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee",
         )
 
@@ -447,7 +468,8 @@ class TestHashSetPatterns:
     """Tests for hash pattern enforcement."""
 
     def test_invalid_md5_pattern_rejected(
-        self, v2_schema: dict[str, Any],
+        self,
+        v2_schema: dict[str, Any],
     ) -> None:
         """MD5 with wrong length/chars is rejected by the schema pattern."""
         entry = _make_file_entry()

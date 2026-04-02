@@ -45,7 +45,7 @@ def _make_hashset(*, sha512: str | None = None) -> HashSet:
 def _make_entry(**overrides: Any) -> IndexEntry:
     pair = TimestampPair(iso="2024-01-01T00:00:00.000000+00:00", unix=1704067200000)
     defaults: dict[str, Any] = {
-        "schema_version": 3,
+        "schema_version": 4,
         "id": "yD41D8CD98F00B204E9800998ECF8427E",
         "id_algorithm": "md5",
         "type": "file",
@@ -82,7 +82,7 @@ class TestJsonRoundTrip:
         json_str = serialize_entry(entry)
         parsed = json.loads(json_str)
 
-        assert parsed["schema_version"] == 3
+        assert parsed["schema_version"] == 4
         assert parsed["id"] == entry.id
         assert parsed["name"]["text"] == "test.txt"
         assert isinstance(parsed["hashes"], dict)
@@ -170,34 +170,34 @@ class TestWriteOutput:
         output = captured.getvalue()
         assert "schema_version" in output
         parsed = json.loads(output.strip())
-        assert parsed["schema_version"] == 3
+        assert parsed["schema_version"] == 4
 
 
 class TestWriteInplace:
     """Tests for write_inplace() sidecar file naming."""
 
     def test_inplace_file_naming(self, tmp_path: Path) -> None:
-        """File sidecar is named _meta3.json."""
+        """File sidecar is named _idx.json."""
         entry = _make_entry()
         item_path = tmp_path / "test.txt"
         item_path.write_text("content", encoding="utf-8")
 
         write_inplace(entry, item_path, "file")
 
-        sidecar = tmp_path / "test.txt_meta3.json"
+        sidecar = tmp_path / "test.txt_idx.json"
         assert sidecar.exists()
         parsed = json.loads(sidecar.read_text(encoding="utf-8"))
-        assert parsed["schema_version"] == 3
+        assert parsed["schema_version"] == 4
 
     def test_inplace_directory_naming(self, tmp_path: Path) -> None:
-        """Directory sidecar is written inside the directory as {dirname}_directorymeta3.json."""
+        """Directory sidecar is written inside the directory as {dirname}_idxd.json."""
         entry = _make_entry(type="directory", hashes=None, extension=None)
         dir_path = tmp_path / "mydir"
         dir_path.mkdir()
 
         write_inplace(entry, dir_path, "directory")
 
-        sidecar = dir_path / "mydir_directorymeta3.json"
+        sidecar = dir_path / "mydir_idxd.json"
         assert sidecar.exists()
 
 
@@ -205,17 +205,18 @@ class TestWriteDirectoryMetaSuppression:
     """Tests for write_directory_meta=False suppression of dir sidecars.
 
     Verifies that the _write_inplace_tree helper skips directory-level
-    _directorymeta3.json files when write_directory_meta is False,
+    _idxd.json files when write_directory_meta is False,
     while per-file sidecars remain unaffected.
     """
 
     @staticmethod
     def _make_dir_entry(**overrides: Any) -> IndexEntry:
         pair = TimestampPair(
-            iso="2024-01-01T00:00:00.000000+00:00", unix=1704067200000,
+            iso="2024-01-01T00:00:00.000000+00:00",
+            unix=1704067200000,
         )
         defaults: dict[str, Any] = {
-            "schema_version": 3,
+            "schema_version": 4,
             "id": "yD41D8CD98F00B204E9800998ECF8427E",
             "id_algorithm": "md5",
             "type": "directory",
@@ -232,7 +233,9 @@ class TestWriteDirectoryMetaSuppression:
             "hashes": None,
             "file_system": FileSystemObject(relative="mydir", parent=None),
             "timestamps": TimestampsObject(
-                created=pair, modified=pair, accessed=pair,
+                created=pair,
+                modified=pair,
+                accessed=pair,
             ),
             "attributes": AttributesObject(is_link=False, storage_name=None),
         }
@@ -251,7 +254,8 @@ class TestWriteDirectoryMetaSuppression:
 
         file_entry = _make_entry(
             file_system=FileSystemObject(
-                relative="sub/file.txt", parent=None,
+                relative="sub/file.txt",
+                parent=None,
             ),
         )
         sub_entry = self._make_dir_entry(
@@ -280,7 +284,9 @@ class TestWriteDirectoryMetaSuppression:
         )
 
         _write_inplace_tree(
-            root_entry, root, write_inplace,
+            root_entry,
+            root,
+            write_inplace,
             write_directory_meta=True,
         )
 
@@ -303,7 +309,8 @@ class TestWriteDirectoryMetaSuppression:
 
         file_entry = _make_entry(
             file_system=FileSystemObject(
-                relative="sub/file.txt", parent=None,
+                relative="sub/file.txt",
+                parent=None,
             ),
         )
         sub_entry = self._make_dir_entry(
@@ -332,7 +339,9 @@ class TestWriteDirectoryMetaSuppression:
         )
 
         _write_inplace_tree(
-            root_entry, root, write_inplace,
+            root_entry,
+            root,
+            write_inplace,
             write_directory_meta=False,
         )
 
@@ -366,7 +375,8 @@ class TestWriteDirectoryMetaSuppression:
                     ),
                     extension=name.rsplit(".", 1)[-1],
                     file_system=FileSystemObject(
-                        relative=name, parent=None,
+                        relative=name,
+                        parent=None,
                     ),
                 ),
             )
@@ -377,7 +387,9 @@ class TestWriteDirectoryMetaSuppression:
         )
 
         _write_inplace_tree(
-            root_entry, root, write_inplace,
+            root_entry,
+            root,
+            write_inplace,
             write_directory_meta=False,
         )
 

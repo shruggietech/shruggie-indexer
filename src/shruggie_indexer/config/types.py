@@ -74,8 +74,8 @@ class IndexerConfig:
 
     # ── Metadata processing ─────────────────────────────────────────────
     extract_exif: bool = False
-    meta_merge: bool = False
-    meta_merge_delete: bool = False
+    no_sidecar_detection: bool = False
+    cleanup_legacy_sidecars: bool = False
 
     # ── Encoding detection ──────────────────────────────────────────────
     detect_encoding: bool = True

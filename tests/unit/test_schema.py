@@ -15,6 +15,8 @@ from shruggie_indexer.models.schema import (
     HashSet,
     IndexEntry,
     NameObject,
+    PredicateResult,
+    RelationshipAnnotation,
     SizeObject,
     TimestampPair,
     TimestampsObject,
@@ -43,7 +45,6 @@ def _make_timestamps() -> TimestampsObject:
 
 def _make_index_entry(**overrides: Any) -> IndexEntry:
     defaults: dict[str, Any] = {
-        "schema_version": 2,
         "id": "yD41D8CD98F00B204E9800998ECF8427E",
         "id_algorithm": "md5",
         "type": "file",
@@ -70,7 +71,7 @@ class TestIndexEntryConstruction:
     def test_index_entry_construction(self) -> None:
         """All required fields provided -> object created, fields accessible."""
         entry = _make_index_entry()
-        assert entry.schema_version == 2
+        assert entry.schema_version == 4
         assert entry.id.startswith("y")
         assert entry.type == "file"
         assert entry.name.text == "sunset.jpg"
@@ -82,7 +83,6 @@ class TestIndexEntryConstruction:
         """Omitting a required field raises TypeError."""
         with pytest.raises(TypeError):
             IndexEntry(  # type: ignore[call-arg]
-                schema_version=2,
                 id="y123",
                 # id_algorithm missing
                 type="file",
@@ -118,7 +118,7 @@ class TestToDict:
         entry = _make_index_entry()
         d = entry.to_dict()
         assert isinstance(d, dict)
-        assert d["schema_version"] == 2
+        assert d["schema_version"] == 4
         assert isinstance(d["name"], dict)
         assert d["name"]["text"] == "sunset.jpg"
         assert isinstance(d["hashes"], dict)
@@ -131,7 +131,42 @@ class TestToDict:
         d = entry.to_dict()
         keys = list(d.keys())
         assert keys[0] == "schema_version"
-        assert d["schema_version"] == 2
+        assert d["schema_version"] == 4
+
+
+class TestRelationshipSerialization:
+    """Tests for v4 relationship annotation structures."""
+
+    def test_predicate_result_to_dict(self) -> None:
+        pred = PredicateResult(
+            name="requires_sibling",
+            pattern="{stem}.mp4",
+            satisfied=True,
+        )
+        assert pred.to_dict() == {
+            "name": "requires_sibling",
+            "pattern": "{stem}.mp4",
+            "satisfied": True,
+        }
+
+    def test_relationship_annotation_serializes(self) -> None:
+        rel = RelationshipAnnotation(
+            target_id="yABCDEF",
+            type="description",
+            rule="yt-dlp-description",
+            rule_source="builtin",
+            confidence=3,
+            predicates=[PredicateResult(name="match", satisfied=True)],
+        )
+        entry = _make_index_entry(relationships=[rel])
+        d = entry.to_dict()
+        assert "relationships" in d
+        assert d["relationships"][0]["target_id"] == "yABCDEF"
+
+    def test_relationships_absent_when_none(self) -> None:
+        entry = _make_index_entry(relationships=None)
+        d = entry.to_dict()
+        assert "relationships" not in d
 
 
 class TestNameObjectCoNull:

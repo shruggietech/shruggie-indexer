@@ -17,6 +17,8 @@ import re
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, NamedTuple
 
+from shruggie_indexer.core.constants import OUTPUT_SUFFIX_DIR, OUTPUT_SUFFIX_FILE
+
 if TYPE_CHECKING:
     from shruggie_indexer.config.types import IndexerConfig
 
@@ -153,8 +155,8 @@ def validate_extension(suffix: str | None, config: IndexerConfig) -> str | None:
 def build_sidecar_path(item_path: Path, item_type: str) -> Path:
     """Construct the path for an in-place sidecar output file.
 
-    For files: ``<item_path>_meta3.json``
-    For directories: ``<item_path>/<dirname>_directorymeta3.json``
+    For files: ``<item_path>_idx.json``
+    For directories: ``<item_path>/<dirname>_idxd.json``
 
     Args:
         item_path: Absolute path to the indexed item.
@@ -164,8 +166,8 @@ def build_sidecar_path(item_path: Path, item_type: str) -> Path:
         The sidecar output :class:`~pathlib.Path`.
     """
     if item_type == "directory":
-        return item_path / f"{item_path.name}_directorymeta3.json"
-    return item_path.parent / f"{item_path.name}_meta3.json"
+        return item_path / f"{item_path.name}{OUTPUT_SUFFIX_DIR}"
+    return item_path.parent / f"{item_path.name}{OUTPUT_SUFFIX_FILE}"
 
 
 def build_storage_path(item_path: Path, storage_name: str) -> Path:

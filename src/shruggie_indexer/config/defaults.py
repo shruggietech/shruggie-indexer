@@ -46,8 +46,8 @@ DEFAULT_SCALARS: dict[str, object] = {
     "output_file": None,
     "output_inplace": False,
     "extract_exif": False,
-    "meta_merge": False,
-    "meta_merge_delete": False,
+    "no_sidecar_detection": False,
+    "cleanup_legacy_sidecars": False,
     "rename": False,
     "dry_run": False,
 }
@@ -64,22 +64,24 @@ DEFAULT_EXTENSION_VALIDATION_PATTERN: str = (
 # Filesystem exclusion defaults (§7.2, DEV-10)
 # ---------------------------------------------------------------------------
 
-DEFAULT_FILESYSTEM_EXCLUDES: frozenset[str] = frozenset({
-    # Windows
-    "$recycle.bin",
-    "system volume information",
-    "desktop.ini",
-    "thumbs.db",
-    # macOS
-    ".ds_store",
-    ".spotlight-v100",
-    ".trashes",
-    ".fseventsd",
-    ".temporaryitems",
-    ".documentrevisions-v100",
-    # Version control
-    ".git",
-})
+DEFAULT_FILESYSTEM_EXCLUDES: frozenset[str] = frozenset(
+    {
+        # Windows
+        "$recycle.bin",
+        "system volume information",
+        "desktop.ini",
+        "thumbs.db",
+        # macOS
+        ".ds_store",
+        ".spotlight-v100",
+        ".trashes",
+        ".fseventsd",
+        ".temporaryitems",
+        ".documentrevisions-v100",
+        # Version control
+        ".git",
+    }
+)
 
 DEFAULT_FILESYSTEM_EXCLUDE_GLOBS: tuple[str, ...] = (
     # Linux
@@ -90,47 +92,51 @@ DEFAULT_FILESYSTEM_EXCLUDE_GLOBS: tuple[str, ...] = (
 # Exiftool defaults (§7.2, §7.4)
 # ---------------------------------------------------------------------------
 
-DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS: frozenset[str] = frozenset({
-    "csv",
-    "htm",
-    "html",
-    "json",
-    "tsv",
-    "xml",
-})
+DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        "csv",
+        "htm",
+        "html",
+        "json",
+        "tsv",
+        "xml",
+    }
+)
 
-DEFAULT_EXIFTOOL_EXCLUDE_KEYS: frozenset[str] = frozenset({
-    # Original v1 jq deletion list
-    "ExifToolVersion",
-    "FileSequence",
-    "NewGUID",
-    "Directory",
-    "FileName",
-    "FilePath",
-    "BaseName",
-    "FilePermissions",
-    # Absolute path exposure
-    "SourceFile",
-    # Redundant — captured in IndexEntry size/timestamps objects
-    "FileSize",
-    "FileModifyDate",
-    "FileAccessDate",
-    "FileCreateDate",
-    # OS-specific filesystem attributes (not embedded metadata)
-    "FileAttributes",
-    "FileDeviceNumber",
-    "FileInodeNumber",
-    "FileHardLinks",
-    "FileUserID",
-    "FileGroupID",
-    "FileDeviceID",
-    "FileBlockSize",
-    "FileBlockCount",
-    # ExifTool operational metadata
-    "Now",
-    "ProcessingTime",
-    "Error",
-})
+DEFAULT_EXIFTOOL_EXCLUDE_KEYS: frozenset[str] = frozenset(
+    {
+        # Original v1 jq deletion list
+        "ExifToolVersion",
+        "FileSequence",
+        "NewGUID",
+        "Directory",
+        "FileName",
+        "FilePath",
+        "BaseName",
+        "FilePermissions",
+        # Absolute path exposure
+        "SourceFile",
+        # Redundant — captured in IndexEntry size/timestamps objects
+        "FileSize",
+        "FileModifyDate",
+        "FileAccessDate",
+        "FileCreateDate",
+        # OS-specific filesystem attributes (not embedded metadata)
+        "FileAttributes",
+        "FileDeviceNumber",
+        "FileInodeNumber",
+        "FileHardLinks",
+        "FileUserID",
+        "FileGroupID",
+        "FileDeviceID",
+        "FileBlockSize",
+        "FileBlockCount",
+        # ExifTool operational metadata
+        "Now",
+        "ProcessingTime",
+        "Error",
+    }
+)
 """Default set of exiftool output keys to exclude.
 
 Keys are matched by their base name (the portion after the last ``:``)
@@ -202,9 +208,7 @@ _BCP47_ALTERNATION: str = (
 # ---------------------------------------------------------------------------
 
 DEFAULT_METADATA_IDENTIFY_STRINGS: dict[str, tuple[str, ...]] = {
-    "description": (
-        r"\.description$",
-    ),
+    "description": (r"\.description$",),
     "desktop_ini": (
         r"\.desktop\.ini$",
         r"desktop\.ini$",
@@ -216,9 +220,7 @@ DEFAULT_METADATA_IDENTIFY_STRINGS: dict[str, tuple[str, ...]] = {
         r"\.(cfg|conf|config)$",
         r"\.yaml$",
     ),
-    "hash": (
-        r"\.(md5|sha\d+|blake2[bs]|crc\d+|xxhash|checksum|hash)$",
-    ),
+    "hash": (r"\.(md5|sha\d+|blake2[bs]|crc\d+|xxhash|checksum|hash)$",),
     "json_metadata": (
         r"_directorymeta2?\.json$",
         r"_(subs|subtitles)\.json$",
@@ -228,9 +230,7 @@ DEFAULT_METADATA_IDENTIFY_STRINGS: dict[str, tuple[str, ...]] = {
         r"\.exifjson$",
         r"\.(AI|exif|info|meta)\.json$",
     ),
-    "link": (
-        r"\.(url|lnk|link|source)$",
-    ),
+    "link": (r"\.(url|lnk|link|source)$",),
     "screenshot": (
         r"(-|_)?(screen|screen(s|shot|shots)|thumb|thumb(nail|nails))"
         r"((-|_)?([0-9]{1,9}))?\.(jpg|jpeg|png|webp)$",
@@ -245,9 +245,7 @@ DEFAULT_METADATA_IDENTIFY_STRINGS: dict[str, tuple[str, ...]] = {
         r"\.(cover|thumb|thumb(s|db|index|nail))$",
         r"^(thumb|thumb(s|db|index|nail))\.db$",
     ),
-    "torrent": (
-        r"\.(torrent|magnet)$",
-    ),
+    "torrent": (r"\.(torrent|magnet)$",),
 }
 
 # Pre-compiled variant for direct access (used by the loader's ``build_config``).
@@ -262,6 +260,7 @@ DEFAULT_METADATA_IDENTIFY: dict[str, tuple[re.Pattern[str], ...]] = {
 
 DEFAULT_METADATA_EXCLUDE_PATTERN_STRINGS: tuple[str, ...] = (
     r"_(meta[23]?|directorymeta[23]?)\.json$",
+    r"_(idx|idxd)\.json$",
     r"\.(cover|thumb|thumb(s|db|index|nail))$",
     r"^(thumb|thumb(s|db|index|nail))\.db$",
 )
@@ -288,8 +287,7 @@ DEFAULT_METADATA_ATTRIBUTES: dict[str, MetadataTypeAttributes] = {
     ),
     "desktop_ini": MetadataTypeAttributes(
         about=(
-            "A Windows desktop.ini file used to customize folder appearance in "
-            "Windows Explorer."
+            "A Windows desktop.ini file used to customize folder appearance in Windows Explorer."
         ),
         expect_json=False,
         expect_text=True,
@@ -317,10 +315,7 @@ DEFAULT_METADATA_ATTRIBUTES: dict[str, MetadataTypeAttributes] = {
         parent_can_be_directory=False,
     ),
     "json_metadata": MetadataTypeAttributes(
-        about=(
-            "A JSON file containing metadata information related to files or "
-            "directories."
-        ),
+        about=("A JSON file containing metadata information related to files or directories."),
         expect_json=True,
         expect_text=False,
         expect_binary=False,
@@ -328,10 +323,7 @@ DEFAULT_METADATA_ATTRIBUTES: dict[str, MetadataTypeAttributes] = {
         parent_can_be_directory=True,
     ),
     "link": MetadataTypeAttributes(
-        about=(
-            "A file containing an Internet URL or a link to another file or "
-            "directory."
-        ),
+        about=("A file containing an Internet URL or a link to another file or directory."),
         expect_json=False,
         expect_text=True,
         expect_binary=True,
@@ -350,10 +342,7 @@ DEFAULT_METADATA_ATTRIBUTES: dict[str, MetadataTypeAttributes] = {
         parent_can_be_directory=False,
     ),
     "subtitles": MetadataTypeAttributes(
-        about=(
-            "A subtitle file which contains text-based subtitles for a video or "
-            "audio file."
-        ),
+        about=("A subtitle file which contains text-based subtitles for a video or audio file."),
         expect_json=True,
         expect_text=True,
         expect_binary=True,
@@ -393,45 +382,242 @@ DEFAULT_METADATA_ATTRIBUTES: dict[str, MetadataTypeAttributes] = {
 
 DEFAULT_EXTENSION_GROUPS: dict[str, tuple[str, ...]] = {
     "archive": (
-        "7z", "ace", "alz", "arc", "arj", "bz", "bz2", "cab", "cbr", "cbz",
-        "chm", "cpio", "deb", "dmg", "egg", "gz", "hdd", "img", "iso", "jar",
-        "lha", "lz", "lz4", "lzh", "lzma", "lzo", "qcow2", "rar", "rpm",
-        "s7z", "shar", "sit", "sitx", "sqx", "tar", "tbz", "tbz2", "tgz",
-        "tlz", "txz", "vdi", "vhd", "vhdx", "vmdk", "war", "wim", "xar",
-        "xz", "z", "zip", "zipx", "zoo", "zpaq", "zst", "zz",
+        "7z",
+        "ace",
+        "alz",
+        "arc",
+        "arj",
+        "bz",
+        "bz2",
+        "cab",
+        "cbr",
+        "cbz",
+        "chm",
+        "cpio",
+        "deb",
+        "dmg",
+        "egg",
+        "gz",
+        "hdd",
+        "img",
+        "iso",
+        "jar",
+        "lha",
+        "lz",
+        "lz4",
+        "lzh",
+        "lzma",
+        "lzo",
+        "qcow2",
+        "rar",
+        "rpm",
+        "s7z",
+        "shar",
+        "sit",
+        "sitx",
+        "sqx",
+        "tar",
+        "tbz",
+        "tbz2",
+        "tgz",
+        "tlz",
+        "txz",
+        "vdi",
+        "vhd",
+        "vhdx",
+        "vmdk",
+        "war",
+        "wim",
+        "xar",
+        "xz",
+        "z",
+        "zip",
+        "zipx",
+        "zoo",
+        "zpaq",
+        "zst",
+        "zz",
     ),
     "audio": (
-        "3ga", "8svx", "aa", "aac", "aax", "ac3", "act", "aiff", "alac",
-        "amr", "ape", "au", "awb", "dct", "dss", "dvf", "flac", "gsm",
-        "iklax", "ivs", "m4a", "m4b", "m4p", "m4r", "mid", "midi", "mka",
-        "mlp", "mmf", "mp2", "mp3", "mpc", "msv", "ogg", "oga", "opus",
-        "ra", "rm", "raw", "sln", "tta", "voc", "vox", "wav", "wma", "wv",
-        "webm", "wvp", "wvpk",
+        "3ga",
+        "8svx",
+        "aa",
+        "aac",
+        "aax",
+        "ac3",
+        "act",
+        "aiff",
+        "alac",
+        "amr",
+        "ape",
+        "au",
+        "awb",
+        "dct",
+        "dss",
+        "dvf",
+        "flac",
+        "gsm",
+        "iklax",
+        "ivs",
+        "m4a",
+        "m4b",
+        "m4p",
+        "m4r",
+        "mid",
+        "midi",
+        "mka",
+        "mlp",
+        "mmf",
+        "mp2",
+        "mp3",
+        "mpc",
+        "msv",
+        "ogg",
+        "oga",
+        "opus",
+        "ra",
+        "rm",
+        "raw",
+        "sln",
+        "tta",
+        "voc",
+        "vox",
+        "wav",
+        "wma",
+        "wv",
+        "webm",
+        "wvp",
+        "wvpk",
     ),
     "font": (
-        "eot", "otf", "svg", "svgz", "ttc", "ttf", "woff", "woff2",
+        "eot",
+        "otf",
+        "svg",
+        "svgz",
+        "ttc",
+        "ttf",
+        "woff",
+        "woff2",
     ),
     "image": (
-        "3fr", "ari", "arw", "bay", "bmp", "cr2", "crw", "dcr", "dng",
-        "erf", "fff", "gif", "gpr", "icns", "ico", "iiq", "jng", "jp2",
-        "jpeg", "jpg", "k25", "kdc", "mef", "mos", "mrw", "nef", "nrw",
-        "orf", "pbm", "pef", "pgm", "png", "ppm", "psd", "ptx", "raf",
-        "raw", "rw2", "rwl", "sr2", "srf", "svg", "tga", "tif", "tiff",
-        "webp", "x3f",
+        "3fr",
+        "ari",
+        "arw",
+        "bay",
+        "bmp",
+        "cr2",
+        "crw",
+        "dcr",
+        "dng",
+        "erf",
+        "fff",
+        "gif",
+        "gpr",
+        "icns",
+        "ico",
+        "iiq",
+        "jng",
+        "jp2",
+        "jpeg",
+        "jpg",
+        "k25",
+        "kdc",
+        "mef",
+        "mos",
+        "mrw",
+        "nef",
+        "nrw",
+        "orf",
+        "pbm",
+        "pef",
+        "pgm",
+        "png",
+        "ppm",
+        "psd",
+        "ptx",
+        "raf",
+        "raw",
+        "rw2",
+        "rwl",
+        "sr2",
+        "srf",
+        "svg",
+        "tga",
+        "tif",
+        "tiff",
+        "webp",
+        "x3f",
     ),
     "link": (
-        "link", "lnk", "shortcut", "source", "symlink", "url",
+        "link",
+        "lnk",
+        "shortcut",
+        "source",
+        "symlink",
+        "url",
     ),
     "subtitles": (
-        "srt", "sub", "sbv", "vtt", "lrc",
+        "srt",
+        "sub",
+        "sbv",
+        "vtt",
+        "lrc",
     ),
     "video": (
-        "3g2", "3gp", "3gp2", "3gpp", "amv", "asf", "avi", "divx", "drc",
-        "dv", "f4v", "flv", "gvi", "gxf", "ismv", "m1v", "m2v", "m2t",
-        "m2ts", "m4v", "mkv", "mov", "mp2", "mp2v", "mp4", "mp4v", "mpe",
-        "mpeg", "mpeg1", "mpeg2", "mpeg4", "mpg", "mpv2", "mts", "mtv",
-        "mxf", "nsv", "nuv", "ogm", "ogv", "ogx", "ps", "rec", "rm",
-        "rmvb", "tod", "ts", "tts", "vob", "vro", "webm", "wm", "wmv",
-        "wtv", "xesc",
+        "3g2",
+        "3gp",
+        "3gp2",
+        "3gpp",
+        "amv",
+        "asf",
+        "avi",
+        "divx",
+        "drc",
+        "dv",
+        "f4v",
+        "flv",
+        "gvi",
+        "gxf",
+        "ismv",
+        "m1v",
+        "m2v",
+        "m2t",
+        "m2ts",
+        "m4v",
+        "mkv",
+        "mov",
+        "mp2",
+        "mp2v",
+        "mp4",
+        "mp4v",
+        "mpe",
+        "mpeg",
+        "mpeg1",
+        "mpeg2",
+        "mpeg4",
+        "mpg",
+        "mpv2",
+        "mts",
+        "mtv",
+        "mxf",
+        "nsv",
+        "nuv",
+        "ogm",
+        "ogv",
+        "ogx",
+        "ps",
+        "rec",
+        "rm",
+        "rmvb",
+        "tod",
+        "ts",
+        "tts",
+        "vob",
+        "vro",
+        "webm",
+        "wm",
+        "wmv",
+        "wtv",
+        "xesc",
     ),
 }

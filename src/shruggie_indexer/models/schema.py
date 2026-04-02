@@ -22,6 +22,8 @@ __all__ = [
     "MetadataEntry",
     "NameObject",
     "ParentObject",
+    "PredicateResult",
+    "RelationshipAnnotation",
     "SizeObject",
     "TimestampPair",
     "TimestampsObject",
@@ -270,28 +272,6 @@ class MetadataAttributes:
     source_media_type: str | None = None
     """MIME type of original source data before transforms."""
 
-    json_style: str | None = None
-    """Original JSON formatting style: ``'compact'`` or ``'pretty'``.
-
-    Recorded at ingest for sidecar-origin JSON entries so that rollback
-    can restore the file with matching formatting intent.  ``None`` for
-    non-JSON formats or legacy entries (treated as ``'compact'``).
-    """
-
-    json_indent: str | None = None
-    """Original JSON indentation string.
-
-    The literal whitespace string used for one level of indentation in the
-    original file. Common values: "  " (2 spaces), "    " (4 spaces),
-    "\\t" (tab). None for compact JSON, non-JSON formats, or when the
-    indent could not be determined. Used by the rollback engine to
-    reproduce the original indentation.
-
-    When json_style is "compact", this field MUST be None.
-    When json_style is "pretty" and this field is None, the rollback
-    engine defaults to 2-space indent for backward compatibility.
-    """
-
     link_metadata: dict[str, str] | None = None
     """Structured metadata extracted from ``.lnk`` binary shortcut files.
 
@@ -308,10 +288,6 @@ class MetadataAttributes:
         }
         if self.source_media_type is not None:
             d["source_media_type"] = self.source_media_type
-        if self.json_style is not None:
-            d["json_style"] = self.json_style
-        if self.json_indent is not None:
-            d["json_indent"] = self.json_indent
         if self.link_metadata is not None:
             d["link_metadata"] = dict(self.link_metadata)
         return d
@@ -333,19 +309,6 @@ class MetadataEntry:
     data: Any
     """Metadata content — JSON object, string, array, or ``None``."""
 
-    # Sidecar-only fields (absent for generated entries)
-    file_system: FileSystemObject | None = None
-    size: SizeObject | None = None
-    timestamps: TimestampsObject | None = None
-
-    encoding: EncodingObject | None = None
-    """Encoding metadata for sidecar files (sidecar-only).
-
-    Present for sidecar entries with text-format data. Absent for generated
-    entries and binary-format sidecars. Enables hash-perfect reversal of
-    the sidecar's text content back to original bytes.
-    """
-
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
             "id": self.id,
@@ -355,20 +318,47 @@ class MetadataEntry:
             "attributes": self.attributes.to_dict(),
             "data": self.data,
         }
-        if self.file_system is not None:
-            # MetadataEntry file_system only includes "relative" per the v2
-            # schema (no "parent" — the parent is always the owning item's
-            # parent and would be redundant).
-            d["file_system"] = {"relative": self.file_system.relative}
-        if self.size is not None:
-            d["size"] = self.size.to_dict()
-        if self.timestamps is not None:
-            d["timestamps"] = self.timestamps.to_dict()
-        if self.encoding is not None:
-            enc_dict = self.encoding.to_dict()
-            if enc_dict:
-                d["encoding"] = enc_dict
         return d
+
+
+@dataclass(frozen=True)
+class PredicateResult:
+    """Result of a single predicate evaluation on a relationship rule."""
+
+    name: str
+    satisfied: bool
+    pattern: str | None = None
+    patterns: list[str] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"name": self.name, "satisfied": self.satisfied}
+        if self.pattern is not None:
+            d["pattern"] = self.pattern
+        if self.patterns is not None:
+            d["patterns"] = self.patterns
+        return d
+
+
+@dataclass(frozen=True)
+class RelationshipAnnotation:
+    """A believed association between this file and another indexed file."""
+
+    target_id: str
+    type: str
+    rule: str
+    rule_source: str
+    confidence: int
+    predicates: list[PredicateResult]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "target_id": self.target_id,
+            "type": self.type,
+            "rule": self.rule,
+            "rule_source": self.rule_source,
+            "confidence": self.confidence,
+            "predicates": [p.to_dict() for p in self.predicates],
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -384,9 +374,6 @@ class IndexEntry:
     default value; optional fields (``items``, ``metadata``, ``mime_type``)
     default to ``None``.
     """
-
-    schema_version: int
-    """Schema version: ``3`` for v3, ``2`` for legacy."""
 
     id: str
     """Prefixed hash: ``y…`` (file), ``x…`` (directory)."""
@@ -407,11 +394,17 @@ class IndexEntry:
     timestamps: TimestampsObject
     attributes: AttributesObject
 
+    schema_version: int = 4
+    """Schema version: ``4`` for v4 output."""
+
     items: list[IndexEntry] | None = None
     """Children (directory) or ``None`` (file)."""
 
     metadata: list[MetadataEntry] | None = None
     """Metadata entries or ``None``."""
+
+    relationships: list[RelationshipAnnotation] | None = None
+    """Relationship annotations for sidecar-like associations."""
 
     duplicates: list[IndexEntry] | None = None
     """Complete IndexEntry objects for files de-duplicated against this entry."""
@@ -450,13 +443,13 @@ class IndexEntry:
             "file_system": self.file_system.to_dict(),
             "timestamps": self.timestamps.to_dict(),
             "attributes": self.attributes.to_dict(),
-            "items": (
-                [item.to_dict() for item in self.items] if self.items is not None else None
-            ),
+            "items": ([item.to_dict() for item in self.items] if self.items is not None else None),
             "metadata": (
                 [m.to_dict() for m in self.metadata] if self.metadata is not None else None
             ),
         }
+        if self.relationships is not None:
+            d["relationships"] = [rel.to_dict() for rel in self.relationships]
         if self.duplicates:
             d["duplicates"] = [dup.to_dict() for dup in self.duplicates]
         if self.schema_version >= 3 and self.encoding is not None:

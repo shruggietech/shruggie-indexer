@@ -87,14 +87,10 @@ def _find_user_config() -> Path | None:
     # Tier 2: v0.1.1 Roaming (Windows only)
     roaming_base = _legacy_roaming_base()
     if roaming_base is not None:
-        roaming_path = (
-            roaming_base / "shruggie-tech" / "shruggie-indexer"
-            / _USER_CONFIG_FILENAME
-        )
+        roaming_path = roaming_base / "shruggie-tech" / "shruggie-indexer" / _USER_CONFIG_FILENAME
         if roaming_path.is_file():
             logger.info(
-                "Configuration file found at legacy Roaming path %s — "
-                "consider moving it to %s",
+                "Configuration file found at legacy Roaming path %s — consider moving it to %s",
                 roaming_path,
                 canonical_path,
             )
@@ -105,13 +101,10 @@ def _find_user_config() -> Path | None:
         legacy_flat = roaming_base / _LEGACY_DIR_NAME / _USER_CONFIG_FILENAME
     else:
         # Linux / macOS: same config base minus ecosystem dir
-        legacy_flat = (
-            canonical_dir.parent.parent / _LEGACY_DIR_NAME / _USER_CONFIG_FILENAME
-        )
+        legacy_flat = canonical_dir.parent.parent / _LEGACY_DIR_NAME / _USER_CONFIG_FILENAME
     if legacy_flat.is_file():
         logger.info(
-            "Configuration file found at legacy v0.1.0 path %s — "
-            "consider moving it to %s",
+            "Configuration file found at legacy v0.1.0 path %s — consider moving it to %s",
             legacy_flat,
             canonical_path,
         )
@@ -168,9 +161,7 @@ def _get_defaults_dict() -> dict[str, Any]:
     d["exiftool_exclude_extensions"] = set(DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS)
     d["exiftool_exclude_keys"] = set(DEFAULT_EXIFTOOL_EXCLUDE_KEYS)
     d["exiftool_args"] = list(DEFAULT_EXIFTOOL_ARGS)
-    d["metadata_identify"] = {
-        k: list(v) for k, v in DEFAULT_METADATA_IDENTIFY_STRINGS.items()
-    }
+    d["metadata_identify"] = {k: list(v) for k, v in DEFAULT_METADATA_IDENTIFY_STRINGS.items()}
     d["metadata_attributes"] = dict(DEFAULT_METADATA_ATTRIBUTES)
     d["metadata_exclude_patterns"] = list(DEFAULT_METADATA_EXCLUDE_PATTERN_STRINGS)
     d["extension_groups"] = {k: list(v) for k, v in DEFAULT_EXTENSION_GROUPS.items()}
@@ -199,11 +190,19 @@ def _merge_toml(config_dict: dict[str, Any], toml_data: dict[str, Any]) -> None:
 
     # Scalar top-level keys
     for key in (
-        "recursive", "id_algorithm", "compute_sha512",
-        "output_stdout", "output_file", "output_inplace",
+        "recursive",
+        "id_algorithm",
+        "compute_sha512",
+        "output_stdout",
+        "output_file",
+        "output_inplace",
         "write_directory_meta",
-        "extract_exif", "meta_merge", "meta_merge_delete",
-        "rename", "dry_run", "extension_validation_pattern",
+        "extract_exif",
+        "no_sidecar_detection",
+        "cleanup_legacy_sidecars",
+        "rename",
+        "dry_run",
+        "extension_validation_pattern",
     ):
         if key in toml_data:
             config_dict[key] = toml_data[key]
@@ -228,9 +227,7 @@ def _merge_toml(config_dict: dict[str, Any], toml_data: dict[str, Any]) -> None:
     exif_section = toml_data.get("exiftool", {})
     if isinstance(exif_section, dict):
         if "exclude_extensions" in exif_section:
-            config_dict["exiftool_exclude_extensions"] = set(
-                exif_section["exclude_extensions"]
-            )
+            config_dict["exiftool_exclude_extensions"] = set(exif_section["exclude_extensions"])
         if "exclude_extensions_append" in exif_section:
             config_dict["exiftool_exclude_extensions"].update(
                 exif_section["exclude_extensions_append"]
@@ -240,13 +237,9 @@ def _merge_toml(config_dict: dict[str, Any], toml_data: dict[str, Any]) -> None:
         if "base_args_append" in exif_section:
             config_dict["exiftool_args"].extend(exif_section["base_args_append"])
         if "exclude_keys" in exif_section:
-            config_dict["exiftool_exclude_keys"] = set(
-                exif_section["exclude_keys"]
-            )
+            config_dict["exiftool_exclude_keys"] = set(exif_section["exclude_keys"])
         if "exclude_keys_append" in exif_section:
-            config_dict["exiftool_exclude_keys"].update(
-                exif_section["exclude_keys_append"]
-            )
+            config_dict["exiftool_exclude_keys"].update(exif_section["exclude_keys_append"])
 
     # Metadata identification patterns section
     identify_section = toml_data.get("metadata_identify", {})
@@ -265,13 +258,9 @@ def _merge_toml(config_dict: dict[str, Any], toml_data: dict[str, Any]) -> None:
     meta_exclude_section = toml_data.get("metadata_exclude", {})
     if isinstance(meta_exclude_section, dict):
         if "patterns" in meta_exclude_section:
-            config_dict["metadata_exclude_patterns"] = list(
-                meta_exclude_section["patterns"]
-            )
+            config_dict["metadata_exclude_patterns"] = list(meta_exclude_section["patterns"])
         if "patterns_append" in meta_exclude_section:
-            config_dict["metadata_exclude_patterns"].extend(
-                meta_exclude_section["patterns_append"]
-            )
+            config_dict["metadata_exclude_patterns"].extend(meta_exclude_section["patterns_append"])
 
     # Extension groups section
     groups_section = toml_data.get("extension_groups", {})
@@ -288,13 +277,24 @@ def _merge_toml(config_dict: dict[str, Any], toml_data: dict[str, Any]) -> None:
 
     # Warn about unknown top-level keys
     known_top = {
-        "recursive", "id_algorithm", "compute_sha512",
-        "output_stdout", "output_file", "output_inplace",
+        "recursive",
+        "id_algorithm",
+        "compute_sha512",
+        "output_stdout",
+        "output_file",
+        "output_inplace",
         "write_directory_meta",
-        "extract_exif", "meta_merge", "meta_merge_delete",
-        "rename", "dry_run", "extension_validation_pattern",
-        "filesystem_excludes", "exiftool", "metadata_identify",
-        "metadata_exclude", "extension_groups",
+        "extract_exif",
+        "no_sidecar_detection",
+        "cleanup_legacy_sidecars",
+        "rename",
+        "dry_run",
+        "extension_validation_pattern",
+        "filesystem_excludes",
+        "exiftool",
+        "metadata_identify",
+        "metadata_exclude",
+        "extension_groups",
         "logging",  # Handled by CLI/GUI, not by IndexerConfig
     }
     for key in toml_data:
@@ -313,11 +313,19 @@ def _merge_overrides(config_dict: dict[str, Any], overrides: dict[str, Any]) -> 
 
     # Direct scalar mappings
     scalar_keys = {
-        "recursive", "id_algorithm", "compute_sha512",
-        "output_stdout", "output_file", "output_inplace",
+        "recursive",
+        "id_algorithm",
+        "compute_sha512",
+        "output_stdout",
+        "output_file",
+        "output_inplace",
         "write_directory_meta",
-        "extract_exif", "meta_merge", "meta_merge_delete",
-        "rename", "dry_run", "extension_validation_pattern",
+        "extract_exif",
+        "no_sidecar_detection",
+        "cleanup_legacy_sidecars",
+        "rename",
+        "dry_run",
+        "extension_validation_pattern",
     }
     for key in scalar_keys:
         if key in overrides:
@@ -349,14 +357,6 @@ def _merge_overrides(config_dict: dict[str, Any], overrides: dict[str, Any]) -> 
 
 def _apply_implications(config_dict: dict[str, Any]) -> None:
     """Propagate parameter implications in reverse dependency order."""
-    # meta_merge_delete → meta_merge
-    if config_dict.get("meta_merge_delete"):
-        config_dict["meta_merge"] = True
-
-    # meta_merge → extract_exif
-    if config_dict.get("meta_merge"):
-        config_dict["extract_exif"] = True
-
     # rename → output_inplace
     if config_dict.get("rename"):
         config_dict["output_inplace"] = True
@@ -386,34 +386,20 @@ def _validate(config_dict: dict[str, Any]) -> None:
 
     Raises ``IndexerConfigError`` on any invariant violation.
     """
-    # 1. MetaMergeDelete safety
-    if config_dict.get("meta_merge_delete"):
-        has_output = bool(config_dict.get("output_file")) or config_dict.get(
-            "output_inplace", False
-        )
-        if not has_output:
-            raise IndexerConfigError(
-                "meta_merge_delete requires at least one of output_file or "
-                "output_inplace to be set. Without a persistent output "
-                "destination, sidecar file content would be lost."
-            )
-
-    # 2. id_algorithm validity
+    # 1. id_algorithm validity
     if config_dict.get("id_algorithm") not in ("md5", "sha256"):
         raise IndexerConfigError(
-            f"id_algorithm must be 'md5' or 'sha256', "
-            f"got {config_dict.get('id_algorithm')!r}"
+            f"id_algorithm must be 'md5' or 'sha256', got {config_dict.get('id_algorithm')!r}"
         )
 
-    # 3. Regex compilation validation
+    # 2. Regex compilation validation
     for type_name, patterns in config_dict.get("metadata_identify", {}).items():
         for i, pattern in enumerate(patterns):
             try:
                 re.compile(pattern, re.IGNORECASE)
             except re.error as exc:
                 raise IndexerConfigError(
-                    f"Invalid regex in metadata_identify.{type_name}[{i}]: "
-                    f"{pattern!r} — {exc}"
+                    f"Invalid regex in metadata_identify.{type_name}[{i}]: {pattern!r} — {exc}"
                 ) from exc
 
     for i, pattern in enumerate(config_dict.get("metadata_exclude_patterns", [])):
@@ -421,8 +407,7 @@ def _validate(config_dict: dict[str, Any]) -> None:
             re.compile(pattern, re.IGNORECASE)
         except re.error as exc:
             raise IndexerConfigError(
-                f"Invalid regex in metadata_exclude_patterns[{i}]: "
-                f"{pattern!r} — {exc}"
+                f"Invalid regex in metadata_exclude_patterns[{i}]: {pattern!r} — {exc}"
             ) from exc
 
     # Validate extension_validation_pattern compiles
@@ -448,20 +433,16 @@ def _build_config(config_dict: dict[str, Any]) -> IndexerConfig:
     # Compile metadata_identify patterns
     compiled_identify: dict[str, tuple[re.Pattern[str], ...]] = {}
     for type_name, patterns in config_dict.get("metadata_identify", {}).items():
-        compiled_identify[type_name] = tuple(
-            re.compile(p, re.IGNORECASE) for p in patterns
-        )
+        compiled_identify[type_name] = tuple(re.compile(p, re.IGNORECASE) for p in patterns)
 
     # Compile metadata_exclude_patterns
     compiled_exclude = tuple(
-        re.compile(p, re.IGNORECASE)
-        for p in config_dict.get("metadata_exclude_patterns", [])
+        re.compile(p, re.IGNORECASE) for p in config_dict.get("metadata_exclude_patterns", [])
     )
 
     # Freeze extension groups
     frozen_groups: dict[str, tuple[str, ...]] = {
-        k: tuple(sorted(set(v)))
-        for k, v in config_dict.get("extension_groups", {}).items()
+        k: tuple(sorted(set(v))) for k, v in config_dict.get("extension_groups", {}).items()
     }
 
     # Freeze metadata_attributes
@@ -485,23 +466,19 @@ def _build_config(config_dict: dict[str, Any]) -> IndexerConfig:
         output_inplace=config_dict.get("output_inplace", False),
         write_directory_meta=config_dict.get("write_directory_meta", True),
         extract_exif=config_dict.get("extract_exif", False),
-        meta_merge=config_dict.get("meta_merge", False),
-        meta_merge_delete=config_dict.get("meta_merge_delete", False),
+        no_sidecar_detection=config_dict.get("no_sidecar_detection", False),
+        cleanup_legacy_sidecars=config_dict.get("cleanup_legacy_sidecars", False),
         rename=config_dict.get("rename", False),
         dry_run=config_dict.get("dry_run", False),
         filesystem_excludes=frozenset(config_dict.get("filesystem_excludes", set())),
-        filesystem_exclude_globs=tuple(
-            config_dict.get("filesystem_exclude_globs", [])
-        ),
+        filesystem_exclude_globs=tuple(config_dict.get("filesystem_exclude_globs", [])),
         extension_validation_pattern=config_dict.get(
             "extension_validation_pattern", DEFAULT_EXTENSION_VALIDATION_PATTERN
         ),
         exiftool_exclude_extensions=frozenset(
             config_dict.get("exiftool_exclude_extensions", set())
         ),
-        exiftool_exclude_keys=frozenset(
-            config_dict.get("exiftool_exclude_keys", set())
-        ),
+        exiftool_exclude_keys=frozenset(config_dict.get("exiftool_exclude_keys", set())),
         exiftool_args=tuple(config_dict.get("exiftool_args", [])),
         metadata_identify=MappingProxyType(compiled_identify),
         metadata_attributes=MappingProxyType(frozen_attrs),
@@ -561,9 +538,7 @@ def load_config(
         if config_file.is_file():
             _merge_toml(config_dict, _read_toml(config_file))
         else:
-            raise IndexerConfigError(
-                f"Specified configuration file does not exist: {config_file}"
-            )
+            raise IndexerConfigError(f"Specified configuration file does not exist: {config_file}")
     else:
         user_config = _find_user_config()
         if user_config is not None:
