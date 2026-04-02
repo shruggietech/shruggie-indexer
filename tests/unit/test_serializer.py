@@ -290,11 +290,11 @@ class TestWriteDirectoryMetaSuppression:
             write_directory_meta=True,
         )
 
-        # Sub-directory sidecar should exist
-        sub_sidecar = subdir / "sub_directorymeta3.json"
+        # Sub-directory sidecar should exist (v4 suffix)
+        sub_sidecar = subdir / "sub_idxd.json"
         assert sub_sidecar.exists()
-        # File sidecar should exist
-        file_sidecar = subdir / "file.txt_meta3.json"
+        # File sidecar should exist (v4 suffix)
+        file_sidecar = subdir / "file.txt_idx.json"
         assert file_sidecar.exists()
 
     def test_dir_sidecar_suppressed_when_disabled(self, tmp_path: Path) -> None:
@@ -345,11 +345,11 @@ class TestWriteDirectoryMetaSuppression:
             write_directory_meta=False,
         )
 
-        # Sub-directory sidecar should NOT exist
-        sub_sidecar = subdir / "sub_directorymeta3.json"
+        # Sub-directory sidecar should NOT exist (v4 suffix)
+        sub_sidecar = subdir / "sub_idxd.json"
         assert not sub_sidecar.exists()
-        # File sidecar should still exist
-        file_sidecar = subdir / "file.txt_meta3.json"
+        # File sidecar should still exist (v4 suffix)
+        file_sidecar = subdir / "file.txt_idx.json"
         assert file_sidecar.exists()
 
     def test_file_sidecars_unaffected(self, tmp_path: Path) -> None:
@@ -393,5 +393,5 @@ class TestWriteDirectoryMetaSuppression:
             write_directory_meta=False,
         )
 
-        assert (root / "a.txt_meta3.json").exists()
-        assert (root / "b.txt_meta3.json").exists()
+        assert (root / "a.txt_idx.json").exists()
+        assert (root / "b.txt_idx.json").exists()

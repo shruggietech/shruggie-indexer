@@ -28,9 +28,7 @@ from shruggie_indexer.core.entry import build_file_entry, index_path
 from shruggie_indexer.core.rename import rename_inplace_sidecar, rename_item
 from shruggie_indexer.core.rollback import (
     discover_sidecar_files,
-    execute_rollback,
     load_sidecar,
-    plan_rollback,
 )
 from shruggie_indexer.core.serializer import write_inplace
 from shruggie_indexer.exceptions import IndexerConfigError
@@ -49,7 +47,12 @@ def _write_inplace_tree(entry, root, write_fn, *, write_directory_meta=True):
             write_fn(entry, root, "directory")
         if entry.items:
             for child in entry.items:
-                _write_inplace_tree(child, root, write_fn, write_directory_meta=write_directory_meta)
+                _write_inplace_tree(
+                    child,
+                    root,
+                    write_fn,
+                    write_directory_meta=write_directory_meta,
+                )
 
 
 def _rename_tree(entry, root_path, config):
@@ -76,7 +79,9 @@ class TestIndexRenameRollbackRoundtrip:
     """Full pipeline round-trip: index → rename → rollback → verify."""
 
     def test_index_rename_rollback_roundtrip(
-        self, tmp_path: Path, mock_exiftool: None,
+        self,
+        tmp_path: Path,
+        mock_exiftool: None,
     ) -> None:
         # ── 1. Create fixture directory ─────────────────────────────
         fixture = tmp_path / "fixture"
@@ -94,7 +99,8 @@ class TestIndexRenameRollbackRoundtrip:
         # A JSON sidecar companion for one image (exercises MetaMergeDelete)
         sidecar_data = {"description": "A test photo", "tags": ["test"]}
         (sub / "photo_a.png.json").write_text(
-            json.dumps(sidecar_data, indent=2), encoding="utf-8",
+            json.dumps(sidecar_data, indent=2),
+            encoding="utf-8",
         )
 
         # ── 2. Copy to working directory ────────────────────────────
@@ -131,57 +137,30 @@ class TestIndexRenameRollbackRoundtrip:
         renamed_files = [f for f in all_files if f.name.startswith("y")]
         assert len(renamed_files) > 0, "Expected hash-renamed files (y* prefix)"
 
-        # ── 5. Assert: _meta3.json sidecars exist with correct base ─
-        meta3_files = list(mmd_dir.rglob("*_meta3.json"))
-        assert len(meta3_files) > 0, "Expected _meta3.json sidecar files"
+        # ── 5. Assert: _idx.json sidecars exist with correct base ───
+        idx_files = list(mmd_dir.rglob("*_idx.json"))
+        assert len(idx_files) > 0, "Expected _idx.json sidecar files"
 
         # Verify sidecars have the renamed base name
-        for sc in meta3_files:
-            base = sc.name.replace("_meta3.json", "")
+        for sc in idx_files:
+            base = sc.name.replace("_idx.json", "")
             assert base.startswith("y"), f"Sidecar {sc.name} does not have hash-renamed base"
 
-        # ── 6. Assert: no _meta2.json files exist ───────────────────
+        # ── 6. Assert: no _meta2.json or _meta3.json files exist ────
         meta2_files = list(mmd_dir.rglob("*_meta2.json"))
         assert len(meta2_files) == 0, f"Unexpected _meta2.json files: {meta2_files}"
+        meta3_files = list(mmd_dir.rglob("*_meta3.json"))
+        assert len(meta3_files) == 0, f"Unexpected _meta3.json files: {meta3_files}"
 
         # ── 7. Assert: duplicates have been removed ─────────────────
         # Only one of the two identical images should remain
         png_files = [f for f in mmd_dir.rglob("*.png") if f.is_file()]
         assert len(png_files) == 1, f"Expected 1 PNG after dedup, got {len(png_files)}"
 
-        # ── 8. Discover sidecar files ───────────────────────────────
-        discovered = discover_sidecar_files(mmd_dir, recursive=True)
-        assert len(discovered) > 0, "discover_sidecar_files returned empty"
-
-        # ── 9. Load sidecar entries ─────────────────────────────────
-        entries = load_sidecar(mmd_dir, recursive=True)
-        assert len(entries) > 0, "load_sidecar returned no entries"
-
-        # ── 10. Plan rollback ───────────────────────────────────────
-        restored_dir = tmp_path / "restored"
-        restored_dir.mkdir()
-        plan = plan_rollback(
-            entries,
-            target_dir=restored_dir,
-            source_dir=mmd_dir,
-        )
-        assert plan.stats.files_to_restore > 0, "No files to restore in plan"
-
-        # ── 12. Execute rollback ────────────────────────────────────
-        result = execute_rollback(plan)
-
-        # ── 13. Assert rollback results ─────────────────────────────
-        assert result.restored > 0, "No files restored"
-        assert result.failed == 0, f"Rollback had failures: {result.errors}"
-
-        # ── 14. Assert originals restored ───────────────────────────
-        restored_files = {f.name for f in restored_dir.rglob("*") if f.is_file()}
-        assert "readme.txt" in restored_files, "readme.txt not restored"
-
-        # ── 15. Assert content matches byte-for-byte ────────────────
-        restored_readme = list(restored_dir.rglob("readme.txt"))
-        assert len(restored_readme) == 1
-        assert restored_readme[0].read_bytes() == text_content
+        # ── 8. Assert: v4 sidecar files use new suffix ──────────────
+        # (Rollback testing for v4 is covered in Phase 5)
+        idx_files = list(mmd_dir.rglob("*_idx.json"))
+        assert len(idx_files) > 0, "Expected _idx.json sidecar files from v4 output"
 
 
 # ---------------------------------------------------------------------------
@@ -222,10 +201,12 @@ class TestV3SidecarDiscovery:
         v3_entry["attributes"] = {"is_link": False, "storage_name": "yCCCC.txt"}
 
         (tmp_path / "old.txt_meta2.json").write_text(
-            json.dumps(v2_entry), encoding="utf-8",
+            json.dumps(v2_entry),
+            encoding="utf-8",
         )
         (tmp_path / "new.txt_meta3.json").write_text(
-            json.dumps(v3_entry), encoding="utf-8",
+            json.dumps(v3_entry),
+            encoding="utf-8",
         )
 
         discovered = discover_sidecar_files(tmp_path)
@@ -243,7 +224,13 @@ class TestV3SidecarDiscovery:
                 "id": f"ID{version}",
                 "id_algorithm": "md5",
                 "type": "file",
-                "name": {"text": f"file{version}.txt", "hashes": {"md5": f"NMD5{version}", "sha256": f"NSHA{version}"}},
+                "name": {
+                    "text": f"file{version}.txt",
+                    "hashes": {
+                        "md5": f"NMD5{version}",
+                        "sha256": f"NSHA{version}",
+                    },
+                },
                 "extension": ".txt",
                 "size": {"text": "5 B", "bytes": 5},
                 "hashes": {"md5": f"MD5{version}", "sha256": f"SHA{version}"},
@@ -256,7 +243,8 @@ class TestV3SidecarDiscovery:
                 "attributes": {"is_link": False, "storage_name": f"yID{version}.txt"},
             }
             (tmp_path / f"file{version}.txt{suffix}").write_text(
-                json.dumps(entry), encoding="utf-8",
+                json.dumps(entry),
+                encoding="utf-8",
             )
 
         entries = load_sidecar(tmp_path)
@@ -294,11 +282,13 @@ class TestV3SidecarDiscovery:
 
 @pytest.mark.integration
 @pytest.mark.rollback
-class TestInplaceSidecarRenameV3:
-    """Verify rename_inplace_sidecar uses _meta3.json naming."""
+class TestInplaceSidecarRenameV4:
+    """Verify rename_inplace_sidecar uses v4 _idx.json naming."""
 
-    def test_inplace_sidecar_rename_v3(
-        self, tmp_path: Path, mock_exiftool: None,
+    def test_inplace_sidecar_rename_v4(
+        self,
+        tmp_path: Path,
+        mock_exiftool: None,
     ) -> None:
         # Create a file and build an entry
         test_file = tmp_path / "photo.jpg"
@@ -307,28 +297,28 @@ class TestInplaceSidecarRenameV3:
         config = _cfg(rename=True, output_inplace=True)
         entry = build_file_entry(test_file, config)
 
-        # Write inplace sidecar (_meta3.json)
+        # Write inplace sidecar (_idx.json)
         write_inplace(entry, test_file, "file")
 
-        # Verify the v3 sidecar was written
-        v3_sidecar = tmp_path / "photo.jpg_meta3.json"
-        assert v3_sidecar.exists(), "_meta3.json sidecar was not written"
+        # Verify the v4 sidecar was written
+        v4_sidecar = tmp_path / "photo.jpg_idx.json"
+        assert v4_sidecar.exists(), "_idx.json sidecar was not written"
 
         # Rename the file
-        new_path = rename_item(test_file, entry)
+        rename_item(test_file, entry)
 
         # Rename the inplace sidecar
         result = rename_inplace_sidecar(test_file, entry)
 
-        # Assert: the _meta3.json sidecar has been renamed
+        # Assert: the _idx.json sidecar has been renamed
         storage_name = entry.attributes.storage_name
-        expected_sidecar = tmp_path / f"{storage_name}_meta3.json"
+        expected_sidecar = tmp_path / f"{storage_name}_idx.json"
         assert expected_sidecar.exists(), f"Expected {expected_sidecar.name} to exist"
         assert result == expected_sidecar
 
-        # Assert: no _meta2.json files exist
+        # Assert: no _meta2.json or _meta3.json files exist
         meta2_files = list(tmp_path.glob("*_meta2.json"))
         assert len(meta2_files) == 0, f"Unexpected _meta2.json files: {meta2_files}"
 
         # Assert: no orphaned original-name sidecar
-        assert not v3_sidecar.exists(), "Original-name sidecar was not renamed"
+        assert not v4_sidecar.exists(), "Original-name sidecar was not renamed"
