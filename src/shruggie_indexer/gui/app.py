@@ -114,22 +114,16 @@ _TAB_ABOUT = "about"
 
 # Operation type display labels (used by CTkOptionMenu)
 _OP_INDEX = "Index"
-_OP_META_MERGE = "Meta Merge"
-_OP_META_MERGE_DELETE = "Meta Merge Delete"
 _OP_ROLLBACK = "Rollback"
 
 _OPERATION_LABELS: list[str] = [
     _OP_INDEX,
-    _OP_META_MERGE,
-    _OP_META_MERGE_DELETE,
     _OP_ROLLBACK,
 ]
 
 # Display label <-> internal key for session persistence
 _OP_KEY_MAP: dict[str, str] = {
     _OP_INDEX: "index",
-    _OP_META_MERGE: "meta_merge",
-    _OP_META_MERGE_DELETE: "meta_merge_delete",
     _OP_ROLLBACK: "rollback",
 }
 _OP_LABEL_MAP: dict[str, str] = {v: k for k, v in _OP_KEY_MAP.items()}
@@ -1225,9 +1219,8 @@ class OperationsPage(ctk.CTkFrame):
     current operation/target configuration are *disabled* (greyed-out)
     with explanatory fine-print labels — they are never hidden.
 
-    Rename is an optional feature toggle that can be combined with any
-    of the three core operations (Index, Meta Merge, Meta Merge Delete),
-    not a standalone operation type.
+    Rename is an optional feature toggle available for Index operations
+    (disabled for Rollback), not a standalone operation type.
     """
 
     def __init__(self, master: Any, app: ShruggiIndexerApp, **kwargs: Any) -> None:
@@ -1355,6 +1348,9 @@ class OperationsPage(ctk.CTkFrame):
 
         ctk.CTkLabel(row, text="Type:", anchor="w").pack(side="left", padx=(0, 8))
         self._op_type_var = ctk.StringVar(value=_OP_INDEX)
+        # TODO(review): With only two operation types remaining after the v4 pivot,
+        # a dropdown may not be the optimal UI pattern. Consider switching to a
+        # segmented toggle or radio buttons in a future UI review pass.
         self._op_menu = _CtkOptionMenu(
             row,
             variable=self._op_type_var,
@@ -1363,7 +1359,7 @@ class OperationsPage(ctk.CTkFrame):
             width=180,
         )
         self._op_menu.pack(side="left", padx=(0, 16))
-        _Tooltip(self._op_menu, "Choose Index, Meta Merge, Meta Merge Delete, or Rollback.")
+        _Tooltip(self._op_menu, "Choose Index or Rollback.")
 
         self._indicator = _DestructiveIndicator(row)
         self._indicator.pack(side="left")
@@ -2156,6 +2152,10 @@ class OperationsPage(ctk.CTkFrame):
 
         **SS10.9 Standard 1.3.3** — Control Interdependency Transparency.
         """
+        # TODO(review): This method was simplified during the v4 pivot by removing
+        # Meta Merge and Meta Merge Delete branches. The overall architecture
+        # (single centralized reconciliation) is preserved. Review whether further
+        # simplification is warranted now that only Index and Rollback remain.
         op = self._op_type_var.get()
         is_rollback = op == _OP_ROLLBACK
 
@@ -2220,8 +2220,7 @@ class OperationsPage(ctk.CTkFrame):
             effective_type = target_kind or "unknown"
 
         is_dir = effective_type == "directory"
-        is_mmd = op == _OP_META_MERGE_DELETE
-        view_only_constrained = is_mmd or rename_on
+        view_only_constrained = rename_on
         dir_meta_on = self._write_dir_meta_var.get()
         mode = self._output_mode_var.get()
 
@@ -2249,9 +2248,6 @@ class OperationsPage(ctk.CTkFrame):
         # is disabled — it would produce zero output.
         single_blocked_by_dir_meta = is_dir and not dir_meta_on
 
-        # When MMD is active and dir meta is off, force Multi-file.
-        mmd_forces_multi = is_mmd and is_dir and not dir_meta_on
-
         # Enforce fallback if current mode is constrained or unavailable.
         if mode == _OUT_VIEW and view_only_constrained:
             # View only is constrained — snap back to appropriate default.
@@ -2259,9 +2255,6 @@ class OperationsPage(ctk.CTkFrame):
             self._output_mode_var.set(mode)
         elif mode == _OUT_SINGLE and single_blocked_by_dir_meta:
             # Single file blocked by suppressed dir meta — snap to Multi-file.
-            mode = _OUT_MULTI
-            self._output_mode_var.set(mode)
-        elif mmd_forces_multi and mode != _OUT_MULTI:
             mode = _OUT_MULTI
             self._output_mode_var.set(mode)
         elif mode not in available_modes:
@@ -2281,23 +2274,11 @@ class OperationsPage(ctk.CTkFrame):
                 "Single file mode requires directory summary output. "
                 "Enable 'Write directory summary files' or use Multi-file mode.",
             )
-        if mmd_forces_multi:
-            info_parts.append(
-                "Multi-file mode is required when directory output is "
-                "suppressed with Meta Merge Delete. Per-file sidecars "
-                "preserve merged sidecar data.",
-            )
         if view_only_constrained:
-            if is_mmd:
-                info_parts.append(
-                    "View only is not available for Meta Merge Delete. "
-                    "Destructive operations require a persistent output record.",
-                )
-            else:
-                info_parts.append(
-                    "View only is not available when Rename is active. "
-                    "Rename requires writing files to disk.",
-                )
+            info_parts.append(
+                "View only is not available when Rename is active. "
+                "Rename requires writing files to disk.",
+            )
         self._output_mode_info_label.configure(
             text="  ".join(info_parts),
         )
@@ -2306,7 +2287,7 @@ class OperationsPage(ctk.CTkFrame):
         self._update_output_path_display()
 
         # -- Destructive indicator --
-        destructive = op == _OP_META_MERGE_DELETE or rename_on
+        destructive = rename_on
         self._indicator.set_destructive(destructive)
 
         # -- Action button enabled state --
@@ -2452,7 +2433,6 @@ class OperationsPage(ctk.CTkFrame):
 
     def build_config(self, base: IndexerConfig) -> IndexerConfig:
         """Construct the final IndexerConfig for the current operation."""
-        op = self._op_type_var.get()
         rename_on = self._rename_var.get()
         mode = self._output_mode_var.get()
         overrides: dict[str, Any] = {
@@ -2468,13 +2448,6 @@ class OperationsPage(ctk.CTkFrame):
         # Rename feature (applies to any operation)
         if rename_on:
             overrides["rename"] = True
-
-        # Operation-specific flags
-        if op == _OP_META_MERGE:
-            overrides["meta_merge"] = True
-        elif op == _OP_META_MERGE_DELETE:
-            overrides["meta_merge"] = True
-            overrides["meta_merge_delete"] = True
 
         # Output mode → config mapping
         if mode == _OUT_VIEW:
@@ -2592,6 +2565,12 @@ class OperationsPage(ctk.CTkFrame):
         if op_type == "rename":
             op_type = "index"
             state.setdefault("rename", True)
+        elif op_type in ("meta_merge", "meta_merge_delete"):
+            logger.info(
+                "Legacy operation type '%s' in session file; falling back to 'index'",
+                op_type,
+            )
+            op_type = "index"
         label = _OP_LABEL_MAP.get(op_type, _OP_INDEX)
         self._op_type_var.set(label)
 
@@ -2673,6 +2652,12 @@ class OperationsPage(ctk.CTkFrame):
         if old_active_tab == "rename":
             self._op_type_var.set(_OP_INDEX)
             self._rename_var.set(True)
+        elif old_active_tab in ("meta_merge", "meta_merge_delete"):
+            logger.info(
+                "Legacy operation type '%s' in session file; falling back to 'index'",
+                old_active_tab,
+            )
+            self._op_type_var.set(_OP_INDEX)
         else:
             label = _OP_LABEL_MAP.get(old_active_tab, _OP_INDEX)
             self._op_type_var.set(label)
@@ -4062,8 +4047,8 @@ class ShruggiIndexerApp(ctk.CTk):
             # ── Log resolved configuration ─────────────────────────────
             logger.info(
                 "Index GUI: target=%s, recursive=%s, id_algorithm=%s, "
-                "compute_sha512=%s, extract_exif=%s, meta_merge=%s, "
-                "meta_merge_delete=%s, rename=%s, dry_run=%s, "
+                "compute_sha512=%s, extract_exif=%s, no_sidecar_detection=%s, "
+                "cleanup_legacy_sidecars=%s, rename=%s, dry_run=%s, "
                 "output_stdout=%s, output_file=%s, output_inplace=%s, "
                 "write_directory_meta=%s",
                 target,
@@ -4071,8 +4056,8 @@ class ShruggiIndexerApp(ctk.CTk):
                 config.id_algorithm,
                 config.compute_sha512,
                 config.extract_exif,
-                getattr(config, "meta_merge", False),
-                getattr(config, "meta_merge_delete", False),
+                config.no_sidecar_detection,
+                config.cleanup_legacy_sidecars,
                 config.rename,
                 config.dry_run,
                 config.output_stdout,

@@ -76,7 +76,9 @@ class TestCliDefaultInvocation:
     """Tests for default CLI invocation."""
 
     def test_default_invocation_indexes_cwd(
-        self, runner: CliRunner, tmp_path: Path,
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
     ) -> None:
         """Invoking without arguments indexes the current directory."""
         (tmp_path / "hello.txt").write_text("hello", encoding="utf-8")
@@ -110,7 +112,9 @@ class TestCliRecursive:
     """Tests for --recursive and --no-recursive."""
 
     def test_recursive_flag(
-        self, runner: CliRunner, sample_tree: Path,
+        self,
+        runner: CliRunner,
+        sample_tree: Path,
     ) -> None:
         """--recursive produces nested items."""
         result = _invoke(runner, [str(sample_tree), "--recursive"])
@@ -119,7 +123,9 @@ class TestCliRecursive:
         assert parsed["items"] is not None
 
     def test_no_recursive_flag(
-        self, runner: CliRunner, sample_tree: Path,
+        self,
+        runner: CliRunner,
+        sample_tree: Path,
     ) -> None:
         """--no-recursive produces items but subdirs have items=None."""
         result = _invoke(runner, [str(sample_tree), "--no-recursive"])
@@ -154,27 +160,69 @@ class TestCliInplace:
 
         result = _invoke(runner, [str(target), "--inplace"])
         assert result.exit_code == 0
-        sidecar = tmp_path / "target.txt_meta3.json"
+        sidecar = tmp_path / "target.txt_idx.json"
         assert sidecar.exists()
 
 
-class TestCliMetaMerge:
-    """Tests for --meta-merge (with exiftool mocked)."""
+class TestCliSidecarDetectionFlags:
+    """Tests for sidecar relationship detection and cleanup flags."""
 
-    def test_meta_merge(self, runner: CliRunner, tmp_path: Path) -> None:
-        """--meta-merge enables sidecar merging."""
+    def test_no_sidecar_detection(self, runner: CliRunner, tmp_path: Path) -> None:
+        """--no-sidecar-detection suppresses relationships in output."""
         target = tmp_path / "video.mp4"
         target.write_bytes(b"mp4")
         (tmp_path / "video.description").write_text("desc", encoding="utf-8")
 
         result = _invoke(
             runner,
-            [str(target), "--meta-merge", "--stdout"],
+            [str(target), "--no-sidecar-detection", "--stdout"],
         )
         assert result.exit_code == 0
         parsed = json.loads(result.output)
-        # metadata should be a list (possibly with sidecar entries).
-        assert parsed.get("metadata") is not None
+        assert "relationships" not in parsed
+
+    def test_cleanup_legacy_sidecars_flag_accepted(
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
+    ) -> None:
+        """--cleanup-legacy-sidecars is accepted by the CLI parser."""
+        target = tmp_path / "target.txt"
+        target.write_text("content", encoding="utf-8")
+
+        result = _invoke(
+            runner,
+            [str(target), "--inplace", "--cleanup-legacy-sidecars"],
+        )
+        assert result.exit_code == 0
+
+
+class TestCliRemovedFlags:
+    """Tests for removed legacy CLI flags."""
+
+    def test_meta_merge_removed(self, runner: CliRunner, tmp_path: Path) -> None:
+        """--meta-merge is removed and should error."""
+        target = tmp_path / "target.txt"
+        target.write_text("content", encoding="utf-8")
+        result = runner.invoke(
+            main,
+            [str(target), "--meta-merge"],
+            catch_exceptions=False,
+        )
+        assert result.exit_code != 0
+        assert "No such option" in result.output
+
+    def test_meta_merge_delete_removed(self, runner: CliRunner, tmp_path: Path) -> None:
+        """--meta-merge-delete is removed and should error."""
+        target = tmp_path / "target.txt"
+        target.write_text("content", encoding="utf-8")
+        result = runner.invoke(
+            main,
+            [str(target), "--meta-merge-delete"],
+            catch_exceptions=False,
+        )
+        assert result.exit_code != 0
+        assert "No such option" in result.output
 
 
 class TestCliRename:

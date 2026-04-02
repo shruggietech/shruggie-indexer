@@ -285,7 +285,7 @@ class DefaultGroup(click.Group):
     help=(
         "Index files and directories, producing structured JSON output with "
         "hash-based identities, filesystem metadata, EXIF data, and sidecar "
-        "metadata.\n\n"
+        "relationship annotations.\n\n"
         "When no subcommand is given, 'index' is used by default."
     ),
 )
@@ -344,8 +344,8 @@ def _build_cli_overrides(
     inplace: bool,
     dir_meta: bool | None,
     meta: bool,
-    meta_merge: bool,
-    meta_merge_delete: bool,
+    no_sidecar_detection: bool,
+    cleanup_legacy_sidecars: bool,
     rename: bool,
     dry_run: bool,
     id_type: str | None,
@@ -364,10 +364,10 @@ def _build_cli_overrides(
         overrides["compute_sha512"] = True
     if meta:
         overrides["extract_exif"] = True
-    if meta_merge:
-        overrides["meta_merge"] = True
-    if meta_merge_delete:
-        overrides["meta_merge_delete"] = True
+    if no_sidecar_detection:
+        overrides["no_sidecar_detection"] = True
+    if cleanup_legacy_sidecars:
+        overrides["cleanup_legacy_sidecars"] = True
     if rename:
         overrides["rename"] = True
     if dry_run:
@@ -535,16 +535,16 @@ def _post_index_pipeline(
     "--inplace",
     is_flag=True,
     default=False,
-    help="Write individual sidecar JSON files alongside each item.",
+    help="Write individual JSON output files alongside each item.",
 )
 @click.option(
     "--dir-meta/--no-dir-meta",
     "dir_meta",
     default=None,
     help=(
-        "Write directory-level _directorymeta3.json files. "
-        "--no-dir-meta suppresses directory sidecars "
-        "while leaving per-file sidecars unaffected."
+        "Write directory-level _idxd.json files. "
+        "--no-dir-meta suppresses directory summaries "
+        "while leaving per-file outputs unaffected."
     ),
 )
 # -- Metadata options --
@@ -556,16 +556,22 @@ def _post_index_pipeline(
     help="Extract embedded metadata via exiftool.",
 )
 @click.option(
-    "--meta-merge",
+    "--no-sidecar-detection",
     is_flag=True,
     default=False,
-    help="Merge sidecar metadata into parent entries. Implies --meta.",
+    help=(
+        "Disable sidecar relationship detection. "
+        "Every file is indexed as standalone content with no relationships array."
+    ),
 )
 @click.option(
-    "--meta-merge-delete",
+    "--cleanup-legacy-sidecars",
     is_flag=True,
     default=False,
-    help="Merge and delete sidecar files. Implies --meta-merge.",
+    help=(
+        "Remove obsolete tool output files (_meta.json, _meta2.json, _meta3.json, etc.) "
+        "when new-format replacements are written in the same run."
+    ),
 )
 # -- Rename options --
 @click.option(
@@ -651,8 +657,8 @@ def index_cmd(
     inplace: bool,
     dir_meta: bool | None,
     meta: bool,
-    meta_merge: bool,
-    meta_merge_delete: bool,
+    no_sidecar_detection: bool,
+    cleanup_legacy_sidecars: bool,
     rename: bool,
     dry_run: bool,
     id_type: str | None,
@@ -697,8 +703,8 @@ def index_cmd(
             inplace=inplace,
             dir_meta=dir_meta,
             meta=meta,
-            meta_merge=meta_merge,
-            meta_merge_delete=meta_merge_delete,
+            no_sidecar_detection=no_sidecar_detection,
+            cleanup_legacy_sidecars=cleanup_legacy_sidecars,
             rename=rename,
             dry_run=dry_run,
             id_type=id_type,
@@ -717,11 +723,6 @@ def index_cmd(
         # Log implication propagation (spec section 8.8)
         if config.rename and not inplace:
             logger.info("--rename implies --inplace; enabling in-place output")
-        if getattr(config, "meta_merge_delete", False) and not meta_merge:
-            logger.info("Legacy meta-merge-delete flag is set in config")
-        if getattr(config, "meta_merge", False) and not meta:
-            logger.info("Legacy meta-merge flag is set in config")
-
         # Warn if no output destinations are enabled
         if not config.output_stdout and config.output_file is None and not config.output_inplace:
             logger.warning(
@@ -732,8 +733,8 @@ def index_cmd(
         # ── Log resolved configuration ─────────────────────────────────
         logger.info(
             "Index CLI: target=%s, recursive=%s, id_algorithm=%s, "
-            "compute_sha512=%s, extract_exif=%s, meta_merge=%s, "
-            "meta_merge_delete=%s, rename=%s, dry_run=%s, "
+            "compute_sha512=%s, extract_exif=%s, no_sidecar_detection=%s, "
+            "cleanup_legacy_sidecars=%s, rename=%s, dry_run=%s, "
             "output_stdout=%s, output_file=%s, output_inplace=%s, "
             "write_directory_meta=%s, detect_encoding=%s, "
             "detect_charset=%s",
@@ -742,8 +743,8 @@ def index_cmd(
             config.id_algorithm,
             config.compute_sha512,
             config.extract_exif,
-            getattr(config, "meta_merge", False),
-            getattr(config, "meta_merge_delete", False),
+            config.no_sidecar_detection,
+            config.cleanup_legacy_sidecars,
             config.rename,
             config.dry_run,
             config.output_stdout,
