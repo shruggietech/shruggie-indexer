@@ -8,12 +8,10 @@ from shruggie_indexer.config.loader import load_config
 from shruggie_indexer.config.types import (
     ExiftoolConfig,
     IndexerConfig,
-    MetadataTypeAttributes,
 )
 
 __all__ = [
     "ExiftoolConfig",
     "IndexerConfig",
-    "MetadataTypeAttributes",
     "load_config",
 ]

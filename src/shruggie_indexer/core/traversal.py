@@ -17,13 +17,8 @@ Metadata exclusion (Batch 6, §7.5) adds one filtering layer at the
 traversal level:
 
 - **Layer 1 (always active):** Files matching ``metadata_exclude_patterns``
-  (indexer output artifacts like ``_meta.json``, ``_meta2.json``) are excluded
-  unconditionally.
-
-A second filtering layer (Layer 2) for sidecar-pattern files when MetaMerge
-is active is applied in ``entry.build_directory_entry()`` rather than here,
-so that sidecar files remain in the ``siblings`` list for sidecar discovery
-while being excluded from the entry-building iteration.
+    (indexer output artifacts like ``_meta.json``, ``_meta2.json``, ``_idx.json``)
+    are excluded unconditionally.
 
 See spec §6.1 for full behavioral guidance.
 """
@@ -37,7 +32,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import re
-    from collections.abc import Mapping
     from pathlib import Path
 
     from shruggie_indexer.config.types import IndexerConfig
@@ -174,20 +168,3 @@ def _matches_metadata_exclude(
     _meta2.json, _meta3.json, _directorymeta3.json, etc.) unconditionally.
     """
     return any(pattern.search(filename) for pattern in exclude_patterns)
-
-
-def _matches_any_identify_pattern(
-    filename: str,
-    metadata_identify: Mapping[str, tuple[re.Pattern[str], ...]],
-) -> bool:
-    """Check whether a filename matches any sidecar identification pattern.
-
-    Layer 2 filter: when MetaMerge is active, removes recognized sidecar
-    files from the item list so they are consumed exclusively through
-    the sidecar merge system.
-    """
-    for patterns in metadata_identify.values():
-        for pattern in patterns:
-            if pattern.search(filename):
-                return True
-    return False

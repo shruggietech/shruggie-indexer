@@ -1,4 +1,8 @@
-"""Sidecar metadata file discovery and parsing for shruggie-indexer.
+"""Legacy sidecar metadata file discovery and parsing.
+
+Deprecated in v4: the active indexing pipeline now treats all files as
+first-class ``IndexEntry`` objects and annotates associations through the
+relationship rule engine in ``core.rules``.
 
 Discovers sidecar metadata files adjacent to an indexed item (siblings in the
 same directory) and parses them into ``MetadataEntry`` objects.  Eleven sidecar
@@ -16,7 +20,7 @@ Parsing follows a format-appropriate fallback chain:
 The ``MetaMergeDelete`` queue accumulates sidecar paths for deferred deletion
 in Stage 6 when ``config.meta_merge_delete`` is enabled.
 
-See spec §6.7 for full behavioral guidance.
+See spec §6.7 for historical behavioral guidance.
 See ``docs/porting-reference/MetaFileRead_DependencyCatalog.md`` for the
 original sidecar parsing logic being replaced.
 """
@@ -26,24 +30,19 @@ from __future__ import annotations
 import base64
 import json
 import logging
-import os
+import re
 from typing import TYPE_CHECKING, Any
 
-from shruggie_indexer.core._formatting import human_readable_size as _human_readable_size
+from shruggie_indexer.config.defaults import DEFAULT_METADATA_IDENTIFY_STRINGS
 from shruggie_indexer.core.hashing import hash_file, hash_string, select_id
-from shruggie_indexer.core.timestamps import extract_timestamps
 from shruggie_indexer.models.schema import (
     EncodingObject,
-    FileSystemObject,
     MetadataAttributes,
     MetadataEntry,
     NameObject,
-    SizeObject,
-    TimestampsObject,
 )
 
 if TYPE_CHECKING:
-    import re
     from collections.abc import Mapping
     from pathlib import Path
 
@@ -54,6 +53,12 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+
+_LEGACY_METADATA_IDENTIFY: dict[str, tuple[re.Pattern[str], ...]] = {
+    type_name: tuple(re.compile(pattern, re.IGNORECASE) for pattern in patterns)
+    for type_name, patterns in DEFAULT_METADATA_IDENTIFY_STRINGS.items()
+}
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +215,7 @@ def _extract_lnk_metadata(path: Path) -> dict[str, str] | None:
 
     try:
         return parse_lnk(path)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(".lnk metadata extraction failed for %s: %s", path, exc)
         return None
 
@@ -275,7 +280,8 @@ def _read_with_fallback(
     Returns:
         A 5-tuple of ``(data, format_name, transforms, extra_attrs, encoding)``.
     """
-    type_attrs = config.metadata_attributes.get(sidecar_type)
+    metadata_attributes = getattr(config, "metadata_attributes", {})
+    type_attrs = metadata_attributes.get(sidecar_type)
 
     # --- Fallback chain types: JSON → text → binary ---
     if sidecar_type in _FALLBACK_CHAIN_TYPES:
@@ -558,8 +564,6 @@ def _build_metadata_entry(
     Returns:
         A fully populated ``MetadataEntry``.
     """
-    from shruggie_indexer.core.paths import relative_forward_slash
-
     # Hash the sidecar file contents.
     algorithms = ("md5", "sha256")
     if config.compute_sha512:
@@ -578,35 +582,15 @@ def _build_metadata_entry(
     name_hashes = hash_string(sidecar_path.name, algorithms=algorithms)
     name_obj = NameObject(text=sidecar_path.name, hashes=name_hashes)
 
-    # Filesystem location.
-    rel_path = relative_forward_slash(sidecar_path, index_root)
-    file_system = FileSystemObject(relative=rel_path, parent=None)
-
-    # Size and timestamps from stat.
-    try:
-        stat_result = os.stat(sidecar_path)
-        size_obj = SizeObject(
-            text=_human_readable_size(stat_result.st_size),
-            bytes=stat_result.st_size,
-        )
-        timestamps_obj: TimestampsObject | None = extract_timestamps(stat_result)
-    except OSError:
-        size_obj = SizeObject(text="0 B", bytes=0)
-        timestamps_obj = None
-
     # Source media type for binary sidecars.
     source_media_type = _detect_source_media_type(sidecar_path, fmt)
 
     # Resolve extra attributes from the reader.
     effective_type = sidecar_type
-    json_style: str | None = None
-    json_indent: str | None = None
     link_metadata: dict[str, str] | None = None
 
     if extra_attrs:
         effective_type = extra_attrs.get("type_override", sidecar_type)
-        json_style = extra_attrs.get("json_style")
-        json_indent = extra_attrs.get("json_indent")
         link_metadata = extra_attrs.get("link_metadata")
 
     # Attributes.
@@ -615,8 +599,6 @@ def _build_metadata_entry(
         format=fmt,
         transforms=list(transforms),
         source_media_type=source_media_type,
-        json_style=json_style,
-        json_indent=json_indent,
         link_metadata=link_metadata,
     )
 
@@ -627,10 +609,6 @@ def _build_metadata_entry(
         hashes=file_hashes,
         attributes=attributes,
         data=data,
-        file_system=file_system,
-        size=size_obj,
-        timestamps=timestamps_obj,
-        encoding=encoding,
     )
 
 
@@ -684,7 +662,7 @@ def discover_and_parse(
     if index_root is None:
         index_root = item_path.parent
 
-    metadata_identify = config.metadata_identify
+    metadata_identify = getattr(config, "metadata_identify", _LEGACY_METADATA_IDENTIFY)
     exclude_patterns = config.metadata_exclude_patterns
 
     entries: list[MetadataEntry] = []
@@ -749,7 +727,7 @@ def discover_and_parse(
         entries.append(entry)
 
         # MetaMergeDelete queue.
-        if config.meta_merge_delete and delete_queue is not None:
+        if bool(getattr(config, "meta_merge_delete", False)) and delete_queue is not None:
             delete_queue.append(sibling_path)
 
     return entries

@@ -7,7 +7,7 @@ as the core modules are delivered across sprints.
 
 from shruggie_indexer._version import __version__
 from shruggie_indexer.config.loader import load_config
-from shruggie_indexer.config.types import IndexerConfig, MetadataTypeAttributes
+from shruggie_indexer.config.types import IndexerConfig
 from shruggie_indexer.core.entry import (
     build_directory_entry,
     build_file_entry,
@@ -38,8 +38,8 @@ from shruggie_indexer.exceptions import (
     IndexerError,
     IndexerRuntimeError,
     IndexerTargetError,
-    RollbackError,
     RenameError,
+    RollbackError,
 )
 from shruggie_indexer.models.schema import (
     AttributesObject,
@@ -69,7 +69,6 @@ __all__ = [
     "LocalSourceResolver",
     "MetadataAttributes",
     "MetadataEntry",
-    "MetadataTypeAttributes",
     "NameObject",
     "ParentObject",
     "ProgressEvent",

@@ -28,14 +28,11 @@ from shruggie_indexer.config.defaults import (
     DEFAULT_EXTENSION_VALIDATION_PATTERN,
     DEFAULT_FILESYSTEM_EXCLUDE_GLOBS,
     DEFAULT_FILESYSTEM_EXCLUDES,
-    DEFAULT_METADATA_ATTRIBUTES,
     DEFAULT_METADATA_EXCLUDE_PATTERN_STRINGS,
-    DEFAULT_METADATA_IDENTIFY_STRINGS,
     DEFAULT_SCALARS,
 )
 from shruggie_indexer.config.types import (
     IndexerConfig,
-    MetadataTypeAttributes,
     SidecarRuleConfig,
 )
 from shruggie_indexer.exceptions import IndexerConfigError
@@ -162,8 +159,6 @@ def _get_defaults_dict() -> dict[str, Any]:
     d["exiftool_exclude_extensions"] = set(DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS)
     d["exiftool_exclude_keys"] = set(DEFAULT_EXIFTOOL_EXCLUDE_KEYS)
     d["exiftool_args"] = list(DEFAULT_EXIFTOOL_ARGS)
-    d["metadata_identify"] = {k: list(v) for k, v in DEFAULT_METADATA_IDENTIFY_STRINGS.items()}
-    d["metadata_attributes"] = dict(DEFAULT_METADATA_ATTRIBUTES)
     d["metadata_exclude_patterns"] = list(DEFAULT_METADATA_EXCLUDE_PATTERN_STRINGS)
     d["sidecar_rules"] = {}
     d["extension_groups"] = {k: list(v) for k, v in DEFAULT_EXTENSION_GROUPS.items()}
@@ -243,18 +238,12 @@ def _merge_toml(config_dict: dict[str, Any], toml_data: dict[str, Any]) -> None:
         if "exclude_keys_append" in exif_section:
             config_dict["exiftool_exclude_keys"].update(exif_section["exclude_keys_append"])
 
-    # Metadata identification patterns section
-    identify_section = toml_data.get("metadata_identify", {})
-    if isinstance(identify_section, dict):
-        for type_name, patterns in identify_section.items():
-            if type_name.endswith("_append"):
-                base_name = type_name.removesuffix("_append")
-                if base_name in config_dict["metadata_identify"]:
-                    config_dict["metadata_identify"][base_name].extend(patterns)
-                else:
-                    config_dict["metadata_identify"][base_name] = list(patterns)
-            else:
-                config_dict["metadata_identify"][type_name] = list(patterns)
+    # Legacy metadata_identify section is ignored in v4.
+    if "metadata_identify" in toml_data:
+        logger.warning(
+            "Configuration key 'metadata_identify' is ignored in v4; "
+            "use sidecar_rules instead"
+        )
 
     # Metadata exclude patterns section
     meta_exclude_section = toml_data.get("metadata_exclude", {})
@@ -407,15 +396,6 @@ def _validate(config_dict: dict[str, Any]) -> None:
         )
 
     # 2. Regex compilation validation
-    for type_name, patterns in config_dict.get("metadata_identify", {}).items():
-        for i, pattern in enumerate(patterns):
-            try:
-                re.compile(pattern, re.IGNORECASE)
-            except re.error as exc:
-                raise IndexerConfigError(
-                    f"Invalid regex in metadata_identify.{type_name}[{i}]: {pattern!r} — {exc}"
-                ) from exc
-
     for i, pattern in enumerate(config_dict.get("metadata_exclude_patterns", [])):
         try:
             re.compile(pattern, re.IGNORECASE)
@@ -444,11 +424,6 @@ def _build_config(config_dict: dict[str, Any]) -> IndexerConfig:
     """Compile patterns, freeze collections, and construct ``IndexerConfig``."""
     from types import MappingProxyType
 
-    # Compile metadata_identify patterns
-    compiled_identify: dict[str, tuple[re.Pattern[str], ...]] = {}
-    for type_name, patterns in config_dict.get("metadata_identify", {}).items():
-        compiled_identify[type_name] = tuple(re.compile(p, re.IGNORECASE) for p in patterns)
-
     # Compile metadata_exclude_patterns
     compiled_exclude = tuple(
         re.compile(p, re.IGNORECASE) for p in config_dict.get("metadata_exclude_patterns", [])
@@ -458,11 +433,6 @@ def _build_config(config_dict: dict[str, Any]) -> IndexerConfig:
     frozen_groups: dict[str, tuple[str, ...]] = {
         k: tuple(sorted(set(v))) for k, v in config_dict.get("extension_groups", {}).items()
     }
-
-    # Freeze metadata_attributes
-    frozen_attrs: dict[str, MetadataTypeAttributes] = dict(
-        config_dict.get("metadata_attributes", {})
-    )
 
     frozen_sidecar_rules = tuple(
         SidecarRuleConfig(
@@ -515,8 +485,6 @@ def _build_config(config_dict: dict[str, Any]) -> IndexerConfig:
         ),
         exiftool_exclude_keys=frozenset(config_dict.get("exiftool_exclude_keys", set())),
         exiftool_args=tuple(config_dict.get("exiftool_args", [])),
-        metadata_identify=MappingProxyType(compiled_identify),
-        metadata_attributes=MappingProxyType(frozen_attrs),
         metadata_exclude_patterns=compiled_exclude,
         extension_groups=MappingProxyType(frozen_groups),
     )

@@ -17,8 +17,6 @@ from __future__ import annotations
 
 import re
 
-from shruggie_indexer.config.types import MetadataTypeAttributes
-
 __all__ = [
     "DEFAULT_EXIFTOOL_ARGS",
     "DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS",
@@ -27,9 +25,7 @@ __all__ = [
     "DEFAULT_EXTENSION_VALIDATION_PATTERN",
     "DEFAULT_FILESYSTEM_EXCLUDES",
     "DEFAULT_FILESYSTEM_EXCLUDE_GLOBS",
-    "DEFAULT_METADATA_ATTRIBUTES",
     "DEFAULT_METADATA_EXCLUDE_PATTERNS",
-    "DEFAULT_METADATA_IDENTIFY",
     "DEFAULT_SCALARS",
 ]
 
@@ -248,12 +244,6 @@ DEFAULT_METADATA_IDENTIFY_STRINGS: dict[str, tuple[str, ...]] = {
     "torrent": (r"\.(torrent|magnet)$",),
 }
 
-# Pre-compiled variant for direct access (used by the loader's ``build_config``).
-DEFAULT_METADATA_IDENTIFY: dict[str, tuple[re.Pattern[str], ...]] = {
-    type_name: tuple(re.compile(p, re.IGNORECASE) for p in patterns)
-    for type_name, patterns in DEFAULT_METADATA_IDENTIFY_STRINGS.items()
-}
-
 # ---------------------------------------------------------------------------
 # Metadata exclude patterns (§7.3 — Indexer include/exclude)
 # ---------------------------------------------------------------------------
@@ -268,110 +258,6 @@ DEFAULT_METADATA_EXCLUDE_PATTERN_STRINGS: tuple[str, ...] = (
 DEFAULT_METADATA_EXCLUDE_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
     re.compile(p, re.IGNORECASE) for p in DEFAULT_METADATA_EXCLUDE_PATTERN_STRINGS
 )
-
-# ---------------------------------------------------------------------------
-# Metadata type attributes (§7.3)
-# ---------------------------------------------------------------------------
-
-DEFAULT_METADATA_ATTRIBUTES: dict[str, MetadataTypeAttributes] = {
-    "description": MetadataTypeAttributes(
-        about=(
-            "Likely a youtube-dl or yt-dlp information file containing UTF-8 text "
-            "(with possible problematic characters)."
-        ),
-        expect_json=True,
-        expect_text=True,
-        expect_binary=False,
-        parent_can_be_file=True,
-        parent_can_be_directory=False,
-    ),
-    "desktop_ini": MetadataTypeAttributes(
-        about=(
-            "A Windows desktop.ini file used to customize folder appearance in Windows Explorer."
-        ),
-        expect_json=False,
-        expect_text=True,
-        expect_binary=True,
-        parent_can_be_file=False,
-        parent_can_be_directory=True,
-    ),
-    "generic_metadata": MetadataTypeAttributes(
-        about=(
-            "Generic metadata file which may contain any type of metadata "
-            "information related to files or directories."
-        ),
-        expect_json=True,
-        expect_text=True,
-        expect_binary=True,
-        parent_can_be_file=True,
-        parent_can_be_directory=True,
-    ),
-    "hash": MetadataTypeAttributes(
-        about="A file containing a hash value (MD5, SHA1, SHA256, etc.) of another file.",
-        expect_json=False,
-        expect_text=True,
-        expect_binary=False,
-        parent_can_be_file=True,
-        parent_can_be_directory=False,
-    ),
-    "json_metadata": MetadataTypeAttributes(
-        about=("A JSON file containing metadata information related to files or directories."),
-        expect_json=True,
-        expect_text=False,
-        expect_binary=False,
-        parent_can_be_file=True,
-        parent_can_be_directory=True,
-    ),
-    "link": MetadataTypeAttributes(
-        about=("A file containing an Internet URL or a link to another file or directory."),
-        expect_json=False,
-        expect_text=True,
-        expect_binary=True,
-        parent_can_be_file=True,
-        parent_can_be_directory=True,
-    ),
-    "screenshot": MetadataTypeAttributes(
-        about=(
-            "A screenshot image file which may contain a screen capture of a "
-            "computer desktop or application."
-        ),
-        expect_json=False,
-        expect_text=False,
-        expect_binary=True,
-        parent_can_be_file=True,
-        parent_can_be_directory=False,
-    ),
-    "subtitles": MetadataTypeAttributes(
-        about=("A subtitle file which contains text-based subtitles for a video or audio file."),
-        expect_json=True,
-        expect_text=True,
-        expect_binary=True,
-        parent_can_be_file=True,
-        parent_can_be_directory=False,
-    ),
-    "thumbnail": MetadataTypeAttributes(
-        about=(
-            "A thumbnail image file containing one or more reduced-size icon "
-            "images related to another file or directory."
-        ),
-        expect_json=False,
-        expect_text=False,
-        expect_binary=True,
-        parent_can_be_file=True,
-        parent_can_be_directory=True,
-    ),
-    "torrent": MetadataTypeAttributes(
-        about=(
-            "A torrent or magnet link file containing connection and/or "
-            "identification information for peer-to-peer retrieval."
-        ),
-        expect_json=False,
-        expect_text=False,
-        expect_binary=True,
-        parent_can_be_file=True,
-        parent_can_be_directory=True,
-    ),
-}
 
 # ---------------------------------------------------------------------------
 # Extension groups (§7.3)

@@ -454,10 +454,14 @@ def classify_relationships(
     for directory_relative, file_entries in grouped_files.items():
         file_entries = sorted(file_entries, key=lambda item: _file_name(item).lower())
         filenames = {_file_name(entry) for entry in file_entries}
-        directory_stems = {_final_stem(filename) for filename in filenames}
+        # Include full filenames so {stem} can bind to names like "video.mp4"
+        # for sidecars such as "video.mp4.info.json".
+        directory_stems = set(filenames) | {_final_stem(filename) for filename in filenames}
         stem_to_entries: dict[str, list[IndexEntry]] = defaultdict(list)
         for entry in file_entries:
-            stem_to_entries[_final_stem(_file_name(entry))].append(entry)
+            filename = _file_name(entry)
+            stem_to_entries[filename].append(entry)
+            stem_to_entries[_final_stem(filename)].append(entry)
 
         directory_id = (
             directory_entries.get(directory_relative).id

@@ -4,7 +4,7 @@ Hub module that orchestrates the assembly of ``IndexEntry`` objects from
 filesystem paths.  This is the hub-and-spoke architecture described in
 spec section 4.2 — ``entry.py`` is the sole module that calls into the
 component modules (``paths``, ``hashing``, ``timestamps``, ``exif``,
-``sidecar``) and wires their outputs together into the final schema objects.
+``rules``) and wires their outputs together into the final schema objects.
 No component module calls another component module directly; all coordination
 flows through ``entry.py``.
 
@@ -41,7 +41,7 @@ from shruggie_indexer.core.paths import (
     resolve_path,
     validate_extension,
 )
-from shruggie_indexer.core.sidecar import discover_and_parse
+from shruggie_indexer.core.rules import classify_relationships, load_rules
 from shruggie_indexer.core.timestamps import extract_timestamps
 from shruggie_indexer.core.traversal import list_children
 from shruggie_indexer.exceptions import (
@@ -149,10 +149,9 @@ def _make_exif_metadata_entry(
 
 def _assemble_metadata(
     exif_entry: MetadataEntry | None,
-    sidecar_entries: list[MetadataEntry],
     metadata_active: bool,
 ) -> list[MetadataEntry] | None:
-    """Combine exif and sidecar entries into the metadata array.
+    """Build the metadata array for a file entry.
 
     Returns ``None`` when no metadata processing was requested.
     Returns ``[]`` when processing was active but produced no results.
@@ -163,7 +162,6 @@ def _assemble_metadata(
     entries: list[MetadataEntry] = []
     if exif_entry is not None:
         entries.append(exif_entry)
-    entries.extend(sidecar_entries)
     return entries
 
 
@@ -209,17 +207,15 @@ def build_file_entry(
 ) -> IndexEntry:
     """Build a complete ``IndexEntry`` for a single file.
 
-    Executes the 12-step construction sequence defined in spec section 6.8.
+    Executes the v4 construction sequence defined in spec section 6.8.
 
     Args:
         path: Absolute path to the file.
         config: Resolved configuration.
-        siblings: Pre-enumerated sibling files in the same directory
-            (for sidecar discovery).  If ``None``, the module will
-            enumerate the parent directory.
-        delete_queue: MetaMergeDelete accumulator (see spec section 6.7).
-        sidecar_type_cache: Optional per-directory sidecar type cache.
-        sidecar_entry_cache: Optional per-directory sidecar metadata cache.
+        siblings: Reserved for backward compatibility with legacy callers.
+        delete_queue: Reserved for backward compatibility with legacy callers.
+        sidecar_type_cache: Reserved for backward compatibility.
+        sidecar_entry_cache: Reserved for backward compatibility.
         cancel_event: Optional ``threading.Event`` checked before expensive
             operations (hashing, EXIF extraction).  When set, raises
             ``IndexerCancellationError``.
@@ -227,7 +223,7 @@ def build_file_entry(
             computation.  Defaults to ``path.parent`` when not supplied.
 
     Returns:
-        A fully populated ``IndexEntry`` conforming to the v2 schema.
+        A fully populated ``IndexEntry`` conforming to the v4 schema.
 
     Raises:
         IndexerCancellationError: ``cancel_event`` was set during processing.
@@ -300,28 +296,7 @@ def build_file_entry(
                 "EXIF extraction failed for %s", path, exc_info=True,
             )
 
-    # Step 9 — Sidecar metadata
-    sidecar_entries: list[MetadataEntry] = []
-    if getattr(config, "meta_merge", False):
-        if siblings is None:
-            siblings = _enumerate_siblings(path)
-        try:
-            sidecar_entries = discover_and_parse(
-                item_path=path,
-                item_name=components.name,
-                siblings=siblings,
-                config=config,
-                index_root=index_root,
-                delete_queue=delete_queue,
-                sidecar_type_cache=sidecar_type_cache,
-                sidecar_entry_cache=sidecar_entry_cache,
-            )
-        except Exception:
-            logger.warning(
-                "Sidecar discovery failed for %s", path, exc_info=True,
-            )
-
-    # Step 10 — Encoding detection
+    # Step 9 — Encoding detection
     encoding_obj = None
     if config.detect_encoding and not is_symlink:
         encoding_obj = detect_file_encoding(
@@ -329,14 +304,14 @@ def build_file_entry(
             detect_charset_enabled=config.detect_charset,
         )
 
-    # Step 11 — Metadata assembly
-    metadata_active = config.extract_exif or getattr(config, "meta_merge", False)
-    metadata = _assemble_metadata(exif_entry, sidecar_entries, metadata_active)
+    # Step 10 — Metadata assembly (ExifTool only in v4)
+    metadata_active = config.extract_exif
+    metadata = _assemble_metadata(exif_entry, metadata_active)
 
-    # Step 12 — Storage name
+    # Step 11 — Storage name
     storage_name = _build_storage_name(entry_id, extension)
 
-    # Step 13 — Assembly
+    # Step 12 — Assembly
     return IndexEntry(
         schema_version=4,
         id=entry_id,
@@ -395,7 +370,7 @@ def build_directory_entry(
             computation.  Defaults to ``path.parent`` when not supplied.
 
     Returns:
-        A fully populated ``IndexEntry`` conforming to the v2 schema.
+        A fully populated ``IndexEntry`` conforming to the v4 schema.
 
     Raises:
         IndexerCancellationError: ``cancel_event`` was set during the
@@ -430,37 +405,11 @@ def build_directory_entry(
     _discovery_start = time.monotonic()
     files, directories = list_children(path, config)
 
-    # ── Layer 2: Sidecar-pattern exclusion from entry building ─────────
-    # When MetaMerge is active, files matching metadata_identify patterns
-    # are sidecar companions.  They must remain in the full `files` list
-    # (used as ``siblings`` for sidecar discovery) but must NOT be built
-    # as standalone index entries.  We keep the unfiltered list as
-    # ``siblings`` and iterate ``entry_files`` for child construction.
-    siblings = files
-    if getattr(config, "meta_merge", False) and config.metadata_identify:
-        from shruggie_indexer.core.traversal import _matches_any_identify_pattern
-
-        entry_files = [
-            f for f in files
-            if not _matches_any_identify_pattern(
-                f.name, config.metadata_identify,
-            )
-        ]
-        _excluded = len(files) - len(entry_files)
-        if _excluded:
-            logger.debug(
-                "Excluded %d sidecar file(s) from entry building in %s",
-                _excluded,
-                path,
-            )
-    else:
-        entry_files = files
-
-    total_items = len(entry_files) + len(directories)
+    total_items = len(files) + len(directories)
     _discovery_elapsed = time.monotonic() - _discovery_start
     logger.info(
         "Discovery complete: %d items found in %.3fs (%d files, %d directories)",
-        total_items, _discovery_elapsed, len(entry_files), len(directories),
+        total_items, _discovery_elapsed, len(files), len(directories),
     )
 
     # Progress: discovery phase
@@ -492,13 +441,7 @@ def build_directory_entry(
 
     # Process file children first
     logger.info("Processing phase started: %d items", total_items)
-    sidecar_type_cache: dict[Path, str | None] | None = None
-    sidecar_entry_cache: dict[Path, MetadataEntry] | None = None
-    if getattr(config, "meta_merge", False):
-        sidecar_type_cache = {}
-        sidecar_entry_cache = {}
-
-    for child_path in entry_files:
+    for child_path in files:
         if cancel_event is not None and cancel_event.is_set():
             raise IndexerCancellationError("Indexing cancelled")
 
@@ -507,10 +450,7 @@ def build_directory_entry(
             child_entry = build_file_entry(
                 child_path,
                 config,
-                siblings=siblings,
                 delete_queue=delete_queue,
-                sidecar_type_cache=sidecar_type_cache,
-                sidecar_entry_cache=sidecar_entry_cache,
                 cancel_event=cancel_event,
                 _index_root=index_root,
                 session_id=session_id,
@@ -707,14 +647,16 @@ def index_path(
         session_id = str(uuid.uuid4())
 
     if resolved.is_file():
-        return build_file_entry(
+        entry = build_file_entry(
             resolved, config, delete_queue=delete_queue,
             cancel_event=cancel_event,
             session_id=session_id,
         )
+        _annotate_relationships(entry, config)
+        return entry
 
     if resolved.is_dir():
-        return build_directory_entry(
+        entry = build_directory_entry(
             resolved,
             config,
             recursive=config.recursive,
@@ -723,6 +665,8 @@ def index_path(
             cancel_event=cancel_event,
             session_id=session_id,
         )
+        _annotate_relationships(entry, config)
+        return entry
 
     raise IndexerTargetError(
         f"Target is neither a file nor a directory: {resolved}"
@@ -769,10 +713,9 @@ def _collect_protected_sidecars(
     elif entry.type == "directory":
         # The root directory entry (relative == ".") has no sidecar
         # written by _write_inplace_tree (it's skipped as _is_root).
-        if entry.file_system.relative != ".":
-            if config.write_directory_meta:
-                dir_path = root_path / entry.file_system.relative
-                protected.add(build_sidecar_path(dir_path, "directory"))
+        if entry.file_system.relative != "." and config.write_directory_meta:
+            dir_path = root_path / entry.file_system.relative
+            protected.add(build_sidecar_path(dir_path, "directory"))
         if entry.items:
             for child in entry.items:
                 _collect_protected_sidecars(
@@ -873,4 +816,34 @@ def cleanup_stale_metadata(
                     child, exc,
                 )
     return deleted
+
+
+def _walk_entries(root: IndexEntry) -> list[IndexEntry]:
+    """Return all entries in a tree for in-place relationship annotation."""
+    entries: list[IndexEntry] = []
+    stack = [root]
+    while stack:
+        current = stack.pop()
+        entries.append(current)
+        if current.duplicates:
+            stack.extend(reversed(current.duplicates))
+        if current.items:
+            stack.extend(reversed(current.items))
+    return entries
+
+
+def _annotate_relationships(root: IndexEntry, config: IndexerConfig) -> None:
+    """Populate ``relationships`` fields using the v4 rule engine."""
+    if config.no_sidecar_detection:
+        return
+
+    rules = load_rules(config)
+    relationship_map = classify_relationships([root], rules)
+    if not relationship_map:
+        return
+
+    for entry in _walk_entries(root):
+        relationships = relationship_map.get(entry.id)
+        if relationships:
+            entry.relationships = relationships
 

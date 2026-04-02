@@ -21,25 +21,8 @@ if TYPE_CHECKING:
 __all__ = [
     "ExiftoolConfig",
     "IndexerConfig",
-    "MetadataTypeAttributes",
     "SidecarRuleConfig",
 ]
-
-
-@dataclass(frozen=True)
-class MetadataTypeAttributes:
-    """Behavioral attributes for a single sidecar metadata type.
-
-    Corresponds to the original ``$MetadataFileParser.Attributes.<TypeName>``
-    sub-objects.  Field names use snake_case per Python convention.
-    """
-
-    about: str
-    expect_json: bool
-    expect_text: bool
-    expect_binary: bool
-    parent_can_be_file: bool
-    parent_can_be_directory: bool
 
 
 @dataclass(frozen=True)
@@ -136,12 +119,6 @@ class IndexerConfig:
     exiftool_args: tuple[str, ...] = ()
 
     # ── Metadata file parser ────────────────────────────────────────────
-    metadata_identify: MappingProxyType[str, tuple[re.Pattern[str], ...]] = field(
-        default_factory=lambda: MappingProxyType({})
-    )
-    metadata_attributes: MappingProxyType[str, MetadataTypeAttributes] = field(
-        default_factory=lambda: MappingProxyType({})
-    )
     metadata_exclude_patterns: tuple[re.Pattern[str], ...] = ()
 
     # ── Extension groups ────────────────────────────────────────────────
