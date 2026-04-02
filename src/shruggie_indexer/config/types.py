@@ -22,6 +22,7 @@ __all__ = [
     "ExiftoolConfig",
     "IndexerConfig",
     "MetadataTypeAttributes",
+    "SidecarRuleConfig",
 ]
 
 
@@ -39,6 +40,22 @@ class MetadataTypeAttributes:
     expect_binary: bool
     parent_can_be_file: bool
     parent_can_be_directory: bool
+
+
+@dataclass(frozen=True)
+class SidecarRuleConfig:
+    """Resolved user-authored sidecar rule configuration."""
+
+    name: str
+    match: str | None = None
+    type: str | None = None
+    scope: str = "file"
+    requires_sibling: str | None = None
+    requires_sibling_any: tuple[str, ...] | None = None
+    excludes_sibling: str | None = None
+    min_siblings: int | None = None
+    enabled: bool = True
+    extends: str | None = None
 
 
 @dataclass(frozen=True)
@@ -76,6 +93,7 @@ class IndexerConfig:
     extract_exif: bool = False
     no_sidecar_detection: bool = False
     cleanup_legacy_sidecars: bool = False
+    sidecar_rules: tuple[SidecarRuleConfig, ...] = ()
 
     # ── Encoding detection ──────────────────────────────────────────────
     detect_encoding: bool = True

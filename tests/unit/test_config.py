@@ -35,6 +35,7 @@ class TestDefaultConfig:
         assert config.compute_sha512 is False
         assert len(config.filesystem_excludes) > 0
         assert len(config.metadata_identify) > 0
+        assert config.sidecar_rules == ()
 
 
 class TestTomlLoading:
@@ -118,6 +119,20 @@ class TestSidecarPatternConfig:
         patterns = config.metadata_identify["custom_type"]
         assert len(patterns) >= 1
 
+    def test_sidecar_rule_config(self, tmp_path: Path) -> None:
+        """Explicit sidecar rule tables are preserved in config.sidecar_rules."""
+        toml_file = tmp_path / "config.toml"
+        toml_file.write_text(
+            '[sidecar_rules.custom-note]\nmatch = "{stem}.note"\ntype = "description"\n',
+            encoding="utf-8",
+        )
+        config = load_config(config_file=toml_file)
+        assert len(config.sidecar_rules) == 1
+        rule = config.sidecar_rules[0]
+        assert rule.name == "custom-note"
+        assert rule.match == "{stem}.note"
+        assert rule.type == "description"
+
 
 class TestFixtureFiles:
     """Tests that exercise the config fixture files on disk."""
@@ -147,7 +162,7 @@ class TestExiftoolExclusionConfig:
         """Custom exclusion extension appears in config."""
         toml_file = tmp_path / "config.toml"
         toml_file.write_text(
-            "[exiftool]\nexclude_extensions = [\"xyz\", \"abc\"]\n",
+            '[exiftool]\nexclude_extensions = ["xyz", "abc"]\n',
             encoding="utf-8",
         )
         config = load_config(config_file=toml_file)

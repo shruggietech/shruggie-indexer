@@ -1,0 +1,7 @@
+[sidecar_rules.custom-note]
+match = "{stem}.note"
+type = "description"
+
+[sidecar_rules.custom-disable-description]
+extends = "yt-dlp-description"
+enabled = false

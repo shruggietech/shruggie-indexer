@@ -1,0 +1,11 @@
+[pack]
+name = "alpha"
+version = "1.0.0"
+
+[sidecar_rules.pack-description]
+match = "{stem}.alpha"
+type = "description"
+
+[sidecar_rules.shared-name]
+match = "{stem}.shared-alpha"
+type = "description"

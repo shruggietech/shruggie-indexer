@@ -52,29 +52,36 @@ from shruggie_indexer.core.rollback import (
     plan_rollback,
     verify_file_hash,
 )
+from shruggie_indexer.core.rules import (
+    SidecarRule,
+    classify_relationships,
+    load_rules,
+)
 from shruggie_indexer.core.serializer import serialize_entry, write_inplace, write_output
 from shruggie_indexer.core.sidecar import discover_and_parse
 from shruggie_indexer.core.timestamps import extract_timestamps
 from shruggie_indexer.core.traversal import list_children
 
 __all__ = [
+    "NULL_HASHES",
     "DedupAction",
     "DedupRegistry",
     "DedupResult",
     "DedupStats",
     "LocalSourceResolver",
-    "NULL_HASHES",
     "PathComponents",
     "ProgressEvent",
     "RollbackAction",
     "RollbackPlan",
     "RollbackResult",
     "RollbackStats",
+    "SidecarRule",
     "apply_dedup",
     "build_directory_entry",
     "build_file_entry",
     "build_sidecar_path",
     "build_storage_path",
+    "classify_relationships",
     "cleanup_duplicate_files",
     "discover_and_parse",
     "discover_meta2_files",
@@ -89,6 +96,7 @@ __all__ = [
     "index_path",
     "list_children",
     "load_meta2",
+    "load_rules",
     "load_sidecar",
     "plan_rollback",
     "relative_forward_slash",

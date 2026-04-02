@@ -36,6 +36,7 @@ from shruggie_indexer.config.defaults import (
 from shruggie_indexer.config.types import (
     IndexerConfig,
     MetadataTypeAttributes,
+    SidecarRuleConfig,
 )
 from shruggie_indexer.exceptions import IndexerConfigError
 
@@ -164,6 +165,7 @@ def _get_defaults_dict() -> dict[str, Any]:
     d["metadata_identify"] = {k: list(v) for k, v in DEFAULT_METADATA_IDENTIFY_STRINGS.items()}
     d["metadata_attributes"] = dict(DEFAULT_METADATA_ATTRIBUTES)
     d["metadata_exclude_patterns"] = list(DEFAULT_METADATA_EXCLUDE_PATTERN_STRINGS)
+    d["sidecar_rules"] = {}
     d["extension_groups"] = {k: list(v) for k, v in DEFAULT_EXTENSION_GROUPS.items()}
     return d
 
@@ -262,6 +264,16 @@ def _merge_toml(config_dict: dict[str, Any], toml_data: dict[str, Any]) -> None:
         if "patterns_append" in meta_exclude_section:
             config_dict["metadata_exclude_patterns"].extend(meta_exclude_section["patterns_append"])
 
+    rules_section = toml_data.get("sidecar_rules", {})
+    if isinstance(rules_section, dict):
+        for rule_name, rule_data in rules_section.items():
+            if not isinstance(rule_data, dict):
+                logger.warning("Ignoring malformed sidecar rule %s: expected table", rule_name)
+                continue
+            merged_rule = dict(rule_data)
+            merged_rule["name"] = rule_name
+            config_dict["sidecar_rules"][rule_name] = merged_rule
+
     # Extension groups section
     groups_section = toml_data.get("extension_groups", {})
     if isinstance(groups_section, dict):
@@ -294,6 +306,7 @@ def _merge_toml(config_dict: dict[str, Any], toml_data: dict[str, Any]) -> None:
         "exiftool",
         "metadata_identify",
         "metadata_exclude",
+        "sidecar_rules",
         "extension_groups",
         "logging",  # Handled by CLI/GUI, not by IndexerConfig
     }
@@ -326,6 +339,7 @@ def _merge_overrides(config_dict: dict[str, Any], overrides: dict[str, Any]) -> 
         "rename",
         "dry_run",
         "extension_validation_pattern",
+        "sidecar_rules",
     }
     for key in scalar_keys:
         if key in overrides:
@@ -450,6 +464,26 @@ def _build_config(config_dict: dict[str, Any]) -> IndexerConfig:
         config_dict.get("metadata_attributes", {})
     )
 
+    frozen_sidecar_rules = tuple(
+        SidecarRuleConfig(
+            name=rule_name,
+            match=rule_data.get("match"),
+            type=rule_data.get("type"),
+            scope=rule_data.get("scope", "file"),
+            requires_sibling=rule_data.get("requires_sibling"),
+            requires_sibling_any=(
+                tuple(rule_data["requires_sibling_any"])
+                if rule_data.get("requires_sibling_any") is not None
+                else None
+            ),
+            excludes_sibling=rule_data.get("excludes_sibling"),
+            min_siblings=rule_data.get("min_siblings"),
+            enabled=rule_data.get("enabled", True),
+            extends=rule_data.get("extends"),
+        )
+        for rule_name, rule_data in config_dict.get("sidecar_rules", {}).items()
+    )
+
     # Handle output_file
     output_file = config_dict.get("output_file")
     if isinstance(output_file, str) and output_file:
@@ -468,6 +502,7 @@ def _build_config(config_dict: dict[str, Any]) -> IndexerConfig:
         extract_exif=config_dict.get("extract_exif", False),
         no_sidecar_detection=config_dict.get("no_sidecar_detection", False),
         cleanup_legacy_sidecars=config_dict.get("cleanup_legacy_sidecars", False),
+        sidecar_rules=frozen_sidecar_rules,
         rename=config_dict.get("rename", False),
         dry_run=config_dict.get("dry_run", False),
         filesystem_excludes=frozenset(config_dict.get("filesystem_excludes", set())),

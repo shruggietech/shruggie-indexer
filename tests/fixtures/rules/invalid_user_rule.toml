@@ -1,0 +1,2 @@
+[sidecar_rules.bad-rule]
+match = "{stem}.broken"

@@ -1,0 +1,11 @@
+[pack]
+name = "beta"
+version = "1.0.0"
+
+[sidecar_rules.pack-json]
+match = "{stem}.beta"
+type = "json_metadata"
+
+[sidecar_rules.shared-name]
+match = "{stem}.shared-beta"
+type = "json_metadata"

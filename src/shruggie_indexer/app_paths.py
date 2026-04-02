@@ -16,6 +16,7 @@ from pathlib import Path
 __all__ = [
     "get_app_data_dir",
     "get_log_dir",
+    "get_pack_dir",
 ]
 
 _ECOSYSTEM_DIR = "shruggie-tech"
@@ -51,3 +52,21 @@ def get_app_data_dir() -> Path:
 def get_log_dir() -> Path:
     """Return the log file directory: ``<app_data_dir>/logs/``."""
     return get_app_data_dir() / "logs"
+
+
+def get_pack_dir() -> Path:
+    """Return the community sidecar rule pack directory.
+
+    Rule packs intentionally live under the platform's data directory rather
+    than the config directory so they can be managed as installed assets.
+    """
+    system = platform.system()
+    if system == "Windows":
+        base = Path(
+            os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"),
+        )
+    else:
+        base = Path(
+            os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"),
+        )
+    return base / _ECOSYSTEM_DIR / _TOOL_DIR / "packs"

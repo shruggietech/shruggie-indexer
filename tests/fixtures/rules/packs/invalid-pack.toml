@@ -1,0 +1,5 @@
+[pack]
+name = "broken"
+
+[sidecar_rules.malformed]
+match = "{stem}.oops"
