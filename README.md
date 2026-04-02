@@ -4,9 +4,9 @@
 [![Release](https://img.shields.io/github/v/release/shruggietech/shruggie-indexer?display_name=tag&cacheSeconds=900)](https://github.com/shruggietech/shruggie-indexer/releases/latest)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 
-Filesystem indexer with hash-based identity, metadata extraction, and structured JSON output.
+Filesystem indexer with hash-based identity, relationship annotation, and structured JSON output.
 
-`shruggie-indexer` scans files and directories to produce deterministic, schema-validated JSON index entries. Each entry captures cryptographic hashes (MD5, SHA-256, optional SHA-512), filesystem timestamps, EXIF metadata (via exiftool), sidecar file content, and a computed storage name — all structured under the [v3 JSON Schema](https://schemas.shruggie.tech/data/shruggie-indexer-v3.schema.json).
+`shruggie-indexer` scans files and directories to produce deterministic, schema-validated JSON index entries. Each file is indexed as a first-class entry with cryptographic hashes (MD5, SHA-256, optional SHA-512), filesystem timestamps, optional EXIF metadata (via exiftool), computed storage name, and optional relationship annotations for sidecar-like associations. Output is structured under the [v4 JSON Schema](https://schemas.shruggie.tech/data/shruggie-indexer-v4.schema.json).
 
 ## Installation
 
@@ -33,7 +33,7 @@ pip install -e ".[dev,cli,gui]"
 
 ### ExifTool (External Dependency)
 
-[ExifTool](https://exiftool.org/) by Phil Harvey is the sole external binary dependency. It is required only for embedded metadata extraction (the `--meta` flag). All other functionality — hashing, timestamps, sidecar handling, renaming — works without it. When ExifTool is not installed, the `metadata` array in output entries simply omits the `exiftool.json_metadata` entry.
+[ExifTool](https://exiftool.org/) by Phil Harvey is the sole external binary dependency. It is required only for embedded metadata extraction (the `--meta` flag). All other functionality — hashing, timestamps, relationship annotation, rollback, and renaming — works without it. When ExifTool is not installed, the `metadata` array in output entries simply omits the `exiftool.json_metadata` entry.
 
 **Minimum version:** 12.0 or later.
 
@@ -107,11 +107,13 @@ shruggie-indexer path/to/directory --recursive
 shruggie-indexer path/to/target --outfile index.json
 ```
 
-### Write Sidecar Files In-Place
+### Write Index Output In-Place
 
 ```
 shruggie-indexer path/to/directory --inplace
 ```
+
+This writes file-level and directory-level output using the v4 suffixes `_idx.json` and `_idxd.json`.
 
 ### Include EXIF Metadata
 
@@ -133,10 +135,10 @@ shruggie-indexer path/to/directory --rename --dry-run
 | `--recursive` / `--no-recursive` | Enable or disable recursive directory traversal |
 | `--stdout` / `--no-stdout` | Control JSON output to stdout |
 | `-o, --outfile PATH` | Write combined JSON to a file |
-| `--inplace` | Write sidecar `_meta2.json` files alongside each item |
+| `--inplace` | Write `_idx.json`/`_idxd.json` output files alongside indexed items |
 | `-m, --meta` | Extract embedded metadata via exiftool |
-| `--meta-merge` | Merge sidecar metadata into parent entries |
-| `--meta-merge-delete` | Merge and delete sidecar files |
+| `--no-sidecar-detection` | Disable relationship classification and omit `relationships` |
+| `--cleanup-legacy-sidecars` | Remove legacy `_meta*.json` output files when replacements are written |
 | `--rename` | Rename files to their computed `storage_name` |
 | `--dry-run` | Preview rename operations without modifying files |
 | `--id-type {md5,sha256}` | Hash algorithm for the `id` field (default: md5) |
@@ -168,4 +170,4 @@ print(json_output)
 
 ## License
 
-Copyright 2024–2026 ShruggieTech LLC. Licensed under the [Apache License 2.0](LICENSE).
+Copyright 2024–2026 Shruggie LLC (DBA ShruggieTech). Licensed under the [Apache License 2.0](LICENSE).

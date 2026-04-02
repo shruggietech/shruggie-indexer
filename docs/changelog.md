@@ -1,3 +1,5 @@
+<!-- AUTO-GENERATED: This file is copied from CHANGELOG.md. Do not edit directly. -->
+
 # Changelog
 
 All notable changes to this project are documented in this file.
@@ -7,6 +9,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+
+## [1.0.0] - 2026-04-02
+
+### Changed
+
+- **BREAKING: v4 schema.** Output schema version bumped from 2/3 to 4.
+  Every file is now a first-class IndexEntry with its own identity hash,
+  timestamps, and metadata. Sidecar files are no longer embedded into
+  parent entries.
+- **BREAKING: Output suffix convention.** In-place output files now use
+  `_idx.json` (file-level) and `_idxd.json` (directory-level) as permanent
+  suffixes, replacing `_meta2.json` / `_meta3.json` and directory variants
+  for current output generation.
+- **BREAKING: Removed CLI flags.** `--meta-merge` and `--meta-merge-delete`
+  have been removed.
+- **BREAKING: Removed GUI operations.** Meta Merge and Meta Merge Delete
+  operation types were removed from the desktop application. The operation
+  dropdown now contains Index and Rollback.
+
+### Added
+
+- **Relationship annotations.** The indexer now annotates believed
+  associations between files via a `relationships[]` array on sidecar-like
+  entries. Annotations include target ID, relationship type, rule name,
+  rule source, confidence level, and predicate evaluation detail.
+- **Sidecar rule engine.** A TOML-based rule engine classifies
+  sidecar relationships with built-in rules and user overrides.
+- **`--no-sidecar-detection` CLI flag.** Disables relationship
+  classification entirely, producing a pure filesystem inventory.
+- **`--cleanup-legacy-sidecars` CLI flag.** Removes obsolete tool output
+  files when new-format replacements are written.
+- **Community rule pack support.** TOML-based rule packs can be installed
+  into the pack directory for shared rule libraries.
+- **Simplified rollback.** All files roll back as uniform file copies.
+  Legacy v2/v3 rollback remains supported through a backward-compat path.
+
+### Removed
+
+- Sidecar content ingest/reconstruct/restore pipeline.
+- Sidecar reconstruction codepaths for v4 execution.
+- Sidecar-rename tracking and coordination logic.
+- MetaMergeDelete execution and safety logic.
+- Sidecar-origin fields on MetadataEntry and MetadataAttributes that were
+  tied to ingest/reconstruct behavior.
+- `metadata_identify` regex pattern runtime as the primary classifier,
+  replaced by the v4 rule engine.
 
 ## [0.2.1] - 2026-03-21
 
