@@ -1,11 +1,11 @@
 """Core rollback engine for shruggie-indexer.
 
-Reverses indexer rename and de-duplication operations by reading sidecar
-files (``_meta2.json`` or ``_meta3.json``) and restoring files to their
-original names, directory structure, and timestamps.  Also reconstructs
-absorbed sidecar metadata files that were consumed by MetaMergeDelete,
-and restores deduplicated files by copying canonical bytes to each
-duplicate's original path.
+Reverses indexer rename and de-duplication operations by reading index output
+files (legacy ``_meta*.json`` / ``_directorymeta*.json`` or v4
+``_idx.json`` / ``_idxd.json``) and restoring files to their original names,
+directory structure, and timestamps. For schema v4, every rollback action is a
+uniform file copy. Legacy v2/v3 sidecar reconstruction remains available as an
+explicit backward-compatibility path.
 
 This module is designed for standalone importability by downstream projects
 (specifically ``shruggie-vault``).  It operates on :class:`IndexEntry` objects
@@ -23,7 +23,7 @@ Architecture follows the **plan-then-execute** pattern established by
 
 Usage::
 
-    entries = load_sidecar(Path("vault/yAAA.jpg_meta3.json"))
+    entries = load_sidecar(Path("vault/yAAA.jpg_idx.json"))
     plan = plan_rollback(entries, target_dir=Path("restored/"))
     result = execute_rollback(plan)
 """
@@ -37,10 +37,8 @@ import logging
 import os
 import shutil
 import sys
-import threading
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from shruggie_indexer.exceptions import IndexerConfigError, IndexerTargetError
 from shruggie_indexer.models.schema import (
@@ -59,6 +57,10 @@ from shruggie_indexer.models.schema import (
 )
 
 if TYPE_CHECKING:
+    import threading
+    from collections.abc import Callable
+    from pathlib import Path
+
     from shruggie_indexer.core.progress import ProgressEvent
 
 __all__ = [
@@ -107,14 +109,17 @@ class RollbackAction:
     verified: bool = False
     """Whether the source file's hash was checked against the sidecar."""
 
-    sidecar_data: bytes | str | None = None
-    """Pre-decoded sidecar content for ``sidecar_restore`` actions."""
+    legacy_payload: LegacySidecarPayload | None = None
+    """Decoded legacy sidecar payload for schema v2/v3 restoration only."""
 
-    sidecar_binary: bool = False
-    """Whether ``sidecar_data`` is binary (base64-decoded)."""
 
-    metadata_entry: MetadataEntry | None = None
-    """The :class:`MetadataEntry` for ``sidecar_restore`` actions."""
+@dataclass(frozen=True)
+class LegacySidecarPayload:
+    """Decoded v2/v3 sidecar payload retained for backward-compatible restore."""
+
+    data: bytes | str
+    is_binary: bool
+    metadata_entry: MetadataEntry
 
 
 @dataclass
@@ -330,6 +335,17 @@ def _timestamp_pair_from_dict(d: dict[str, Any]) -> TimestampPair:
     return TimestampPair(iso=d["iso"], unix=d["unix"])
 
 
+def _encoding_from_dict(d: dict[str, Any] | None) -> EncodingObject | None:
+    if d is None:
+        return None
+    return EncodingObject(
+        bom=d.get("bom"),
+        line_endings=d.get("line_endings"),
+        detected_encoding=d.get("detected_encoding"),
+        confidence=d.get("confidence"),
+    )
+
+
 def _timestamps_from_dict(d: dict[str, Any]) -> TimestampsObject:
     return TimestampsObject(
         created=_timestamp_pair_from_dict(d["created"]),
@@ -364,10 +380,9 @@ def _attributes_from_dict(d: dict[str, Any]) -> AttributesObject:
 def _metadata_attrs_from_dict(d: dict[str, Any]) -> MetadataAttributes:
     return MetadataAttributes(
         type=d["type"],
-        format=d["format"],
+        format=d.get("format", "json"),
         transforms=d.get("transforms", []),
         source_media_type=d.get("source_media_type"),
-        json_style=d.get("json_style"),
         link_metadata=d.get("link_metadata"),
     )
 
@@ -382,17 +397,19 @@ def _metadata_entry_from_dict(d: dict[str, Any]) -> MetadataEntry:
     ts = None
     if d.get("timestamps") is not None:
         ts = _timestamps_from_dict(d["timestamps"])
-    return MetadataEntry(
+    entry = MetadataEntry(
         id=d["id"],
         origin=d["origin"],
         name=_name_from_dict(d["name"]),
         hashes=_hashset_from_dict(d["hashes"]) or HashSet(md5="", sha256=""),
         attributes=_metadata_attrs_from_dict(d["attributes"]),
         data=d.get("data"),
-        file_system=fs,
-        size=size,
-        timestamps=ts,
     )
+    entry.file_system = fs
+    entry.size = size
+    entry.timestamps = ts
+    entry.encoding = _encoding_from_dict(d.get("encoding"))
+    return entry
 
 
 def _entry_from_dict(d: dict[str, Any]) -> IndexEntry:
@@ -429,6 +446,7 @@ def _entry_from_dict(d: dict[str, Any]) -> IndexEntry:
         metadata=metadata,
         duplicates=duplicates,
         mime_type=d.get("mime_type"),
+        encoding=_encoding_from_dict(d.get("encoding")),
         session_id=d.get("session_id"),
         indexed_at=indexed_at,
     )
@@ -444,10 +462,10 @@ def discover_sidecar_files(
     *,
     recursive: bool = False,
 ) -> list[Path]:
-    """Find all sidecar files (``*_meta2.json`` and ``*_meta3.json``) in a directory.
+    """Find all rollback-readable index output files in a directory.
 
-    Discovers both v2 and v3 sidecar files, supporting directories processed
-    by any indexer version.
+    Discovers legacy v1/v2/v3 output files and v4 output files, supporting
+    rollback across all on-disk formats understood by the engine.
 
     Args:
         directory: The directory to search.
@@ -458,9 +476,19 @@ def discover_sidecar_files(
         Sorted list of discovered sidecar file paths.
     """
     glob_fn = directory.rglob if recursive else directory.glob
-    v2 = list(glob_fn("*_meta2.json"))
-    v3 = list(glob_fn("*_meta3.json"))
-    return sorted(v2 + v3)
+    matches: list[Path] = []
+    for pattern in (
+        "*_meta.json",
+        "*_meta2.json",
+        "*_meta3.json",
+        "*_directorymeta.json",
+        "*_directorymeta2.json",
+        "*_directorymeta3.json",
+        "*_idx.json",
+        "*_idxd.json",
+    ):
+        matches.extend(glob_fn(pattern))
+    return sorted(set(matches))
 
 
 def discover_meta2_files(
@@ -498,7 +526,7 @@ def load_sidecar(
     *,
     recursive: bool = False,
 ) -> list[IndexEntry]:
-    """Load and parse a sidecar file into a flat list of IndexEntry objects.
+    """Load and parse an index output file into a flat list of IndexEntry objects.
 
     Handles three input shapes:
 
@@ -513,8 +541,8 @@ def load_sidecar(
     annotation distinguishing them from canonical entries.
 
     Args:
-        path: Path to a sidecar file (``_meta2.json`` or ``_meta3.json``),
-            aggregate output file, or directory containing sidecar files.
+        path: Path to a legacy sidecar file, v4 index output file,
+            aggregate output file, or directory containing those files.
         recursive: When ``True`` and *path* is a directory, search
             subdirectories for sidecars.
 
@@ -523,7 +551,7 @@ def load_sidecar(
 
     Raises:
         IndexerConfigError: If the file is not valid JSON.
-        IndexerConfigError: If ``schema_version`` is not 2 or 3.
+        IndexerConfigError: If ``schema_version`` is not 2, 3, or 4.
         IndexerTargetError: If *path* does not exist.
     """
     if not path.exists():
@@ -554,9 +582,9 @@ def load_sidecar(
 
     # Schema version gate
     version = data.get("schema_version")
-    if version not in {2, 3}:
+    if version not in {2, 3, 4}:
         msg = (
-            f"Unsupported schema version in {path}: expected 2 or 3, got {version}. "
+            f"Unsupported schema version in {path}: expected 2, 3, or 4, got {version}. "
             "v1 sidecar files must be migrated to v2 format before rollback."
         )
         raise IndexerConfigError(msg)
@@ -822,15 +850,16 @@ def _strip_legacy_prefix(
     Upon detection, the prefix is stripped from all entries and an ``INFO``
     message is logged.
     """
-    if not entries:
+    legacy_entries = [entry for entry in entries if entry.schema_version < 4]
+    if not legacy_entries:
         return
 
     # If any entry already uses "." as relative, it's the current format
-    if any(e.file_system.relative == "." for e in entries):
+    if any(e.file_system.relative == "." for e in legacy_entries):
         return
 
     first_components: set[str] = set()
-    for entry in entries:
+    for entry in legacy_entries:
         rel = entry.file_system.relative.replace("\\", "/")
         parts = rel.split("/")
         if len(parts) < 2:
@@ -856,7 +885,7 @@ def _strip_legacy_prefix(
         prefix,
     )
 
-    for entry in entries:
+    for entry in legacy_entries:
         rel = entry.file_system.relative.replace("\\", "/")
         if rel == prefix:
             entry.file_system = FileSystemObject(
@@ -1072,12 +1101,12 @@ def plan_rollback(
             if parent != target_dir:
                 dirs_needed.add(parent)
 
-        # Sidecar restoration
-        if restore_sidecars and entry.metadata:
+        # Legacy v2/v3 sidecar restoration
+        if restore_sidecars and entry.schema_version < 4 and entry.metadata:
             for meta in entry.metadata:
                 if meta.origin != "sidecar":
                     continue
-                _plan_sidecar_restore(
+                _plan_legacy_sidecar_restore(
                     meta, entry, target_dir, flat, actions, stats,
                     dirs_needed, flat_targets_seen, force, verify,
                 )
@@ -1149,11 +1178,14 @@ def _check_conflict(
     if not target_path.exists():
         return None
 
-    if verify and entry.hashes is not None:
-        if verify_file_hash(target_path, entry.hashes, entry.id_algorithm):
-            logger.debug("Skipped (already exists, same hash): %s", target_path)
-            stats.skipped_already_exists += 1
-            return "Already exists (same content)"
+    if (
+        verify
+        and entry.hashes is not None
+        and verify_file_hash(target_path, entry.hashes, entry.id_algorithm)
+    ):
+        logger.debug("Skipped (already exists, same hash): %s", target_path)
+        stats.skipped_already_exists += 1
+        return "Already exists (same content)"
 
     if force:
         return None
@@ -1163,7 +1195,7 @@ def _check_conflict(
     return "Already exists (different content)"
 
 
-def _plan_sidecar_restore(
+def _plan_legacy_sidecar_restore(
     meta: MetadataEntry,
     parent_entry: IndexEntry,
     target_dir: Path,
@@ -1175,7 +1207,7 @@ def _plan_sidecar_restore(
     force: bool,
     verify: bool,
 ) -> None:
-    """Add a sidecar restoration action to the plan."""
+    """Add a legacy v2/v3 sidecar reconstruction action to the plan."""
     # Compute target path
     if flat:
         target_path = target_dir / (meta.name.text or "unknown_sidecar")
@@ -1217,9 +1249,11 @@ def _plan_sidecar_restore(
             target_path=target_path,
             entry=parent_entry,
             action_type="sidecar_restore",
-            sidecar_data=sidecar_data,
-            sidecar_binary=sidecar_binary,
-            metadata_entry=meta,
+            legacy_payload=LegacySidecarPayload(
+                data=sidecar_data,
+                is_binary=sidecar_binary,
+                metadata_entry=meta,
+            ),
         ),
     )
 
@@ -1230,7 +1264,7 @@ def _plan_sidecar_restore(
 
 
 def _decode_sidecar_data(meta: MetadataEntry) -> tuple[bytes | str, bool]:
-    """Decode sidecar data based on format, respecting encoding metadata.
+    """Decode legacy sidecar data based on format, respecting encoding metadata.
 
     For JSON-format sidecars, respects json_style and json_indent to
     reproduce the original formatting. For text-format sidecars, respects
@@ -1240,7 +1274,7 @@ def _decode_sidecar_data(meta: MetadataEntry) -> tuple[bytes | str, bool]:
     """
     fmt = meta.attributes.format
     data = meta.data
-    enc = meta.encoding  # May be None for legacy entries.
+    enc = getattr(meta, "encoding", None)  # May be None for legacy entries.
 
     if fmt == "json":
         text = _restore_json(data, meta.attributes)
@@ -1251,10 +1285,7 @@ def _decode_sidecar_data(meta: MetadataEntry) -> tuple[bytes | str, bool]:
     if fmt == "base64":
         return base64.b64decode(data), True
     if fmt == "lines":
-        if isinstance(data, list):
-            text = "\n".join(str(line) for line in data)
-        else:
-            text = str(data)
+        text = "\n".join(str(line) for line in data) if isinstance(data, list) else str(data)
         return _apply_text_encoding(text, enc), True
 
     # Unknown format — treat as text.
@@ -1301,7 +1332,7 @@ def _restore_json(data: Any, attrs: MetadataAttributes) -> str:
 
 def _apply_text_encoding(
     text: str,
-    enc: "EncodingObject | None",
+    enc: EncodingObject | None,
 ) -> bytes:
     """Convert a text string back to bytes, restoring encoding metadata.
 
@@ -1373,15 +1404,30 @@ def execute_rollback(
     result = RollbackResult()
 
     # Sort actions by execution phase
-    mkdir_actions = [a for a in plan.actions if a.action_type == "mkdir" and not a.skip_reason]
-    restore_actions = [a for a in plan.actions if a.action_type == "restore" and not a.skip_reason]
-    dup_actions = [a for a in plan.actions if a.action_type == "duplicate_restore" and not a.skip_reason]
-    sidecar_actions = [a for a in plan.actions if a.action_type == "sidecar_restore" and not a.skip_reason]
+    mkdir_actions = [
+        a for a in plan.actions if a.action_type == "mkdir" and not a.skip_reason
+    ]
+    restore_actions = [
+        a for a in plan.actions if a.action_type == "restore" and not a.skip_reason
+    ]
+    dup_actions = [
+        a
+        for a in plan.actions
+        if a.action_type == "duplicate_restore" and not a.skip_reason
+    ]
+    sidecar_actions = [
+        a for a in plan.actions if a.action_type == "sidecar_restore" and not a.skip_reason
+    ]
     skipped_actions = [a for a in plan.actions if a.skip_reason]
 
     result.skipped = len(skipped_actions)
 
-    total_actionable = len(mkdir_actions) + len(restore_actions) + len(dup_actions) + len(sidecar_actions)
+    total_actionable = (
+        len(mkdir_actions)
+        + len(restore_actions)
+        + len(dup_actions)
+        + len(sidecar_actions)
+    )
     completed = 0
 
     # Phase 1: create directories (deepest-first → sort by depth descending,
@@ -1391,7 +1437,13 @@ def execute_rollback(
         if _check_cancelled(cancel_event, result):
             return result
         completed += 1
-        _report_progress(progress_callback, "rollback", total_actionable, completed, action.target_path)
+        _report_progress(
+            progress_callback,
+            "rollback",
+            total_actionable,
+            completed,
+            action.target_path,
+        )
 
         if dry_run:
             logger.info("Dry run — would create directory: %s", action.target_path)
@@ -1411,7 +1463,13 @@ def execute_rollback(
         if _check_cancelled(cancel_event, result):
             return result
         completed += 1
-        _report_progress(progress_callback, "rollback", total_actionable, completed, action.target_path)
+        _report_progress(
+            progress_callback,
+            "rollback",
+            total_actionable,
+            completed,
+            action.target_path,
+        )
         _execute_file_copy(action, result, dry_run=dry_run)
 
     # Phase 3: restore duplicates
@@ -1419,7 +1477,13 @@ def execute_rollback(
         if _check_cancelled(cancel_event, result):
             return result
         completed += 1
-        _report_progress(progress_callback, "rollback", total_actionable, completed, action.target_path)
+        _report_progress(
+            progress_callback,
+            "rollback",
+            total_actionable,
+            completed,
+            action.target_path,
+        )
         _execute_file_copy(action, result, dry_run=dry_run, is_duplicate=True)
 
     # Phase 4: restore sidecars
@@ -1427,12 +1491,18 @@ def execute_rollback(
         if _check_cancelled(cancel_event, result):
             return result
         completed += 1
-        _report_progress(progress_callback, "rollback", total_actionable, completed, action.target_path)
+        _report_progress(
+            progress_callback,
+            "rollback",
+            total_actionable,
+            completed,
+            action.target_path,
+        )
         _execute_sidecar_write(action, result, dry_run=dry_run)
 
     # Summary log
     logger.info(
-        "Rollback complete: %d restored, %d duplicates, %d sidecars, %d skipped, %d failed",
+        "Rollback complete: %d restored, %d duplicates, %d legacy sidecars, %d skipped, %d failed",
         result.restored,
         result.duplicates_restored,
         result.sidecars_restored,
@@ -1546,10 +1616,18 @@ def _execute_sidecar_write(
     *,
     dry_run: bool = False,
 ) -> None:
-    """Write decoded sidecar data to the target path."""
+    """Write a decoded legacy sidecar payload to the target path."""
+    payload = action.legacy_payload
+    if payload is None:
+        result.failed += 1
+        result.errors.append(
+            f"legacy sidecar restore {action.target_path}: missing payload"
+        )
+        return
+
     sidecar_name = (
-        action.metadata_entry.name.text
-        if action.metadata_entry and action.metadata_entry.name.text
+        payload.metadata_entry.name.text
+        if payload.metadata_entry.name.text
         else str(action.target_path.name)
     )
 
@@ -1565,17 +1643,17 @@ def _execute_sidecar_write(
     try:
         action.target_path.parent.mkdir(parents=True, exist_ok=True)
 
-        if action.sidecar_binary:
-            action.target_path.write_bytes(action.sidecar_data)  # type: ignore[arg-type]
+        if payload.is_binary:
+            action.target_path.write_bytes(payload.data)  # type: ignore[arg-type]
         else:
             action.target_path.write_text(
-                str(action.sidecar_data),
+                str(payload.data),
                 encoding="utf-8",
             )
 
         # Restore timestamps if the metadata entry has them
-        if action.metadata_entry and action.metadata_entry.timestamps:
-            _restore_timestamps(action.target_path, action.metadata_entry.timestamps)
+        if payload.metadata_entry.timestamps:
+            _restore_timestamps(action.target_path, payload.metadata_entry.timestamps)
 
         logger.info("Sidecar restored: %s → %s", sidecar_name, action.target_path)
         result.sidecars_restored += 1
@@ -1651,7 +1729,7 @@ def _set_windows_creation_time(path: Path, ctime_seconds: float) -> bool:
             return True
         finally:
             kernel32.CloseHandle(handle)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("Failed to set ctime on %s: %s", path, exc)
         return False
 

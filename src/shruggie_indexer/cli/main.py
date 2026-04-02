@@ -480,27 +480,18 @@ def _post_index_pipeline(
 
     write_output(entry, config_for_write)
 
-    # ── MetaMergeDelete: drain deletion queue (Stage 6) ─────────────
-    logger.debug(
-        "Stage 6 delete queue: %d entries (%d unique)",
-        len(delete_queue) if delete_queue is not None else 0,
-        len(set(delete_queue)) if delete_queue else 0,
-    )
-    if delete_queue:
-        deleted = _drain_delete_queue(delete_queue)
-        logger.info("Deleted %d merged sidecar file(s)", deleted)
+    # ── Legacy output cleanup for v4 in-place writes ────────────────
+    if config.cleanup_legacy_sidecars and config.output_inplace and not config.dry_run:
+        from shruggie_indexer.core.cleanup import cleanup_legacy_outputs
 
-    # ── Stage 7: Remove stale metadata artifacts from prior runs ───
-    if config.meta_merge_delete:
-        from shruggie_indexer.core.entry import cleanup_stale_metadata
-
-        stale_root = target_path if entry.type == "directory" else target_path.parent
-        stale_removed = cleanup_stale_metadata(entry, stale_root, config)
-        if stale_removed:
-            logger.info(
-                "Removed %d stale metadata artifact(s)",
-                stale_removed,
-            )
+        cleanup_root = target_path if entry.type == "directory" else target_path.parent
+        removed = cleanup_legacy_outputs(
+            entry,
+            cleanup_root,
+            write_directory_meta=config.write_directory_meta,
+        )
+        if removed:
+            logger.info("Removed %d legacy output artifact(s)", removed)
 
 
 # ---------------------------------------------------------------------------
@@ -698,14 +689,6 @@ def index_cmd(
         # ── Resolve target ──────────────────────────────────────────────
         target_path = Path(target).resolve() if target else Path.cwd()
 
-        # ── Programmatic validation (spec section 8.8) ──────────────────
-        if meta_merge_delete and not outfile and not inplace:
-            logger.error(
-                "--meta-merge-delete requires --outfile or --inplace "
-                "to ensure sidecar content is preserved before deletion."
-            )
-            sys.exit(ExitCode.CONFIGURATION_ERROR)
-
         # ── Build configuration overrides ───────────────────────────────
         overrides = _build_cli_overrides(
             recursive=recursive,
@@ -734,10 +717,10 @@ def index_cmd(
         # Log implication propagation (spec section 8.8)
         if config.rename and not inplace:
             logger.info("--rename implies --inplace; enabling in-place output")
-        if config.meta_merge_delete and not meta_merge:
-            logger.info("--meta-merge-delete implies --meta-merge; enabling sidecar merging")
-        if config.meta_merge and not meta:
-            logger.info("--meta-merge implies --meta; enabling EXIF extraction")
+        if getattr(config, "meta_merge_delete", False) and not meta_merge:
+            logger.info("Legacy meta-merge-delete flag is set in config")
+        if getattr(config, "meta_merge", False) and not meta:
+            logger.info("Legacy meta-merge flag is set in config")
 
         # Warn if no output destinations are enabled
         if not config.output_stdout and config.output_file is None and not config.output_inplace:
@@ -759,8 +742,8 @@ def index_cmd(
             config.id_algorithm,
             config.compute_sha512,
             config.extract_exif,
-            config.meta_merge,
-            config.meta_merge_delete,
+            getattr(config, "meta_merge", False),
+            getattr(config, "meta_merge_delete", False),
             config.rename,
             config.dry_run,
             config.output_stdout,
@@ -772,7 +755,7 @@ def index_cmd(
         )
 
         # ── Prepare delete queue ────────────────────────────────────────
-        delete_queue: list[Path] | None = [] if config.meta_merge_delete else None
+        delete_queue: list[Path] | None = None
 
         # ── Execute indexing ────────────────────────────────────────────
         progress_cb = _make_progress_callback(verbose)

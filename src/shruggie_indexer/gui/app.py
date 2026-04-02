@@ -4056,8 +4056,8 @@ class ShruggiIndexerApp(ctk.CTk):
         logger.debug("Background thread entry: target=%s", target)
         _job_start = time.monotonic()
         try:
-            # ── Prepare delete queue for MetaMergeDelete ────────────────
-            delete_queue: list[Path] | None = [] if config.meta_merge_delete else None
+            # MetaMergeDelete execution was removed in the v4 rollback pivot.
+            delete_queue: list[Path] | None = None
 
             # ── Log resolved configuration ─────────────────────────────
             logger.info(
@@ -4071,8 +4071,8 @@ class ShruggiIndexerApp(ctk.CTk):
                 config.id_algorithm,
                 config.compute_sha512,
                 config.extract_exif,
-                config.meta_merge,
-                config.meta_merge_delete,
+                getattr(config, "meta_merge", False),
+                getattr(config, "meta_merge_delete", False),
                 config.rename,
                 config.dry_run,
                 config.output_stdout,
@@ -4168,31 +4168,18 @@ class ShruggiIndexerApp(ctk.CTk):
                 config.output_file.write_text(json_str + "\n", encoding="utf-8")
                 logger.info("Output written to: %s", config.output_file)
 
-            # ── MetaMergeDelete: drain deletion queue (Stage 6) ─────────
-            logger.debug(
-                "Stage 6 delete queue: %d entries (%d unique)",
-                len(delete_queue) if delete_queue is not None else 0,
-                len(set(delete_queue)) if delete_queue else 0,
-            )
-            if delete_queue:
-                deleted = self._drain_delete_queue(delete_queue)
-                logger.info("Deleted %d merged sidecar file(s)", deleted)
+            # ── Legacy output cleanup for v4 in-place writes ───────────
+            if config.cleanup_legacy_sidecars and config.output_inplace and not config.dry_run:
+                from shruggie_indexer.core.cleanup import cleanup_legacy_outputs
 
-            # ── Stage 7: Remove stale metadata artifacts ────────────────
-            if config.meta_merge_delete:
-                from shruggie_indexer.core.entry import cleanup_stale_metadata
-
-                stale_root = target if entry.type == "directory" else target.parent
-                stale_removed = cleanup_stale_metadata(
+                cleanup_root = target if entry.type == "directory" else target.parent
+                removed = cleanup_legacy_outputs(
                     entry,
-                    stale_root,
-                    config,
+                    cleanup_root,
+                    write_directory_meta=config.write_directory_meta,
                 )
-                if stale_removed:
-                    logger.info(
-                        "Removed %d stale metadata artifact(s)",
-                        stale_removed,
-                    )
+                if removed:
+                    logger.info("Removed %d legacy output artifact(s)", removed)
 
             result = {"status": "success", "json": json_str}
             _job_elapsed = time.monotonic() - _job_start

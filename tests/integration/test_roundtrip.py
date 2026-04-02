@@ -271,7 +271,7 @@ class TestV3SidecarDiscovery:
         }
         path = tmp_path / "legacy.txt_meta2.json"
         path.write_text(json.dumps(v1_entry), encoding="utf-8")
-        with pytest.raises(IndexerConfigError, match="expected 2 or 3"):
+        with pytest.raises(IndexerConfigError, match="expected 2, 3, or 4"):
             load_sidecar(path)
 
 

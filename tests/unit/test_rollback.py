@@ -20,9 +20,6 @@ import pytest
 
 from shruggie_indexer.core.rollback import (
     LocalSourceResolver,
-    RollbackAction,
-    RollbackPlan,
-    RollbackResult,
     RollbackStats,
     _entry_from_dict,
     discover_meta2_files,
@@ -84,11 +81,12 @@ def _make_file_entry(
     session_id: str | None = None,
     metadata: list[MetadataEntry] | None = None,
     duplicates: list[IndexEntry] | None = None,
+    schema_version: int = 2,
 ) -> IndexEntry:
     if storage_name is None:
         storage_name = f"y{md5}.{name.rsplit('.', 1)[-1]}"
     return IndexEntry(
-        schema_version=2,
+        schema_version=schema_version,
         id=f"y{md5}",
         id_algorithm="md5",
         type="file",
@@ -113,7 +111,7 @@ def _make_sidecar_metadata(
 ) -> MetadataEntry:
     if data is None:
         data = {"key": "value"}
-    return MetadataEntry(
+    entry = MetadataEntry(
         id="zSIDECAR0000000000000000000000000",
         origin="sidecar",
         name=NameObject(text=name, hashes=_make_hashset()),
@@ -124,10 +122,12 @@ def _make_sidecar_metadata(
             transforms=[],
         ),
         data=data,
-        file_system=FileSystemObject(relative=relative, parent=None),
-        size=SizeObject(text="50 B", bytes=50),
-        timestamps=_make_ts(),
     )
+    entry.file_system = FileSystemObject(relative=relative, parent=None)
+    entry.size = SizeObject(text="50 B", bytes=50)
+    entry.timestamps = _make_ts()
+    entry.encoding = None
+    return entry
 
 
 # ===========================================================================
@@ -211,6 +211,43 @@ class TestLoadMeta2:
         meta = canonical.metadata[0]
         assert meta.origin == "sidecar"
         assert meta.name.text == "photo.jpg.info.json"
+
+    def test_v4_idx_output_loads(self, tmp_path: Path) -> None:
+        """v4 _idx.json output is accepted by the rollback loader."""
+        entry = {
+            "schema_version": 4,
+            "id": "yAAAA",
+            "id_algorithm": "md5",
+            "type": "file",
+            "name": {"text": "video.mp4", "hashes": {"md5": "AAAA", "sha256": "BBBB"}},
+            "extension": "mp4",
+            "size": {"text": "5 B", "bytes": 5},
+            "hashes": {"md5": "AAAA", "sha256": "BBBB"},
+            "file_system": {"relative": "media/video.mp4", "parent": None},
+            "timestamps": {
+                "created": {"iso": "2026-01-01T00:00:00Z", "unix": 0},
+                "modified": {"iso": "2026-01-01T00:00:00Z", "unix": 0},
+                "accessed": {"iso": "2026-01-01T00:00:00Z", "unix": 0},
+            },
+            "attributes": {"is_link": False, "storage_name": "yAAAA.mp4"},
+            "metadata": [
+                {
+                    "id": "zMETA",
+                    "origin": "generated",
+                    "name": {"text": None, "hashes": None},
+                    "hashes": {"md5": "CCCC", "sha256": "DDDD"},
+                    "attributes": {"type": "exiftool.json_metadata"},
+                    "data": {"SourceFile": "video.mp4"},
+                }
+            ],
+        }
+        path = tmp_path / "yAAAA.mp4_idx.json"
+        path.write_text(json.dumps(entry), encoding="utf-8")
+
+        entries = load_meta2(path)
+        assert len(entries) == 1
+        assert entries[0].schema_version == 4
+        assert entries[0].attributes.storage_name == "yAAAA.mp4"
 
 
 class TestDiscoverMeta2Files:
@@ -492,7 +529,7 @@ class TestPlanRollback:
         )
         sidecar_actions = [a for a in plan.actions if a.action_type == "sidecar_restore"]
         assert len(sidecar_actions) == 1
-        assert sidecar_actions[0].sidecar_data is not None
+        assert sidecar_actions[0].legacy_payload is not None
 
     def test_no_sidecar_restoration_when_disabled(self, tmp_path: Path) -> None:
         """restore_sidecars=False suppresses sidecar restoration."""
@@ -513,6 +550,26 @@ class TestPlanRollback:
         )
         sidecar_actions = [a for a in plan.actions if a.action_type == "sidecar_restore"]
         assert len(sidecar_actions) == 0
+
+    def test_v4_entries_do_not_plan_legacy_sidecar_restoration(self, tmp_path: Path) -> None:
+        """Schema v4 entries never enter the legacy sidecar reconstruction path."""
+        meta = _make_sidecar_metadata()
+        entry = _make_file_entry(
+            name="readme.txt",
+            storage_name="y0654CDF77702945DA87A8B4E72E98EEE.txt",
+            relative="readme.txt",
+            md5="0654CDF77702945DA87A8B4E72E98EEE",
+            metadata=[meta],
+            schema_version=4,
+        )
+        plan = plan_rollback(
+            [entry],
+            target_dir=tmp_path,
+            source_dir=FIXTURES / "non-renamed",
+            verify=False,
+        )
+        sidecar_actions = [a for a in plan.actions if a.action_type == "sidecar_restore"]
+        assert sidecar_actions == []
 
     def test_directory_actions_created(self, tmp_path: Path) -> None:
         """Structured mode creates mkdir actions for subdirectories."""
@@ -1031,8 +1088,8 @@ class TestExecuteRollback:
             fmt="json",
             data={"key": "value"},
         )
-        # json_style is None (default) — should restore as compact
-        assert meta.attributes.json_style is None
+        # json_style is absent by default — compact serialization is the legacy fallback
+        assert getattr(meta.attributes, "json_style", None) is None
         entry = _make_file_entry(
             name="readme.txt",
             storage_name="y0654CDF77702945DA87A8B4E72E98EEE.txt",
@@ -1989,8 +2046,9 @@ class TestJsonIndentRestoration:
 
         attrs = MetadataAttributes(
             type="json_metadata", format="json", transforms=[],
-            json_style="pretty", json_indent="    ",
         )
+        attrs.json_style = "pretty"
+        attrs.json_indent = "    "
         result = _restore_json({"key": "value"}, attrs)
         assert '    "key"' in result
 
@@ -2001,8 +2059,9 @@ class TestJsonIndentRestoration:
 
         attrs = MetadataAttributes(
             type="json_metadata", format="json", transforms=[],
-            json_style="pretty", json_indent="\t",
         )
+        attrs.json_style = "pretty"
+        attrs.json_indent = "\t"
         result = _restore_json({"key": "value"}, attrs)
         assert '\t"key"' in result
 
@@ -2013,8 +2072,8 @@ class TestJsonIndentRestoration:
 
         attrs = MetadataAttributes(
             type="json_metadata", format="json", transforms=[],
-            json_style="pretty",
         )
+        attrs.json_style = "pretty"
         result = _restore_json({"key": "value"}, attrs)
         assert '  "key"' in result
         assert '    "key"' not in result
@@ -2063,10 +2122,10 @@ class TestLegacyV2SidecarRestoration:
             hashes=_make_hashset(),
             attributes=MetadataAttributes(
                 type="json_metadata", format="json", transforms=[],
-                json_style="pretty",
             ),
             data={"title": "Test"},
         )
+        meta.attributes.json_style = "pretty"
         data, is_binary = _decode_sidecar_data(meta)
         assert isinstance(data, bytes)
         text = data.decode("utf-8")
@@ -2106,8 +2165,8 @@ class TestFullRoundTrip:
                 type="description", format="text", transforms=[],
             ),
             data=text_content,
-            encoding=enc,
         )
+        meta.encoding = enc
 
         restored_data, is_binary = _decode_sidecar_data(meta)
         assert isinstance(restored_data, bytes)

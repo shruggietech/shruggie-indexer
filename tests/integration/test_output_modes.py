@@ -35,7 +35,7 @@ class TestOutputModes:
 
         output = captured.getvalue().strip()
         parsed = json.loads(output)
-        assert parsed["schema_version"] == 3
+        assert parsed["schema_version"] == 4
 
     def test_outfile_write(
         self, sample_file: Path, tmp_path: Path, mock_exiftool: None,
@@ -49,7 +49,7 @@ class TestOutputModes:
 
         assert outfile.exists()
         parsed = json.loads(outfile.read_text(encoding="utf-8"))
-        assert parsed["schema_version"] == 3
+        assert parsed["schema_version"] == 4
 
     def test_inplace_creates_sidecar(
         self, sample_file: Path, mock_exiftool: None,
@@ -63,7 +63,7 @@ class TestOutputModes:
         sidecar = sample_file.parent / (sample_file.name + "_meta3.json")
         assert sidecar.exists()
         parsed = json.loads(sidecar.read_text(encoding="utf-8"))
-        assert parsed["schema_version"] == 3
+        assert parsed["schema_version"] == 4
 
     def test_combined_stdout_and_outfile(
         self, sample_file: Path, tmp_path: Path, mock_exiftool: None,
@@ -78,8 +78,8 @@ class TestOutputModes:
             write_output(entry, config)
 
         # Both destinations should have valid output.
-        assert json.loads(captured.getvalue().strip())["schema_version"] == 3
-        assert json.loads(outfile.read_text(encoding="utf-8"))["schema_version"] == 3
+        assert json.loads(captured.getvalue().strip())["schema_version"] == 4
+        assert json.loads(outfile.read_text(encoding="utf-8"))["schema_version"] == 4
 
     def test_empty_directory_output(
         self, tmp_path: Path, mock_exiftool: None,
@@ -97,7 +97,7 @@ class TestOutputModes:
 
         json_str = serialize_entry(entry)
         parsed = json.loads(json_str)
-        assert parsed["schema_version"] == 3
+        assert parsed["schema_version"] == 4
         assert parsed["items"] == []
 
 
@@ -160,7 +160,7 @@ class TestWriteDirectoryMetaFlag:
 
         output = captured.getvalue().strip()
         parsed = json.loads(output)
-        assert parsed["schema_version"] == 3
+        assert parsed["schema_version"] == 4
         assert parsed["type"] == "directory"
         assert "items" in parsed
 
@@ -180,7 +180,7 @@ class TestWriteDirectoryMetaFlag:
 
         assert outfile.exists()
         parsed = json.loads(outfile.read_text(encoding="utf-8"))
-        assert parsed["schema_version"] == 3
+        assert parsed["schema_version"] == 4
 
     def test_auto_generated_aggregate_suppressed(
         self, sample_tree: Path, tmp_path: Path, mock_exiftool: None,
@@ -228,4 +228,4 @@ class TestWriteDirectoryMetaFlag:
         output = captured.getvalue().strip()
         parsed = json.loads(output)
         assert parsed["type"] == "file"
-        assert parsed["schema_version"] == 3
+        assert parsed["schema_version"] == 4

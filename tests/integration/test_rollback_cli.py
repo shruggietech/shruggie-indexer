@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import json
-import os
 import shutil
 from pathlib import Path
 
@@ -37,6 +36,48 @@ def _make_renamed_workdir(tmp_path: Path) -> Path:
     """
     workdir = tmp_path / "workdir"
     shutil.copytree(FIXTURES / "renamed", workdir)
+    return workdir
+
+
+def _make_v4_workdir(tmp_path: Path) -> Path:
+    workdir = tmp_path / "v4_workdir"
+    workdir.mkdir()
+
+    storage_name = "yAAAA0000AAAA0000AAAA0000AAAA0000.mp4"
+    content_path = workdir / storage_name
+    content_path.write_bytes(b"v4 rollback fixture bytes\n")
+
+    idx_payload = {
+        "schema_version": 4,
+        "id": "yAAAA0000AAAA0000AAAA0000AAAA0000",
+        "id_algorithm": "md5",
+        "type": "file",
+        "name": {"text": "video.mp4", "hashes": {"md5": "AAAA", "sha256": "BBBB"}},
+        "extension": "mp4",
+        "size": {"text": "25 B", "bytes": 25},
+        "hashes": {"md5": "AAAA", "sha256": "BBBB"},
+        "file_system": {"relative": "media/video.mp4", "parent": None},
+        "timestamps": {
+            "created": {"iso": "2026-01-01T00:00:00Z", "unix": 0},
+            "modified": {"iso": "2026-01-01T00:00:00Z", "unix": 0},
+            "accessed": {"iso": "2026-01-01T00:00:00Z", "unix": 0},
+        },
+        "attributes": {"is_link": False, "storage_name": storage_name},
+        "metadata": [
+            {
+                "id": "zMETA0000",
+                "origin": "generated",
+                "name": {"text": None, "hashes": None},
+                "hashes": {"md5": "CCCC", "sha256": "DDDD"},
+                "attributes": {"type": "exiftool.json_metadata"},
+                "data": {"SourceFile": "video.mp4"},
+            }
+        ],
+    }
+    (workdir / f"{storage_name}_idx.json").write_text(
+        json.dumps(idx_payload),
+        encoding="utf-8",
+    )
     return workdir
 
 
@@ -92,6 +133,28 @@ class TestRollbackWithDedup:
         assert (target / "images" / "photo.jpg").exists()
         # Duplicate: backup/photo_copy.jpg
         assert (target / "backup" / "photo_copy.jpg").exists()
+
+
+class TestRollbackV4Output:
+    """Rollback from v4 _idx.json output uses uniform file copy behavior."""
+
+    def test_rollback_v4_idx_output(
+        self, runner: CliRunner, tmp_path: Path,
+    ) -> None:
+        workdir = _make_v4_workdir(tmp_path)
+        target = tmp_path / "restored_v4"
+        target.mkdir()
+
+        idx_file = workdir / "yAAAA0000AAAA0000AAAA0000AAAA0000.mp4_idx.json"
+        result = runner.invoke(
+            main,
+            ["rollback", str(idx_file), "--target", str(target), "--no-verify"],
+            catch_exceptions=False,
+        )
+        assert result.exit_code == 0
+        restored = target / "media" / "video.mp4"
+        assert restored.exists()
+        assert restored.read_bytes() == b"v4 rollback fixture bytes\n"
 
 
 class TestRollbackAggregateOutput:
@@ -282,7 +345,6 @@ class TestRollbackDryRun:
 
         # No files should exist in the target (dry-run)
         actual_files = list(target.rglob("*"))
-        dirs_only = all(p.is_dir() for p in actual_files)
         has_no_files = len([p for p in actual_files if p.is_file()]) == 0
         assert has_no_files, "Dry-run should not create any files"
 
@@ -394,7 +456,11 @@ class TestRollbackV1Rejection:
         )
         assert result.exit_code == ExitCode.CONFIGURATION_ERROR
         combined = (result.output or "") + (result.stderr or "")
-        assert "schema" in combined.lower() or "v1" in combined.lower() or "version" in combined.lower()
+        assert (
+            "schema" in combined.lower()
+            or "v1" in combined.lower()
+            or "version" in combined.lower()
+        )
 
 
 class TestRollbackBackwardCompat:
@@ -433,7 +499,7 @@ class TestRollbackBackwardCompat:
 
         assert result.exit_code == 0
         parsed = json.loads(result.output)
-        assert parsed["schema_version"] == 3
+        assert parsed["schema_version"] == 4
         assert parsed["type"] == "file"
 
 
@@ -466,7 +532,6 @@ class TestRollbackTimestampRestoration:
         # accessed unix = 1771165698109 (ms) → 1771165698.109 (s)
         stat = restored.stat()
         expected_mtime = 1691106464.0
-        expected_atime = 1771165698.109
 
         # Allow 2-second tolerance for filesystem granularity
         assert abs(stat.st_mtime - expected_mtime) < 2.0, (
