@@ -195,7 +195,7 @@ This should print the installed version (e.g., `shruggie-indexer, version 0.1.0`
 
 ## ExifTool (Optional)
 
-ExifTool is required only for embedded EXIF/XMP/IPTC metadata extraction (the `--meta` flag). All other functionality — hashing, timestamps, sidecar handling, renaming — works without it.
+ExifTool is required only for embedded EXIF/XMP/IPTC metadata extraction (the `--meta` flag). All other functionality — hashing, timestamps, relationship annotation, renaming, and rollback — works without it.
 
 See the [ExifTool Setup](exiftool.md) page for detailed installation instructions on each platform.
 

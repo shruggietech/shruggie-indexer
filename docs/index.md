@@ -1,75 +1,56 @@
 # shruggie-indexer
 
-**shruggie-indexer** produces structured JSON index entries for files and directories, capturing hash-based identities, filesystem timestamps, EXIF metadata, sidecar metadata, and storage attributes. Every entry conforms to the [v3 JSON Schema](schema/shruggie-indexer-v3.schema.json) and includes deterministic, content-derived identifiers that are stable across runs and platforms. The tool ships as a CLI utility, a Python library, and a standalone GUI application — all powered by the same core indexing engine.
+shruggie-indexer indexes files and directories into structured JSON with deterministic identity hashes, filesystem evidence, optional ExifTool metadata, and v4 relationship annotations for sidecar-like files.
+
+The v4 architecture treats every discovered file as a first-class `IndexEntry`. Instead of ingesting sidecar files into parent metadata, the indexer records believed associations in `relationships[]`.
 
 ## Key Features
 
-**Deterministic hash-based identity** — Each file receives a unique identifier derived from its content hashes (MD5 or SHA-256), prefixed by type (`y` for files, `x` for directories). The same file always produces the same ID.
-
-**Multi-algorithm hashing** — MD5 and SHA-256 are computed in a single streaming pass over each file. Optional SHA-512 is available for high-strength verification workflows.
-
-**EXIF metadata extraction** — Embedded EXIF, XMP, and IPTC metadata is extracted via [ExifTool](https://exiftool.org/) using a persistent batch process for high throughput. When ExifTool is not installed, all other features continue to work normally.
-
-**Sidecar metadata discovery and merging** — Automatically discovers sidecar files (`.info.json`, `.description`, thumbnails, subtitles, hash files, and more) alongside indexed items. Sidecar content can be merged into parent entries or merged-and-deleted with full provenance tracking for reversal.
-
-**Configurable TOML-based settings** — All behavior is configurable through a layered system: built-in defaults, user config files, project-local config files, and CLI flags. Sidecar patterns, exclusion lists, and extension validation are all user-modifiable without editing source code.
-
-**Cross-platform** — Windows, Linux, and macOS are fully supported with platform-aware handling of timestamps, symlinks, and filesystem attributes.
-
-**Structured v3 JSON output** — Output follows a well-defined schema with typed sub-objects (`HashSet`, `NameObject`, `SizeObject`, `TimestampPair`, `TimestampsObject`, `ParentObject`) and a `schema_version` discriminator for forward compatibility.
+- Deterministic hash-based identity for files and directories (`id`, `id_algorithm`, `storage_name`)
+- Recursive filesystem inventory with platform-aware timestamps and path normalization
+- Optional ExifTool extraction into `metadata[]` (`origin: "generated"`)
+- Sidecar relationship classification via rule engine (`relationships[]` with rule source, confidence, predicate detail)
+- Uniform rename and rollback workflows across all files
+- v4 output sidecar conventions: `_idx.json` (file scope), `_idxd.json` (directory scope)
+- CLI, GUI, and Python API frontends backed by one core engine
 
 ## Quick Example
 
-Index a file and print the result to stdout:
-
 ```bash
-shruggie-indexer path/to/file.exe
+shruggie-indexer index path/to/library --inplace
 ```
 
-Output (abbreviated):
+This writes v4 per-item outputs beside indexed content:
+
+- `movie.mkv_idx.json`
+- `movie.mkv.info.json_idx.json`
+- `videos_idxd.json`
+
+If sidecar detection is enabled (default), sidecar-like entries may include:
 
 ```json
-{
-  "schema_version": 3,
-  "id": "yA8A8C089A6A8583B24C85F5A4A41F5AC",
-  "id_algorithm": "md5",
-  "type": "file",
-  "name": {
-    "text": "file.exe",
-    "hashes": { "md5": "...", "sha256": "..." }
-  },
-  "extension": "exe",
-  "size": { "text": "15.28 MB", "bytes": 16027648 },
-  "hashes": { "md5": "A8A8C089...", "sha256": "B6BA115C..." },
-  "file_system": {
-    "relative": "file.exe",
-    "parent": { "id": "x3B4F479E...", "name": { "text": "my-dir", "hashes": { "...": "..." } } }
-  },
-  "timestamps": {
-    "created":  { "iso": "2026-02-15T09:28:17.408462-05:00", "unix": 1771165697408 },
-    "modified": { "iso": "2023-08-03T19:47:44.000000-04:00", "unix": 1691106464000 },
-    "accessed": { "iso": "2026-02-15T09:28:18.109390-05:00", "unix": 1771165698109 }
-  },
-  "attributes": { "is_link": false, "storage_name": "yA8A8C089A6A8583B24C85F5A4A41F5AC.exe" },
-  "items": null,
-  "metadata": null,
-  "mime_type": "application/octet-stream"
-}
+"relationships": [
+  {
+    "target_id": "yABC...",
+    "type": "json_metadata",
+    "rule": "yt-dlp-info",
+    "rule_source": "builtin",
+    "confidence": 3,
+    "predicates": []
+  }
+]
 ```
 
-## Documentation Sections
+## Documentation
 
-- **[Getting Started](getting-started/installation.md)** — Install shruggie-indexer, set up ExifTool, and index your first file in minutes.
-- **[User Guide](user-guide/index.md)** — Desktop application guide, CLI reference, configuration guide, Python API documentation, and platform-specific notes.
-- **[Schema Reference](schema/index.md)** — Full v3 JSON Schema documentation with type definitions, field tables, and annotated examples.
-- **[Porting Reference](porting-reference/index.md)** — Historical reference materials from the original PowerShell implementation.
-- **[Changelog](changelog.md)** — Version history and release notes.
+- [Getting Started](getting-started/installation.md)
+- [User Guide](user-guide/index.md)
+- [Schema Reference](schema/index.md)
+- [Porting Reference](porting-reference/index.md)
+- [Changelog](changelog.md)
 
 ## Quick Links
 
 - [GitHub Repository](https://github.com/shruggietech/shruggie-indexer)
-- [V3 JSON Schema (canonical)](https://schemas.shruggie.tech/data/shruggie-indexer-v3.schema.json)
-- [Rollback Guide](user-guide/rollback.md) — Restore renamed and de-duplicated files to their original state.
-- Technical Specification:
-    - [Markdown (GitHub)](https://github.com/shruggietech/shruggie-indexer/blob/main/shruggie-indexer-spec.md)
-    - [PDF Download](https://raw.githubusercontent.com/shruggietech/shruggie-indexer/main/.archive/20260224-001-shruggie-indexer-spec.pdf)
+- [V4 JSON Schema (canonical)](https://schemas.shruggie.tech/data/shruggie-indexer-v4.schema.json)
+- [Local v4 schema copy](schema/shruggie-indexer-v4.schema.json)

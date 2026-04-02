@@ -4,7 +4,7 @@
 
 [ExifTool](https://exiftool.org/) by Phil Harvey is a platform-independent Perl library and command-line tool for reading, writing, and editing metadata in a wide variety of file formats — including EXIF, XMP, IPTC, GPS, and maker notes from camera manufacturers.
 
-shruggie-indexer uses ExifTool to extract embedded metadata from indexed files when the `--meta` flag is active. ExifTool is the sole external binary dependency and is required **only** for embedded metadata extraction. All other functionality — hashing, timestamp capture, sidecar file handling, renaming — works without it.
+shruggie-indexer uses ExifTool to extract embedded metadata from indexed files when the `--meta` flag is active. ExifTool is the sole external binary dependency and is required **only** for embedded metadata extraction. All other functionality — hashing, timestamp capture, relationship annotation, renaming, and rollback — works without it.
 
 ## Installation
 
@@ -75,7 +75,7 @@ When ExifTool is not found on `PATH`, shruggie-indexer logs a single warning at 
 WARNING: exiftool not found on PATH; embedded metadata extraction disabled
 ```
 
-The indexing operation continues normally. The `metadata` array in output entries simply omits the `exiftool.json_metadata` entry that would otherwise be present. This is a **graceful degradation**, not a fatal error — the tool is fully functional for hashing, timestamping, sidecar handling, and renaming without ExifTool.
+The indexing operation continues normally. The `metadata` array in output entries simply omits the `exiftool.json_metadata` entry that would otherwise be present. This is a **graceful degradation**, not a fatal error — the tool is fully functional for hashing, timestamping, relationship annotation, and renaming without ExifTool.
 
 !!! tip "Check once, not per-file"
     The ExifTool availability check happens once at startup and the result is cached. You will not see repeated warnings for each file.
@@ -115,5 +115,5 @@ This exclusion list is configurable. See the [Configuration](../user-guide/confi
 ## Next Steps
 
 - [Quick Start](quickstart.md) — Try `--meta` with a real file.
-- [CLI Reference](../user-guide/cli-reference.md) — Full `--meta`, `--meta-merge`, and `--meta-merge-delete` documentation.
+- [CLI Reference](../user-guide/cli-reference.md) — Full `--meta`, `--no-sidecar-detection`, and output workflow documentation.
 - [Configuration](../user-guide/configuration.md) — Customize ExifTool arguments and exclusion lists.

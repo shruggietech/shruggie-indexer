@@ -1,383 +1,104 @@
 # Configuration
 
-shruggie-indexer uses a layered configuration system. All behavior is configurable without editing source code, and the tool operates correctly with no configuration file — sensible defaults are built in.
+shruggie-indexer uses layered TOML configuration.
 
-## Configuration Hierarchy
+Priority order (low to high):
 
-Configuration values are resolved in the following order. Higher-priority layers override lower-priority ones:
+1. Compiled defaults
+2. User config file
+3. Project-local `.shruggie-indexer.toml`
+4. CLI/API overrides
 
-| Priority | Source | Description |
-|----------|--------|-------------|
-| 1 (lowest) | Compiled defaults | Built into the tool. Always present. |
-| 2 | User config file | Platform-standard location (see below). |
-| 3 | Project-local config file | `.shruggie-indexer.toml` in the target directory or its ancestors. |
-| 4 (highest) | CLI flags / API arguments | Command-line options or `load_config(overrides=...)`. |
+## v4-Oriented Keys
 
-### Config file locations
+- `no_sidecar_detection` (bool, default `false`): disable relationship classification
+- `cleanup_legacy_sidecars` (bool, default `false`): remove legacy output artifacts after successful v4 in-place writes
+- `write_directory_meta` (bool, default `true`): emit directory `_idxd.json` outputs in in-place mode
 
-| Platform | User config path |
-|----------|-----------------|
-| Linux | `~/.config/shruggie-tech/shruggie-indexer/config.toml` |
-| macOS | `~/Library/Application Support/shruggie-tech/shruggie-indexer/config.toml` |
-| Windows | `%LOCALAPPDATA%\shruggie-tech\shruggie-indexer\config.toml` |
+Legacy merge/delete configuration keys from pre-v4 releases are no longer active.
 
-Project-local config files (`.shruggie-indexer.toml`) are searched starting from the target directory and walking up to the filesystem root.
-
-!!! info "Migration from earlier versions"
-    Prior to the current version, configuration files were stored at different
-    locations depending on the release:
-
-    - **v0.1.1:** `%APPDATA%\shruggie-tech\shruggie-indexer\config.toml` (Windows Roaming)
-    - **v0.1.0:** `<base>/shruggie-indexer/config.toml` (without `shruggie-tech/` parent)
-
-    The tool checks the canonical path first and transparently falls back to
-    legacy paths. An INFO-level log message is emitted when a legacy path is
-    used, recommending relocation. No files are deleted during migration.
-
-To specify a config file explicitly from the command line:
-
-```bash
-shruggie-indexer path/to/target --config my-config.toml
-```
-
-## Configuration File Format
-
-Configuration files use [TOML](https://toml.io/) format, parsed by Python's built-in `tomllib` module (Python 3.11+).
-
-### Complete example
-
-The following shows all available configuration options with their default values:
+## Example
 
 ```toml
-# ── Traversal and identity ──────────────────────────────────
-
 [traversal]
 recursive = true
-id_algorithm = "md5"         # "md5" or "sha256"
+id_algorithm = "md5"
 compute_sha512 = false
 
-# ── Output routing ──────────────────────────────────────────
-
 [output]
-stdout = true                # Conditional default (see docs)
-# file = "index.json"       # No default; set to enable file output
+stdout = true
 inplace = false
-write_directory_meta = true  # Suppress with false to skip _directorymeta2.json files
-
-# ── Metadata processing ────────────────────────────────────
+write_directory_meta = true
 
 [metadata]
 extract_exif = false
-meta_merge = false
-meta_merge_delete = false
-
-# ── Rename ──────────────────────────────────────────────────
+no_sidecar_detection = false
+cleanup_legacy_sidecars = false
 
 [rename]
 enabled = false
 dry_run = false
-
-# ── Logging ─────────────────────────────────────────────────
-
-[logging]
-file_enabled = false         # Enable persistent log file output
-# file_path = ""             # Empty = default app data directory
-
-# ── Extension validation ───────────────────────────────────
-
-[extensions]
-validation_pattern = '^(([a-z0-9]){1,2}|([a-z0-9])([a-z0-9\-]){1,12}([a-z0-9]))$'
-
-# ── Filesystem exclusion filters ───────────────────────────
-
-[filesystem_excludes]
-names = [
-    "$recycle.bin",
-    "system volume information",
-    "desktop.ini",
-    "thumbs.db",
-    ".ds_store",
-    ".spotlight-v100",
-    ".trashes",
-    ".fseventsd",
-    ".temporaryitems",
-    ".documentrevisions-v100",
-    ".git",
-]
-globs = [".trash-*"]
-
-# ── ExifTool configuration ─────────────────────────────────
-
-[exiftool]
-exclude_extensions = ["csv", "htm", "html", "json", "tsv", "xml"]
-# exclude_keys = [...]          # Replace the entire key exclusion set (advanced)
-# exclude_keys_append = [...]   # Append additional keys to the default exclusion set
-base_args = [
-    "-extractEmbedded3",
-    "-scanForXMP",
-    "-unknown2",
-    "-json",
-    "-G3:1",
-    "-struct",
-    "-ignoreMinorErrors",
-    "-charset", "filename=utf8",
-    "-api", "requestall=3",
-    "-api", "largefilesupport=1",
-    "--",
-]
-
-# ── Extension groups ────────────────────────────────────────
-
-# Seven groups: archive, audio, font, image, link, subtitles, video
-# Each maps to a list of lowercase extensions (without leading dots).
-# See the technical specification §7.3 for the complete default lists.
 ```
 
-## Default Configuration Values
+Note: CLI/API fields map directly to internal config names (`no_sidecar_detection`, `cleanup_legacy_sidecars`).
 
-### Scalar defaults
+## Sidecar Rules
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `traversal.recursive` | `true` | Recurse into subdirectories. |
-| `traversal.id_algorithm` | `"md5"` | Hash algorithm for the `id` field. |
-| `traversal.compute_sha512` | `false` | Compute SHA-512 (not computed by default for performance). |
-| `output.stdout` | `true` (conditional) | Write to stdout when no other output is specified. |
-| `output.inplace` | `false` | Write in-place sidecar files. |
-| `output.write_directory_meta` | `true` | Write `_directorymeta2.json` directory sidecars. Set to `false` to suppress directory-level metadata while keeping per-file sidecars. |
-| `metadata.extract_exif` | `false` | Extract embedded metadata via ExifTool. |
-| `metadata.meta_merge` | `false` | Merge sidecar metadata into parent entries. |
-| `metadata.meta_merge_delete` | `false` | Merge and delete sidecar files. |
-| `rename.enabled` | `false` | Rename files to storage names. |
-| `rename.dry_run` | `false` | Preview rename operations. |
+User rules are declared under `[sidecar_rules.<rule_name>]`.
 
-### Extension validation pattern
+Supported fields:
 
-The default pattern accepts extensions of 1–2 alphanumeric characters, or 3–14 characters where the first and last are alphanumeric and interior characters may include hyphens:
+- `match` (required when enabled)
+- `type` (required when enabled)
+- `scope` (`"file"` or `"directory"`, default `"file"`)
+- `requires_sibling`
+- `requires_sibling_any`
+- `excludes_sibling`
+- `min_siblings` (reserved; ignored in current confidence computation)
+- `enabled` (default `true`)
+- `extends` (for override/disable workflows)
 
-```
-^(([a-z0-9]){1,2}|([a-z0-9])([a-z0-9\-]){1,12}([a-z0-9]))$
-```
-
-Extensions that fail validation are recorded in the output's `extension` field but are treated as unrecognized for ExifTool processing purposes.
-
-### Logging configuration
-
-The `[logging]` section controls persistent log file output. By default, shruggie-indexer does not write log files — diagnostic output goes to stderr (CLI) or the in-app log panel (GUI).
-
-| Key | Default | Description |
-|-----|---------|-------------|
-| `logging.file_enabled` | `false` | Enable persistent log file output. |
-| `logging.file_path` | `""` (empty) | Path to the log file. Empty uses the default platform-specific directory. |
-
-**Default log directory by platform:**
-
-| Platform | Directory |
-|----------|-----------|
-| Windows | `%LOCALAPPDATA%\shruggie-tech\shruggie-indexer\logs\` |
-| macOS | `~/Library/Application Support/shruggie-tech/shruggie-indexer/logs/` |
-| Linux | `~/.config/shruggie-tech/shruggie-indexer/logs/` |
-
-Log files are named by date and session: `YYYY-MM-DD_HHMMSS.log`. The log file format includes timestamps, session ID, log level, logger name, and message:
-
-```
-2026-02-23 14:30:02  abc123  INFO      shruggie_indexer.core.hasher  Hashing file: photo.jpg
-```
-
-The CLI equivalent is the `--log-file` flag. In the GUI, enable "Write log files" in Settings.
-
-### Metadata exclusion patterns
-
-The `metadata_exclude.patterns` setting controls which files are unconditionally excluded from indexing as standalone items. This prevents indexer output artifacts from being re-indexed on subsequent runs.
-
-The default pattern list:
-
-| Pattern | Matches |
-|---------|---------|
-| `_(meta2?\|directorymeta2?)\.json$` | Indexer output sidecars: `_meta.json`, `_meta2.json`, `images_directorymeta2.json`, etc. |
-
-These patterns are end-anchored, so they match both bare filenames (e.g., `_meta2.json`) and prefixed filenames (e.g., `video.mp4_meta2.json`, `images_directorymeta2.json`).
-
-!!! info "Two-layer exclusion mechanism"
-    shruggie-indexer applies two layers of file exclusion during traversal:
-
-    **Layer 1 — Metadata exclude patterns** (always active): Files matching `metadata_exclude.patterns` are removed from the item list during initial directory scanning. This prevents indexer output artifacts from being indexed as regular items.
-
-    **Layer 2 — Sidecar identification patterns** (active when MetaMerge is enabled): When MetaMerge or MetaMergeDelete is active, files matching recognized sidecar patterns (`.info.json`, `.description`, thumbnails, subtitles, etc.) are additionally excluded from the item list. These files are still available to the sidecar discovery system for merging into parent entries, but they are not indexed as standalone items.
-
-    Both layers work together to ensure sidecar files appear exclusively through the metadata merge system and never as inflated item counts in the output.
-
-!!! note "MetaMergeDelete stale artifact cleanup (Stage 7)"
-    When MetaMergeDelete is active, a post-processing cleanup pass (Stage 7)
-    scans all traversed directories for stale metadata artifacts — files
-    matching `metadata_exclude.patterns` that survived from prior indexer
-    runs. Because Layer 1 prevents these files from entering the sidecar
-    discovery pipeline, they are never queued for deletion during normal
-    processing. Stage 7 fills this gap by identifying and removing any
-    matching file that is not a current-run output sidecar. See the spec
-    §6.10 for details.
-
-### Filesystem exclusion defaults
-
-The default exclusion set covers system artifacts across all supported platforms:
-
-| Platform | Excluded items |
-|----------|---------------|
-| Windows | `$RECYCLE.BIN`, `System Volume Information`, `desktop.ini`, `Thumbs.db` |
-| macOS | `.DS_Store`, `.Spotlight-V100`, `.Trashes`, `.fseventsd`, `.TemporaryItems`, `.DocumentRevisions-V100` |
-| Linux | `.Trash-*` (glob pattern) |
-| All | `.git` |
-
-All platform-specific exclusions are applied regardless of the current platform, ensuring clean output from cross-platform network shares and external drives.
-
-### ExifTool exclusion defaults
-
-These file extensions are skipped for ExifTool invocation because ExifTool tends to dump the entire file content rather than extracting meaningful metadata:
-
-`csv`, `htm`, `html`, `json`, `tsv`, `xml`
-
-## MetadataFileParser Configuration
-
-The metadata file parser configuration controls how sidecar files are discovered and classified. It defines the regex patterns that match sidecar filenames and the behavioral attributes for each type.
-
-### Recognized sidecar types
-
-| Type | Description | Data handling |
-|------|-------------|---------------|
-| `description` | Text description files (youtube-dl `.description`) | JSON → text → binary fallback |
-| `desktop_ini` | Windows `desktop.ini` files | Text |
-| `generic_metadata` | Generic config/metadata (`.cfg`, `.conf`, `.yaml`, `.meta`) | JSON → text → binary fallback |
-| `hash` | Hash/checksum files (`.md5`, `.sha256`, `.crc32`) | Lines (non-empty lines only) |
-| `json_metadata` | JSON metadata (`.info.json`, `.meta.json`) | JSON |
-| `link` | URL shortcuts (`.url`) and pointer files | Text cascade (JSON → text → binary fallback); full file content preserved |
-| `shortcut` | Windows filesystem shortcuts (`.lnk`) | Base64-encoded binary + optional structured `link_metadata` |
-| `screenshot` | Screen capture images | Base64-encoded binary |
-| `subtitles` | Subtitle tracks (`.srt`, `.sub`, `.vtt`, `.lrc`) | JSON → text → binary fallback |
-| `thumbnail` | Thumbnail/cover images (`.cover`, `.thumb`) | Base64-encoded binary |
-| `torrent` | Torrent/magnet link files | Base64-encoded binary |
-
-### Type identification patterns
-
-Each sidecar type is identified by one or more regex patterns matched against the sibling filename. The patterns are applied in the order listed above — the first match wins.
-
-Patterns are specified as regex strings in the configuration. All patterns are compiled with `re.IGNORECASE`. See the [Technical Specification §7.3](https://github.com/shruggietech/shruggie-indexer/blob/main/shruggie-indexer-spec.md) for the complete default pattern inventory, including the BCP 47 language code alternation for subtitle detection.
-
-### Type behavioral attributes
-
-Each sidecar type has behavioral attributes that control how its content is read:
-
-| Attribute | Description |
-|-----------|-------------|
-| `expect_json` | Attempt JSON parsing first. |
-| `expect_text` | Attempt UTF-8 text reading. |
-| `expect_binary` | Attempt binary reading (Base64 encode). |
-| `parent_can_be_file` | This sidecar type can be associated with a file. |
-| `parent_can_be_directory` | This sidecar type can be associated with a directory. |
-
-For types where multiple formats are expected, the reader attempts formats in order: JSON → text → binary, falling through on parse failures.
-
-## ExifTool Exclusion Lists
-
-### Extension exclusions
-
-`exiftool.exclude_extensions` controls which file types are skipped for ExifTool invocation. Default: `["csv", "htm", "html", "json", "tsv", "xml"]`.
-
-### Key exclusions
-
-After ExifTool returns metadata, certain operational and OS-specific keys are filtered out before storage. Because exiftool with `-G` flags emits group-prefixed keys (e.g. `System:FileName`), the filter matches by **base key name** (the portion after the last `:` separator).
-
-The key exclusion set is configurable via two TOML keys:
-
-| Config key | Behavior |
-|------------|----------|
-| `exiftool.exclude_keys = [...]` | **Replace** — the specified list becomes the complete exclusion set. |
-| `exiftool.exclude_keys_append = [...]` | **Append** — entries are added to the compiled default set below. |
-
-Example — append additional keys:
+### Example: Add Custom Rule
 
 ```toml
-[exiftool]
-exclude_keys_append = ["Copyright", "Artist"]
+[sidecar_rules.custom-notes]
+match = "{stem}.notes.txt"
+type = "generic_metadata"
+scope = "file"
+requires_sibling = "{stem}.*"
 ```
 
-Example — replace the entire set (advanced):
+### Example: Override Built-In Rule
 
 ```toml
-[exiftool]
-exclude_keys = ["SourceFile", "Directory", "FileName"]
+[sidecar_rules.yt-dlp-info]
+extends = "yt-dlp-info"
+match = "{stem}.info.json"
+type = "json_metadata"
+scope = "file"
+requires_sibling = "{stem}.mp4"
 ```
 
-The compiled default exclusion set:
+### Example: Disable Built-In Rule
 
-| Base key | Category |
-|----------|----------|
-| `ExifToolVersion` | ExifTool operational |
-| `FileSequence` | ExifTool operational |
-| `NewGUID` | ExifTool operational |
-| `Now` | ExifTool operational |
-| `ProcessingTime` | ExifTool operational |
-| `Directory` | Filesystem path |
-| `FileName` | Filesystem path |
-| `FilePath` | Filesystem path |
-| `BaseName` | Filesystem path |
-| `SourceFile` | Filesystem path |
-| `FilePermissions` | OS-specific |
-| `FileSize` | Redundant (in `size` object) |
-| `FileModifyDate` | Redundant (in `timestamps`) |
-| `FileAccessDate` | Redundant (in `timestamps`) |
-| `FileCreateDate` | Redundant (in `timestamps`) |
-| `FileAttributes` | OS-specific |
-| `FileDeviceNumber` | OS-specific |
-| `FileInodeNumber` | OS-specific |
-| `FileHardLinks` | OS-specific |
-| `FileUserID` | OS-specific |
-| `FileGroupID` | OS-specific |
-| `FileDeviceID` | OS-specific |
-| `FileBlockSize` | OS-specific |
-| `FileBlockCount` | OS-specific |
+```toml
+[sidecar_rules.any-url]
+extends = "any-url"
+enabled = false
+```
 
-All embedded metadata keys (e.g. `File:FileType`, `File:MIMEType`, `QuickTime:*`, `Composite:*`) are preserved.
+## Rule Resolution Order
 
-## Override and Merging Behavior
+1. User rules
+2. Pack rules (`pack:<name>`)
+3. Built-in rules
 
-### Scalar fields: last-writer-wins
+First matching rule wins.
 
-The highest-priority layer that specifies a value wins. Omitted fields in a configuration file preserve the value from the layer below (ultimately the compiled default).
+## Community Rule Packs
 
-### Collection fields: replace by default, append on request
+Packs are TOML files loaded from the pack directory and evaluated between user and built-in rules. Pack CLI management is planned; current workflow is manual installation.
 
-Collection fields (lists and sets) use two strategies depending on the key name:
+## Legacy Note
 
-| Config key | Behavior |
-|------------|----------|
-| `exclude_extensions = [...]` | **Replace** — the specified list becomes the complete set. |
-| `exclude_extensions_append = [...]` | **Append** — entries are added to the existing set. |
-
-This convention applies to all collection fields: `filesystem_excludes.names`, `filesystem_excludes.globs`, `exiftool.exclude_extensions`, `exiftool.exclude_keys`, `exiftool.base_args`, `metadata_exclude.patterns`, and `extension_groups.*`.
-
-### Unknown fields
-
-Unrecognized keys in configuration files are logged as a warning and ignored. They are not fatal errors, which allows forward compatibility when older tool versions encounter config files written for newer versions.
-
-## Parameter Implications
-
-Certain configuration values automatically enable dependent settings:
-
-| If this is `true`... | ...then this is forced to `true` |
-|---|---|
-| `rename.enabled` | `output.inplace` |
-| `metadata.meta_merge_delete` | `metadata.meta_merge` |
-| `metadata.meta_merge` | `metadata.extract_exif` |
-
-These implications are applied during configuration construction, after all layers are merged. The CLI logs the activated implications at `INFO` level when verbose output is enabled.
-
-## Validation Rules
-
-The configuration loader validates the fully-resolved configuration before returning:
-
-1. **MetaMergeDelete safety:** If `meta_merge_delete` is `true`, at least one of `output.file` or `output.inplace` must also be `true`.
-2. **ID type validity:** `id_algorithm` must be either `"md5"` or `"sha256"`.
-3. **Regex compilation:** All regex strings in the metadata identification and exclusion pattern lists must compile without error.
-4. **Path conflicts:** If `output.file` is specified, it must not point inside the target directory when `output.inplace` is also active.
-
-Validation failures produce a fatal `IndexerConfigError` (CLI exit code 2).
+`metadata_identify` is legacy and ignored in v4; migrate to `sidecar_rules`.
