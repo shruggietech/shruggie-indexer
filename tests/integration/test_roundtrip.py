@@ -1,12 +1,11 @@
 """Integration tests — index-then-rollback round-trip verification.
 
-Exercises the full pipeline round-trip: index a directory (with rename,
-inplace, MetaMergeDelete), then roll back from the produced sidecars,
+Exercises the full pipeline round-trip: index a directory (with rename
+and inplace), then roll back from the produced index files,
 then verify the restored output matches the original.
 
-These tests would have failed against the v0.2.0 codebase, serving as
-genuine regression detectors for the v3 sidecar discovery, v3 schema
-acceptance, and v3 inplace sidecar rename bugs.
+These tests cover the v4 behavior where output uses _idx.json/_idxd.json
+and rollback supports legacy v2/v3 sidecar formats.
 """
 
 from __future__ import annotations
@@ -96,7 +95,7 @@ class TestIndexRenameRollbackRoundtrip:
         (sub / "photo_a.png").write_bytes(image_content)
         (sub / "photo_b.png").write_bytes(image_content)
 
-        # A JSON sidecar companion for one image (exercises MetaMergeDelete)
+        # A JSON companion file that should be indexed independently.
         sidecar_data = {"description": "A test photo", "tags": ["test"]}
         (sub / "photo_a.png.json").write_text(
             json.dumps(sidecar_data, indent=2),
@@ -104,17 +103,16 @@ class TestIndexRenameRollbackRoundtrip:
         )
 
         # ── 2. Copy to working directory ────────────────────────────
-        mmd_dir = tmp_path / "mmd"
-        shutil.copytree(fixture, mmd_dir)
+        run_dir = tmp_path / "run"
+        shutil.copytree(fixture, run_dir)
 
-        # ── 3. Run index_path with rename, inplace, meta_merge_delete ─
+        # ── 3. Run index_path with rename + inplace ─────────────────
         config = _cfg(
             rename=True,
             output_inplace=True,
-            meta_merge_delete=True,
             write_directory_meta=False,
         )
-        entry = index_path(mmd_dir, config)
+        entry = index_path(run_dir, config)
 
         # Dedup
         registry = DedupRegistry()
@@ -123,22 +121,22 @@ class TestIndexRenameRollbackRoundtrip:
             apply_dedup(dedup_actions)
 
         # Write inplace sidecars
-        _write_inplace_tree(entry, mmd_dir, write_inplace, write_directory_meta=False)
+        _write_inplace_tree(entry, run_dir, write_inplace, write_directory_meta=False)
 
         # Rename
-        _rename_tree(entry, mmd_dir, config)
+        _rename_tree(entry, run_dir, config)
 
         # Cleanup duplicates
         if dedup_actions:
-            cleanup_duplicate_files(dedup_actions, mmd_dir, dry_run=False)
+            cleanup_duplicate_files(dedup_actions, run_dir, dry_run=False)
 
         # ── 4. Assert: content files have been hash-renamed ─────────
-        all_files = [f for f in mmd_dir.rglob("*") if f.is_file() and not f.name.endswith(".json")]
+        all_files = [f for f in run_dir.rglob("*") if f.is_file() and not f.name.endswith(".json")]
         renamed_files = [f for f in all_files if f.name.startswith("y")]
         assert len(renamed_files) > 0, "Expected hash-renamed files (y* prefix)"
 
         # ── 5. Assert: _idx.json sidecars exist with correct base ───
-        idx_files = list(mmd_dir.rglob("*_idx.json"))
+        idx_files = list(run_dir.rglob("*_idx.json"))
         assert len(idx_files) > 0, "Expected _idx.json sidecar files"
 
         # Verify sidecars have the renamed base name
@@ -147,19 +145,19 @@ class TestIndexRenameRollbackRoundtrip:
             assert base.startswith("y"), f"Sidecar {sc.name} does not have hash-renamed base"
 
         # ── 6. Assert: no _meta2.json or _meta3.json files exist ────
-        meta2_files = list(mmd_dir.rglob("*_meta2.json"))
+        meta2_files = list(run_dir.rglob("*_meta2.json"))
         assert len(meta2_files) == 0, f"Unexpected _meta2.json files: {meta2_files}"
-        meta3_files = list(mmd_dir.rglob("*_meta3.json"))
+        meta3_files = list(run_dir.rglob("*_meta3.json"))
         assert len(meta3_files) == 0, f"Unexpected _meta3.json files: {meta3_files}"
 
         # ── 7. Assert: duplicates have been removed ─────────────────
         # Only one of the two identical images should remain
-        png_files = [f for f in mmd_dir.rglob("*.png") if f.is_file()]
+        png_files = [f for f in run_dir.rglob("*.png") if f.is_file()]
         assert len(png_files) == 1, f"Expected 1 PNG after dedup, got {len(png_files)}"
 
         # ── 8. Assert: v4 sidecar files use new suffix ──────────────
         # (Rollback testing for v4 is covered in Phase 5)
-        idx_files = list(mmd_dir.rglob("*_idx.json"))
+        idx_files = list(run_dir.rglob("*_idx.json"))
         assert len(idx_files) > 0, "Expected _idx.json sidecar files from v4 output"
 
 

@@ -34,7 +34,8 @@ class TestDefaultConfig:
         assert config.id_algorithm == "md5"
         assert config.compute_sha512 is False
         assert len(config.filesystem_excludes) > 0
-        assert len(config.metadata_identify) > 0
+        assert config.no_sidecar_detection is False
+        assert config.cleanup_legacy_sidecars is False
         assert config.sidecar_rules == ()
 
 
@@ -107,17 +108,15 @@ class TestFrozenImmutability:
 class TestSidecarPatternConfig:
     """Tests for sidecar pattern configuration."""
 
-    def test_sidecar_pattern_config(self, tmp_path: Path) -> None:
-        """Custom sidecar regex appears in config.metadata_identify."""
+    def test_legacy_metadata_identify_ignored(self, tmp_path: Path) -> None:
+        """Legacy metadata_identify key is ignored in v4 without raising."""
         toml_file = tmp_path / "config.toml"
         toml_file.write_text(
             '[metadata_identify]\ncustom_type = ["\\\\.custom$"]\n',
             encoding="utf-8",
         )
         config = load_config(config_file=toml_file)
-        assert "custom_type" in config.metadata_identify
-        patterns = config.metadata_identify["custom_type"]
-        assert len(patterns) >= 1
+        assert config.sidecar_rules == ()
 
     def test_sidecar_rule_config(self, tmp_path: Path) -> None:
         """Explicit sidecar rule tables are preserved in config.sidecar_rules."""

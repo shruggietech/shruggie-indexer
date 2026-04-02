@@ -47,7 +47,7 @@ class TestBuildFileEntry:
         entry = build_file_entry(sample_file, config)
 
         assert isinstance(entry, IndexEntry)
-        assert entry.schema_version == 3
+        assert entry.schema_version == 4
         assert entry.type == "file"
         assert entry.id.startswith("y")
         assert entry.name.text == "sample.txt"
@@ -63,8 +63,8 @@ class TestBuildFileEntry:
     def test_file_entry_metadata_none_when_disabled(
         self, sample_file: Path, mock_exiftool: None,
     ) -> None:
-        """Metadata is None when extract_exif and meta_merge are both off."""
-        config = _cfg(extract_exif=False, meta_merge=False)
+        """Metadata is None when Exif extraction is disabled."""
+        config = _cfg(extract_exif=False)
         entry = build_file_entry(sample_file, config)
         assert entry.metadata is None
 
@@ -205,34 +205,6 @@ class TestMissingExiftoolDegradation:
         assert isinstance(entry.metadata, list)
 
 
-class TestSidecarFolding:
-    """Tests for sidecar metadata being merged into the entry."""
-
-    def test_sidecar_folded_into_metadata(
-        self, tmp_path: Path, mock_exiftool: None,
-    ) -> None:
-        """With meta_merge=True, sidecar entries are folded into metadata."""
-        root = tmp_path / "fold"
-        root.mkdir()
-        primary = root / "video.mp4"
-        primary.write_bytes(b"mp4data")
-        (root / "video.description").write_text("A video", encoding="utf-8")
-
-        config = _cfg(meta_merge=True, extract_exif=False)
-        siblings = sorted(
-            [p for p in root.iterdir() if p.is_file()],
-            key=lambda p: p.name.lower(),
-        )
-        entry = build_file_entry(primary, config, siblings=siblings)
-
-        assert entry.metadata is not None
-        assert len(entry.metadata) >= 1
-        sidecar_entries = [
-            m for m in entry.metadata if m.origin == "sidecar"
-        ]
-        assert len(sidecar_entries) >= 1
-
-
 class TestSessionIdThreading:
     """Tests for session_id propagation through entry builders."""
 
@@ -332,7 +304,7 @@ class TestIndexedAtTimestamp:
 
         pair = TimestampPair(iso="2024-01-01T00:00:00.000000+00:00", unix=1704067200000)
         entry = IndexEntry(
-            schema_version=3,
+            schema_version=4,
             id="yD41D8CD98F00B204E9800998ECF8427E",
             id_algorithm="md5",
             type="file",
