@@ -25,11 +25,12 @@ import time
 import tkinter as tk
 import uuid
 import webbrowser
+from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
 from tkinter import filedialog, messagebox
-from typing import Any, Callable, ClassVar
+from typing import Any, ClassVar
 
 import customtkinter as ctk
 
@@ -47,11 +48,6 @@ from shruggie_indexer import (
     shutdown_exiftool,
     write_inplace,
 )
-from shruggie_indexer.core.rollback import (
-    execute_rollback,
-    load_sidecar,
-    plan_rollback,
-)
 from shruggie_indexer.config.defaults import (
     DEFAULT_EXIFTOOL_ARGS,
     DEFAULT_EXIFTOOL_EXCLUDE_EXTENSIONS,
@@ -62,6 +58,12 @@ from shruggie_indexer.config.defaults import (
     DEFAULT_FILESYSTEM_EXCLUDES,
     DEFAULT_METADATA_EXCLUDE_PATTERN_STRINGS,
     DEFAULT_METADATA_IDENTIFY_STRINGS,
+)
+from shruggie_indexer.core.constants import OUTPUT_SUFFIX_DIR, OUTPUT_SUFFIX_FILE
+from shruggie_indexer.core.rollback import (
+    execute_rollback,
+    load_sidecar,
+    plan_rollback,
 )
 
 __all__ = ["ShruggiIndexerApp", "main"]
@@ -117,7 +119,10 @@ _OP_META_MERGE_DELETE = "Meta Merge Delete"
 _OP_ROLLBACK = "Rollback"
 
 _OPERATION_LABELS: list[str] = [
-    _OP_INDEX, _OP_META_MERGE, _OP_META_MERGE_DELETE, _OP_ROLLBACK,
+    _OP_INDEX,
+    _OP_META_MERGE,
+    _OP_META_MERGE_DELETE,
+    _OP_ROLLBACK,
 ]
 
 # Display label <-> internal key for session persistence
@@ -171,11 +176,14 @@ def _normalize_verbosity(value: str | None) -> str:
     normalized = _VERBOSITY_MAP.get(value.strip().lower())
     return normalized if normalized is not None else "Normal"
 
+
 # Compact widget constructors — controls sized modestly larger than labels.
 # Explicit ``height``/size kwargs on individual widgets override these defaults.
 _CtkCheckBox = partial(ctk.CTkCheckBox, checkbox_width=_CB_SIZE, checkbox_height=_CB_SIZE)
 _CtkRadioButton = partial(
-    ctk.CTkRadioButton, radiobutton_width=_RB_SIZE, radiobutton_height=_RB_SIZE,
+    ctk.CTkRadioButton,
+    radiobutton_width=_RB_SIZE,
+    radiobutton_height=_RB_SIZE,
 )
 _CtkButton = partial(ctk.CTkButton, height=_CTRL_HEIGHT)
 _CtkEntry = partial(ctk.CTkEntry, height=_CTRL_HEIGHT)
@@ -254,8 +262,7 @@ class SessionManager:
         roaming_base = cls._legacy_roaming_base()
         if roaming_base is not None:
             roaming_path = (
-                roaming_base / "shruggie-tech" / "shruggie-indexer"
-                / cls._SESSION_FILENAME
+                roaming_base / "shruggie-tech" / "shruggie-indexer" / cls._SESSION_FILENAME
             )
             if roaming_path.exists():
                 logger.info(
@@ -273,11 +280,7 @@ class SessionManager:
             # Linux / macOS: same base as canonical minus ecosystem dir
             from shruggie_indexer.app_paths import get_app_data_dir
 
-            legacy_flat = (
-                get_app_data_dir().parent.parent
-                / cls._LEGACY_DIR
-                / cls._SESSION_FILENAME
-            )
+            legacy_flat = get_app_data_dir().parent.parent / cls._LEGACY_DIR / cls._SESSION_FILENAME
         if legacy_flat.exists():
             logger.info(
                 "Session file found at legacy v0.1.0 path %s — "
@@ -415,10 +418,16 @@ class _Tooltip:
         tw.wm_overrideredirect(True)
         tw.wm_geometry(f"+{x}+{y}")
         tk.Label(
-            tw, text=self._text, justify="left",
-            background="#333333", foreground="#ffffff",
-            relief="solid", borderwidth=1,
-            font=("Segoe UI", 9), padx=6, pady=4,
+            tw,
+            text=self._text,
+            justify="left",
+            background="#333333",
+            foreground="#ffffff",
+            relief="solid",
+            borderwidth=1,
+            font=("Segoe UI", 9),
+            padx=6,
+            pady=4,
         ).pack()
 
     def _hide(self) -> None:
@@ -490,14 +499,16 @@ class _LabeledGroup(ctk.CTkFrame):
             self._caret = None
             self._header_label = None
             ctk.CTkLabel(
-                self, text=label,
+                self,
+                text=label,
                 font=ctk.CTkFont(size=13, weight="bold"),
                 anchor="w",
             ).pack(fill="x", padx=12, pady=(6, 0))
 
         if description:
             self._desc_label = ctk.CTkLabel(
-                self, text=description,
+                self,
+                text=description,
                 font=ctk.CTkFont(size=11),
                 text_color=("gray40", "gray60"),
                 anchor="w",
@@ -648,15 +659,20 @@ class _AutoScrollFrame(ctk.CTkFrame):
         canvas_bg = ctk.ThemeManager.theme["CTk"]["fg_color"][mode_idx]
 
         self._canvas = tk.Canvas(
-            self, highlightthickness=0, borderwidth=0,
-            background=canvas_bg, yscrollincrement=1,
+            self,
+            highlightthickness=0,
+            borderwidth=0,
+            background=canvas_bg,
+            yscrollincrement=1,
         )
         self._scrollbar = ctk.CTkScrollbar(self, command=self._canvas.yview)
         self._canvas.configure(yscrollcommand=self._scrollbar.set)
 
         self.content = ctk.CTkFrame(self._canvas, fg_color="transparent")
         self._window_id = self._canvas.create_window(
-            (0, 0), window=self.content, anchor="nw",
+            (0, 0),
+            window=self.content,
+            anchor="nw",
         )
 
         self._canvas.pack(side="left", fill="both", expand=True)
@@ -754,37 +770,57 @@ class OutputPanel(ctk.CTkFrame):
         toolbar.pack(fill="x", pady=(0, 4))
 
         self.output_btn = _CtkButton(
-            toolbar, text="Output", width=80, command=self._show_json,
+            toolbar,
+            text="Output",
+            width=80,
+            command=self._show_json,
         )
         self.output_btn.pack(side="left", padx=(0, 4))
         self.log_btn = _CtkButton(
-            toolbar, text="Log", width=60, command=self._show_log,
-            fg_color="transparent", text_color=("gray50", "gray70"),
+            toolbar,
+            text="Log",
+            width=60,
+            command=self._show_log,
+            fg_color="transparent",
+            text_color=("gray50", "gray70"),
         )
         self.log_btn.pack(side="left", padx=(0, 16))
 
         # Clear button (item 2.7)
         self.clear_btn = _CtkButton(
-            toolbar, text="Clear", width=60, command=self.clear,
+            toolbar,
+            text="Clear",
+            width=60,
+            command=self.clear,
         )
         self.clear_btn.pack(side="right", padx=(4, 0))
         _Tooltip(self.clear_btn, "Clear both output and log content.")
 
         self.copy_btn = _CtkButton(
-            toolbar, text="Copy", width=60, command=self._copy, state="disabled",
+            toolbar,
+            text="Copy",
+            width=60,
+            command=self._copy,
+            state="disabled",
         )
         self.copy_btn.pack(side="right", padx=(4, 0))
         _Tooltip(self.copy_btn, "Copy current view to clipboard.")
 
         self.save_btn = _CtkButton(
-            toolbar, text="Save", width=60, command=self._save, state="disabled",
+            toolbar,
+            text="Save",
+            width=60,
+            command=self._save,
+            state="disabled",
         )
         self.save_btn.pack(side="right", padx=(4, 0))
         _Tooltip(self.save_btn, "Save current view content to a file.")
 
         # Text display
         self.textbox = ctk.CTkTextbox(
-            self, state="disabled", wrap="none",
+            self,
+            state="disabled",
+            wrap="none",
             font=ctk.CTkFont(family=_MONOSPACE_FONTS[0], size=12),
         )
         self.textbox.pack(fill="both", expand=True)
@@ -962,7 +998,8 @@ class OutputPanel(ctk.CTkFrame):
                 text_color=ctk.ThemeManager.theme["CTkButton"]["text_color"],
             )
             self.log_btn.configure(
-                fg_color="transparent", text_color=("gray50", "gray70"),
+                fg_color="transparent",
+                text_color=("gray50", "gray70"),
             )
         else:
             self.log_btn.configure(
@@ -970,7 +1007,8 @@ class OutputPanel(ctk.CTkFrame):
                 text_color=ctk.ThemeManager.theme["CTkButton"]["text_color"],
             )
             self.output_btn.configure(
-                fg_color="transparent", text_color=("gray50", "gray70"),
+                fg_color="transparent",
+                text_color=("gray50", "gray70"),
             )
 
     def _refresh_view(self) -> None:
@@ -1038,8 +1076,10 @@ class OutputPanel(ctk.CTkFrame):
 
     def _show_toast(self, message: str) -> None:
         toast = ctk.CTkLabel(
-            self, text=f"  {message}  ",
-            fg_color=("green", "#2d5a2d"), corner_radius=6,
+            self,
+            text=f"  {message}  ",
+            fg_color=("green", "#2d5a2d"),
+            corner_radius=6,
         )
         toast.place(relx=0.5, rely=0.95, anchor="center")
         self.after(_TOAST_DURATION_MS, toast.destroy)
@@ -1081,7 +1121,9 @@ class ProgressPanel(ctk.CTkFrame):
         self.progress_bar.set(0)
 
         self.current_label = ctk.CTkLabel(
-            self, text="", anchor="w",
+            self,
+            text="",
+            anchor="w",
             font=ctk.CTkFont(size=11),
             text_color=("gray40", "gray60"),
         )
@@ -1201,7 +1243,8 @@ class OperationsPage(ctk.CTkFrame):
     def _build_widgets(self) -> None:
         # Header
         ctk.CTkLabel(
-            self, text="Operations",
+            self,
+            text="Operations",
             font=ctk.CTkFont(size=18, weight="bold"),
             anchor="w",
         ).pack(fill="x", pady=(0, 8))
@@ -1212,30 +1255,36 @@ class OperationsPage(ctk.CTkFrame):
         # Fixed-height progress/action region pinned at bottom (SS10.9 1.3.6).
         # Packed before the scroll area so it claims space first.
         self._progress_region = ctk.CTkFrame(
-            self, height=_PROGRESS_REGION_HEIGHT,
+            self,
+            height=_PROGRESS_REGION_HEIGHT,
         )
         self._progress_region.pack(fill="x", side="bottom", pady=(8, 0))
         self._progress_region.pack_propagate(False)
 
         # Region boundary separator — top edge of bottom anchored region
         ctk.CTkFrame(self, height=1, fg_color="gray50").pack(
-            fill="x", side="bottom",
+            fill="x",
+            side="bottom",
         )
 
         # Drag handle for resizable output panel — positioned above the
         # START button / progress region, between the scrollable content
         # and the action area.
         self._drag_handle = _DragHandle(
-            self, on_drag=lambda delta: self._app._on_output_resize(delta),
+            self,
+            on_drag=lambda delta: self._app._on_output_resize(delta),
         )
         self._drag_handle.pack(fill="x", side="bottom", pady=(2, 2))
 
         # -- Idle sub-frame (START button, centered) --
         self._idle_frame = ctk.CTkFrame(
-            self._progress_region, fg_color="transparent",
+            self._progress_region,
+            fg_color="transparent",
         )
         self.action_btn = _CtkButton(
-            self._idle_frame, text=_ACTION_LABEL_START, height=36,
+            self._idle_frame,
+            text=_ACTION_LABEL_START,
+            height=36,
             font=ctk.CTkFont(size=14, weight="bold"),
             fg_color=("#1b8a1b", "#22882a"),
             hover_color=("#167016", "#1d6e23"),
@@ -1253,12 +1302,15 @@ class OperationsPage(ctk.CTkFrame):
 
         # -- Running sub-frame (progress + cancel) --
         self._running_frame = ctk.CTkFrame(
-            self._progress_region, fg_color="transparent",
+            self._progress_region,
+            fg_color="transparent",
         )
         self._progress_panel = ProgressPanel(self._running_frame)
         self._progress_panel.pack(fill="x", pady=(4, 2))
         self._cancel_btn = _CtkButton(
-            self._running_frame, text=_ACTION_LABEL_RUNNING, height=36,
+            self._running_frame,
+            text=_ACTION_LABEL_RUNNING,
+            height=36,
             font=ctk.CTkFont(size=14, weight="bold"),
             fg_color=("#cc3333", "#cc3333"),
             hover_color=("#aa2222", "#aa2222"),
@@ -1291,7 +1343,8 @@ class OperationsPage(ctk.CTkFrame):
 
     def _build_operation_group(self) -> None:
         group = _LabeledGroup(
-            self._scroll.content, "Operation",
+            self._scroll.content,
+            "Operation",
             "Select the indexing operation to perform.",
         )
         group.pack(fill="x", pady=(0, 6))
@@ -1303,7 +1356,8 @@ class OperationsPage(ctk.CTkFrame):
         ctk.CTkLabel(row, text="Type:", anchor="w").pack(side="left", padx=(0, 8))
         self._op_type_var = ctk.StringVar(value=_OP_INDEX)
         self._op_menu = _CtkOptionMenu(
-            row, variable=self._op_type_var,
+            row,
+            variable=self._op_type_var,
             values=_OPERATION_LABELS,
             command=self._on_operation_changed,
             width=180,
@@ -1316,23 +1370,25 @@ class OperationsPage(ctk.CTkFrame):
 
     def _build_target_group(self) -> None:
         self._target_group = _LabeledGroup(
-            self._scroll.content, "Target",
+            self._scroll.content,
+            "Target",
             "Choose the file or directory to index.",
             collapsible=True,
         )
         self._target_group.pack(fill="x", pady=(0, 6))
         c = self._target_group.content
-        group = self._target_group
 
         # Path entry row
         path_frame = ctk.CTkFrame(c, fg_color="transparent")
         path_frame.pack(fill="x", pady=(0, 2))
 
         ctk.CTkLabel(path_frame, text="Path:", width=40, anchor="w").pack(
-            side="left", padx=(0, 6),
+            side="left",
+            padx=(0, 6),
         )
         self._path_entry = _CtkEntry(
-            path_frame, placeholder_text="Select a file or folder...",
+            path_frame,
+            placeholder_text="Select a file or folder...",
         )
         self._path_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
         _Tooltip(self._path_entry, "Enter the file or directory path to index.")
@@ -1343,13 +1399,22 @@ class OperationsPage(ctk.CTkFrame):
 
         # Browse buttons -- single button for file/directory, dual for auto
         self._browse_single_btn = _CtkButton(
-            path_frame, text="Browse", width=80, command=self._browse_by_type,
+            path_frame,
+            text="Browse",
+            width=80,
+            command=self._browse_by_type,
         )
         self._browse_file_btn = _CtkButton(
-            path_frame, text="File\u2026", width=60, command=self._browse_file,
+            path_frame,
+            text="File\u2026",
+            width=60,
+            command=self._browse_file,
         )
         self._browse_dir_btn = _CtkButton(
-            path_frame, text="Folder\u2026", width=70, command=self._browse_dir,
+            path_frame,
+            text="Folder\u2026",
+            width=70,
+            command=self._browse_dir,
         )
         _Tooltip(self._browse_single_btn, "Open a file or directory picker.")
         _Tooltip(self._browse_file_btn, "Open a file picker dialog.")
@@ -1357,7 +1422,8 @@ class OperationsPage(ctk.CTkFrame):
 
         # Target validation error label (red fine-print, always present)
         self._target_error_label = ctk.CTkLabel(
-            c, text="",
+            c,
+            text="",
             font=ctk.CTkFont(size=10),
             text_color=("#cc3333", "#ff4444"),
             anchor="w",
@@ -1369,7 +1435,8 @@ class OperationsPage(ctk.CTkFrame):
         opts_frame.pack(fill="x", pady=(0, 2))
 
         ctk.CTkLabel(opts_frame, text="Type:", width=40, anchor="w").pack(
-            side="left", padx=(0, 6),
+            side="left",
+            padx=(0, 6),
         )
         self._type_var = ctk.StringVar(value="auto")
         _TARGET_TYPE_LABELS = ["Auto", "File", "Directory"]
@@ -1398,14 +1465,17 @@ class OperationsPage(ctk.CTkFrame):
 
         self._recursive_var = ctk.BooleanVar(value=True)
         self._recursive_cb = _CtkCheckBox(
-            recursive_row, text="Recursive", variable=self._recursive_var,
+            recursive_row,
+            text="Recursive",
+            variable=self._recursive_var,
         )
         self._recursive_cb.pack(anchor="w")
         _Tooltip(self._recursive_cb, "Include subdirectories when indexing a directory.")
 
         # Recursive disabled explanation (fine-print, aligned under checkbox)
         self._recursive_info_label = ctk.CTkLabel(
-            recursive_row, text="",
+            recursive_row,
+            text="",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
@@ -1417,7 +1487,8 @@ class OperationsPage(ctk.CTkFrame):
 
     def _build_options_group(self) -> None:
         self._opts_group = _LabeledGroup(
-            self._scroll.content, "Options",
+            self._scroll.content,
+            "Options",
             "Configure indexing parameters.",
             collapsible=True,
         )
@@ -1429,11 +1500,15 @@ class OperationsPage(ctk.CTkFrame):
         row1.pack(fill="x", pady=(0, 2))
 
         ctk.CTkLabel(row1, text="ID Algorithm:", anchor="w").pack(
-            side="left", padx=(0, 6),
+            side="left",
+            padx=(0, 6),
         )
         self._id_algo_var = ctk.StringVar(value="md5")
         self._algo_combo = _CtkComboBox(
-            row1, values=["md5", "sha256"], variable=self._id_algo_var, width=120,
+            row1,
+            values=["md5", "sha256"],
+            variable=self._id_algo_var,
+            width=120,
         )
         self._algo_combo.pack(side="left", padx=(0, 20))
         _Tooltip(self._algo_combo, "Hash algorithm used for generating file identity.")
@@ -1444,14 +1519,17 @@ class OperationsPage(ctk.CTkFrame):
 
         self._sha512_var = ctk.BooleanVar(value=False)
         self._sha512_cb = _CtkCheckBox(
-            sha512_row, text="Compute SHA-512", variable=self._sha512_var,
+            sha512_row,
+            text="Compute SHA-512",
+            variable=self._sha512_var,
         )
         self._sha512_cb.pack(anchor="w")
         _Tooltip(self._sha512_cb, "Compute an additional SHA-512 hash for each file.")
 
         # SHA-512 override info label (fine-print, aligned under checkbox)
         self._sha512_override_label = ctk.CTkLabel(
-            sha512_row, text="",
+            sha512_row,
+            text="",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
@@ -1463,14 +1541,16 @@ class OperationsPage(ctk.CTkFrame):
         exif_row.pack(fill="x", pady=(2, 0))
         self._exif_var = ctk.BooleanVar(value=False)
         self._exif_cb = _CtkCheckBox(
-            exif_row, text="Extract EXIF metadata",
+            exif_row,
+            text="Extract EXIF metadata",
             variable=self._exif_var,
         )
         self._exif_cb.pack(anchor="w")
         _Tooltip(self._exif_cb, "Extract embedded metadata using ExifTool.")
 
         self._exif_info_label = ctk.CTkLabel(
-            exif_row, text="",
+            exif_row,
+            text="",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
@@ -1482,7 +1562,8 @@ class OperationsPage(ctk.CTkFrame):
         enc_row.pack(fill="x", pady=(2, 0))
         self._detect_encoding_var = ctk.BooleanVar(value=True)
         self._detect_encoding_cb = _CtkCheckBox(
-            enc_row, text="Detect encoding",
+            enc_row,
+            text="Detect encoding",
             variable=self._detect_encoding_var,
         )
         self._detect_encoding_cb.pack(anchor="w")
@@ -1496,7 +1577,8 @@ class OperationsPage(ctk.CTkFrame):
         charset_row.pack(fill="x", pady=(2, 0))
         self._detect_charset_var = ctk.BooleanVar(value=True)
         self._detect_charset_cb = _CtkCheckBox(
-            charset_row, text="Detect charset (chardet)",
+            charset_row,
+            text="Detect charset (chardet)",
             variable=self._detect_charset_var,
         )
         self._detect_charset_cb.pack(anchor="w", padx=(26, 0))
@@ -1511,7 +1593,8 @@ class OperationsPage(ctk.CTkFrame):
         rename_row.pack(fill="x", pady=(2, 0))
         self._rename_var = ctk.BooleanVar(value=False)
         self._rename_cb = _CtkCheckBox(
-            rename_row, text="Rename files",
+            rename_row,
+            text="Rename files",
             variable=self._rename_var,
             command=self._on_rename_changed,
         )
@@ -1519,7 +1602,8 @@ class OperationsPage(ctk.CTkFrame):
         _Tooltip(self._rename_cb, "Rename files to content-based storage names after indexing.")
 
         self._rename_info_label = ctk.CTkLabel(
-            rename_row, text="",
+            rename_row,
+            text="",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
@@ -1528,7 +1612,8 @@ class OperationsPage(ctk.CTkFrame):
 
     def _build_output_group(self) -> None:
         self._output_group = _LabeledGroup(
-            self._scroll.content, "Output",
+            self._scroll.content,
+            "Output",
             "Control how results are produced.",
             collapsible=True,
         )
@@ -1540,11 +1625,13 @@ class OperationsPage(ctk.CTkFrame):
         mode_row.pack(fill="x", pady=(0, 4))
 
         ctk.CTkLabel(mode_row, text="Mode:", anchor="w").pack(
-            side="left", padx=(0, 8),
+            side="left",
+            padx=(0, 8),
         )
         self._output_mode_var = ctk.StringVar(value=_OUT_SINGLE)
         self._output_mode_menu = _CtkOptionMenu(
-            mode_row, variable=self._output_mode_var,
+            mode_row,
+            variable=self._output_mode_var,
             values=_OUTPUT_MODE_LABELS,
             command=self._on_output_mode_changed,
             width=180,
@@ -1559,7 +1646,8 @@ class OperationsPage(ctk.CTkFrame):
 
         # Output mode info label (constraint explanation)
         self._output_mode_info_label = ctk.CTkLabel(
-            c, text="",
+            c,
+            text="",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
@@ -1579,11 +1667,12 @@ class OperationsPage(ctk.CTkFrame):
         self._write_dir_meta_cb.pack(anchor="w")
         _Tooltip(
             self._write_dir_meta_cb,
-            "When unchecked, _directorymeta3.json files are suppressed.\n"
+            f"When unchecked, {OUTPUT_SUFFIX_DIR} files are suppressed.\n"
             "Per-file sidecar files are unaffected.",
         )
         self._write_dir_meta_info_label = ctk.CTkLabel(
-            c, text="",
+            c,
+            text="",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
@@ -1592,14 +1681,16 @@ class OperationsPage(ctk.CTkFrame):
 
         # Read-only output path display
         self._outpath_display = _CtkEntry(
-            c, state="disabled",
+            c,
+            state="disabled",
             placeholder_text="Select a target to see the output path.",
         )
         self._outpath_display.pack(fill="x", pady=(2, 0))
 
         # Output path note (small font, e.g. sidecar info)
         self._outpath_note = ctk.CTkLabel(
-            c, text="",
+            c,
+            text="",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
@@ -1611,7 +1702,8 @@ class OperationsPage(ctk.CTkFrame):
     def _build_rollback_source_group(self) -> None:
         """Card 2 (rollback) — Source: meta2 path, source dir, recursive."""
         self._rb_source_group = _LabeledGroup(
-            self._scroll.content, "Source",
+            self._scroll.content,
+            "Source",
             "Select the meta2 sidecar file or directory to rollback from.",
             collapsible=True,
         )
@@ -1623,7 +1715,8 @@ class OperationsPage(ctk.CTkFrame):
         meta2_frame.pack(fill="x", pady=(0, 2))
 
         ctk.CTkLabel(meta2_frame, text="Meta2:", width=48, anchor="w").pack(
-            side="left", padx=(0, 6),
+            side="left",
+            padx=(0, 6),
         )
         self._rb_meta2_entry = _CtkEntry(
             meta2_frame,
@@ -1638,21 +1731,27 @@ class OperationsPage(ctk.CTkFrame):
 
         # Bind validation on text change
         self._rb_meta2_entry.bind(
-            "<FocusOut>", lambda _: self._reconcile_controls(),
+            "<FocusOut>",
+            lambda _: self._reconcile_controls(),
         )
         self._rb_meta2_entry.bind(
-            "<KeyRelease>", lambda _: self._reconcile_controls(),
+            "<KeyRelease>",
+            lambda _: self._reconcile_controls(),
         )
 
         # Dual browse buttons (File… / Folder…) matching the indexer Target pattern
         self._rb_meta2_dir_btn = _CtkButton(
-            meta2_frame, text="Folder\u2026", width=70,
+            meta2_frame,
+            text="Folder\u2026",
+            width=70,
             command=self._browse_rb_meta2_dir,
         )
         self._rb_meta2_dir_btn.pack(side="right", padx=(2, 0))
         _Tooltip(self._rb_meta2_dir_btn, "Browse for a directory of sidecar files.")
         self._rb_meta2_file_btn = _CtkButton(
-            meta2_frame, text="File\u2026", width=60,
+            meta2_frame,
+            text="File\u2026",
+            width=60,
             command=self._browse_rb_meta2_file,
         )
         self._rb_meta2_file_btn.pack(side="right", padx=(2, 0))
@@ -1663,7 +1762,8 @@ class OperationsPage(ctk.CTkFrame):
         source_frame.pack(fill="x", pady=(2, 2))
 
         ctk.CTkLabel(source_frame, text="Source:", width=48, anchor="w").pack(
-            side="left", padx=(0, 6),
+            side="left",
+            padx=(0, 6),
         )
         self._rb_source_entry = _CtkEntry(
             source_frame,
@@ -1677,7 +1777,9 @@ class OperationsPage(ctk.CTkFrame):
         )
 
         self._rb_source_browse_btn = _CtkButton(
-            source_frame, text="Browse", width=80,
+            source_frame,
+            text="Browse",
+            width=80,
             command=self._browse_rb_source_dir,
         )
         self._rb_source_browse_btn.pack(side="right")
@@ -1688,7 +1790,8 @@ class OperationsPage(ctk.CTkFrame):
         rb_recursive_row.pack(fill="x", pady=(2, 0))
         self._rb_recursive_var = ctk.BooleanVar(value=False)
         self._rb_recursive_cb = _CtkCheckBox(
-            rb_recursive_row, text="Recursive",
+            rb_recursive_row,
+            text="Recursive",
             variable=self._rb_recursive_var,
         )
         self._rb_recursive_cb.pack(anchor="w")
@@ -1698,7 +1801,8 @@ class OperationsPage(ctk.CTkFrame):
         )
 
         self._rb_recursive_info = ctk.CTkLabel(
-            rb_recursive_row, text="",
+            rb_recursive_row,
+            text="",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"),
             anchor="w",
@@ -1708,7 +1812,8 @@ class OperationsPage(ctk.CTkFrame):
     def _build_rollback_options_group(self) -> None:
         """Card 3 (rollback) — Options: flat, verify, force, skip dupes, restore sidecars."""
         self._rb_opts_group = _LabeledGroup(
-            self._scroll.content, "Options",
+            self._scroll.content,
+            "Options",
             "Configure rollback parameters.",
             collapsible=True,
         )
@@ -1719,14 +1824,14 @@ class OperationsPage(ctk.CTkFrame):
         flat_row.pack(fill="x", pady=(0, 2))
         self._rb_flat_var = ctk.BooleanVar(value=False)
         self._rb_flat_cb = _CtkCheckBox(
-            flat_row, text="Flat restore",
+            flat_row,
+            text="Flat restore",
             variable=self._rb_flat_var,
         )
         self._rb_flat_cb.pack(anchor="w")
         _Tooltip(
             self._rb_flat_cb,
-            "Restore files using original names only, without "
-            "reconstructing directory structure.",
+            "Restore files using original names only, without reconstructing directory structure.",
         )
 
         # Verify hashes
@@ -1734,7 +1839,8 @@ class OperationsPage(ctk.CTkFrame):
         verify_row.pack(fill="x", pady=(2, 2))
         self._rb_verify_var = ctk.BooleanVar(value=True)
         self._rb_verify_cb = _CtkCheckBox(
-            verify_row, text="Verify hashes",
+            verify_row,
+            text="Verify hashes",
             variable=self._rb_verify_var,
         )
         self._rb_verify_cb.pack(anchor="w")
@@ -1748,7 +1854,8 @@ class OperationsPage(ctk.CTkFrame):
         force_row.pack(fill="x", pady=(2, 2))
         self._rb_force_var = ctk.BooleanVar(value=False)
         self._rb_force_cb = _CtkCheckBox(
-            force_row, text="Force overwrite",
+            force_row,
+            text="Force overwrite",
             variable=self._rb_force_var,
         )
         self._rb_force_cb.pack(anchor="w")
@@ -1762,7 +1869,8 @@ class OperationsPage(ctk.CTkFrame):
         skip_dup_row.pack(fill="x", pady=(2, 2))
         self._rb_skip_dup_var = ctk.BooleanVar(value=False)
         self._rb_skip_dup_cb = _CtkCheckBox(
-            skip_dup_row, text="Skip duplicates",
+            skip_dup_row,
+            text="Skip duplicates",
             variable=self._rb_skip_dup_var,
         )
         self._rb_skip_dup_cb.pack(anchor="w")
@@ -1776,7 +1884,8 @@ class OperationsPage(ctk.CTkFrame):
         sidecar_row.pack(fill="x", pady=(2, 0))
         self._rb_restore_sc_var = ctk.BooleanVar(value=True)
         self._rb_restore_sc_cb = _CtkCheckBox(
-            sidecar_row, text="Restore sidecars",
+            sidecar_row,
+            text="Restore sidecars",
             variable=self._rb_restore_sc_var,
         )
         self._rb_restore_sc_cb.pack(anchor="w")
@@ -1788,7 +1897,8 @@ class OperationsPage(ctk.CTkFrame):
     def _build_rollback_target_group(self) -> None:
         """Card 4 (rollback) — Target: output directory for restored files."""
         self._rb_target_group = _LabeledGroup(
-            self._scroll.content, "Target",
+            self._scroll.content,
+            "Target",
             "Choose the directory for restored files.",
             collapsible=True,
         )
@@ -1798,7 +1908,8 @@ class OperationsPage(ctk.CTkFrame):
         target_frame.pack(fill="x", pady=(0, 2))
 
         ctk.CTkLabel(target_frame, text="Path:", width=40, anchor="w").pack(
-            side="left", padx=(0, 6),
+            side="left",
+            padx=(0, 6),
         )
         self._rb_target_entry = _CtkEntry(
             target_frame,
@@ -1812,7 +1923,9 @@ class OperationsPage(ctk.CTkFrame):
         )
 
         self._rb_target_browse_btn = _CtkButton(
-            target_frame, text="Browse", width=80,
+            target_frame,
+            text="Browse",
+            width=80,
             command=self._browse_rb_target_dir,
         )
         self._rb_target_browse_btn.pack(side="right")
@@ -1923,9 +2036,9 @@ class OperationsPage(ctk.CTkFrame):
         if target_kind == "directory":
             normalized = str(p).rstrip("/\\")
             if not normalized or normalized == "/":
-                return str(Path.home() / "root_directorymeta3.json")
-            return normalized + "_directorymeta3.json"
-        return str(p) + "_meta3.json"
+                return str(Path.home() / f"root{OUTPUT_SUFFIX_DIR}")
+            return normalized + OUTPUT_SUFFIX_DIR
+        return str(p) + OUTPUT_SUFFIX_FILE
 
     # -- Target / Type validation -------------------------------------------
 
@@ -1962,12 +2075,12 @@ class OperationsPage(ctk.CTkFrame):
         if kind == "file" and selected_type == "directory":
             return (
                 "Target appears to be a file, but Type is set to "
-                "\"Directory\". Change the target or select a different Type."
+                '"Directory". Change the target or select a different Type.'
             )
         if kind == "directory" and selected_type == "file":
             return (
                 "Target appears to be a directory, but Type is set to "
-                "\"File\". Change the target or select a different Type."
+                '"File". Change the target or select a different Type.'
             )
         return None
 
@@ -2277,7 +2390,8 @@ class OperationsPage(ctk.CTkFrame):
 
         if mode == _OUT_VIEW:
             self._outpath_display.insert(
-                0, "Output will be displayed in the viewer panel.",
+                0,
+                "Output will be displayed in the viewer panel.",
             )
             self._outpath_note.configure(text="")
         elif not target_path:
@@ -2294,13 +2408,12 @@ class OperationsPage(ctk.CTkFrame):
             if target_kind == "directory":
                 if mode == _OUT_MULTI and not dir_meta_on:
                     self._outpath_note.configure(
-                        text="(per-file sidecars only — directory summaries "
-                             "suppressed)",
+                        text="(per-file sidecars only — directory summaries suppressed)",
                     )
                 elif mode == _OUT_MULTI:
                     self._outpath_note.configure(
                         text="Summary output file. Per-file sidecar files "
-                             "will also be written within the directory tree.",
+                        "will also be written within the directory tree.",
                     )
                 else:
                     self._outpath_note.configure(
@@ -2321,7 +2434,7 @@ class OperationsPage(ctk.CTkFrame):
             self._sha512_var.set(True)
             self._disable_cb(self._sha512_cb, select=True)
             self._sha512_override_label.configure(
-                text="Forced on by Settings -> \"Compute SHA-512 by default\".",
+                text='Forced on by Settings -> "Compute SHA-512 by default".',
             )
         else:
             self._enable_cb(self._sha512_cb)
@@ -2436,7 +2549,8 @@ class OperationsPage(ctk.CTkFrame):
     def get_state(self) -> dict[str, Any]:
         state: dict[str, Any] = {
             "operation_type": _OP_KEY_MAP.get(
-                self._op_type_var.get(), "index",
+                self._op_type_var.get(),
+                "index",
             ),
             "target_path": self._path_entry.get(),
             "target_type": self._type_var.get(),
@@ -2449,7 +2563,8 @@ class OperationsPage(ctk.CTkFrame):
             "rename": self._rename_var.get(),
             "write_directory_meta": self._write_dir_meta_var.get(),
             "output_mode": _OUT_KEY_MAP.get(
-                self._output_mode_var.get(), "single",
+                self._output_mode_var.get(),
+                "single",
             ),
             "card_states": {
                 "target_expanded": self._target_group.expanded,
@@ -2550,7 +2665,9 @@ class OperationsPage(ctk.CTkFrame):
         self._reconcile_controls()
 
     def restore_from_old_session(
-        self, old_active_tab: str, tab_states: dict[str, Any],
+        self,
+        old_active_tab: str,
+        tab_states: dict[str, Any],
     ) -> None:
         """Migrate from the old per-tab session format."""
         if old_active_tab == "rename":
@@ -2596,8 +2713,10 @@ class SettingsTab(ctk.CTkFrame):
     def _build_widgets(self) -> None:
         # -- Fixed title region ---
         ctk.CTkLabel(
-            self, text="Settings",
-            font=ctk.CTkFont(size=18, weight="bold"), anchor="w",
+            self,
+            text="Settings",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            anchor="w",
         ).pack(fill="x", pady=(0, 16))
 
         # Region boundary separator — bottom edge of Settings title
@@ -2618,14 +2737,19 @@ class SettingsTab(ctk.CTkFrame):
         ctk.CTkLabel(row, text="Default ID Algorithm:").pack(side="left", padx=(0, 6))
         self.id_algo_var = ctk.StringVar(value="md5")
         algo_combo = _CtkComboBox(
-            row, values=["md5", "sha256"], variable=self.id_algo_var, width=120,
+            row,
+            values=["md5", "sha256"],
+            variable=self.id_algo_var,
+            width=120,
         )
         algo_combo.pack(side="left")
         _Tooltip(algo_combo, "Default hash algorithm for new operations.")
 
         self.sha512_var = ctk.BooleanVar(value=False)
         sha512_cb = _CtkCheckBox(
-            idx, text="Compute SHA-512 by default", variable=self.sha512_var,
+            idx,
+            text="Compute SHA-512 by default",
+            variable=self.sha512_var,
             command=self._on_sha512_changed,
         )
         sha512_cb.pack(fill="x", pady=(0, 4))
@@ -2643,19 +2767,26 @@ class SettingsTab(ctk.CTkFrame):
         self.indent_var = ctk.StringVar(value="2")
         for label, val in [("2 spaces", "2"), ("4 spaces", "4"), ("Compact", "none")]:
             rb = _CtkRadioButton(
-                row2, text=label, variable=self.indent_var, value=val,
+                row2,
+                text=label,
+                variable=self.indent_var,
+                value=val,
             )
             rb.pack(side="left", padx=(0, 10))
-            _Tooltip(rb, {
-                "2": "Indent JSON output with 2 spaces.",
-                "4": "Indent JSON output with 4 spaces.",
-                "none": "Produce compact single-line JSON.",
-            }[val])
+            _Tooltip(
+                rb,
+                {
+                    "2": "Indent JSON output with 2 spaces.",
+                    "4": "Indent JSON output with 4 spaces.",
+                    "none": "Produce compact single-line JSON.",
+                }[val],
+            )
 
         # 2. Write log files (before log level — user decides WHETHER first)
         self.log_to_file_var = ctk.BooleanVar(value=True)
         log_file_cb = _CtkCheckBox(
-            ol, text="Write log files",
+            ol,
+            text="Write log files",
             variable=self.log_to_file_var,
             command=self._on_log_to_file_changed,
         )
@@ -2679,16 +2810,21 @@ class SettingsTab(ctk.CTkFrame):
             command=self._on_log_level_changed,
         )
         self._log_level_dropdown.pack(side="left")
-        _Tooltip(self._log_level_dropdown, (
-            "None — suppress all logging output.\n"
-            "Normal — warnings and errors only.\n"
-            "Verbose — informational messages and above.\n"
-            "Debug — full diagnostic output including trace-level details."
-        ))
+        _Tooltip(
+            self._log_level_dropdown,
+            (
+                "None — suppress all logging output.\n"
+                "Normal — warnings and errors only.\n"
+                "Verbose — informational messages and above.\n"
+                "Debug — full diagnostic output including trace-level details."
+            ),
+        )
 
         # 4. Log file path (read-only display)
         self._log_path_label = ctk.CTkLabel(
-            ol, text="Log file path:", anchor="w",
+            ol,
+            text="Log file path:",
+            anchor="w",
             font=ctk.CTkFont(size=11),
             text_color=("gray40", "gray60"),
         )
@@ -2698,8 +2834,7 @@ class SettingsTab(ctk.CTkFrame):
         self._log_path_entry.pack(fill="x", pady=(0, 4))
         _Tooltip(
             self._log_path_entry,
-            "The computed path where log files are written. "
-            "This field is read-only.",
+            "The computed path where log files are written. This field is read-only.",
         )
         self._update_log_path_display()
 
@@ -2710,7 +2845,8 @@ class SettingsTab(ctk.CTkFrame):
 
         self.tooltips_var = ctk.BooleanVar(value=True)
         tooltips_cb = _CtkCheckBox(
-            ifc, text="Show tooltips on hover",
+            ifc,
+            text="Show tooltips on hover",
             variable=self.tooltips_var,
             command=self._on_tooltips_changed,
         )
@@ -2726,13 +2862,17 @@ class SettingsTab(ctk.CTkFrame):
         row4.pack(fill="x", pady=(0, 4))
         ctk.CTkLabel(row4, text="Custom Config File:").pack(side="left", padx=(0, 6))
         self.config_entry = _CtkEntry(
-            row4, placeholder_text="Optional TOML config path",
+            row4,
+            placeholder_text="Optional TOML config path",
         )
         self.config_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
         _Tooltip(self.config_entry, "Path to a TOML configuration file for custom defaults.")
 
         config_browse = _CtkButton(
-            row4, text="Browse", width=80, command=self._browse_config,
+            row4,
+            text="Browse",
+            width=80,
+            command=self._browse_config,
         )
         config_browse.pack(side="right")
         _Tooltip(config_browse, "Select a TOML configuration file.")
@@ -2774,14 +2914,18 @@ class SettingsTab(ctk.CTkFrame):
         btn_inner.pack(anchor="center")
 
         reset_btn = _CtkButton(
-            btn_inner, text="Reset to Defaults", width=140,
+            btn_inner,
+            text="Reset to Defaults",
+            width=140,
             command=self._reset_defaults,
         )
         reset_btn.pack(side="left", padx=(0, 10))
         _Tooltip(reset_btn, "Reset all settings to factory defaults.")
 
         open_btn = _CtkButton(
-            btn_inner, text="Open Config Folder", width=140,
+            btn_inner,
+            text="Open Config Folder",
+            width=140,
             command=self._open_config_folder,
         )
         open_btn.pack(side="left")
@@ -2789,11 +2933,14 @@ class SettingsTab(ctk.CTkFrame):
 
     @staticmethod
     def _section_header(
-        parent: ctk.CTkFrame, text: str,
+        parent: ctk.CTkFrame,
+        text: str,
     ) -> None:
         ctk.CTkLabel(
-            parent, text=text,
-            font=ctk.CTkFont(size=14, weight="bold"), anchor="w",
+            parent,
+            text=text,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            anchor="w",
         ).pack(fill="x", pady=(12, 4))
 
     def _on_tooltips_changed(self) -> None:
@@ -2849,10 +2996,7 @@ class SettingsTab(ctk.CTkFrame):
         verbosity = _normalize_verbosity(self.verbosity_var.get())
         if self.verbosity_var.get() != verbosity:
             self.verbosity_var.set(verbosity)
-        should_log = (
-            self.log_to_file_var.get()
-            and verbosity != "None"
-        )
+        should_log = self.log_to_file_var.get() and verbosity != "None"
 
         if should_log and app._persistent_file_handler is None:
             # Re-attach file handler
@@ -2933,7 +3077,9 @@ class SettingsTab(ctk.CTkFrame):
         """Build the collapsed Advanced Configuration scaffold."""
         # Thin separator before the section
         ctk.CTkFrame(
-            parent, height=1, fg_color="gray50",
+            parent,
+            height=1,
+            fg_color="gray50",
         ).pack(fill="x", pady=(20, 0))
 
         # Clickable header row with disclosure arrow
@@ -2941,15 +3087,20 @@ class SettingsTab(ctk.CTkFrame):
         hdr.pack(fill="x", pady=(8, 0))
 
         self._adv_arrow = ctk.CTkLabel(
-            hdr, text="\u25b6", width=20, anchor="w",
+            hdr,
+            text="\u25b6",
+            width=20,
+            anchor="w",
             font=ctk.CTkFont(size=12),
         )
         self._adv_arrow.pack(side="left")
 
         adv_title = ctk.CTkLabel(
-            hdr, text="Advanced Configuration",
+            hdr,
+            text="Advanced Configuration",
             font=ctk.CTkFont(size=14, weight="bold"),
-            anchor="w", cursor="hand2",
+            anchor="w",
+            cursor="hand2",
         )
         adv_title.pack(side="left", fill="x")
 
@@ -2988,24 +3139,27 @@ class SettingsTab(ctk.CTkFrame):
             content,
             text="Shared Settings  (not yet available)",
             font=ctk.CTkFont(size=12),
-            text_color="#cc0000", anchor="w",
+            text_color="#cc0000",
+            anchor="w",
         )
         shared_lbl.pack(fill="x", pady=(8, 2))
         _Tooltip(
             shared_lbl,
-            "Cross-tool shared configuration (shared.toml) will be "
-            "available in a future release.",
+            "Cross-tool shared configuration (shared.toml) will be available in a future release.",
         )
 
         ctk.CTkFrame(
-            content, height=1, fg_color="gray40",
+            content,
+            height=1,
+            fg_color="gray40",
         ).pack(fill="x", pady=(2, 8))
 
         tool_lbl = ctk.CTkLabel(
             content,
             text="Indexer-Specific Settings",
             font=ctk.CTkFont(size=12, slant="italic"),
-            text_color="gray60", anchor="w",
+            text_color="gray60",
+            anchor="w",
         )
         tool_lbl.pack(fill="x", pady=(0, 4))
         _Tooltip(
@@ -3090,7 +3244,9 @@ class SettingsTab(ctk.CTkFrame):
 
         self._adv_field_label(parent, "Excluded globs")
         self._adv_readonly_textbox(
-            parent, "\n".join(DEFAULT_FILESYSTEM_EXCLUDE_GLOBS), height=30,
+            parent,
+            "\n".join(DEFAULT_FILESYSTEM_EXCLUDE_GLOBS),
+            height=30,
         )
 
     def _build_adv_exiftool_content(self, parent: ctk.CTkFrame) -> None:
@@ -3105,14 +3261,18 @@ class SettingsTab(ctk.CTkFrame):
 
         self._adv_field_label(parent, "Base arguments")
         self._adv_readonly_textbox(
-            parent, "\n".join(DEFAULT_EXIFTOOL_ARGS), height=290,
+            parent,
+            "\n".join(DEFAULT_EXIFTOOL_ARGS),
+            height=290,
         )
 
     def _build_adv_ext_validation_content(self, parent: ctk.CTkFrame) -> None:
         """Populate the Extension Validation subsection."""
         self._adv_field_label(parent, "Pattern")
         self._adv_readonly_textbox(
-            parent, DEFAULT_EXTENSION_VALIDATION_PATTERN, height=30,
+            parent,
+            DEFAULT_EXTENSION_VALIDATION_PATTERN,
+            height=30,
         )
 
     def _build_adv_sidecar_content(self, parent: ctk.CTkFrame) -> None:
@@ -3130,7 +3290,9 @@ class SettingsTab(ctk.CTkFrame):
             lines.append("")
 
         self._adv_readonly_textbox(
-            parent, "\n".join(lines).rstrip(), height=300,
+            parent,
+            "\n".join(lines).rstrip(),
+            height=300,
         )
 
     def _build_adv_metadata_exclude_content(self, parent: ctk.CTkFrame) -> None:
@@ -3152,7 +3314,9 @@ class SettingsTab(ctk.CTkFrame):
             lines.append("")
 
         self._adv_readonly_textbox(
-            parent, "\n".join(lines).rstrip(), height=300,
+            parent,
+            "\n".join(lines).rstrip(),
+            height=300,
         )
 
     # -- Shared helpers for the advanced scaffold -----------------------
@@ -3161,12 +3325,18 @@ class SettingsTab(ctk.CTkFrame):
     def _adv_field_label(parent: ctk.CTkFrame, text: str) -> None:
         """Small muted label identifying a read-only field."""
         ctk.CTkLabel(
-            parent, text=f"{text}:", anchor="w", text_color="gray70",
+            parent,
+            text=f"{text}:",
+            anchor="w",
+            text_color="gray70",
         ).pack(fill="x")
 
     @staticmethod
     def _adv_readonly_textbox(
-        parent: ctk.CTkFrame, content: str, *, height: int = 80,
+        parent: ctk.CTkFrame,
+        content: str,
+        *,
+        height: int = 80,
     ) -> ctk.CTkTextbox:
         """Create a read-only monospace textbox displaying *content*."""
         tb = ctk.CTkTextbox(
@@ -3185,7 +3355,10 @@ class SettingsTab(ctk.CTkFrame):
     def _adv_disabled_reset(parent: ctk.CTkFrame) -> None:
         """Disabled per-group \"Reset to Defaults\" button (scaffold)."""
         btn = _CtkButton(
-            parent, text="Reset to Defaults", width=140, state="disabled",
+            parent,
+            text="Reset to Defaults",
+            width=140,
+            state="disabled",
         )
         btn.pack(anchor="w", pady=(4, 12))
         _Tooltip(
@@ -3196,8 +3369,7 @@ class SettingsTab(ctk.CTkFrame):
 
     def get_state(self) -> dict[str, Any]:
         adv_subsection_states = {
-            key: group.expanded
-            for key, group in self._adv_subsections.items()
+            key: group.expanded for key, group in self._adv_subsections.items()
         }
         return {
             "id_algorithm": self.id_algo_var.get(),
@@ -3257,8 +3429,10 @@ class AboutTab(ctk.CTkFrame):
 
     def _build_widgets(self) -> None:
         ctk.CTkLabel(
-            self, text="About",
-            font=ctk.CTkFont(size=18, weight="bold"), anchor="w",
+            self,
+            text="About",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            anchor="w",
         ).pack(fill="x", pady=(0, 16))
 
         # Region boundary separator — bottom edge of About title
@@ -3269,11 +3443,13 @@ class AboutTab(ctk.CTkFrame):
 
         # Branding
         ctk.CTkLabel(
-            content, text="\u00af\\_(\u30c4)_/\u00af",
+            content,
+            text="\u00af\\_(\u30c4)_/\u00af",
             font=ctk.CTkFont(size=28, weight="bold"),
         ).pack(pady=(20, 4))
         ctk.CTkLabel(
-            content, text="Shruggie Indexer",
+            content,
+            text="Shruggie Indexer",
             font=ctk.CTkFont(size=20, weight="bold"),
         ).pack(pady=(0, 16))
 
@@ -3295,7 +3471,8 @@ class AboutTab(ctk.CTkFrame):
 
         self._info_row(info_frame, "Version:", __version__)
         self._info_row(
-            info_frame, "Python:",
+            info_frame,
+            "Python:",
             f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
         )
         exiftool_status = "Available" if shutil.which("exiftool") else "Not found"
@@ -3306,15 +3483,19 @@ class AboutTab(ctk.CTkFrame):
         links_frame.pack(pady=(0, 20))
 
         docs_btn = _CtkButton(
-            links_frame, text="Documentation",
-            width=160, command=lambda: webbrowser.open(_DOCS_URL),
+            links_frame,
+            text="Documentation",
+            width=160,
+            command=lambda: webbrowser.open(_DOCS_URL),
         )
         docs_btn.pack(side="left", padx=(0, 10))
         _Tooltip(docs_btn, "Open the project documentation in your browser.")
 
         website_btn = _CtkButton(
-            links_frame, text="shruggie.tech",
-            width=160, command=lambda: webbrowser.open(_WEBSITE_URL),
+            links_frame,
+            text="shruggie.tech",
+            width=160,
+            command=lambda: webbrowser.open(_WEBSITE_URL),
         )
         website_btn.pack(side="left")
         _Tooltip(website_btn, "Visit the ShruggieTech LLC website.")
@@ -3333,7 +3514,10 @@ class AboutTab(ctk.CTkFrame):
         row.pack(fill="x", pady=2)
         ctk.CTkLabel(row, text=label, anchor="e", width=80).pack(side="left", padx=(0, 8))
         ctk.CTkLabel(
-            row, text=value, anchor="w", text_color=("gray30", "gray70"),
+            row,
+            text=value,
+            anchor="w",
+            text_color=("gray30", "gray70"),
         ).pack(side="left")
 
     def get_state(self) -> dict[str, Any]:
@@ -3427,10 +3611,7 @@ class ShruggiIndexerApp(ctk.CTk):
         if hasattr(self, "_settings_tab"):
             settings = self._settings_tab
             verbosity = _normalize_verbosity(settings.verbosity_var.get())
-            if (
-                not settings.log_to_file_var.get()
-                or verbosity == "None"
-            ):
+            if not settings.log_to_file_var.get() or verbosity == "None":
                 return
 
         if self._persistent_file_handler is not None:
@@ -3479,11 +3660,13 @@ class ShruggiIndexerApp(ctk.CTk):
 
         # App branding
         ctk.CTkLabel(
-            self._sidebar, text="\u00af\\_(\u30c4)_/\u00af",
+            self._sidebar,
+            text="\u00af\\_(\u30c4)_/\u00af",
             font=ctk.CTkFont(size=16, weight="bold"),
         ).pack(pady=(16, 4))
         ctk.CTkLabel(
-            self._sidebar, text="Indexer",
+            self._sidebar,
+            text="Indexer",
             font=ctk.CTkFont(size=12),
             text_color=("gray40", "gray60"),
         ).pack(pady=(0, 16))
@@ -3639,8 +3822,7 @@ class ShruggiIndexerApp(ctk.CTk):
         # "None" — suppress all logging to GUI panel
         if verbosity == "None":
             self._output_panel.append_log(
-                "Logging is disabled. To enable logging, go to "
-                "Settings \u2192 Output & Logging.",
+                "Logging is disabled. To enable logging, go to Settings \u2192 Output & Logging.",
             )
             return
 
@@ -3788,7 +3970,8 @@ class ShruggiIndexerApp(ctk.CTk):
         if not meta2_path_str:
             logger.warning("Validation: no meta2 path provided")
             messagebox.showwarning(
-                "Missing Source", "Please select a meta2 sidecar file or directory.",
+                "Missing Source",
+                "Please select a meta2 sidecar file or directory.",
             )
             return
 
@@ -3796,7 +3979,8 @@ class ShruggiIndexerApp(ctk.CTk):
         if not meta2_path.exists():
             logger.warning("Validation: meta2 path does not exist: %s", meta2_path)
             messagebox.showerror(
-                "Invalid Source", f"Path does not exist:\n{meta2_path}",
+                "Invalid Source",
+                f"Path does not exist:\n{meta2_path}",
             )
             return
 
@@ -3873,9 +4057,7 @@ class ShruggiIndexerApp(ctk.CTk):
         _job_start = time.monotonic()
         try:
             # ── Prepare delete queue for MetaMergeDelete ────────────────
-            delete_queue: list[Path] | None = (
-                [] if config.meta_merge_delete else None
-            )
+            delete_queue: list[Path] | None = [] if config.meta_merge_delete else None
 
             # ── Log resolved configuration ─────────────────────────────
             logger.info(
@@ -3943,7 +4125,8 @@ class ShruggiIndexerApp(ctk.CTk):
             if config.output_inplace:
                 inplace_root = target if entry.type == "directory" else target.parent
                 self._write_inplace_tree(
-                    entry, inplace_root,
+                    entry,
+                    inplace_root,
                     write_directory_meta=config.write_directory_meta,
                 )
 
@@ -3960,7 +4143,9 @@ class ShruggiIndexerApp(ctk.CTk):
             # ── Dedup cleanup: delete duplicate files from disk ─────────
             if dedup_actions:
                 cleanup_duplicate_files(
-                    dedup_actions, target, dry_run=config.dry_run,
+                    dedup_actions,
+                    target,
+                    dry_run=config.dry_run,
                 )
 
             # ── Aggregate output ────────────────────────────────────────
@@ -3974,7 +4159,7 @@ class ShruggiIndexerApp(ctk.CTk):
                 not config.write_directory_meta
                 and entry.type == "directory"
                 and config.output_file is not None
-                and str(config.output_file).endswith("_directorymeta3.json")
+                and str(config.output_file).endswith(OUTPUT_SUFFIX_DIR)
             ):
                 logger.info("Directory aggregate output suppressed (--no-dir-meta).")
                 write_aggregate = False
@@ -3997,13 +4182,11 @@ class ShruggiIndexerApp(ctk.CTk):
             if config.meta_merge_delete:
                 from shruggie_indexer.core.entry import cleanup_stale_metadata
 
-                stale_root = (
-                    target
-                    if entry.type == "directory"
-                    else target.parent
-                )
+                stale_root = target if entry.type == "directory" else target.parent
                 stale_removed = cleanup_stale_metadata(
-                    entry, stale_root, config,
+                    entry,
+                    stale_root,
+                    config,
                 )
                 if stale_removed:
                     logger.info(
@@ -4171,7 +4354,9 @@ class ShruggiIndexerApp(ctk.CTk):
 
     @staticmethod
     def _write_inplace_tree(
-        entry: Any, root_path: Path, *,
+        entry: Any,
+        root_path: Path,
+        *,
         _is_root: bool = True,
         write_directory_meta: bool = True,
     ) -> None:
@@ -4182,7 +4367,7 @@ class ShruggiIndexerApp(ctk.CTk):
         (written alongside the target).  Child sidecars are unaffected.
 
         When *write_directory_meta* is ``False``, directory-level sidecar
-        files (``_directorymeta3.json``) are suppressed.  Per-file sidecars
+        directory sidecars (``_idxd.json``) are suppressed.  Per-file sidecars
         are unaffected.
         """
         if entry.type == "file":
@@ -4195,14 +4380,17 @@ class ShruggiIndexerApp(ctk.CTk):
             if entry.items:
                 for child in entry.items:
                     ShruggiIndexerApp._write_inplace_tree(
-                        child, root_path,
+                        child,
+                        root_path,
                         _is_root=False,
                         write_directory_meta=write_directory_meta,
                     )
 
     @staticmethod
     def _rename_tree(
-        entry: Any, root_path: Path, config: Any,
+        entry: Any,
+        root_path: Path,
+        config: Any,
     ) -> None:
         """Recursively rename all file entries in the tree.
 
@@ -4222,7 +4410,9 @@ class ShruggiIndexerApp(ctk.CTk):
                 storage_name = child.attributes.storage_name
                 logger.debug(
                     "Rename candidate: %s (type=%s, storage_name=%s)",
-                    child_path, child.type, storage_name,
+                    child_path,
+                    child.type,
+                    storage_name,
                 )
                 try:
                     result_path = rename_item(child_path, child, dry_run=config.dry_run)
@@ -4240,7 +4430,8 @@ class ShruggiIndexerApp(ctk.CTk):
                 if child.items:
                     logger.debug(
                         "Rename candidate: %s (type=directory, descending, %d items)",
-                        child.name.text, len(child.items),
+                        child.name.text,
+                        len(child.items),
                     )
                     ShruggiIndexerApp._rename_tree(child, root_path, config)
                 else:
@@ -4279,13 +4470,8 @@ class ShruggiIndexerApp(ctk.CTk):
         except queue.Empty:
             # Safety net: if the worker thread died without posting a
             # result, detect and force-complete with an error.
-            if (
-                self._worker_thread is not None
-                and not self._worker_thread.is_alive()
-            ):
-                logger.error(
-                    "Background thread died without posting a result"
-                )
+            if self._worker_thread is not None and not self._worker_thread.is_alive():
+                logger.error("Background thread died without posting a result")
                 result = {
                     "status": "error",
                     "message": "Background thread terminated unexpectedly.",
@@ -4319,7 +4505,8 @@ class ShruggiIndexerApp(ctk.CTk):
 
         if status == "success":
             progress.status_label.configure(
-                text="Complete", text_color=("green", "#00cc00"),
+                text="Complete",
+                text_color=("green", "#00cc00"),
             )
             logger.info("Operation completed successfully")
 
@@ -4345,14 +4532,16 @@ class ShruggiIndexerApp(ctk.CTk):
 
         elif status == "cancelled":
             progress.status_label.configure(
-                text="Cancelled", text_color=("#cc8800", "#ffaa00"),
+                text="Cancelled",
+                text_color=("#cc8800", "#ffaa00"),
             )
             logger.info("Operation cancelled")
             self._output_panel.append_log(result.get("message", "Cancelled."))
 
         else:
             progress.status_label.configure(
-                text="Error", text_color=("#cc3333", "#ff4444"),
+                text="Error",
+                text_color=("#cc3333", "#ff4444"),
             )
             logger.error("Operation failed: %s", result.get("message", "Unknown error"))
             self._output_panel.append_log(
@@ -4375,13 +4564,8 @@ class ShruggiIndexerApp(ctk.CTk):
         logger.debug("cancel_event.set() called")
         # Safety net: if the worker thread already died, force-reset the
         # GUI to idle immediately.
-        if (
-            self._worker_thread is not None
-            and not self._worker_thread.is_alive()
-        ):
-            logger.warning(
-                "Worker thread already dead — forcing GUI to idle"
-            )
+        if self._worker_thread is not None and not self._worker_thread.is_alive():
+            logger.warning("Worker thread already dead — forcing GUI to idle")
             result = {
                 "status": "error",
                 "message": "Background thread terminated unexpectedly.",
@@ -4427,7 +4611,8 @@ class ShruggiIndexerApp(ctk.CTk):
             old_active = data.get("active_tab", "index")
             if old_active in ("index", "meta_merge", "meta_merge_delete", "rename"):
                 self._ops_page.restore_from_old_session(
-                    old_active, data["tab_states"],
+                    old_active,
+                    data["tab_states"],
                 )
 
         # Settings

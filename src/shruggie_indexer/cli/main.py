@@ -25,6 +25,7 @@ from typing import Any
 import click
 
 from shruggie_indexer._version import __version__
+from shruggie_indexer.core.constants import OUTPUT_SUFFIX_DIR
 
 __all__ = [
     "DefaultGroup",
@@ -151,8 +152,7 @@ def _install_signal_handlers(cancel_event: threading.Event) -> None:
             raise KeyboardInterrupt
         cancel_event.set()
         print(
-            "\nInterrupt received — finishing current item. "
-            "Press Ctrl+C again to force quit.",
+            "\nInterrupt received — finishing current item. Press Ctrl+C again to force quit.",
             file=sys.stderr,
         )
 
@@ -327,7 +327,8 @@ def _resolve_log_file_from_config(
         )
         logging_section = toml_data.get("logging", {})
         if isinstance(logging_section, dict) and logging_section.get(
-            "file_enabled", False,
+            "file_enabled",
+            False,
         ):
             return logging_section.get("file_path", "")
     except Exception:
@@ -439,7 +440,9 @@ def _post_index_pipeline(
     if config.output_inplace:
         inplace_root = target_path if entry.type == "directory" else target_path.parent
         _write_inplace_tree(
-            entry, inplace_root, write_inplace,
+            entry,
+            inplace_root,
+            write_inplace,
             write_directory_meta=config.write_directory_meta,
         )
 
@@ -458,7 +461,9 @@ def _post_index_pipeline(
         from shruggie_indexer.core.dedup import cleanup_duplicate_files
 
         cleanup_duplicate_files(
-            dedup_actions, target_path, dry_run=config.dry_run,
+            dedup_actions,
+            target_path,
+            dry_run=config.dry_run,
         )
 
     # ── Aggregate output (stdout + outfile) ─────────────────────────
@@ -466,7 +471,7 @@ def _post_index_pipeline(
         not config.write_directory_meta
         and entry.type == "directory"
         and config.output_file is not None
-        and str(config.output_file).endswith("_directorymeta3.json")
+        and str(config.output_file).endswith(OUTPUT_SUFFIX_DIR)
     ):
         logger.info("Directory aggregate output suppressed (--no-dir-meta).")
         config_for_write = replace(config, output_file=None)
@@ -489,13 +494,12 @@ def _post_index_pipeline(
     if config.meta_merge_delete:
         from shruggie_indexer.core.entry import cleanup_stale_metadata
 
-        stale_root = (
-            target_path if entry.type == "directory" else target_path.parent
-        )
+        stale_root = target_path if entry.type == "directory" else target_path.parent
         stale_removed = cleanup_stale_metadata(entry, stale_root, config)
         if stale_removed:
             logger.info(
-                "Removed %d stale metadata artifact(s)", stale_removed,
+                "Removed %d stale metadata artifact(s)",
+                stale_removed,
             )
 
 
@@ -681,7 +685,9 @@ def index_cmd(
     # ── Logging ─────────────────────────────────────────────────────────
     effective_log_file = _resolve_log_file_from_config(log_file, config_file)
     configure_logging(
-        verbose=verbose, quiet=quiet, log_file=effective_log_file,
+        verbose=verbose,
+        quiet=quiet,
+        log_file=effective_log_file,
     )
 
     # ── Signal handling ─────────────────────────────────────────────────
@@ -721,9 +727,7 @@ def index_cmd(
         # ── Load configuration ──────────────────────────────────────────
         config = load_config(
             config_file=config_file,
-            target_directory=(
-                target_path if target_path.is_dir() else target_path.parent
-            ),
+            target_directory=(target_path if target_path.is_dir() else target_path.parent),
             overrides=overrides,
         )
 
@@ -731,20 +735,12 @@ def index_cmd(
         if config.rename and not inplace:
             logger.info("--rename implies --inplace; enabling in-place output")
         if config.meta_merge_delete and not meta_merge:
-            logger.info(
-                "--meta-merge-delete implies --meta-merge; enabling sidecar merging"
-            )
+            logger.info("--meta-merge-delete implies --meta-merge; enabling sidecar merging")
         if config.meta_merge and not meta:
-            logger.info(
-                "--meta-merge implies --meta; enabling EXIF extraction"
-            )
+            logger.info("--meta-merge implies --meta; enabling EXIF extraction")
 
         # Warn if no output destinations are enabled
-        if (
-            not config.output_stdout
-            and config.output_file is None
-            and not config.output_inplace
-        ):
+        if not config.output_stdout and config.output_file is None and not config.output_inplace:
             logger.warning(
                 "No output destinations are enabled. The indexing operation "
                 "will execute but produce no output."
@@ -776,9 +772,7 @@ def index_cmd(
         )
 
         # ── Prepare delete queue ────────────────────────────────────────
-        delete_queue: list[Path] | None = (
-            [] if config.meta_merge_delete else None
-        )
+        delete_queue: list[Path] | None = [] if config.meta_merge_delete else None
 
         # ── Execute indexing ────────────────────────────────────────────
         progress_cb = _make_progress_callback(verbose)
@@ -796,7 +790,10 @@ def index_cmd(
 
         # ── Post-index pipeline (dedup, output, rename, cleanup) ───────
         _post_index_pipeline(
-            entry, target_path, config, delete_queue=delete_queue,
+            entry,
+            target_path,
+            config,
+            delete_queue=delete_queue,
         )
 
         logger.info("Indexing complete.")
@@ -860,7 +857,9 @@ def _write_inplace_tree(
         if entry.items:
             for child in entry.items:
                 _write_inplace_tree(
-                    child, root_path, write_fn,
+                    child,
+                    root_path,
+                    write_fn,
                     _is_root=False,
                     write_directory_meta=write_directory_meta,
                 )
@@ -891,7 +890,9 @@ def _rename_tree(
             storage_name = child.attributes.storage_name
             logger.debug(
                 "Rename candidate: %s (type=%s, storage_name=%s)",
-                child_path, child.type, storage_name,
+                child_path,
+                child.type,
+                storage_name,
             )
             try:
                 result_path = rename_item(child_path, child, dry_run=config.dry_run)
@@ -899,16 +900,20 @@ def _rename_tree(
                 # Skip sidecar rename when the content file was collision-skipped.
                 if not config.dry_run and config.output_inplace and result_path != child_path:
                     from shruggie_indexer.core.rename import rename_inplace_sidecar
+
                     rename_inplace_sidecar(child_path, child)
             except Exception:
                 logger.warning(
-                    "Rename failed for %s", child_path, exc_info=True,
+                    "Rename failed for %s",
+                    child_path,
+                    exc_info=True,
                 )
         elif child.type == "directory":
             if child.items:
                 logger.debug(
                     "Rename candidate: %s (type=directory, descending, %d items)",
-                    child.name.text, len(child.items),
+                    child.name.text,
+                    len(child.items),
                 )
                 _rename_tree(child, root_path, config)
             else:
