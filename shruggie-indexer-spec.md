@@ -3,9 +3,9 @@
 - **Project:** `shruggie-indexer`
 - **Repository:** [shruggietech/shruggie-indexer](https://github.com/shruggietech/shruggie-indexer)
 - **License:** Apache 2.0 ([full text](https://www.apache.org/licenses/LICENSE-2.0))
-- **Version:** 0.1.2
+- **Version:** 1.0.0
 - **Author:** William Thompson (Shruggie LLC, DBA ShruggieTech)
-- **Date:** 2026-04-01
+- **Date:** 2026-04-03
 - **Status:** AMENDED
 - **Audience:** AI-first, Human-second
 
@@ -367,7 +367,7 @@ Each dependency catalog documents a single function from the original pslib libr
 | License | Apache 2.0 ([full text](https://www.apache.org/licenses/LICENSE-2.0)) |
 | License file | `LICENSE` (full Apache 2.0 text, obtained from [https://www.apache.org/licenses/LICENSE-2.0.txt](https://www.apache.org/licenses/LICENSE-2.0.txt)) |
 | Build system | `hatchling` |
-| Current version | 0.1.2 |
+| Current version | 1.0.0 |
 | CLI entry point | `shruggie-indexer = "shruggie_indexer.cli.main:main"` |
 | Module entry point | `python -m shruggie_indexer` (via `__main__.py`) |
 
@@ -705,7 +705,7 @@ src/shruggie_indexer/
 |------|---------|
 | `__init__.py` | Public API surface. Exports the primary programmatic entry points (e.g., `index_path()`, `index_file()`, `index_directory()`) and the configuration constructor. Consumers who `import shruggie_indexer` interact through this module. See [§9.1](#91-public-api-surface). |
 | `__main__.py` | Enables `python -m shruggie_indexer` invocation. Contains only an import and call to `cli.main.main()`. No logic beyond the entry-point dispatch. |
-| `_version.py` | Single source of truth for the package version string: `__version__ = "0.1.0"`. Read by `pyproject.toml` (via `hatchling`'s version plugin), by `__init__.py` for the public `__version__` attribute, and by the CLI `--version` flag. This is the same version management pattern used by `shruggie-feedtools`. |
+| `_version.py` | Single source of truth for the package version string: `__version__ = "1.0.0"`. Read by `pyproject.toml` (via `hatchling`'s version plugin), by `__init__.py` for the public `__version__` attribute, and by the CLI `--version` flag. This is the same version management pattern used by `shruggie-feedtools`. |
 | `app_paths.py` | Canonical application data path resolver. Defines `get_app_data_dir()` and `get_log_dir()` — the single source of truth for all application data directories on all platforms. Every module that reads or writes to the application data directory imports from this module. See [§3.3](#33-configuration-file-locations). |
 | `exceptions.py` | Defines the exception hierarchy used throughout the package: `IndexerError` (base), `IndexerConfigError`, `IndexerTargetError`, `IndexerRuntimeError`, `RenameError`, and `IndexerCancellationError`. See [§9.4](#94-data-classes-and-type-definitions), Exception hierarchy. |
 | `log_file.py` | Persistent log file support. Provides `get_default_log_dir()` (delegates to `app_paths.get_log_dir()`) and `make_file_handler()` for creating `logging.FileHandler` instances with timestamped filenames. See [§11.1](#111-logging-architecture). |
@@ -6033,7 +6033,7 @@ The window uses a two-panel layout: a narrow left sidebar for page navigation an
 │             │  ┌ Output ─────────────────────────────────────┐  │
 │             │  │  Mode: [Single file ▾]                       │  │
 │             │  │  Path: target_idxd.json (read-only)│  │
-│  v0.1.0    │  └────────────────────────────────────────────┘  │
+│  v1.0.0    │  └────────────────────────────────────────────┘  │
 │             │  ═══════════════ drag handle ═══════════════════   │
 │             │  ┌──────────────────────────────────────────────┐  │
 │             │  │              ▶  START                        │  │
@@ -6761,7 +6761,7 @@ The About tab (`AboutTab`) is accessed via the third sidebar button and displays
 │  A filesystem indexer with hash-based identity,      │
 │  metadata extraction, and structured JSON output.    │
 │                                                      │
-│  Version:    0.1.0                                   │
+│  Version:    1.0.0                                   │
 │  Python:     3.12.x                                  │
 │  ExifTool:   Available / Not found                   │
 │                                                      │
@@ -8239,7 +8239,7 @@ Each release produces a fixed set of artifacts, uploaded to GitHub Releases. The
 | `shruggie-indexer-{version}-macos-arm64` | macOS (Apple Silicon) | CLI standalone executable |
 | `shruggie-indexer-gui-{version}-macos-arm64` | macOS (Apple Silicon) | GUI standalone executable |
 
-The `{version}` placeholder is the version string from `_version.py` (e.g., `0.1.0`). Filenames use hyphens as separators and include the platform and architecture to disambiguate downloads on the releases page.
+The `{version}` placeholder is the version string from `_version.py` (e.g., `1.0.0`). Filenames use hyphens as separators and include the platform and architecture to disambiguate downloads on the releases page.
 
 #### macOS dual-architecture builds
 
@@ -8270,7 +8270,7 @@ on:
       - "v*"
 ```
 
-The pipeline triggers when a tag matching `v*` (e.g., `v0.1.0`, `v0.2.0-rc1`) is pushed to the repository. It does not trigger on branch pushes or pull requests — those are handled by a separate CI workflow (not specified in this document, as it is not a packaging concern).
+The pipeline triggers when a tag matching `v*` (e.g., `v1.0.0`, `v1.1.0-rc1`) is pushed to the repository. It does not trigger on branch pushes or pull requests — those are handled by a separate CI workflow (not specified in this document, as it is not a packaging concern).
 
 #### Matrix strategy
 
@@ -8302,7 +8302,7 @@ The pipeline executes the following stages on each matrix runner:
 
 **Stage 3 — Build.** Invokes the build scripts (`scripts/build.sh` or `scripts/build.ps1`) to produce both the CLI and GUI executables via PyInstaller. The build scripts output to `dist/`.
 
-**Stage 4 — Rename artifacts.** Renames the executables from their generic names (`shruggie-indexer`, `shruggie-indexer-gui`) to the versioned, platform-tagged names defined in the artifact inventory (e.g., `shruggie-indexer-0.1.0-linux-x64`). The version string is extracted from the git tag.
+**Stage 4 — Rename artifacts.** Renames the executables from their generic names (`shruggie-indexer`, `shruggie-indexer-gui`) to the versioned, platform-tagged names defined in the artifact inventory (e.g., `shruggie-indexer-1.0.0-linux-x64`). The version string is extracted from the git tag.
 
 **Stage 5 — Upload.** Uploads the renamed artifacts using `actions/upload-artifact` for cross-job sharing.
 
@@ -8326,7 +8326,7 @@ The version is defined in `src/shruggie_indexer/_version.py`:
 
 ```python
 # src/shruggie_indexer/_version.py
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 ```
 
 This is the only place the version string is written. All other version consumers read from this file:
@@ -8347,7 +8347,7 @@ The project uses semantic versioning (`MAJOR.MINOR.PATCH`):
 - **MINOR** — Incremented for backward-compatible feature additions (new CLI flags, new configuration options, new metadata types, schema additions that do not break existing consumers).
 - **PATCH** — Incremented for bug fixes, documentation corrections, and internal refactoring that does not change observable behavior.
 
-Pre-release versions use the format `MAJOR.MINOR.PATCH-rcN` (e.g., `0.1.0-rc1`) for release candidates. Pre-release versions are valid PEP 440 versions when expressed as `0.1.0rc1` (no hyphen) — the `_version.py` file uses PEP 440 format, and the git tag uses the hyphenated form for readability.
+Pre-release versions use the format `MAJOR.MINOR.PATCH-rcN` (e.g., `1.0.0-rc1`) for release candidates. Pre-release versions are valid PEP 440 versions when expressed as `1.0.0rc1` (no hyphen) — the `_version.py` file uses PEP 440 format, and the git tag uses the hyphenated form for readability.
 
 For the MVP release cycle: the project starts at `0.1.0`. During the `0.x.y` series, minor version bumps MAY include breaking changes to the public API ([§9.1](#91-public-api-surface)). Once the project reaches `1.0.0`, semantic versioning guarantees apply in full.
 
