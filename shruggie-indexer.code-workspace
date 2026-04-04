@@ -99,6 +99,15 @@
                     "*-feeds-export_index3.json"
                 ],
                 "url": "https://schemas.shruggie.tech/data/shruggie-indexer-v3.schema.json"
+            },{
+                "fileMatch": [
+                    "*_meta4.json",
+                    "*_directorymeta4.json",
+                    "*-feeds-export_index4.json",
+                    "*_idx.json",
+                    "*_idxd.json"
+                ],
+                "url": "https://schemas.shruggie.tech/data/shruggie-indexer-v4.schema.json"
             }
         ],
         "[powershell]": {
